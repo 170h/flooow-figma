@@ -1,0 +1,19 @@
+{
+  "name": "ui-flow-diagram",
+  "version": "1.0.0",
+  "description": "UI Flow Diagram - Screen Flow Connectors, Navigation Maps, and Status Tracking",
+  "main": "dist/code.js",
+  "scripts": {
+    "build": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es2020",
+    "watch": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es2020 --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["figma", "plugin", "workflow", "user-flow", "status-tracker"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.106.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0"
+  }
+}

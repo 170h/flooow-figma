@@ -1,0 +1,11 @@
+{
+  "name": "UI Flow Diagram",
+  "id": "ui-flow-diagram",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "src/ui.html",
+  "editorType": ["figma", "figjam"],
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}

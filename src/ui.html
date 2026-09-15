@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>UI Flow Diagram</title>
+  <style>
+    :root {
+      --bg: var(--figma-color-bg, #ffffff);
+      --bg-subtle: var(--figma-color-bg-secondary, #f5f5f7);
+      --bg-hover: var(--figma-color-bg-hover, #ebebee);
+      --text: var(--figma-color-text, #1e1e1e);
+      --text-muted: var(--figma-color-text-secondary, #757575);
+      --border: var(--figma-color-border, #e5e5e5);
+      --primary: var(--figma-color-bg-brand, #18a0fb);
+      --primary-hover: var(--figma-color-bg-brand-hover, #0d8de3);
+      --primary-text: #ffffff;
+      --radius: 8px;
+      --radius-sm: 6px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 탭 헤더 */
+    .tabs {
+      display: flex;
+      background: var(--bg-subtle);
+      padding: 6px;
+      border-bottom: 1px solid var(--border);
+      gap: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .tab-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    /* 탭 컨텐츠 영역 */
+    .tab-content {
+      display: none;
+      padding: 16px;
+      flex: 1;
+      overflow-y: auto;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    /* 섹션 박스 */
+    .section-box {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 선택 상태 알림 뱃지 */
+    .selection-info {
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .selection-count {
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* 입력 필드 */
+    .input-field {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .input-field:focus {
+      border-color: var(--primary);
+    }
+
+    /* 라디오 / 세그먼트 컨트롤 */
+    .segmented-control {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .segment-item {
+      flex: 1;
+      text-align: center;
+      padding: 5px;
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .segment-item.active {
+      background: var(--primary);
+      color: var(--primary-text);
+      font-weight: 600;
+    }
+
+    /* 버튼 스타일 */
+    .btn {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--primary-text);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-hover);
+    }
+
+    /* 상태 뱃지 버튼 그리드 */
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .status-btn {
+      padding: 8px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
+    }
+
+    .status-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-draft { background: #8c94a0; }
+    .dot-in-progress { background: #2980fa; }
+    .dot-in-review { background: #f59e0b; }
+    .dot-approved { background: #8c5cf6; }
+    .dot-ready-for-dev { background: #10b981; }
+
+    /* 상태 리스트 대시보드 */
+    .status-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 230px;
+      overflow-y: auto;
+    }
+
+    .status-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .status-list-item:hover {
+      background: var(--bg-hover);
+      border-color: var(--primary);
+    }
+
+    .item-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 190px;
+    }
+
+    .item-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #fff;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 20px 10px;
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    /* 템플릿 카드 */
+    .template-card {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .template-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+    }
+
+    .template-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .template-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <!-- 탭 네비게이션 -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-connectors')">
+      <span>🔗</span> 플로우 연결
+    </button>
+    <button class="tab-btn" onclick="switchTab('tab-status')">
+      <span>📊</span> 상태 관리
+    </button>
+    <button class="tab-btn" onclick="switchTab('tab-templates')">
+      <span>📑</span> 템플릿
+    </button>
+  </div>
+
+  <!-- 1. 플로우 연결 탭 -->
+  <div id="tab-connectors" class="tab-content active">
+    <div class="selection-info">
+      <span>선택된 화면:</span>
+      <span id="selection-count-text" class="selection-count">0개 선택됨</span>
+    </div>
+
+    <div class="section-box">
+      <div class="section-title">화면 간 플로우 커넥터</div>
+      <input
+        type="text"
+        id="connector-label"
+        class="input-field"
+        placeholder="이동 라벨 입력 (예: 버튼 탭 시, 다음 단계)"
+      />
+
+      <div class="segmented-control">
+        <div id="style-solid" class="segment-item active" onclick="setLineStyle('solid')">실선 (Solid)</div>
+        <div id="style-dashed" class="segment-item" onclick="setLineStyle('dashed')">점선 (Dashed)</div>
+      </div>
+
+      <button class="btn btn-primary" onclick="createConnectors()">
+        <span>➔</span> 연결선 자동 생성
+      </button>
+    </div>
+
+    <div class="section-box">
+      <div class="section-title">스텝 번호 일괄 부여</div>
+      <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
+        선택한 프레임들의 좌상단에 순차적인 번호 뱃지(①, ②, ③...)를 자동 배치합니다.
+      </p>
+      <button class="btn btn-secondary" onclick="addStepBadges()">
+        <span>🔢</span> 스텝 번호 부여하기
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. 상태 관리 탭 -->
+  <div id="tab-status" class="tab-content">
+    <div class="selection-info">
+      <span>선택 대상:</span>
+      <span id="status-selection-name" class="selection-count">선택 없음</span>
+    </div>
+
+    <div class="section-box">
+      <div class="section-title">작업 상태 지정</div>
+      <div class="status-grid">
+        <button class="status-btn" onclick="setStatus('draft')">
+          <span class="status-dot dot-draft"></span> Draft
+        </button>
+        <button class="status-btn" onclick="setStatus('in_progress')">
+          <span class="status-dot dot-in-progress"></span> In Progress
+        </button>
+        <button class="status-btn" onclick="setStatus('in_review')">
+          <span class="status-dot dot-in-review"></span> In Review
+        </button>
+        <button class="status-btn" onclick="setStatus('approved')">
+          <span class="status-dot dot-approved"></span> Approved
+        </button>
+      </div>
+      <button class="status-btn" style="width: 100%; justify-content: center;" onclick="setStatus('ready_for_dev')">
+        <span class="status-dot dot-ready-for-dev"></span> Ready for Dev (개발 인계)
+      </button>
+    </div>
+
+    <div class="section-box" style="flex: 1;">
+      <div class="section-title">
+        <span>캔버스 화면 현황</span>
+        <span id="status-total-count" style="font-size: 10px; color: var(--primary);">0개</span>
+      </div>
+      <div id="status-list-container" class="status-list">
+        <div class="empty-state">
+          등록된 상태가 없습니다.<br />
+          프레임을 선택하고 상태를 지정해 보세요.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 템플릿 탭 -->
+  <div id="tab-templates" class="tab-content">
+    <div class="section-box">
+      <div class="section-title">표준 워크플로우 템플릿 생성</div>
+      <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
+        기획 및 화면 설계를 위한 섹션과 카드 구조를 캔버스 중앙에 한 번에 생성합니다.
+      </p>
+
+      <div class="template-card" onclick="createTemplate('user_flow')">
+        <div class="template-name">🗺️ 유저 플로우 & 여정 (User Flow)</div>
+        <div class="template-desc">진입 - 핵심 인터랙션 - 완료 단계의 3단계 흐름 구조를 생성합니다.</div>
+      </div>
+
+      <div class="template-card" onclick="createTemplate('screen_spec')">
+        <div class="template-name">📐 UI 화면 명세서 (Screen Spec)</div>
+        <div class="template-desc">기본 뷰, 인터랙션 상태 변화, 예외/에러 케이스를 정리하는 템플릿입니다.</div>
+      </div>
+
+      <div class="template-card" onclick="createTemplate('feature_roadmap')">
+        <div class="template-name">🚀 기능 로드맵 (Feature Roadmap)</div>
+        <div class="template-desc">MVP 범위부터 단계별 고도화 계획을 시각적으로 배치할 수 있는 템플릿입니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentLineStyle = 'solid';
+    const statusColorMap = {
+      draft: '#8C94A0',
+      in_progress: '#2980FA',
+      in_review: '#F59E0B',
+      approved: '#8C5CF6',
+      ready_for_dev: '#10B981'
+    };
+
+    const statusLabelMap = {
+      draft: 'Draft',
+      in_progress: 'In Progress',
+      in_review: 'In Review',
+      approved: 'Approved',
+      ready_for_dev: 'Ready for Dev'
+    };
+
+    // 탭 전환
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      event.currentTarget.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+
+      if (tabId === 'tab-status') {
+        parent.postMessage({ pluginMessage: { type: 'GET_STATUS_LIST' } }, '*');
+      }
+    }
+
+    // 선 스타일 선택
+    function setLineStyle(style) {
+      currentLineStyle = style;
+      document.getElementById('style-solid').classList.toggle('active', style === 'solid');
+      document.getElementById('style-dashed').classList.toggle('active', style === 'dashed');
+    }
+
+    // 1. 커넥터 생성 요청
+    function createConnectors() {
+      const label = document.getElementById('connector-label').value;
+      parent.postMessage({
+        pluginMessage: {
+          type: 'CREATE_CONNECTORS',
+          label: label,
+          lineStyle: currentLineStyle
+        }
+      }, '*');
+    }
+
+    // 2. 스텝 번호 부여 요청
+    function addStepBadges() {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'ADD_STEP_BADGES',
+          startNumber: 1
+        }
+      }, '*');
+    }
+
+    // 3. 상태 지정 요청
+    function setStatus(status) {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'SET_STATUS',
+          status: status
+        }
+      }, '*');
+    }
+
+    // 4. 템플릿 생성 요청
+    function createTemplate(templateType) {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'CREATE_TEMPLATE',
+          templateType: templateType
+        }
+      }, '*');
+    }
+
+    // 5. 프레임 포커스 이동 요청
+    function focusFrame(nodeId) {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'FOCUS_FRAME',
+          nodeId: nodeId
+        }
+      }, '*');
+    }
+
+    // Figma Core로부터 메시지 수신
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      if (msg.type === 'SELECTION_CHANGED') {
+        const countText = document.getElementById('selection-count-text');
+        const statusSelectName = document.getElementById('status-selection-name');
+
+        countText.textContent = `${msg.count}개 선택됨`;
+        if (msg.count === 0) {
+          statusSelectName.textContent = '선택 없음';
+        } else if (msg.count === 1) {
+          statusSelectName.textContent = msg.names[0] || '1개 선택됨';
+        } else {
+          statusSelectName.textContent = `${msg.names[0]} 외 ${msg.count - 1}개`;
+        }
+      }
+
+      if (msg.type === 'STATUS_LIST_UPDATED') {
+        renderStatusList(msg.items);
+      }
+    };
+
+    // 상태 대시보드 리스트 렌더링
+    function renderStatusList(items) {
+      const container = document.getElementById('status-list-container');
+      const totalCount = document.getElementById('status-total-count');
+
+      totalCount.textContent = `${items.length}개`;
+
+      if (!items || items.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            등록된 상태가 없습니다.<br />
+            프레임을 선택하고 상태를 지정해 보세요.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = '';
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'status-list-item';
+        div.onclick = () => focusFrame(item.id);
+
+        const color = statusColorMap[item.status] || '#8C94A0';
+        const label = statusLabelMap[item.status] || item.status;
+
+        div.innerHTML = `
+          <span class="item-name" title="${item.name}">${item.name}</span>
+          <span class="item-badge" style="background-color: ${color};">${label}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
