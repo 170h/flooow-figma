@@ -1,602 +1,4595 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
-  <title>UI Flow Diagram</title>
+  <title>UI Flow</title>
   <style>
+    /* ============================================================ */
+    /* 피그마 UI3 공식 디자인 시스템 토큰 (Light Mode Primary)       */
+    /* ============================================================ */
     :root {
-      --bg: var(--figma-color-bg, #ffffff);
-      --bg-subtle: var(--figma-color-bg-secondary, #f5f5f7);
-      --bg-hover: var(--figma-color-bg-hover, #ebebee);
-      --text: var(--figma-color-text, #1e1e1e);
-      --text-muted: var(--figma-color-text-secondary, #757575);
-      --border: var(--figma-color-border, #e5e5e5);
-      --primary: var(--figma-color-bg-brand, #18a0fb);
-      --primary-hover: var(--figma-color-bg-brand-hover, #0d8de3);
-      --primary-text: #ffffff;
-      --radius: 8px;
+      /* 표면 및 배경 색상 */
+      --color-bg: #ffffff;
+      --color-bg-secondary: #f5f5f5;
+      --color-bg-tertiary: #ebebeb;
+      --color-bg-hover: var(--figma-color-bg-hover, rgba(0, 0, 0, 0.04));
+      --color-bg-dark-modal: #1e1e1e;
+      --color-bg-dark-hover: rgba(255, 255, 255, 0.08);
+
+      /* 브랜드 및 인터랙션 액센트 (피그마 바이올렛/퍼플) */
+      --color-brand: #8638e5;
+      --color-brand-hover: #7528d4;
+      --color-brand-cta: #9747ff;
+      --color-brand-cta-hover: #8636ee;
+      --color-brand-subtle: rgba(134, 56, 229, 0.12);
+
+      /* 텍스트 색상 */
+      --color-text-primary: #000000;
+      --color-text-secondary: rgba(0, 0, 0, 0.6);
+      --color-text-tertiary: rgba(0, 0, 0, 0.4);
+      --color-text-onbrand: #ffffff;
+      --color-text-ondark: #ffffff;
+      --color-text-ondark-muted: rgba(255, 255, 255, 0.65);
+
+      /* 보더 및 구분선 */
+      --color-border: var(--figma-color-border, rgba(0, 0, 0, 0.08));
+      --color-border-subtle: var(--figma-color-border-subtle, rgba(0, 0, 0, 0.05));
+      --color-border-strong: var(--figma-color-border-strong, rgba(0, 0, 0, 0.16));
+      --color-border-focus: var(--figma-color-border-brand, #8638e5);
+      --color-border-dark: rgba(255, 255, 255, 0.12);
+
+      /* 고도 및 그림자 */
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+      --shadow-popover: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+      /* 반경 규격 */
+      --radius-xs: 4px;
       --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-full: 9999px;
     }
 
+    /* 다크 테마 자동 감지 시 */
+    @media (prefers-color-scheme: dark) {
+      body.figma-dark-auto {
+        --color-bg: #2c2c2c;
+        --color-bg-secondary: #1e1e1e;
+        --color-bg-tertiary: #383838;
+        --color-bg-hover: var(--figma-color-bg-hover, rgba(255, 255, 255, 0.06));
+        --color-text-primary: #ffffff;
+        --color-text-secondary: rgba(255, 255, 255, 0.65);
+        --color-text-tertiary: rgba(255, 255, 255, 0.4);
+        --color-border: rgba(255, 255, 255, 0.12);
+      }
+    }
+
+    /* ============================================================ */
+    /* 기초 리셋 및 타이포그래피 (사용자 규칙: 글자 간격 금지)       */
+    /* ============================================================ */
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       user-select: none;
+      /* ★ 사용자 규칙: 일체의 글자 간격(tracking/letter-spacing) 적용 금지 */
+      letter-spacing: 0 !important;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    input,
+    button,
+    select,
+    textarea {
+      font-family: inherit;
+      font-size: inherit;
+      letter-spacing: 0 !important;
+    }
+
+    /* 숫자 입력필드 우측 브라우저 기본 화살표 증감 버튼(스피너) 전역 제거 */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none !important;
+      margin: 0 !important;
+    }
+
+    input[type="number"] {
+      -moz-appearance: textfield !important;
+      appearance: textfield !important;
+    }
+
+    html {
+      height: auto;
     }
 
     body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-size: 12px;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
+      background-color: var(--color-bg);
+      color: var(--color-text-primary);
+      font-size: 11px;
+      line-height: 1.45;
+      margin: 0;
+      padding: 0;
+      height: auto;
+      min-height: 0;
       overflow: hidden;
+      position: relative;
     }
 
-    /* 탭 헤더 */
-    .tabs {
+    #plugin-root {
+      width: 100%;
+      height: auto;
+      min-height: 0;
       display: flex;
-      background: var(--bg-subtle);
-      padding: 6px;
-      border-bottom: 1px solid var(--border);
-      gap: 4px;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    /* 슬림 커스텀 스크롤바 */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: var(--radius-full);
+    }
+
+
+    /* 서브 헤더 / 노드 제목 또는 선택 상태 */
+    .title-banner {
+      height: 40px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+
+    .node-title-input {
+      font-family: inherit;
+      border: 1px solid transparent;
+      background: transparent;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 16px;
+      color: var(--color-text-primary);
+      outline: none;
+      width: calc(100% + 8px);
+      margin-left: -4px;
+      margin-right: -4px;
+      border-radius: var(--radius-xs);
+      padding: 3px 4px;
+      transition: border 0.15s, background 0.15s;
+    }
+
+    .node-title-input:hover {
+      background: var(--color-bg-hover);
+    }
+
+    .node-title-input:focus {
+      background: #ffffff;
+      border-color: var(--color-brand);
+    }
+
+    .multi-selection-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    /* ============================================================ */
+    /* 3-세그먼트 메인 탭 네비게이션                                */
+    /* ============================================================ */
+    .main-tabs-wrapper {
+      padding: 4px 16px 8px 16px;
+      flex-shrink: 0;
+    }
+
+    .segmented-control {
+      display: flex;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 1px;
     }
 
     .tab-btn {
       flex: 1;
-      padding: 8px 4px;
+      height: 24px;
       border: none;
       background: transparent;
-      color: var(--text-muted);
+      border-radius: var(--radius-xs);
       font-size: 11px;
-      font-weight: 600;
-      border-radius: var(--radius-sm);
+      font-weight: 400;
+      color: var(--color-text-secondary);
       cursor: pointer;
-      transition: all 0.15s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
+      transition: all 0.18s ease;
     }
 
     .tab-btn:hover {
-      background: var(--bg-hover);
-      color: var(--text);
+      color: var(--color-text-primary);
     }
 
     .tab-btn.active {
-      background: var(--bg);
-      color: var(--text);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      background: #ffffff;
+      color: var(--color-text-primary);
+      font-weight: 400;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     }
 
-    /* 탭 컨텐츠 영역 */
-    .tab-content {
+    .tab-btn.disabled {
+      opacity: 0.35;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+
+    /* ============================================================ */
+    /* 탭 본문 스크롤 영역                                          */
+    /* ============================================================ */
+    .tab-panels {
+      flex: none;
+      overflow: visible;
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .tab-panel {
       display: none;
-      padding: 16px;
-      flex: 1;
-      overflow-y: auto;
       flex-direction: column;
-      gap: 14px;
+      gap: 0;
     }
 
-    .tab-content.active {
+    .tab-panel.active {
       display: flex;
     }
 
-    /* 섹션 박스 */
-    .section-box {
-      background: var(--bg-subtle);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px;
+    /* 구분선 */
+    .section-divider {
+      height: 1px;
+      background: var(--color-border);
+      margin: 0;
+      border: none;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================ */
+    /* [COMPONENT] Standard Section Layout System                   */
+    /*                                                              */
+    /* 모든 섹션은 아래의 일관된 3단 컴포넌트 레이아웃을 준수합니다:     */
+    /* .section-block                                               */
+    /*   ├─ .section-header (.toggle-row)  (height: 40px 고정)      */
+    /*   │    ├─ .section-title (11px / 500)                    */
+    /*   │    └─ .section-actions 또는 .switch (32×24px)        */
+    /*   └─ .section-body (.collapsible-body)                       */
+    /* ============================================================ */
+
+    /* 1. 섹션 컨테이너 */
+    /* 기본적으로 모든 섹션은 하단 패딩 12px 적용 (Figma UI3 표준) */
+    .section-block {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      padding-bottom: 12px;
     }
 
-    .section-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    /* 접힐 수 있는 토글 섹션: 접혀 있을 때(체크박스 OFF)는 하단 패딩이 0으로 사라짐 */
+    .section-block:has(.toggle-row) {
+      padding-bottom: 0;
     }
 
-    /* 선택 상태 알림 뱃지 */
-    .selection-info {
-      font-size: 11px;
-      padding: 6px 10px;
-      border-radius: var(--radius-sm);
-      background: var(--bg-subtle);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
+    /* 토글 섹션이 활성화(체크박스 ON)되어 펼쳐졌을 때는 하단 패딩 12px 복원 */
+    .section-block:has(.toggle-row input:checked) {
+      padding-bottom: 12px;
+    }
+
+    /* 2. 섹션 헤더 — height 40px 고정 (Figma UI3 표준) */
+    .section-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      height: 40px;
+      flex-shrink: 0;
     }
 
-    .selection-count {
-      font-weight: 700;
-      color: var(--primary);
+    /* 토글 스위치형 헤더 */
+    .section-header.toggle-row,
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      flex-shrink: 0;
+      cursor: default;
+      margin: 0;
     }
 
-    /* 입력 필드 */
-    .input-field {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 10px;
+    /* 섹션 타이틀 텍스트 (UI3 표준 11px / 500) */
+    .section-title,
+    .toggle-row-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      line-height: 16px;
+      user-select: none;
+    }
+
+    /* 섹션 헤더 우측 아이콘 그룹 */
+    .section-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* 섹션 헤더 아이콘 버튼 — 24×24px 터치 영역 및 아이콘 */
+    .btn-action-icon {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-action-icon:hover {
+      background: var(--color-bg-hover);
+      color: var(--color-text-primary);
+    }
+
+    /* 섹션 헤더 아이콘 SVG — 기본 24×24px 규격 */
+    .btn-action-icon svg {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      display: block;
+    }
+
+    /* 섹션 헤더 모어(More) 버튼 — 버튼 사이즈 24×24px 유지, 아이콘만 16×16px (icon.16.more) */
+    .btn-action-icon.btn-more-icon {
+      width: 24px;
+      height: 24px;
+    }
+
+    .btn-action-icon.btn-more-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* 복사 완료 후 체크 상태 스타일 */
+    .btn-action-icon.copied {
+      color: #10B981 !important;
+    }
+
+    .btn-action-icon.copied svg {
+      animation: checkPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes checkPop {
+      0% {
+        transform: scale(0.6);
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* 3. 섹션 본문 컨테이너 (Section Body) — 상하 4px 패딩 적용 (피그마 18:848, 18:949 표준) */
+    .section-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 4px 0;
+    }
+
+    /* 접혀 있는 토글 섹션의 본문은 완전히 숨김 (0px) */
+    .section-block:has(.toggle-row input:not(:checked)) .section-body {
+      display: none;
+    }
+
+    /* 펼쳐진 토글 섹션의 본문은 표시 */
+    .section-block:has(.toggle-row input:checked) .section-body {
+      display: flex;
+    }
+
+    /* 인풋 및 셀렉트 박스 */
+    .form-input {
+      height: 32px;
+      background: var(--color-bg-secondary);
+      border: 1px solid transparent;
       border-radius: var(--radius-sm);
-      font-size: 12px;
+      padding: 0 10px;
+      font-size: 11px;
+      color: var(--color-text-primary);
       outline: none;
-      transition: border-color 0.15s ease;
+      width: 100%;
+      transition: border 0.15s, background 0.15s;
     }
 
-    .input-field:focus {
-      border-color: var(--primary);
+    .form-input:focus {
+      border-color: var(--color-brand);
+      background: #ffffff;
     }
 
-    /* 라디오 / 세그먼트 컨트롤 */
-    .segmented-control {
+    .form-input::placeholder {
+      color: var(--color-text-tertiary);
+    }
+
+    .switch {
+      position: relative;
+      width: 32px;
+      height: 18px;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #e0e0e0;
+      transition: 0.2s;
+      border-radius: 9999px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: 0.2s;
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    input:checked+.slider {
+      background-color: var(--color-brand);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(14px);
+    }
+
+    /* 칩 / 탭 버튼 (Type 탭 등 피그마 18:865 스펙) */
+    .chip-group {
       display: flex;
-      background: var(--bg);
-      border: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip-btn {
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      font-size: 11px;
+      font-weight: 450;
+      color: rgba(0, 0, 0, 0.6);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    .chip-btn:hover {
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.9);
+    }
+
+    .chip-btn.active {
+      background: #8C4CF6;
+      /* 피그잼 시그니처 퍼플 컬러 */
+      color: #ffffff;
+      font-weight: 450;
+      /* 볼드 처리 금지 */
+    }
+
+    .chip-btn.active:hover {
+      background: #7B3EE4;
+      color: #ffffff;
+    }
+
+    /* ============================================================ */
+    /* 1. [ Node ] 탭 세부 스타일 (18:819)                           */
+    /* ============================================================ */
+    .phase-dropdown-btn {
+      width: 100%;
+      height: 32px;
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 5px;
+      padding: 0 4px 0 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .phase-dropdown-btn:hover {
+      border-color: rgba(0, 0, 0, 0.2);
+      background: #fafafa;
+    }
+
+    .phase-btn-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .phase-btn-icon-wrap {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .phase-checkerboard-24 {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: repeating-conic-gradient(#e1e1e1 0% 25%, #ffffff 0% 50%) 50% / 8px 8px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    .phase-chip-24 {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    /* 피그마 정품 icon-phase-mixed (18:814 / 18:918) */
+    .icon-phase-mixed-24 {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    .icon-phase-mixed-24 .phase-mixed-dash {
+      width: 10px;
+      height: 1.5px;
+      background: #2c2c2c;
+      border-radius: 1px;
+    }
+
+    .phase-btn-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(0, 0, 0, 0.9);
+      line-height: 16px;
+      letter-spacing: 0;
+    }
+
+    .phase-btn-arrow {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(0, 0, 0, 0.9);
+    }
+
+    .desc-textarea {
+      width: 100%;
+      height: 110px;
+      background: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      font-size: 11px;
+      color: var(--color-text-primary);
+      outline: none;
+      resize: none;
+      line-height: 1.5;
+      transition: border 0.15s, background 0.15s;
+    }
+
+    .desc-textarea:focus {
+      background: #ffffff;
+      border-color: var(--color-brand);
+    }
+
+    .desc-textarea::placeholder {
+      color: var(--color-text-tertiary);
+    }
+
+    /* ============================================================ */
+    /* 피그마 공통 표준 아이콘 컴포넌트 규격 (Icon-24, Icon-16)       */
+    /* ============================================================ */
+    .icon-24,
+    .figma-icon-24 {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .icon-24 svg,
+    .figma-icon-24 svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .icon-16,
+    .figma-icon-16 {
+      width: 16px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .icon-16 svg,
+    .figma-icon-16 svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+
+    /* ============================================================ */
+    /* 2. [ Appearance ] 탭 세부 스타일 (18:4487, 18:4347)          */
+    /* ============================================================ */
+    .numeric-inputs-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.45fr;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .input-scrubber-box {
+      display: flex;
+      align-items: center;
+      background: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      height: 28px;
+      padding: 0 6px 0 8px;
+      gap: 5px;
+      box-sizing: border-box;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .input-scrubber-box:hover {
+      border-color: var(--color-border);
+    }
+
+    .input-scrubber-box:focus-within {
+      background: #ffffff;
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 1px var(--color-brand);
+    }
+
+    .input-scrubber-box span,
+    .input-scrubber-box .scrubber-label {
+      color: var(--color-text-secondary);
+      font-weight: 500;
+      font-size: 11px;
+      line-height: 1;
+      cursor: default;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .input-scrubber-box svg {
+      width: 24px;
+      height: 24px;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+      cursor: default;
+    }
+
+    .input-scrubber-box:has(svg) {
+      padding: 0 6px 0 2px;
+      gap: 2px;
+    }
+
+    .input-scrubber-box input {
+      border: none;
+      background: transparent;
+      width: 100%;
+      min-width: 0;
+      padding: 0;
+      margin: 0;
+      font-size: 11px;
+      color: var(--color-text-primary);
+      outline: none;
+      font-variant-numeric: tabular-nums;
+      -webkit-appearance: none !important;
+      -moz-appearance: textfield !important;
+      appearance: textfield !important;
+    }
+
+    .select-dropdown-box {
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      height: 28px;
+      padding: 0 20px 0 8px;
+      font-size: 11px;
+      color: var(--color-text-primary);
+      outline: none;
+      cursor: pointer;
+      box-sizing: border-box;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L4 4L7 1' stroke='%23808080' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 7px center;
+      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .select-dropdown-box:hover {
+      border-color: var(--color-border);
+    }
+
+    .select-dropdown-box:focus {
+      background-color: #ffffff;
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 1px var(--color-brand);
+    }
+
+    /* ============================================================ */
+    /* 피그마 UI3 표준 드롭다운 시스템 (Figma 18:2877, 18:3076)     */
+    /* ============================================================ */
+    .figma-dropdown-wrapper,
+    .size-mode-dropdown-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .figma-dropdown-btn,
+    .size-mode-dropdown-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      height: 28px;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 4px 0 2px;
+      gap: 2px;
+      cursor: pointer;
+      box-sizing: border-box;
+      color: var(--color-text-primary);
+      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .figma-dropdown-btn:hover,
+    .size-mode-dropdown-btn:hover {
+      border-color: var(--color-border);
+    }
+
+    .figma-dropdown-btn:focus,
+    .figma-dropdown-btn.active,
+    .size-mode-dropdown-btn:focus,
+    .size-mode-dropdown-btn.active {
+      background-color: #ffffff;
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 1px var(--color-brand);
+      outline: none;
+    }
+
+    .figma-dropdown-btn-content,
+    .size-mode-btn-content {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .figma-dropdown-current-icon,
+    .size-mode-current-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+    }
+
+    .figma-dropdown-current-icon svg,
+    .size-mode-current-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .figma-dropdown-current-text,
+    .size-mode-current-text {
+      font-size: 11px;
+      color: var(--color-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1;
+      letter-spacing: 0 !important;
+    }
+
+    .figma-dropdown-chevron-icon,
+    .size-mode-chevron-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+      margin-left: 2px;
+    }
+
+    /* 피그마 표준 드롭다운 팝오버 메뉴 (Select Size Option, 18:3076) */
+    .figma-dropdown-menu,
+    .size-mode-menu-popover {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      width: 180px;
+      background: #1e1e1e;
+      color: #ffffff;
+      border-radius: 13px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 1050;
+      box-sizing: border-box;
+    }
+
+    .figma-dropdown-menu.active,
+    .size-mode-menu-popover.active {
+      display: flex;
+    }
+
+    /* 메뉴 각 행 (Menu Row) */
+    .figma-dropdown-item,
+    .size-mode-menu-item {
+      width: 164px;
+      height: 24px;
+      padding: 0 8px 0 0;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #ffffff;
+      transition: background 0.12s, color 0.12s;
+      user-select: none;
+      box-sizing: border-box;
+    }
+
+    /* 호버 시: 피그마 공식 보라색(#8C4CF6) 하이라이트 */
+    .figma-dropdown-item:hover,
+    .size-mode-menu-item:hover {
+      background: #8C4CF6;
+      color: #ffffff;
+    }
+
+    .figma-dropdown-item:hover .figma-dropdown-label,
+    .size-mode-menu-item:hover .size-mode-menu-item-label,
+    .figma-dropdown-item:hover .figma-dropdown-value,
+    .size-mode-menu-item:hover .size-mode-menu-item-value,
+    .figma-dropdown-item:hover svg,
+    .size-mode-menu-item:hover svg {
+      color: #ffffff !important;
+      fill: #ffffff;
+      opacity: 1 !important;
+    }
+
+    /* 선택된 항목 */
+    .figma-dropdown-item.selected,
+    .size-mode-menu-item.selected {
+      color: #ffffff;
+    }
+
+    /* 선두 체크 슬롯 (20px) */
+    .figma-dropdown-check-slot,
+    .size-mode-menu-item-check {
+      width: 20px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #ffffff;
+    }
+
+    .figma-dropdown-check-slot svg,
+    .size-mode-menu-item-check svg {
+      display: none;
+      width: 16px;
+      height: 16px;
+    }
+
+    .figma-dropdown-item.selected .figma-dropdown-check-slot svg,
+    .size-mode-menu-item.selected .size-mode-menu-item-check svg {
+      display: block;
+    }
+
+    /* 항목 선두 아이콘 슬롯 (24px) */
+    .figma-dropdown-icon-slot,
+    .size-mode-menu-item-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #ffffff;
+    }
+
+    .figma-dropdown-icon-slot svg,
+    .size-mode-menu-item-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* 텍스트 라벨 */
+    .figma-dropdown-label,
+    .size-mode-menu-item-label {
+      flex: 1;
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 16px;
+      color: #ffffff;
+    }
+
+    /* 우측 수치 라벨 (예: 250, 328) */
+    .figma-dropdown-value,
+    .size-mode-menu-item-value {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.65);
+      text-align: right;
+      font-feature-settings: "tnum";
+      font-variant-numeric: tabular-nums;
+    }
+
+    .figma-dropdown-item.selected .figma-dropdown-value,
+    .size-mode-menu-item.selected .size-mode-menu-item-value {
+      color: #ffffff;
+    }
+
+    /* 스타일 컬러 스와치 그리드 (9개 스와치 균등 9열 배치) */
+    .swatches-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 6px;
+      margin-top: 4px;
+      padding: 4px 2px;
+    }
+
+    .swatch-item {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: none;
+      box-sizing: border-box;
+      transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.15s ease;
+      position: relative;
+    }
+
+    /* 흰색 칩은 배경 구분을 위한 1px 내부 미세 경계선 유지 */
+    .swatch-item[data-color="#ffffff"] {
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 선택되지 않은 칩 호버 시: 딱 2px 보더 크기만큼 사이즈 확대 (보더 크기 초과 방지) */
+    .swatch-item:hover:not(.selected) {
+      transform: scale(1.13);
+      z-index: 4;
+    }
+    .swatch-item[data-color="#ffffff"]:hover:not(.selected) {
+      transform: scale(1.13);
+      z-index: 4;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 선택 시: 외곽 2px 브랜드 보더 적용 */
+    .swatch-item.selected {
+      box-shadow: 0 0 0 2px var(--color-brand);
+      z-index: 2;
+      transform: none;
+    }
+    .swatch-item[data-color="#ffffff"].selected {
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 0 0 2px var(--color-brand);
+      z-index: 2;
+      transform: none;
+    }
+
+    /* 선택된 칩은 호버되어도 애니메이션 없이 2px 보더 유지 */
+    .swatch-item.selected:hover {
+      transform: none !important;
+      box-shadow: 0 0 0 2px var(--color-brand);
+      z-index: 2;
+    }
+    .swatch-item[data-color="#ffffff"].selected:hover {
+      transform: none !important;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 0 0 2px var(--color-brand);
+      z-index: 2;
+    }
+
+    /* 고도(Elevation) 5단계 프리뷰 카드 */
+    .elevation-cards-container {
+      display: none;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      padding: 4px 2px;
+    }
+
+    .elevation-cards-container.active {
+      display: grid;
+    }
+
+    .elevation-card {
+      height: 56px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: none;
+      box-sizing: border-box;
+      background: transparent;
+    }
+
+    /* 배경 박스 (가상 요소로 분리하여 가운데 사각형은 놔두고 배경만 확대) */
+    .elevation-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      transition: inset 0.15s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.15s ease;
+      z-index: 1;
+    }
+
+    /* 선택되지 않은 카드 호버 시: 사방 정확히 2px 보더 크기(inset: -2px)만큼만 확장 */
+    .elevation-card:hover:not(.selected) {
+      z-index: 4;
+    }
+    .elevation-card:hover:not(.selected)::before {
+      inset: -2px;
+    }
+
+    /* 선택 시: 외곽 2px 브랜드 보더 적용 */
+    .elevation-card.selected {
+      z-index: 2;
+    }
+    .elevation-card.selected::before {
+      inset: 0;
+      box-shadow: 0 0 0 2px var(--color-brand);
+      transform: none;
+    }
+
+    /* 선택된 카드는 호버되어도 애니메이션 없이 2px 보더 유지 */
+    .elevation-card.selected:hover::before {
+      inset: 0 !important;
+      transform: none !important;
+      box-shadow: 0 0 0 2px var(--color-brand);
+    }
+
+    .elevation-inner-box {
+      width: 24px;
+      height: 24px;
+      background: #ffffff;
+      border-radius: 3px;
+      position: relative;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .elev-0 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0.5px rgba(0, 0, 0, 0.30);
+    }
+
+    .elev-1 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 3px 8px rgba(0, 0, 0, 0.10), 0 0 0.5px rgba(0, 0, 0, 0.18);
+    }
+
+    .elev-2 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 5px 12px rgba(0, 0, 0, 0.13), 0 0 0.5px rgba(0, 0, 0, 0.15);
+    }
+
+    .elev-3 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12), 0 0 0.5px rgba(0, 0, 0, 0.12);
+    }
+
+    .elev-4 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 24px rgba(0, 0, 0, 0.18), 0 0 0.5px rgba(0, 0, 0, 0.08);
+    }
+
+    /* 상태 뱃지 옵션 (Status Pills) */
+    .status-pills-container {
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 4px 0;
+    }
+
+    .status-pills-container.active {
+      display: flex;
+    }
+
+    .status-pill {
+      height: 24px;
+      padding: 0 10px;
+      border-radius: var(--radius-sm);
+      background: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+
+    .status-pill:hover {
+      background: #eaeaea;
+    }
+
+    .status-pill.selected {
+      background: #5f92f3;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* 스텝 배지 옵션 */
+    .step-badges-container {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      padding: 4px 0;
+    }
+
+    .step-badges-container.active {
+      display: flex;
+    }
+
+    .step-badges-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .corner-position-group {
+      display: flex;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+      flex: 1;
+      height: 28px;
+      box-sizing: border-box;
+      align-items: center;
+    }
+
+    .corner-btn {
+      flex: 1;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+
+    .corner-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .corner-btn:hover {
+      color: var(--color-text-primary);
+    }
+
+    .corner-btn.active {
+      background: #ffffff;
+      color: var(--color-text-primary);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ============================================================ */
+    /* 3. [ Connection ] 탭 세부 스타일 (18:4622, 18:4656, 18:4748)   */
+    /* ============================================================ */
+    .connect-canvas-box {
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      position: relative;
+      min-height: 120px;
+    }
+
+    .node-preview-card {
+      width: 120px;
+      height: 74px;
+      background: #ffffff;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-xs);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      text-align: center;
+      word-break: break-all;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .anchor-handle {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      background: #ffffff;
+      border: 1.5px solid #b0b0b0;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      z-index: 2;
+    }
+
+    .anchor-handle:hover {
+      border-color: var(--color-brand);
+      transform: scale(1.2);
+    }
+
+    .anchor-handle.active {
+      background: var(--color-brand) !important;
+      border-color: var(--color-brand) !important;
+      box-shadow: 0 0 0 2px #ffffff;
+    }
+
+    .anchor-top {
+      top: -5px;
+      left: calc(50% - 4.5px);
+    }
+
+    .anchor-bottom {
+      bottom: -5px;
+      left: calc(50% - 4.5px);
+    }
+
+    .anchor-left {
+      left: -5px;
+      top: calc(50% - 4.5px);
+    }
+
+    .anchor-right {
+      right: -5px;
+      top: calc(50% - 4.5px);
+    }
+
+    .line-style-segment {
+      display: flex;
+      background: var(--color-bg-secondary);
       border-radius: var(--radius-sm);
       padding: 2px;
       gap: 2px;
     }
 
-    .segment-item {
+    .line-style-btn {
       flex: 1;
-      text-align: center;
-      padding: 5px;
-      font-size: 11px;
-      color: var(--text-muted);
-      cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.15s ease;
-    }
-
-    .segment-item.active {
-      background: var(--primary);
-      color: var(--primary-text);
-      font-weight: 600;
-    }
-
-    /* 버튼 스타일 */
-    .btn {
-      width: 100%;
-      padding: 9px 12px;
-      border-radius: var(--radius-sm);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
+      height: 24px;
       border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      font-size: 11px;
       transition: all 0.15s ease;
+      padding: 0;
+    }
+
+    .line-style-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .line-style-btn.active {
+      background: #ffffff;
+      color: var(--color-text-primary);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .routing-types-grid {
+      display: flex;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .routing-btn {
+      flex: 1;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+
+    .routing-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .routing-btn.active {
+      background: #ffffff;
+      color: var(--color-text-primary);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .terminal-offset-row {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1.2fr 1fr;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* 토글에 따른 가변 컨텐츠 */
+    .collapsible-group {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .collapsible-group.active {
+      display: flex;
+    }
+
+    /* ============================================================ */
+    /* 하단 고정 푸터 액션 바                                        */
+    /* ============================================================ */
+    .app-footer {
+      padding: 8px 16px 12px 16px;
+      background: var(--color-bg);
+      border-top: 1px solid var(--color-border);
+      flex-shrink: 0;
+    }
+
+    .btn-cta-primary {
+      width: 100%;
+      height: 32px;
+      background: var(--color-brand-cta);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: var(--primary-text);
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-hover);
-    }
-
-    .btn-secondary {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
-
-    .btn-secondary:hover {
-      background: var(--bg-hover);
-    }
-
-    /* 상태 뱃지 버튼 그리드 */
-    .status-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-    }
-
-    .status-btn {
-      padding: 8px 6px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--bg);
-      color: var(--text);
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: transform 0.1s ease, box-shadow 0.15s ease;
-    }
-
-    .status-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 5px rgba(0,0,0,0.06);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .dot-draft { background: #8c94a0; }
-    .dot-in-progress { background: #2980fa; }
-    .dot-in-review { background: #f59e0b; }
-    .dot-approved { background: #8c5cf6; }
-    .dot-ready-for-dev { background: #10b981; }
-
-    /* 상태 리스트 대시보드 */
-    .status-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 230px;
-      overflow-y: auto;
-    }
-
-    .status-list-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 10px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
       transition: background 0.15s ease;
     }
 
-    .status-list-item:hover {
-      background: var(--bg-hover);
-      border-color: var(--primary);
+    .btn-cta-primary:hover {
+      background: var(--color-brand-cta-hover);
     }
 
-    .item-name {
+    /* 커넥션 탭 2노드 선택 시 표시되는 서브 푸터 */
+    .footer-undo-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .plan-status-badge {
       font-size: 11px;
-      font-weight: 500;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 190px;
-    }
-
-    .item-badge {
-      font-size: 10px;
       font-weight: 600;
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: #fff;
+      color: var(--color-text-secondary);
     }
 
-    .empty-state {
-      text-align: center;
-      padding: 20px 10px;
-      color: var(--text-muted);
-      font-size: 11px;
-      line-height: 1.5;
-    }
-
-    /* 템플릿 카드 */
-    .template-card {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 12px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .template-card:hover {
-      border-color: var(--primary);
-      transform: translateY(-1px);
-      box-shadow: 0 3px 8px rgba(0,0,0,0.06);
-    }
-
-    .template-name {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text);
+    .undo-actions-group {
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    .template-desc {
+    .btn-outline-action {
+      height: 28px;
+      padding: 0 12px;
+      background: #ffffff;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
       font-size: 11px;
-      color: var(--text-muted);
-      line-height: 1.4;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      cursor: pointer;
+      transition: background 0.15s;
     }
-  </style>
-</head>
-<body>
-  <!-- 탭 네비게이션 -->
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('tab-connectors')">
-      <span>🔗</span> 플로우 연결
-    </button>
-    <button class="tab-btn" onclick="switchTab('tab-status')">
-      <span>📊</span> 상태 관리
-    </button>
-    <button class="tab-btn" onclick="switchTab('tab-templates')">
-      <span>📑</span> 템플릿
-    </button>
-  </div>
 
-  <!-- 1. 플로우 연결 탭 -->
-  <div id="tab-connectors" class="tab-content active">
-    <div class="selection-info">
-      <span>선택된 화면:</span>
-      <span id="selection-count-text" class="selection-count">0개 선택됨</span>
-    </div>
+    .btn-outline-action:hover {
+      background: var(--color-bg-secondary);
+    }
 
-    <div class="section-box">
-      <div class="section-title">화면 간 플로우 커넥터</div>
-      <input
-        type="text"
-        id="connector-label"
-        class="input-field"
-        placeholder="이동 라벨 입력 (예: 버튼 탭 시, 다음 단계)"
-      />
+    /* ============================================================ */
+    /* 팝오버 및 모달 다이얼로그 (18:2325, 18:2522, 18:2498, 18:2568)*/
+    /* ============================================================ */
+    .popover-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(2px);
+    }
 
-      <div class="segmented-control">
-        <div id="style-solid" class="segment-item active" onclick="setLineStyle('solid')">실선 (Solid)</div>
-        <div id="style-dashed" class="segment-item" onclick="setLineStyle('dashed')">점선 (Dashed)</div>
-      </div>
+    .popover-backdrop.active {
+      display: flex;
+    }
 
-      <button class="btn btn-primary" onclick="createConnectors()">
-        <span>➔</span> 연결선 자동 생성
-      </button>
-    </div>
+    /* 1. Phase Select 팝오버 (피그마 18:2325) */
+    .popover-phase-select {
+      position: absolute;
+      width: 180px;
+      background: #1e1e1e;
+      color: #ffffff;
+      border-radius: 13px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 0;
+      z-index: 1010;
+      box-sizing: border-box;
+    }
 
-    <div class="section-box">
-      <div class="section-title">스텝 번호 일괄 부여</div>
-      <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
-        선택한 프레임들의 좌상단에 순차적인 번호 뱃지(①, ②, ③...)를 자동 배치합니다.
-      </p>
-      <button class="btn btn-secondary" onclick="addStepBadges()">
-        <span>🔢</span> 스텝 번호 부여하기
-      </button>
-    </div>
-  </div>
+    .popover-phase-select.active {
+      display: flex;
+    }
 
-  <!-- 2. 상태 관리 탭 -->
-  <div id="tab-status" class="tab-content">
-    <div class="selection-info">
-      <span>선택 대상:</span>
-      <span id="status-selection-name" class="selection-count">선택 없음</span>
-    </div>
+    .phase-menu-item {
+      width: 164px;
+      height: 24px;
+      padding: 0 8px 0 0;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #ffffff;
+      transition: background 0.15s;
+      user-select: none;
+      box-sizing: border-box;
+    }
 
-    <div class="section-box">
-      <div class="section-title">작업 상태 지정</div>
-      <div class="status-grid">
-        <button class="status-btn" onclick="setStatus('draft')">
-          <span class="status-dot dot-draft"></span> Draft
-        </button>
-        <button class="status-btn" onclick="setStatus('in_progress')">
-          <span class="status-dot dot-in-progress"></span> In Progress
-        </button>
-        <button class="status-btn" onclick="setStatus('in_review')">
-          <span class="status-dot dot-in-review"></span> In Review
-        </button>
-        <button class="status-btn" onclick="setStatus('approved')">
-          <span class="status-dot dot-approved"></span> Approved
-        </button>
-      </div>
-      <button class="status-btn" style="width: 100%; justify-content: center;" onclick="setStatus('ready_for_dev')">
-        <span class="status-dot dot-ready-for-dev"></span> Ready for Dev (개발 인계)
-      </button>
-    </div>
+    .phase-menu-item:hover {
+      background: #8C4CF6;
+      color: #ffffff;
+    }
 
-    <div class="section-box" style="flex: 1;">
-      <div class="section-title">
-        <span>캔버스 화면 현황</span>
-        <span id="status-total-count" style="font-size: 10px; color: var(--primary);">0개</span>
-      </div>
-      <div id="status-list-container" class="status-list">
-        <div class="empty-state">
-          등록된 상태가 없습니다.<br />
-          프레임을 선택하고 상태를 지정해 보세요.
-        </div>
-      </div>
-    </div>
-  </div>
+    .phase-menu-item:hover svg,
+    .phase-menu-item:hover .phase-item-label,
+    .phase-menu-item:hover .phase-check-icon {
+      color: #ffffff !important;
+      fill: #ffffff;
+    }
 
-  <!-- 3. 템플릿 탭 -->
-  <div id="tab-templates" class="tab-content">
-    <div class="section-box">
-      <div class="section-title">표준 워크플로우 템플릿 생성</div>
-      <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
-        기획 및 화면 설계를 위한 섹션과 카드 구조를 캔버스 중앙에 한 번에 생성합니다.
-      </p>
+    .phase-menu-item.selected {
+      color: #ffffff;
+    }
 
-      <div class="template-card" onclick="createTemplate('user_flow')">
-        <div class="template-name">🗺️ 유저 플로우 & 여정 (User Flow)</div>
-        <div class="template-desc">진입 - 핵심 인터랙션 - 완료 단계의 3단계 흐름 구조를 생성합니다.</div>
-      </div>
+    .phase-item-check-slot {
+      width: 20px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
 
-      <div class="template-card" onclick="createTemplate('screen_spec')">
-        <div class="template-name">📐 UI 화면 명세서 (Screen Spec)</div>
-        <div class="template-desc">기본 뷰, 인터랙션 상태 변화, 예외/에러 케이스를 정리하는 템플릿입니다.</div>
-      </div>
+    .phase-item-check-slot .phase-check-icon {
+      display: none;
+    }
 
-      <div class="template-card" onclick="createTemplate('feature_roadmap')">
-        <div class="template-name">🚀 기능 로드맵 (Feature Roadmap)</div>
-        <div class="template-desc">MVP 범위부터 단계별 고도화 계획을 시각적으로 배치할 수 있는 템플릿입니다.</div>
-      </div>
-    </div>
-  </div>
+    .phase-menu-item.selected .phase-item-check-slot .phase-check-icon {
+      display: block;
+    }
 
-  <script>
-    let currentLineStyle = 'solid';
-    const statusColorMap = {
-      draft: '#8C94A0',
-      in_progress: '#2980FA',
-      in_review: '#F59E0B',
-      approved: '#8C5CF6',
-      ready_for_dev: '#10B981'
-    };
+    .phase-item-icon-slot {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
 
-    const statusLabelMap = {
-      draft: 'Draft',
-      in_progress: 'In Progress',
-      in_review: 'In Review',
-      approved: 'Approved',
-      ready_for_dev: 'Ready for Dev'
-    };
+    .phase-dash-icon {
+      width: 8px;
+      height: 1px;
+      background: #ffffff;
+      opacity: 0.9;
+      border-radius: 1px;
+    }
 
-    // 탭 전환
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    .icon-phase-mixed-14 {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
 
-      event.currentTarget.classList.add('active');
-      document.getElementById(tabId).classList.add('active');
+    .icon-phase-mixed-14 .phase-mixed-dash {
+      width: 8px;
+      height: 1px;
+      background: #ffffff;
+      border-radius: 1px;
+    }
 
-      if (tabId === 'tab-status') {
-        parent.postMessage({ pluginMessage: { type: 'GET_STATUS_LIST' } }, '*');
+    .phase-checkerboard-14 {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: repeating-conic-gradient(#e1e1e1 0% 25%, #ffffff 0% 50%) 50% / 6px 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-sizing: border-box;
+    }
+
+    .phase-chip-14 {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      box-sizing: border-box;
+    }
+
+    .phase-item-label {
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 16px;
+      color: #ffffff;
+      letter-spacing: 0;
+      flex: 1;
+    }
+
+    .phase-popover-divider {
+      width: 164px;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.15);
+      margin: 8px 0;
+      border: none;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--color-border-dark);
+      margin: 4px 0;
+      border: none;
+    }
+
+    /* 2. more 컨텍스트 메뉴 (피그마 18:2568 규격: 82x80, R13, padding 8px 0, 아이템 66x24 R5, 구분선 16px) */
+    .popover-context-menu {
+      position: absolute;
+      width: 82px;
+      background: #1e1e1e;
+      color: #ffffff;
+      border-radius: 13px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12), 0 0 0.5px rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 0;
+      display: none;
+      flex-direction: column;
+      gap: 0;
+      z-index: 1050;
+      box-sizing: border-box;
+    }
+
+    .popover-context-menu.active {
+      display: flex;
+    }
+
+    .context-row {
+      width: 82px;
+      height: 24px;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    .context-item {
+      width: 66px;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 16px;
+      cursor: pointer;
+      color: #ffffff;
+      background: transparent;
+      transition: background 0.12s, color 0.12s;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    .context-item:hover {
+      background: #8C4CF6;
+      color: #ffffff;
+    }
+
+    .context-divider-row {
+      width: 82px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    .context-divider-line {
+      width: 100%;
+      height: 1px;
+      background: #383838;
+      border: none;
+      margin: 0;
+    }
+
+    /* 3. 심플 다이얼로그 모달 공통 (18:2522 Confirmation, 18:2498 Delete Item) */
+    .dialog-modal-card {
+      width: 240px;
+      background: var(--color-bg-dark-modal);
+      color: var(--color-text-ondark);
+      border-radius: 13px;
+      box-shadow: var(--shadow-popover);
+      border: 1px solid var(--color-border-dark);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
       }
     }
 
-    // 선 스타일 선택
-    function setLineStyle(style) {
-      currentLineStyle = style;
-      document.getElementById('style-solid').classList.toggle('active', style === 'solid');
-      document.getElementById('style-dashed').classList.toggle('active', style === 'dashed');
+    .dialog-header {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--color-border-dark);
     }
 
-    // 1. 커넥터 생성 요청
-    function createConnectors() {
-      const label = document.getElementById('connector-label').value;
-      parent.postMessage({
-        pluginMessage: {
-          type: 'CREATE_CONNECTORS',
-          label: label,
-          lineStyle: currentLineStyle
+    .dialog-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-ondark);
+    }
+
+    .dialog-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--color-text-ondark-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dialog-close-btn:hover {
+      color: #ffffff;
+    }
+
+    .dialog-body {
+      padding: 12px;
+      font-size: 11px;
+      color: var(--color-text-ondark-muted);
+      line-height: 1.45;
+    }
+
+    .dialog-footer {
+      padding: 8px 12px 12px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .btn-dialog-cancel {
+      height: 26px;
+      padding: 0 10px;
+      background: transparent;
+      border: 1px solid var(--color-border-dark);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .btn-dialog-cancel:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-dialog-cta {
+      height: 26px;
+      padding: 0 12px;
+      background: var(--color-brand-cta);
+      border: none;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-dialog-cta:hover {
+      background: var(--color-brand-cta-hover);
+    }
+
+    /* Add / Edit Phase 전용 모달 (피그마 18:2289, 18:2351, 18:3034 규격) */
+    .phase-modal-card {
+      width: 200px;
+      background: #1E1E1E;
+      color: #FFFFFF;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease-out;
+    }
+
+    .phase-modal-header {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px 0 16px;
+      border-bottom: 1px solid #444444;
+      box-sizing: border-box;
+    }
+
+    .phase-modal-title {
+      font-size: 11px;
+      font-weight: 550;
+      color: #FFFFFF;
+      line-height: 16px;
+    }
+
+    .phase-modal-close-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .phase-modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+
+    .phase-modal-body {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    .phase-field-group {
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 12px;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    /* 타이틀 라벨 행: 높이 40px 피그마 표준 규격 */
+    .phase-field-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      box-sizing: border-box;
+    }
+
+    .phase-field-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #FFFFFF;
+      line-height: 16px;
+    }
+
+    /* 요소 그룹 래퍼: 높이 32px, 상하 패딩 4px 피그마 표준 규격 */
+    .phase-input-row-wrapper {
+      width: 100%;
+      height: 32px;
+      padding: 4px 0;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+    }
+
+    .phase-eyedropper-btn {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 0;
+    }
+
+    .phase-eyedropper-btn:hover {
+      color: #FFFFFF;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .phase-text-input {
+      width: 100%;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      padding: 0 8px;
+      font-size: 11px;
+      color: #FFFFFF;
+      box-sizing: border-box;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .phase-text-input:focus {
+      border-color: #8C4CF6;
+    }
+
+    .phase-text-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .phase-color-picker-box {
+      width: 100%;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .phase-color-picker-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .phase-color-picker-box:focus-within {
+      border-color: #8C4CF6;
+    }
+
+    .phase-color-preview-wrap {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .phase-color-preview-chip {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: #EA2039;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    .phase-color-hex-input {
+      flex: 1;
+      min-width: 0;
+      height: 24px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #FFFFFF;
+      font-size: 11px;
+      padding: 0 4px;
+      font-family: inherit;
+      text-transform: uppercase;
+      cursor: text;
+      box-sizing: border-box;
+    }
+
+    .phase-color-chevron-wrap {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: rgba(255, 255, 255, 0.7);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+
+    .phase-color-picker-box.is-open {
+      border-color: #8C4CF6;
+    }
+
+    .phase-color-picker-box.is-open .phase-color-chevron-wrap {
+      transform: rotate(180deg);
+    }
+
+    .phase-color-dropdown-panel {
+      display: flex;
+      flex-direction: column;
+      margin-top: 0;
+      animation: modalFadeIn 0.15s ease-out;
+      user-select: none;
+    }
+
+    /* 피그마 Frame 1 (18:3053): 높이 52px, paddingTop 20px, paddingBottom 20px */
+    .phase-hue-container {
+      width: 100%;
+      height: 52px;
+      padding: 20px 0;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+    }
+
+    .phase-hue-track {
+      width: 100%;
+      height: 12px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, #FF0000 0%, #FFFF00 17%, #00FF00 33%, #00FFFF 50%, #0000FF 67%, #FF00FF 83%, #FF0000 100%);
+      position: relative;
+      cursor: pointer;
+      box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 피그마 Ellipse 314 규격: 24x24px 순색 유지 핸들 */
+    .phase-hue-thumb {
+      position: absolute;
+      top: 50%;
+      left: 0%;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #FF0000;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    /* 피그마 Frame 14694 규격: 너비 168px, 높이 148px */
+    .phase-satval-canvas {
+      width: 100%;
+      height: 148px;
+      border-radius: 6px;
+      background-color: #FF0000;
+      position: relative;
+      cursor: crosshair;
+      overflow: hidden;
+      box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
+    }
+
+    .phase-satval-white-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, #FFFFFF, rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+
+    .phase-satval-black-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, #000000, rgba(0, 0, 0, 0));
+      pointer-events: none;
+    }
+
+    /* 피그마 Ellipse 315 규격: 24x24px 링 */
+    .phase-satval-ring {
+      position: absolute;
+      top: 0%;
+      left: 0%;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.8), inset 0 0 2px rgba(0, 0, 0, 0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    .phase-modal-footer {
+      height: 40px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: #1E1E1E;
+      box-sizing: border-box;
+    }
+
+    .btn-phase-modal-cancel {
+      height: 24px;
+      padding: 0 8px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 5px;
+      color: #FFFFFF;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .btn-phase-modal-cancel:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-phase-modal-save {
+      height: 24px;
+      padding: 0 10px;
+      background: #8C4CF6;
+      border: none;
+      border-radius: 5px;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-phase-modal-save:hover {
+      background: #7A39E3;
+    }
+
+    /* 토스트 메시지 */
+    .toast-container {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30, 30, 30, 0.92);
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 11px;
+      box-shadow: var(--shadow-md);
+      display: none;
+      z-index: 2000;
+      pointer-events: none;
+    }
+
+    /* 피그마 공식 UI3 툴팁 (말꼬리 삼각형 팁 포함) */
+    .figma-tooltip {
+      position: fixed;
+      background: #222222;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 14px;
+      letter-spacing: 0 !important;
+      padding: 5px 8px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+      pointer-events: none;
+      z-index: 99999;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      white-space: nowrap;
+      display: none;
+    }
+
+    .figma-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+      display: block;
+    }
+
+    /* 하단 삼각형 꼬리 (대상 요소 상단 배치 시) */
+    .figma-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px 5px 0 5px;
+      border-style: solid;
+      border-color: #222222 transparent transparent transparent;
+    }
+
+    /* 상단 삼각형 꼬리 (화면 상단 공간 부족으로 하단 배치 시) */
+    .figma-tooltip.arrow-top::after {
+      top: auto;
+      bottom: 100%;
+      border-width: 0 5px 5px 5px;
+      border-color: transparent transparent #222222 transparent;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="plugin-root">
+
+    <!-- 1. 서브 헤더 (노드 제목 또는 다중 선택 상태 인디케이터) -->
+    <div class="title-banner">
+
+      <!-- 단일/신규 노드 상태 -->
+      <div id="single-title-wrap" style="width: 100%;">
+        <input type="text" id="node-title-input" class="node-title-input" value="Untitled" placeholder="노드 제목을 입력하세요" />
+      </div>
+      <!-- 2개 이상 선택 상태 -->
+      <div id="multi-selection-indicator" class="multi-selection-indicator">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M10.2246 13.0822C10.4187 12.9541 10.6826 12.9758 10.8535 13.1467L12.8535 15.1467C13.0487 15.342 13.0487 15.6585 12.8535 15.8537L10.8535 17.8537C10.6582 18.049 10.3417 18.049 10.1464 17.8537L8.14645 15.8537C7.95118 15.6585 7.95118 15.342 8.14645 15.1467L10.1464 13.1467L10.2246 13.0822ZM15.1464 15.1467C15.3417 14.9514 15.6582 14.9514 15.8535 15.1467C16.0487 15.342 16.0487 15.6585 15.8535 15.8537L13.8535 17.8537C13.6582 18.049 13.3417 18.049 13.1464 17.8537C12.9512 17.6585 12.9512 17.342 13.1464 17.1467L15.1464 15.1467ZM9.20699 15.5002L10.5 16.7932L11.7929 15.5002L10.5 14.2072L9.20699 15.5002ZM6.72457 9.58224C6.91865 9.45407 7.18261 9.47583 7.35348 9.64669L9.35348 11.6467C9.54874 11.842 9.54874 12.1585 9.35348 12.3537L7.35348 14.3537C7.15822 14.549 6.84171 14.549 6.64645 14.3537L4.64645 12.3537C4.45118 12.1585 4.45118 11.842 4.64645 11.6467L6.64645 9.64669L6.72457 9.58224ZM13.7246 9.58224C13.9187 9.45407 14.1826 9.47583 14.3535 9.64669L16.3535 11.6467C16.5487 11.842 16.5487 12.1585 16.3535 12.3537L14.3535 14.3537C14.1582 14.549 13.8417 14.549 13.6464 14.3537L11.6464 12.3537C11.4512 12.1585 11.4512 11.842 11.6464 11.6467L13.6464 9.64669L13.7246 9.58224ZM16.6464 9.64669C16.8417 9.45143 17.1582 9.45143 17.3535 9.64669L19.3535 11.6467C19.5487 11.842 19.5487 12.1585 19.3535 12.3537L17.3535 14.3537C17.1582 14.549 16.8417 14.549 16.6464 14.3537C16.4512 14.1585 16.4512 13.842 16.6464 13.6467L18.2929 12.0002L16.6464 10.3537C16.4512 10.1585 16.4512 9.84195 16.6464 9.64669ZM5.70699 12.0002L6.99996 13.2932L8.29293 12.0002L6.99996 10.7072L5.70699 12.0002ZM12.707 12.0002L14 13.2932L15.2929 12.0002L14 10.7072L12.707 12.0002ZM10.2246 6.08224C10.4187 5.95407 10.6826 5.97583 10.8535 6.14669L12.8535 8.14669C13.0487 8.34195 13.0487 8.65846 12.8535 8.85372L10.8535 10.8537C10.6582 11.049 10.3417 11.049 10.1464 10.8537L8.14645 8.85372C7.95118 8.65846 7.95118 8.34195 8.14645 8.14669L10.1464 6.14669L10.2246 6.08224ZM9.20699 8.50021L10.5 9.79318L11.7929 8.50021L10.5 7.20724L9.20699 8.50021ZM13.1464 6.14669C13.3417 5.95143 13.6582 5.95143 13.8535 6.14669L15.8535 8.14669C16.0487 8.34195 16.0487 8.65846 15.8535 8.85372C15.6582 9.04898 15.3417 9.04898 15.1464 8.85372L13.1464 6.85372C12.9512 6.65846 12.9512 6.34195 13.1464 6.14669Z"
+            fill="currentColor" />
+        </svg>
+        <span id="multi-selection-text">2 nodes are selected</span>
+      </div>
+    </div>
+
+    <!-- 3. 3-세그먼트 메인 탭 -->
+    <nav class="main-tabs-wrapper">
+      <div class="segmented-control" role="tablist">
+        <button id="tab-btn-node" class="tab-btn active" role="tab" onclick="switchMainTab('node')">
+          Node
+        </button>
+        <button id="tab-btn-appearance" class="tab-btn" role="tab" onclick="switchMainTab('appearance')">
+          Appearance
+        </button>
+        <button id="tab-btn-connection" class="tab-btn" role="tab" onclick="switchMainTab('connection')">
+          Connection
+        </button>
+      </div>
+    </nav>
+
+    <!-- 상단 그룹 하단 세퍼레이터 구분선 -->
+    <hr class="section-divider" />
+
+    <!-- 4. 탭별 컨텐츠 패널들 -->
+    <main class="tab-panels">
+
+      <!-- ============================================================ -->
+      <!-- [ TAB 1: Node (피그마 18:819) ]                              -->
+      <!-- ============================================================ */ -->
+      <section id="panel-node" class="tab-panel active">
+        <!-- 1. Phase 섹션 -->
+        <div class="section-block">
+          <div class="section-header">
+            <span class="section-title">Phase</span>
+            <div class="section-actions">
+              <button class="btn-action-icon" title="Phase 추가" onclick="openAddPhaseModal()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z"
+                    fill="currentColor" />
+                </svg>
+              </button>
+              <button id="btn-phase-more" class="btn-action-icon btn-more-icon" title="더보기 옵션"
+                onclick="toggleContextMenu(event)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="4" cy="8" r="1" fill="currentColor" />
+                  <circle cx="8" cy="8" r="1" fill="currentColor" />
+                  <circle cx="12" cy="8" r="1" fill="currentColor" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="section-body">
+            <button id="btn-phase-select" class="phase-dropdown-btn" onclick="togglePhasePopover(event)">
+              <div class="phase-btn-left">
+                <div id="current-phase-icon" class="phase-btn-icon-wrap">
+                  <div class="phase-checkerboard-24"></div>
+                </div>
+                <span id="current-phase-text" class="phase-btn-label">None</span>
+              </div>
+              <div class="phase-btn-arrow">
+                <svg width="8" height="5" viewBox="0 0 8 5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 1L4 4L7 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <!-- 2. Type 섹션 (9종 노드 분류 칩) -->
+        <div class="section-block">
+          <div class="section-header">
+            <span class="section-title">Type</span>
+          </div>
+          <div class="section-body">
+            <div class="chip-group" id="node-type-chips">
+              <button class="chip-btn active" data-type="Screen" onclick="selectNodeType('Screen')">Screen</button>
+              <button class="chip-btn" data-type="Action" onclick="selectNodeType('Action')">Action</button>
+              <button class="chip-btn" data-type="Decision" onclick="selectNodeType('Decision')">Decision</button>
+              <button class="chip-btn" data-type="System" onclick="selectNodeType('System')">System</button>
+              <button class="chip-btn" data-type="Database" onclick="selectNodeType('Database')">Database</button>
+              <button class="chip-btn" data-type="Terminator" onclick="selectNodeType('Terminator')">Terminator</button>
+              <button class="chip-btn" data-type="True" onclick="selectNodeType('True')">True</button>
+              <button class="chip-btn" data-type="False" onclick="selectNodeType('False')">False</button>
+              <button class="chip-btn" data-type="Error" onclick="selectNodeType('Error')">Error</button>
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <!-- 3. Description 섹션 -->
+        <div class="section-block">
+          <div class="section-header">
+            <span class="section-title">Description</span>
+            <div class="section-actions">
+              <button id="btn-copy-desc" class="btn-action-icon" title="내용 복사" onclick="copyDescription()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M13.5 6C14.3284 6 15 6.67157 15 7.5V9H16.5C17.3284 9 18 9.67157 18 10.5V16.5C18 17.3284 17.3284 18 16.5 18H10.5C9.67157 18 9 17.3284 9 16.5V15H7.5C6.67157 15 6 14.3284 6 13.5V7.5C6 6.67157 6.67157 6 7.5 6H13.5ZM15 13.5C15 14.3284 14.3284 15 13.5 15H10V16.5C10 16.7761 10.2239 17 10.5 17H16.5C16.7761 17 17 16.7761 17 16.5V10.5C17 10.2239 16.7761 10 16.5 10H15V13.5ZM7.5 7C7.22386 7 7 7.22386 7 7.5V13.5C7 13.7761 7.22386 14 7.5 14H13.5C13.7761 14 14 13.7761 14 13.5V7.5C14 7.22386 13.7761 7 13.5 7H7.5Z"
+                    fill="currentColor" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="section-body">
+            <textarea id="node-description-input" class="desc-textarea" placeholder="Add a description"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- [ TAB 2: Appearance (피그마 18:4487, 18:4347) ]              -->
+      <!-- ============================================================ */ -->
+      <section id="panel-appearance" class="tab-panel">
+        <!-- 4. Size 섹션 -->
+        <div class="section-block">
+          <div class="section-header">
+            <span class="section-title">Size</span>
+            <div class="section-actions">
+              <button class="btn-action-icon" title="사이즈 추가" onclick="showToast('기본 사이즈 규격')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z"
+                    fill="currentColor" />
+                </svg>
+              </button>
+              <button class="btn-action-icon btn-more-icon" title="더보기 옵션" onclick="toggleContextMenu(event)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="4" cy="8" r="1" fill="currentColor" />
+                  <circle cx="8" cy="8" r="1" fill="currentColor" />
+                  <circle cx="12" cy="8" r="1" fill="currentColor" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="section-body">
+            <div class="numeric-inputs-row">
+              <div class="input-scrubber-box">
+                <span class="scrubber-label" data-tooltip="Width">W</span>
+                <input type="number" id="input-size-w" value="250" min="50" onchange="triggerLiveResize()" />
+              </div>
+              <div class="input-scrubber-box">
+                <span class="scrubber-label" data-tooltip="Height">H</span>
+                <input type="number" id="input-size-h" value="90" min="40" onchange="triggerLiveResize()" />
+              </div>
+              <div class="input-scrubber-box">
+                <svg data-tooltip="Corner radius" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z"
+                    fill="currentColor" />
+                </svg>
+                <input type="number" id="input-size-radius" value="0" min="0" max="40" />
+              </div>
+              <div class="size-mode-dropdown-wrapper figma-dropdown-wrapper" id="size-mode-dropdown-wrapper">
+                <button type="button" id="btn-size-mode-dropdown" class="size-mode-dropdown-btn figma-dropdown-btn"
+                  title="높이 모드 선택" onclick="toggleSizeModeDropdown(event)">
+                  <div class="size-mode-btn-content figma-dropdown-btn-content">
+                    <span class="size-mode-current-icon figma-dropdown-current-icon" id="size-mode-current-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z"
+                          fill="currentColor" />
+                      </svg>
+                    </span>
+                    <span class="size-mode-current-text figma-dropdown-current-text" id="size-mode-current-text">Fixed
+                      height</span>
+                  </div>
+                  <svg class="size-mode-chevron-icon figma-dropdown-chevron-icon" width="16" height="16"
+                    viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z"
+                      fill="currentColor" />
+                  </svg>
+                </button>
+
+                <!-- 피그마 표준 드롭다운 팝오버 메뉴 (Select Size Option, 18:3076) -->
+                <div class="size-mode-menu-popover figma-dropdown-menu" id="popover-size-mode">
+                  <!-- 1. Mixed 옵션 -->
+                  <div class="size-mode-menu-item figma-dropdown-item" data-value="mixed"
+                    onclick="selectSizeMode('mixed')">
+                    <span class="size-mode-menu-item-check figma-dropdown-check-slot">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z"
+                          fill="currentColor" />
+                      </svg>
+                    </span>
+                    <span class="size-mode-menu-item-icon figma-dropdown-icon-slot">
+                      <span class="phase-dash-icon"></span>
+                    </span>
+                    <span class="size-mode-menu-item-label figma-dropdown-label">Mixed</span>
+                  </div>
+
+                  <!-- 구분선 -->
+                  <hr class="phase-popover-divider" style="margin: 4px 0;" />
+
+                  <!-- 2. Fixed height 옵션 -->
+                  <div class="size-mode-menu-item figma-dropdown-item selected" data-value="fixed"
+                    onclick="selectSizeMode('fixed')">
+                    <span class="size-mode-menu-item-check figma-dropdown-check-slot">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z"
+                          fill="currentColor" />
+                      </svg>
+                    </span>
+                    <span class="size-mode-menu-item-icon figma-dropdown-icon-slot">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z"
+                          fill="currentColor" />
+                      </svg>
+                    </span>
+                    <span class="size-mode-menu-item-label figma-dropdown-label">Fixed height</span>
+                    <span class="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-fixed">250</span>
+                  </div>
+
+                  <!-- 3. Hug contents 옵션 -->
+                  <div class="size-mode-menu-item figma-dropdown-item" data-value="hug" onclick="selectSizeMode('hug')">
+                    <span class="size-mode-menu-item-check figma-dropdown-check-slot">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z"
+                          fill="currentColor" />
+                      </svg>
+                    </span>
+                    <span class="size-mode-menu-item-icon figma-dropdown-icon-slot">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z"
+                          fill="currentColor" />
+                      </svg>
+                    </span>
+                    <span class="size-mode-menu-item-label figma-dropdown-label">Hug contents</span>
+                    <span class="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-hug">328</span>
+                  </div>
+                </div>
+
+                <!-- 폼/스크립트 호환용 hidden input -->
+                <input type="hidden" id="select-size-mode" value="fixed" />
+              </div>
+            </div>
+
+            <!-- 규격 프리셋 칩 -->
+            <div class="chip-group" style="margin-top: 6px;">
+              <button class="chip-btn active" onclick="applySizePreset(250, 90, this)">Default</button>
+              <button class="chip-btn" onclick="applySizePreset(160, 160, this)">Square</button>
+              <button class="chip-btn" onclick="applySizePreset(1200, 800, this)">Web</button>
+              <button class="chip-btn" onclick="applySizePreset(375, 812, this)">Mobile</button>
+              <button class="chip-btn" onclick="applySizePreset(375, 188, this)">Custom</button>
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <!-- 5. Style 섹션 (컬러 스와치) -->
+        <div class="section-block">
+          <div class="section-header">
+            <span class="section-title">Style</span>
+            <div class="section-actions">
+              <button class="btn-action-icon" title="스타일 추가" onclick="showToast('스타일 프리셋')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z"
+                    fill="currentColor" />
+                </svg>
+              </button>
+              <button class="btn-action-icon btn-more-icon" title="더보기 옵션" onclick="toggleContextMenu(event)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="4" cy="8" r="1" fill="currentColor" />
+                  <circle cx="8" cy="8" r="1" fill="currentColor" />
+                  <circle cx="12" cy="8" r="1" fill="currentColor" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="section-body">
+            <div class="swatches-grid" id="style-swatches">
+              <div class="swatch-item selected" style="background: #ffffff;" data-color="#ffffff"
+                onclick="selectSwatch(this)"></div>
+              <div class="swatch-item" style="background: #000000;" data-color="#000000" onclick="selectSwatch(this)">
+              </div>
+              <div class="swatch-item" style="background: #EA2039;" data-color="#EA2039" onclick="selectSwatch(this)">
+              </div>
+              <div class="swatch-item" style="background: #EB4C46;" data-color="#EB4C46" onclick="selectSwatch(this)">
+              </div>
+              <div class="swatch-item" style="background: #E03E3E;" data-color="#E03E3E" onclick="selectSwatch(this)">
+              </div>
+              <div class="swatch-item" style="background: #E05638;" data-color="#E05638" onclick="selectSwatch(this)">
+              </div>
+              <div class="swatch-item" style="background: #DF6246;" data-color="#DF6246" onclick="selectSwatch(this)">
+              </div>
+              <div class="swatch-item" style="background: #EB5757;" data-color="#EB5757" onclick="selectSwatch(this)">
+              </div>
+              <div class="swatch-item" style="background: #8638E5;" data-color="#8638E5" onclick="selectSwatch(this)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <!-- 6. Elevation 섹션 (토글형) -->
+        <div class="section-block">
+          <div class="section-header toggle-row">
+            <span class="section-title">Elevation</span>
+            <label class="switch">
+              <input type="checkbox" id="toggle-elevation" onchange="toggleElevationUI(this.checked)" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="section-body">
+            <div class="elevation-cards-container active" id="elevation-options">
+              <div class="elevation-card elev-0 selected" title="None (Level 0)" onclick="selectElevation(0, this)">
+                <div class="elevation-inner-box"></div>
+              </div>
+              <div class="elevation-card elev-1" title="Level 1" onclick="selectElevation(1, this)">
+                <div class="elevation-inner-box"></div>
+              </div>
+              <div class="elevation-card elev-2" title="Level 2" onclick="selectElevation(2, this)">
+                <div class="elevation-inner-box"></div>
+              </div>
+              <div class="elevation-card elev-3" title="Level 3" onclick="selectElevation(3, this)">
+                <div class="elevation-inner-box"></div>
+              </div>
+              <div class="elevation-card elev-4" title="Level 4" onclick="selectElevation(4, this)">
+                <div class="elevation-inner-box"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <!-- 7. Status 섹션 (토글형) -->
+        <div class="section-block">
+          <div class="section-header toggle-row">
+            <span class="section-title">Status</span>
+            <label class="switch">
+              <input type="checkbox" id="toggle-status" onchange="toggleStatusUI(this.checked)" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="section-body">
+            <div class="status-pills-container active" id="status-options">
+              <div class="status-pill" data-status="draft" onclick="selectStatus('draft', this)">
+                <span class="status-dot" style="background: #8E949F;"></span>
+                <span>Draft</span>
+              </div>
+              <div class="status-pill" data-status="wireframe" onclick="selectStatus('wireframe', this)">
+                <span class="status-dot" style="background: #D9D9D9;"></span>
+                <span>Wireframe</span>
+              </div>
+              <div class="status-pill selected" data-status="in_progress" onclick="selectStatus('in_progress', this)">
+                <span class="status-dot" style="background: #ffffff;"></span>
+                <span>In Progress</span>
+              </div>
+              <div class="status-pill" data-status="in_review" onclick="selectStatus('in_review', this)">
+                <span class="status-dot" style="background: #E9A23B;"></span>
+                <span>In Review</span>
+              </div>
+              <div class="status-pill" data-status="approved" onclick="selectStatus('approved', this)">
+                <span class="status-dot" style="background: #8638E5;"></span>
+                <span>Approved</span>
+              </div>
+              <div class="status-pill" data-status="ready_for_dev" onclick="selectStatus('ready_for_dev', this)">
+                <span class="status-dot" style="background: #55B685;"></span>
+                <span>Ready for Dev</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <!-- 8. Step Badges 섹션 (토글형) -->
+        <div class="section-block">
+          <div class="section-header toggle-row">
+            <span class="section-title">Step Badges</span>
+            <label class="switch">
+              <input type="checkbox" id="toggle-step-badges" onchange="toggleStepBadgesUI(this.checked)" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="section-body">
+            <div class="step-badges-container active" id="step-badges-options">
+              <div class="step-badges-row">
+                <div class="input-scrubber-box" id="step-number-box" style="width: 80px;">
+                  <svg id="step-number-icon" data-tooltip="Number" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M16 18C17.1046 18 18 17.1046 18 16V8C18 6.89543 17.1046 6 16 6H8C6.89543 6 6 6.89543 6 8V16C6 17.1046 6.89543 18 8 18H16ZM8 17C7.44772 17 7 16.5523 7 16V8C7 7.44772 7.44772 7 8 7H16C16.5523 7 17 7.44772 17 8V16C17 16.5523 16.5523 17 16 17H8ZM10.4502 14.9971C10.7249 15.0245 10.9695 14.8245 10.9971 14.5498L11.0518 14H12.5479L12.5029 14.4502C12.4755 14.7249 12.6755 14.9695 12.9502 14.9971C13.2249 15.0245 13.4695 14.8245 13.4971 14.5498L13.5518 14H14.5C14.7761 14 15 13.7761 15 13.5C15 13.2239 14.7761 13 14.5 13H13.6523L13.8525 11H14.5C14.7761 11 15 10.7761 15 10.5C15 10.2239 14.7761 10 14.5 10H13.9521L13.9971 9.5498C14.0245 9.27507 13.8245 9.03045 13.5498 9.00293C13.2751 8.97546 13.0305 9.17547 13.0029 9.4502L12.9482 10H11.4521L11.4971 9.5498C11.5245 9.27507 11.3245 9.03045 11.0498 9.00293C10.7751 8.97546 10.5305 9.17547 10.5029 9.4502L10.4482 10H9.5C9.22386 10 9 10.2239 9 10.5C9 10.7761 9.22386 11 9.5 11H10.3477L10.1475 13H9.5C9.22386 13 9 13.2239 9 13.5C9 13.7761 9.22386 14 9.5 14H10.0479L10.0029 14.4502C9.97546 14.7249 10.1755 14.9695 10.4502 14.9971ZM11.1523 13L11.3525 11H12.8477L12.6475 13H11.1523Z"
+                      fill="currentColor" />
+                  </svg>
+                  <input type="number" id="input-step-number" value="24" min="1" />
+                </div>
+                <div class="corner-position-group">
+                  <button class="corner-btn active" title="Top-Left" onclick="selectBadgeCorner('TOP_LEFT', this)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M15.98 7.5H9.93C9.71 6.64 8.93 6 8 6C6.9 6 6 6.9 6 8C6 8.92 6.63 9.69 7.48 9.92V16C7.48 16.28 7.7 16.5 7.98 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM7 8C7 7.45 7.45 7 8 7C8.55 7 9 7.45 9 8C9 8.55 8.55 9 8 9C7.45 9 7 8.55 7 8ZM15.48 15.5H8.48V9.94C9.19 9.76 9.75 9.21 9.93 8.5H15.48V15.5Z"
+                        fill="currentColor" />
+                    </svg>
+                  </button>
+                  <button class="corner-btn" title="Top-Right" onclick="selectBadgeCorner('TOP_RIGHT', this)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M18 8C18 6.9 17.1 6 16 6C15.07 6 14.29 6.64 14.07 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H16C16.28 16.5 16.5 16.28 16.5 16V9.93C17.36 9.71 18 8.93 18 8ZM8.5 15.5V8.5H14.07C14.25 9.2 14.8 9.75 15.5 9.93V15.5H8.5ZM16 9C15.45 9 15 8.55 15 8C15 7.45 15.45 7 16 7C16.55 7 17 7.45 17 8C17 8.55 16.55 9 16 9Z"
+                        fill="currentColor" />
+                    </svg>
+                  </button>
+                  <button class="corner-btn" title="Bottom-Left" onclick="selectBadgeCorner('BOTTOM_LEFT', this)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M15.98 7.5H7.98C7.7 7.5 7.48 7.72 7.48 8V14.08C6.63 14.31 6 15.08 6 16C6 17.1 6.9 18 8 18C8.93 18 9.71 17.36 9.93 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM8 17C7.45 17 7 16.55 7 16C7 15.45 7.45 15 8 15C8.55 15 9 15.45 9 16C9 16.55 8.55 17 8 17ZM15.48 15.5H9.93C9.75 14.79 9.19 14.24 8.48 14.06V8.5H15.48V15.5Z"
+                        fill="currentColor" />
+                    </svg>
+                  </button>
+                  <button class="corner-btn" title="Bottom-Right" onclick="selectBadgeCorner('BOTTOM_RIGHT', this)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M16.5 14.07V8C16.5 7.72 16.28 7.5 16 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H14.07C14.29 17.36 15.07 18 16 18C17.1 18 18 17.1 18 16C18 15.07 17.36 14.29 16.5 14.07ZM14.07 15.5H8.5V8.5H15.5V14.07C14.8 14.25 14.25 14.8 14.07 15.5ZM16 17C15.45 17 15 16.55 15 16C15 15.45 15.45 15 16 15C16.55 15 17 15.45 17 16C17 16.55 16.55 17 16 17Z"
+                        fill="currentColor" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="chip-group" style="margin-top: 4px;">
+                <button class="chip-btn active" onclick="selectBadgeShape('Square', this)">Square</button>
+                <button class="chip-btn" onclick="selectBadgeShape('Circle', this)">Circle</button>
+                <button class="chip-btn" onclick="selectBadgeShape('RoundBox', this)">Round Box</button>
+              </div>
+            </div>
+          </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- [ TAB 3: Connection (피그마 18:4622, 18:4656, 18:4748) ]     -->
+      <!-- ============================================================ */ -->
+      <section id="panel-connection" class="tab-panel">
+
+        <!-- 9. Figma Screen Link 섹션 (단일 노드 모드, 18:4622) -->
+        <div id="conn-single-mode" class="section-block">
+          <div class="section-header toggle-row">
+            <span class="section-title">Figma Screen Link</span>
+            <label class="switch">
+              <input type="checkbox" id="toggle-single-figma-link"
+                onchange="toggleSingleLinkInput(this.checked)" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="section-body collapsible-body" id="single-figma-link-group" style="display: none;">
+            <input type="text" id="single-screen-url" class="form-input" placeholder="Add a Figma Screen URL" />
+          </div>
+        </div>
+
+        <!-- 다중 노드 선택 모드 (18:4656, 18:4748) -->
+        <div id="conn-multi-mode" style="display: none; flex-direction: column;">
+          <!-- 10. Connect 섹션 -->
+          <div class="section-block">
+            <div class="section-header">
+              <span class="section-title">Connect</span>
+            </div>
+
+            <div class="section-body">
+              <!-- 연결선 색상 및 선 패턴 (solid, dashed, dotted) -->
+              <div style="display: flex; gap: 6px;">
+                <select id="conn-line-color" class="select-dropdown-box" style="width: 110px;">
+                  <option value="#EA2039">■ EA2039</option>
+                  <option value="#8638E5">■ 8638E5</option>
+                  <option value="#000000">■ 000000</option>
+                  <option value="#5F92F3">■ 5F92F3</option>
+                </select>
+                <div class="line-style-segment" style="flex: 1;">
+                  <button class="line-style-btn active" title="실선" onclick="selectLinePattern('SOLID', this)"><svg
+                      width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M18.5 11C18.7761 11 19 11.2239 19 11.5C19 11.7761 18.7761 12 18.5 12H5.5C5.22386 12 5 11.7761 5 11.5C5 11.2239 5.22386 11 5.5 11H18.5Z"
+                        fill="currentColor" />
+                    </svg></button>
+                  <button class="line-style-btn" title="파선" onclick="selectLinePattern('DASHED', this)"><svg width="24"
+                      height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M7.5 12C7.77614 12 8 12.2239 8 12.5C8 12.7761 7.77614 13 7.5 13H5.5C5.22386 13 5 12.7761 5 12.5C5 12.2239 5.22386 12 5.5 12H7.5ZM13 12C13.2761 12 13.5 12.2239 13.5 12.5C13.5 12.7761 13.2761 13 13 13H11C10.7239 13 10.5 12.7761 10.5 12.5C10.5 12.2239 10.7239 12 11 12H13ZM18.5 12C18.7761 12 19 12.2239 19 12.5C19 12.7761 18.7761 13 18.5 13H16.5C16.2239 13 16 12.7761 16 12.5C16 12.2239 16.2239 12 16.5 12H18.5Z"
+                        fill="currentColor" />
+                    </svg></button>
+                  <button class="line-style-btn" title="점선" onclick="selectLinePattern('DOTTED', this)"><svg width="24"
+                      height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="6" cy="12" r="1.2" fill="currentColor" />
+                      <circle cx="9" cy="12" r="1.2" fill="currentColor" />
+                      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+                      <circle cx="15" cy="12" r="1.2" fill="currentColor" />
+                      <circle cx="18" cy="12" r="1.2" fill="currentColor" />
+                    </svg></button>
+                </div>
+              </div>
+
+              <!-- 인터랙티브 2노드 앵커 연결 캔버스 -->
+              <div class="connect-canvas-box" id="conn-anchor-preview-box">
+                <!-- Node 1 카드 -->
+                <div class="node-preview-card" id="preview-node-1">
+                  <div class="anchor-handle anchor-top" data-node="1" data-pos="TOP"
+                    onclick="selectAnchor(1, 'TOP', this)"></div>
+                  <div class="anchor-handle anchor-right active" data-node="1" data-pos="RIGHT"
+                    onclick="selectAnchor(1, 'RIGHT', this)"></div>
+                  <div class="anchor-handle anchor-bottom" data-node="1" data-pos="BOTTOM"
+                    onclick="selectAnchor(1, 'BOTTOM', this)"></div>
+                  <div class="anchor-handle anchor-left" data-node="1" data-pos="LEFT"
+                    onclick="selectAnchor(1, 'LEFT', this)"></div>
+                  <span id="preview-node-1-text">Node 1</span>
+                </div>
+
+                <!-- Node 2 카드 -->
+                <div class="node-preview-card" id="preview-node-2">
+                  <div class="anchor-handle anchor-top" data-node="2" data-pos="TOP"
+                    onclick="selectAnchor(2, 'TOP', this)"></div>
+                  <div class="anchor-handle anchor-right" data-node="2" data-pos="RIGHT"
+                    onclick="selectAnchor(2, 'RIGHT', this)"></div>
+                  <div class="anchor-handle anchor-bottom" data-node="2" data-pos="BOTTOM"
+                    onclick="selectAnchor(2, 'BOTTOM', this)"></div>
+                  <div class="anchor-handle anchor-left active" data-node="2" data-pos="LEFT"
+                    onclick="selectAnchor(2, 'LEFT', this)"></div>
+                  <span id="preview-node-2-text">Node 2</span>
+                </div>
+              </div>
+
+              <!-- 선 두께 및 4개 라우팅 스타일 -->
+              <div style="display: flex; gap: 6px;">
+                <div class="input-scrubber-box" style="width: 70px;">
+                  <svg data-tooltip="Stroke width" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z"
+                      fill="currentColor" />
+                  </svg>
+                  <input type="number" id="input-stroke-weight" value="1.5" step="0.5" min="1" max="10" />
+                </div>
+                <div class="routing-types-grid" style="flex: 1;">
+                  <button class="routing-btn active" title="직각 (Orthogonal)"
+                    onclick="selectRoutingType('ORTHOGONAL', this)"><svg width="24" height="24" viewBox="0 0 24 24"
+                      fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <g clip-path="url(#clip0_1027209_4547)">
+                        <path
+                          d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z"
+                          fill="currentColor" />
+                      </g>
+                      <defs>
+                        <clipPath id="clip0_1027209_4547">
+                          <rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)" />
+                        </clipPath>
+                      </defs>
+                    </svg></button>
+                  <button class="routing-btn" title="S자 곡선 (S-curve)" onclick="selectRoutingType('S_CURVE', this)"><svg
+                      width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <g clip-path="url(#clip0_1027209_4546)">
+                        <path
+                          d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z"
+                          fill="currentColor" />
+                      </g>
+                      <defs>
+                        <clipPath id="clip0_1027209_4546">
+                          <rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)" />
+                        </clipPath>
+                      </defs>
+                    </svg></button>
+                  <button class="routing-btn" title="부드러운 곡선 (Curve)" onclick="selectRoutingType('CURVED', this)"><svg
+                      width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <g clip-path="url(#clip0_1027209_4545)">
+                        <path
+                          d="M6.3999 18.1C6.1299 18.1 5.8999 17.88 5.8999 17.61C5.8999 17.33 6.1199 17.11 6.3999 17.1C10.4799 17.06 10.9599 14.69 11.5099 11.94C12.0699 9.17002 12.7099 6.02002 17.5899 5.90002H17.5999C17.8699 5.90002 18.0899 6.12002 18.0999 6.39002C18.0999 6.67002 17.8899 6.90002 17.6099 6.90002C13.5299 7.00002 13.0399 9.38002 12.4899 12.14C11.9299 14.91 11.2899 18.05 6.4099 18.1H6.3999Z"
+                          fill="currentColor" />
+                      </g>
+                      <defs>
+                        <clipPath id="clip0_1027209_4545">
+                          <rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)" />
+                        </clipPath>
+                      </defs>
+                    </svg></button>
+                  <button class="routing-btn" title="직선 (Straight)" onclick="selectRoutingType('STRAIGHT', this)"><svg
+                      width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M17.2714 6.02145C17.4667 5.82618 17.7832 5.82618 17.9785 6.02145C18.1737 6.21671 18.1737 6.53322 17.9785 6.72848L6.72848 17.9785C6.53322 18.1737 6.21671 18.1737 6.02145 17.9785C5.82618 17.7832 5.82618 17.4667 6.02145 17.2714L17.2714 6.02145Z"
+                        fill="currentColor" />
+                    </svg></button>
+                </div>
+              </div>
+
+              <!-- 단자 및 오프셋 스크러버 -->
+              <div class="terminal-offset-row">
+                <div class="input-scrubber-box">
+                  <input type="number" id="input-start-offset" placeholder="Offset" value="0" />
+                </div>
+                <select id="select-start-terminal" class="select-dropdown-box" title="시작 단자">
+                  <option value="NONE">None</option>
+                  <option value="ARROW">◆──</option>
+                  <option value="DIAMOND">◇──</option>
+                  <option value="CIRCLE">●──</option>
+                </select>
+                <select id="select-end-terminal" class="select-dropdown-box" title="끝 단자">
+                  <option value="ARROW">──▶</option>
+                  <option value="DIAMOND">──◆</option>
+                  <option value="CIRCLE">──●</option>
+                  <option value="NONE">None</option>
+                </select>
+                <div class="input-scrubber-box">
+                  <input type="number" id="input-end-offset" placeholder="Offset" value="0" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="section-divider" />
+
+          <!-- 11. Label 섹션 (토글 ON/OFF) -->
+          <div class="section-block">
+            <div class="section-header toggle-row">
+              <span class="section-title">Label</span>
+              <label class="switch">
+                <input type="checkbox" id="toggle-conn-label" onchange="toggleLabelGroupUI(this.checked)" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="section-body collapsible-body collapsible-group" id="conn-label-group">
+              <div class="chip-group">
+                <button class="chip-btn active" onclick="setLabelPreset('Text', this)">Text</button>
+                <button class="chip-btn" onclick="setLabelPreset('True', this)">True</button>
+                <button class="chip-btn" onclick="setLabelPreset('False', this)">False</button>
+                <button class="chip-btn" onclick="setLabelPreset('Error', this)">Error</button>
+              </div>
+              <input type="text" id="input-conn-label" class="form-input" value="Text" placeholder="Add a label" />
+            </div>
+          </div>
+
+          <hr class="section-divider" id="conn-link-divider" />
+
+          <!-- 12. Link 섹션 (토글 ON/OFF) -->
+          <div class="section-block" id="conn-link-section-block">
+            <div class="section-header toggle-row">
+              <span class="toggle-row-label">Link</span>
+              <label class="switch">
+                <input type="checkbox" id="toggle-conn-link" onchange="toggleLinkGroupUI(this.checked)" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="section-body collapsible-body collapsible-group" id="conn-link-group">
+              <input type="text" id="input-conn-link-url" class="form-input" placeholder="Add a Figma Screen URL" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 5. 하단 액션 영역 (메인 CTA 적용 버튼) -->
+    <footer class="app-footer">
+      <button id="btn-main-cta" class="btn-cta-primary" onclick="handleMainAction()">
+        Create a new node
+      </button>
+    </footer>
+  </div> <!-- /#plugin-root -->
+
+  <!-- ============================================================ -->
+  <!-- 팝오버 및 모달 다이얼로그 레이어                             -->
+  <!-- ============================================================ -->
+
+  <!-- 1. Phase Select 팝오버 (피그마 18:2325) -->
+  <div id="popover-phase" class="popover-phase-select">
+    <!-- Mixed 행 -->
+    <div class="phase-menu-item" data-phase="mixed" onclick="selectPhase('mixed')">
+      <div class="phase-item-check-slot">
+        <svg class="phase-check-icon" width="8" height="7" viewBox="0 0 8 7" fill="none"
+          xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 3.5L3 5.5L7 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="phase-item-icon-slot">
+        <div class="phase-dash-icon"></div>
+      </div>
+      <span class="phase-item-label">Mixed</span>
+    </div>
+
+    <!-- None 행 -->
+    <div class="phase-menu-item selected" data-phase="none" onclick="selectPhase('none')">
+      <div class="phase-item-check-slot">
+        <svg class="phase-check-icon" width="8" height="7" viewBox="0 0 8 7" fill="none"
+          xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 3.5L3 5.5L7 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="phase-item-icon-slot">
+        <div class="phase-checkerboard-14"></div>
+      </div>
+      <span class="phase-item-label">None</span>
+    </div>
+
+    <!-- 구분선 (Divider) -->
+    <div class="phase-popover-divider"></div>
+
+    <!-- Phase 1 행 -->
+    <div class="phase-menu-item" data-phase="phase-1" onclick="selectPhase('phase-1', 'Phase 1', '#EA2039')">
+      <div class="phase-item-check-slot">
+        <svg class="phase-check-icon" width="8" height="7" viewBox="0 0 8 7" fill="none"
+          xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 3.5L3 5.5L7 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="phase-item-icon-slot">
+        <div class="phase-chip-14" style="background: #EA2039;"></div>
+      </div>
+      <span class="phase-item-label">Phase 1</span>
+    </div>
+
+    <!-- Phase 2 행 -->
+    <div class="phase-menu-item" data-phase="phase-2" onclick="selectPhase('phase-2', 'Phase 2', '#EA2039')">
+      <div class="phase-item-check-slot">
+        <svg class="phase-check-icon" width="8" height="7" viewBox="0 0 8 7" fill="none"
+          xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 3.5L3 5.5L7 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="phase-item-icon-slot">
+        <div class="phase-chip-14" style="background: #EA2039;"></div>
+      </div>
+      <span class="phase-item-label">Phase 2</span>
+    </div>
+  </div>
+
+  <!-- 2. more 컨텍스트 메뉴 (피그마 18:2568: 82x80, R13, padding 8px 0, 아이템 66x24 R5, 구분선 16px) -->
+  <div id="popover-context" class="popover-context-menu">
+    <div class="context-row">
+      <div class="context-item" onclick="handleContextEdit()">Edit</div>
+    </div>
+    <div class="context-divider-row">
+      <div class="context-divider-line"></div>
+    </div>
+    <div class="context-row">
+      <div class="context-item" onclick="handleContextDelete()">Delete</div>
+    </div>
+  </div>
+
+  <!-- 모달 백드롭 (공통 다이얼로그용) -->
+  <div id="modal-backdrop" class="popover-backdrop" onclick="handleBackdropClick(event)">
+
+    <!-- 1. Add / Edit Phase 모달 (피그마 18:2289, 18:2351 규격) -->
+    <div id="modal-phase" class="phase-modal-card" style="display: none;">
+      <div class="phase-modal-header">
+        <span id="phase-modal-title-text" class="phase-modal-title">Add Phase</span>
+        <button class="phase-modal-close-btn" onclick="closeAllModals()" title="닫기">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z"
+              fill="currentColor" />
+          </svg>
+        </button>
+      </div>
+      <div class="phase-modal-body">
+        <div class="phase-field-group">
+          <div class="phase-field-label-row">
+            <span class="phase-field-label">Name</span>
+          </div>
+          <div class="phase-input-row-wrapper">
+            <input type="text" id="input-phase-modal-name" class="phase-text-input" placeholder="Phase Name" />
+          </div>
+        </div>
+
+        <div class="phase-field-group">
+          <div class="phase-field-label-row">
+            <span class="phase-field-label">Background Color</span>
+          </div>
+          <div class="phase-input-row-wrapper">
+            <div class="phase-color-picker-box" id="phase-color-box-trigger" onclick="togglePhaseColorPickerPanel()">
+              <div class="phase-color-preview-wrap">
+                <div id="phase-modal-color-chip" class="phase-color-preview-chip" style="background: #EA2039;"></div>
+              </div>
+              <input type="text" id="input-phase-modal-hex" class="phase-color-hex-input" value="EA2039" maxlength="7" onclick="event.stopPropagation()" oninput="handlePhaseHexManualInput(this.value)" />
+              <div class="phase-color-chevron-wrap" id="phase-color-chevron">
+                <svg width="8" height="6" viewBox="0 0 8 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1.5 2L4 4.5L6.5 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- 아래로 열리는 피그마 규격 컬러 선택 패널 (피그마 18:3034) -->
+          <div id="phase-color-picker-panel" class="phase-color-dropdown-panel" style="display: none;">
+            <div class="phase-hue-container">
+              <div class="phase-hue-track" id="phase-hue-track">
+                <div class="phase-hue-thumb" id="phase-hue-thumb"></div>
+              </div>
+            </div>
+            <div class="phase-satval-canvas" id="phase-satval-canvas">
+              <div class="phase-satval-white-overlay"></div>
+              <div class="phase-satval-black-overlay"></div>
+              <div class="phase-satval-ring" id="phase-satval-ring"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phase-modal-footer">
+        <button class="btn-phase-modal-cancel" onclick="closeAllModals()">Cancel</button>
+        <button id="btn-save-phase" class="btn-phase-modal-save" onclick="savePhaseFromModal()">Save</button>
+      </div>
+    </div>
+
+    <!-- 3. Confirmation 모달 (피그마 18:2522) -->
+    <div id="modal-confirmation" class="dialog-modal-card" style="display: none;">
+      <div class="dialog-header">
+        <span class="dialog-title">Confirmation</span>
+        <button class="dialog-close-btn" onclick="closeAllModals()"><svg width="14" height="14" viewBox="0 0 24 24"
+            fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z"
+              fill="currentColor" />
+          </svg></button>
+      </div>
+      <div class="dialog-body">
+        An example of a simpler modal dialog with text only or one input field.
+      </div>
+      <div class="dialog-footer">
+        <button class="btn-dialog-cta" onclick="closeAllModals()">OK</button>
+      </div>
+    </div>
+
+    <!-- 4. Delete Item 모달 (피그마 18:2498) -->
+    <div id="modal-delete" class="dialog-modal-card" style="display: none;">
+      <div class="dialog-header">
+        <span class="dialog-title">Delete Item</span>
+        <button class="dialog-close-btn" onclick="closeAllModals()"><svg width="14" height="14" viewBox="0 0 24 24"
+            fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z"
+              fill="currentColor" />
+          </svg></button>
+      </div>
+      <div class="dialog-body">
+        An example of a simpler modal dialog with text only or one input field.
+      </div>
+      <div class="dialog-footer">
+        <button class="btn-dialog-cancel" onclick="closeAllModals()">Cancel</button>
+        <button class="btn-dialog-cta" onclick="confirmDeleteItem()">Delete</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 토스트 알림 메시지 레이어 -->
+  <div id="toast-message" class="toast-container"></div>
+
+  <!-- 피그마 공식 UI3 툴팁 플로팅 요소 -->
+  <div id="figma-tooltip" class="figma-tooltip">
+    <span id="figma-tooltip-text"></span>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 자바스크립트 인터랙션 및 피그마 통신 로직                     -->
+  <!-- ============================================================ -->
+  <script>
+    // 상태 관리 (디폴트: phase none, type Screen, size default, style 검정 보더에 흰색 배경, 나머지 해제)
+    let selectedNodes = [];
+    let isConnectorSelected = false;
+    let currentTab = 'node';
+    let selectedNodeType = 'Screen';
+    let selectedPhase = 'none';
+    let selectedColor = '#ffffff';
+    let selectedElevation = 0;
+    let selectedStatus = 'in_progress';
+    let selectedBadgeCorner = 'TOP_LEFT';
+    let selectedBadgeShape = 'Square';
+    let selectedLinePattern = 'SOLID';
+    let selectedRoutingType = 'ORTHOGONAL';
+    let sourceMagnet = 'RIGHT';
+    let targetMagnet = 'LEFT';
+
+    // 이전에 설정/조작한 상태를 기억(Memory)하여 이후 노드 생성 시 그대로 유지
+    let lastNodeConfig = {
+      phase: 'none',
+      phaseName: 'None',
+      phaseColor: '#EA2039',
+      nodeType: 'Screen',
+      width: 250,
+      height: 90,
+      cornerRadius: 0,
+      sizeMode: 'fixed',
+      color: '#ffffff',
+      elevationOn: false,
+      elevation: 0,
+      statusOn: false,
+      status: 'in_progress',
+      stepBadgesOn: false,
+      stepNumber: 1,
+      badgeCorner: 'TOP_LEFT',
+      badgeShape: 'Square',
+      singleLinkOn: false,
+      singleLinkUrl: ''
+    };
+
+    // 커넥터 설정 기억 (디폴트: Label 해제(OFF), Text 프리셋, Figma Link 해제)
+    let lastConnectorConfig = {
+      labelOn: false,
+      labelText: 'Text',
+      linkOn: false,
+      linkUrl: ''
+    };
+
+    // 기억된 마지막 설정 상태를 UI 폼에 완벽하게 복원하는 함수
+    function restoreLastNodeConfig() {
+      // 1. Phase 복원
+      selectPhase(lastNodeConfig.phase, lastNodeConfig.phaseName, lastNodeConfig.phaseColor);
+
+      // 2. Type 복원
+      selectNodeType(lastNodeConfig.nodeType);
+
+      // 3. Size 복원
+      const wInput = document.getElementById('input-size-w');
+      const hInput = document.getElementById('input-size-h');
+      const rInput = document.getElementById('input-size-radius');
+      if (wInput) wInput.value = lastNodeConfig.width;
+      if (hInput) hInput.value = lastNodeConfig.height;
+      if (rInput) rInput.value = lastNodeConfig.cornerRadius;
+      selectSizeMode(lastNodeConfig.sizeMode || 'fixed');
+
+      document.querySelectorAll('#panel-appearance .chip-group .chip-btn').forEach(btn => {
+        const isDefault = lastNodeConfig.width === 250 && lastNodeConfig.height === 90 && btn.innerText === 'Default';
+        const isSquare = lastNodeConfig.width === 160 && lastNodeConfig.height === 160 && btn.innerText === 'Square';
+        const isWeb = lastNodeConfig.width === 1200 && lastNodeConfig.height === 800 && btn.innerText === 'Web';
+        const isMobile = lastNodeConfig.width === 375 && lastNodeConfig.height === 812 && btn.innerText === 'Mobile';
+        btn.classList.toggle('active', isDefault || isSquare || isWeb || isMobile);
+      });
+
+      // 4. Style / Color 복원
+      selectedColor = lastNodeConfig.color;
+      document.querySelectorAll('#style-swatches .swatch-item').forEach(swatch => {
+        swatch.classList.toggle('selected', (swatch.dataset.color || '').toUpperCase() === lastNodeConfig.color.toUpperCase());
+      });
+
+      // 5. Elevation 복원
+      const elevToggle = document.getElementById('toggle-elevation');
+      if (elevToggle) {
+        elevToggle.checked = lastNodeConfig.elevationOn;
+        toggleElevationUI(lastNodeConfig.elevationOn);
+      }
+      selectedElevation = lastNodeConfig.elevation;
+      document.querySelectorAll('#elevation-options .elevation-card').forEach((card, idx) => {
+        card.classList.toggle('selected', idx === lastNodeConfig.elevation);
+      });
+
+      // 6. Status 복원
+      const statusToggle = document.getElementById('toggle-status');
+      if (statusToggle) {
+        statusToggle.checked = lastNodeConfig.statusOn;
+        toggleStatusUI(lastNodeConfig.statusOn);
+      }
+      selectedStatus = lastNodeConfig.status;
+      document.querySelectorAll('#status-options .status-pill').forEach(pill => {
+        pill.classList.toggle('selected', pill.dataset.status === lastNodeConfig.status);
+      });
+
+      // 7. Step Badges 복원
+      const stepToggle = document.getElementById('toggle-step-badges');
+      if (stepToggle) {
+        stepToggle.checked = lastNodeConfig.stepBadgesOn;
+        toggleStepBadgesUI(lastNodeConfig.stepBadgesOn);
+      }
+      const stepInput = document.getElementById('input-step-number');
+      if (stepInput) stepInput.value = lastNodeConfig.stepNumber;
+      selectedBadgeCorner = lastNodeConfig.badgeCorner;
+      const cornerMap = { TOP_LEFT: 'Top-Left', TOP_RIGHT: 'Top-Right', BOTTOM_LEFT: 'Bottom-Left', BOTTOM_RIGHT: 'Bottom-Right' };
+      document.querySelectorAll('#step-badges-options .corner-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('title') === cornerMap[lastNodeConfig.badgeCorner]);
+      });
+      selectedBadgeShape = lastNodeConfig.badgeShape;
+      document.querySelectorAll('#step-badges-options .chip-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText === lastNodeConfig.badgeShape);
+      });
+
+      // 8. Figma Screen Link 복원
+      const singleLinkToggle = document.getElementById('toggle-single-figma-link');
+      if (singleLinkToggle) {
+        singleLinkToggle.checked = lastNodeConfig.singleLinkOn;
+        toggleSingleLinkInput(lastNodeConfig.singleLinkOn);
+      }
+      const singleUrl = document.getElementById('single-screen-url');
+      if (singleUrl) singleUrl.value = lastNodeConfig.singleLinkUrl || '';
+    }
+
+    // 기억된 마지막 커넥터 설정 상태를 UI 폼에 복원하는 함수
+    function restoreLastConnectorConfig() {
+      const toggleLabel = document.getElementById('toggle-conn-label');
+      if (toggleLabel) {
+        toggleLabel.checked = lastConnectorConfig.labelOn;
+        toggleLabelGroupUI(lastConnectorConfig.labelOn);
+      }
+      const labelInput = document.getElementById('input-conn-label');
+      if (labelInput) {
+        labelInput.value = lastConnectorConfig.labelText || 'Text';
+      }
+      document.querySelectorAll('#conn-label-group .chip-btn').forEach(b => {
+        b.classList.toggle('active', b.innerText === (lastConnectorConfig.labelText || 'Text'));
+      });
+
+      const toggleLink = document.getElementById('toggle-conn-link');
+      if (toggleLink) {
+        toggleLink.checked = lastConnectorConfig.linkOn;
+        toggleLinkGroupUI(lastConnectorConfig.linkOn);
+      }
+      const linkInput = document.getElementById('input-conn-link-url');
+      if (linkInput) {
+        linkInput.value = lastConnectorConfig.linkUrl || '';
+      }
+    }
+
+    // 1. 메인 탭 전환
+    function switchMainTab(tabName) {
+      const targetBtn = document.getElementById(`tab-btn-${tabName}`);
+      // 비활성화된 탭은 클릭 전환 방지
+      if (targetBtn && targetBtn.classList.contains('disabled')) return;
+
+      currentTab = tabName;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+
+      const targetPanel = document.getElementById(`panel-${tabName}`);
+      if (targetBtn) targetBtn.classList.add('active');
+      if (targetPanel) targetPanel.classList.add('active');
+
+      updateFooterForTab();
+      autoResizeWindow();
+    }
+
+    function updateFooterForTab() {
+      const ctaBtn = document.getElementById('btn-main-cta');
+      if (!ctaBtn) return;
+
+      ctaBtn.style.display = 'flex';
+
+      if (currentTab === 'connection') {
+        if (isConnectorSelected) {
+          ctaBtn.innerText = 'Update connector';
+          ctaBtn.disabled = false;
+          ctaBtn.style.opacity = '1';
+          ctaBtn.style.cursor = 'pointer';
+        } else if (selectedNodes.length >= 2) {
+          ctaBtn.innerText = 'Connect';
+          ctaBtn.disabled = false;
+          ctaBtn.style.opacity = '1';
+          ctaBtn.style.cursor = 'pointer';
+        } else {
+          ctaBtn.innerText = 'Connect (2개 노드 선택 필요)';
+          ctaBtn.disabled = true;
+          ctaBtn.style.opacity = '0.5';
+          ctaBtn.style.cursor = 'not-allowed';
         }
-      }, '*');
-    }
-
-    // 2. 스텝 번호 부여 요청
-    function addStepBadges() {
-      parent.postMessage({
-        pluginMessage: {
-          type: 'ADD_STEP_BADGES',
-          startNumber: 1
+      } else if (currentTab === 'appearance') {
+        ctaBtn.disabled = false;
+        ctaBtn.style.opacity = '1';
+        ctaBtn.style.cursor = 'pointer';
+        ctaBtn.innerText = selectedNodes.length > 0 ? 'Update style' : 'Apply style';
+      } else {
+        ctaBtn.disabled = false;
+        ctaBtn.style.opacity = '1';
+        ctaBtn.style.cursor = 'pointer';
+        if (selectedNodes.length === 1) {
+          ctaBtn.innerText = 'Update node';
+        } else if (selectedNodes.length >= 2) {
+          ctaBtn.innerText = 'Update selected nodes';
+        } else {
+          ctaBtn.innerText = 'Create a new node';
         }
-      }, '*');
+      }
     }
 
-    // 3. 상태 지정 요청
-    function setStatus(status) {
-      parent.postMessage({
-        pluginMessage: {
-          type: 'SET_STATUS',
-          status: status
-        }
-      }, '*');
-    }
-
-    // 4. 템플릿 생성 요청
-    function createTemplate(templateType) {
-      parent.postMessage({
-        pluginMessage: {
-          type: 'CREATE_TEMPLATE',
-          templateType: templateType
-        }
-      }, '*');
-    }
-
-    // 5. 프레임 포커스 이동 요청
-    function focusFrame(nodeId) {
-      parent.postMessage({
-        pluginMessage: {
-          type: 'FOCUS_FRAME',
-          nodeId: nodeId
-        }
-      }, '*');
-    }
-
-    // Figma Core로부터 메시지 수신
+    // 2. 피그마 선택 변경 리스너
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
       if (!msg) return;
 
-      if (msg.type === 'SELECTION_CHANGED') {
-        const countText = document.getElementById('selection-count-text');
-        const statusSelectName = document.getElementById('status-selection-name');
-
-        countText.textContent = `${msg.count}개 선택됨`;
-        if (msg.count === 0) {
-          statusSelectName.textContent = '선택 없음';
-        } else if (msg.count === 1) {
-          statusSelectName.textContent = msg.names[0] || '1개 선택됨';
-        } else {
-          statusSelectName.textContent = `${msg.names[0]} 외 ${msg.count - 1}개`;
-        }
-      }
-
-      if (msg.type === 'STATUS_LIST_UPDATED') {
-        renderStatusList(msg.items);
+      switch (msg.type) {
+        case 'SELECTION_CHANGED':
+          selectedNodes = msg.nodes || [];
+          handleSelectionChange(msg.count, selectedNodes);
+          break;
+        case 'TOAST':
+          showToast(msg.message);
+          break;
       }
     };
 
-    // 상태 대시보드 리스트 렌더링
-    function renderStatusList(items) {
-      const container = document.getElementById('status-list-container');
-      const totalCount = document.getElementById('status-total-count');
+    // 피그마 공식 툴팁 제어 로직
+    let figmaTooltipTimer = null;
+    function showFigmaTooltip(targetEl, text) {
+      if (!text) return;
+      const tooltipEl = document.getElementById('figma-tooltip');
+      const tooltipTextEl = document.getElementById('figma-tooltip-text');
+      if (!tooltipEl || !tooltipTextEl) return;
 
-      totalCount.textContent = `${items.length}개`;
+      clearTimeout(figmaTooltipTimer);
+      figmaTooltipTimer = setTimeout(() => {
+        tooltipTextEl.innerText = text;
+        tooltipEl.className = 'figma-tooltip visible';
 
-      if (!items || items.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            등록된 상태가 없습니다.<br />
-            프레임을 선택하고 상태를 지정해 보세요.
-          </div>
-        `;
+        const rect = targetEl.getBoundingClientRect();
+        const tipRect = tooltipEl.getBoundingClientRect();
+
+        // 대상 요소 상단 중앙에 배치 (말꼬리 화살표 5px 고려 6px 갭)
+        let top = rect.top - tipRect.height - 6;
+        let left = rect.left + (rect.width / 2) - (tipRect.width / 2);
+
+        // 화면 상단 공간 부족 시 하단에 배치 및 위쪽 화살표 적용
+        if (top < 4) {
+          top = rect.bottom + 6;
+          tooltipEl.classList.add('arrow-top');
+        } else {
+          tooltipEl.classList.remove('arrow-top');
+        }
+
+        // 화면 좌우 경계 이탈 방지
+        if (left < 6) left = 6;
+        if (left + tipRect.width > window.innerWidth - 6) {
+          left = window.innerWidth - tipRect.width - 6;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+      }, 150);
+    }
+
+    function hideFigmaTooltip() {
+      clearTimeout(figmaTooltipTimer);
+      const tooltipEl = document.getElementById('figma-tooltip');
+      if (tooltipEl) {
+        tooltipEl.className = 'figma-tooltip';
+      }
+    }
+
+    // 전역 data-tooltip 마우스 호버 이벤트
+    document.addEventListener('mouseover', (e) => {
+      // 입력 필드(input, textarea, select)에 마우스가 올라가면 툴팁을 즉시 숨기고 차단
+      if (e.target.matches('input, textarea, select')) {
+        hideFigmaTooltip();
+        return;
+      }
+      const target = e.target.closest('[data-tooltip]');
+      if (target) {
+        if (target.matches('input, textarea, select')) {
+          hideFigmaTooltip();
+          return;
+        }
+        showFigmaTooltip(target, target.getAttribute('data-tooltip'));
+      }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+      const target = e.target.closest('[data-tooltip]');
+      if (target) {
+        hideFigmaTooltip();
+      }
+    });
+
+    function updateStepBadgeTooltip(isMulti) {
+      const tooltipText = isMulti ? 'Start Number' : 'Number';
+      const box = document.getElementById('step-number-box');
+      const icon = document.getElementById('step-number-icon');
+      if (box) box.removeAttribute('data-tooltip');
+      if (icon) icon.setAttribute('data-tooltip', tooltipText);
+    }
+
+    function handleSelectionChange(count, nodes) {
+      selectedNodes = nodes || [];
+      const singleTitleWrap = document.getElementById('single-title-wrap');
+      const multiIndicator = document.getElementById('multi-selection-indicator');
+
+      const titleInput = document.getElementById('node-title-input');
+      const connSingle = document.getElementById('conn-single-mode');
+      const connMulti = document.getElementById('conn-multi-mode');
+
+      const tabBtnNode = document.getElementById('tab-btn-node');
+      const tabBtnAppearance = document.getElementById('tab-btn-appearance');
+      const anchorPreviewBox = document.getElementById('conn-anchor-preview-box');
+      const linkDivider = document.getElementById('conn-link-divider');
+      const linkSection = document.getElementById('conn-link-section-block');
+
+      // 멀티 선택 시 Step Badge 샵 아이콘 툴팁을 'Start Number', 단일 선택 시 'Number'로 전환
+      updateStepBadgeTooltip(count >= 2);
+
+      // 단일 커넥터 선택 여부 판별
+      const isSingleConn = count === 1 && Boolean(nodes[0] && nodes[0].isConnector);
+      isConnectorSelected = isSingleConn;
+
+      if (isSingleConn) {
+        // [커넥터 단일 선택 모드]
+        // 1. 노드 & 어피어런스 탭 비활성화 (클릭 차단 및 반투명)
+        if (tabBtnNode) tabBtnNode.classList.add('disabled');
+        if (tabBtnAppearance) tabBtnAppearance.classList.add('disabled');
+
+        // 2. 자동으로 커넥션 탭 활성화
+        switchMainTab('connection');
+
+        // 3. 헤더 타이틀 표시
+        singleTitleWrap.style.display = 'block';
+        multiIndicator.style.display = 'none';
+        titleInput.value = nodes[0].title || nodes[0].name || 'Connector';
+
+        // 4. Figma Screen Link 섹션 및 2노드 앵커 프리뷰 캔버스 숨김
+        connSingle.style.display = 'none';
+        connMulti.style.display = 'flex';
+        if (anchorPreviewBox) anchorPreviewBox.style.display = 'none';
+        if (linkDivider) linkDivider.style.display = 'none';
+        if (linkSection) linkSection.style.display = 'none';
+
+        // 5. 선택된 커넥터의 속성을 UI에 로드
+        if (nodes[0].connectorColorHex) {
+          setConnectorColor(nodes[0].connectorColorHex);
+        }
+        if (nodes[0].connectorStrokePattern) {
+          selectLinePattern(nodes[0].connectorStrokePattern);
+        }
+        if (typeof nodes[0].connectorStrokeWeight === 'number') {
+          document.getElementById('input-stroke-weight').value = nodes[0].connectorStrokeWeight;
+        }
+        if (nodes[0].connectorRoutingType) {
+          selectRoutingType(nodes[0].connectorRoutingType);
+        }
+        if (nodes[0].connectorStartTerminal) {
+          document.getElementById('select-start-terminal').value = nodes[0].connectorStartTerminal;
+        }
+        if (nodes[0].connectorEndTerminal) {
+          document.getElementById('select-end-terminal').value = nodes[0].connectorEndTerminal;
+        }
+
+        // 라벨 바인딩
+        const labelVal = nodes[0].connectorLabel || '';
+        const hasLabel = Boolean(labelVal.trim());
+        const toggleLabel = document.getElementById('toggle-conn-label');
+        if (toggleLabel) {
+          toggleLabel.checked = hasLabel;
+          toggleLabelGroupUI(hasLabel);
+        }
+        if (hasLabel) {
+          document.getElementById('input-conn-label').value = labelVal;
+          document.querySelectorAll('#conn-label-group .chip-btn').forEach(b => {
+            b.classList.toggle('active', b.innerText === labelVal);
+          });
+        }
+      } else {
+        // [일반 노드 선택 모드]
+        // 1. 노드 & 어피어런스 탭 정상 활성화 복구
+        if (tabBtnNode) tabBtnNode.classList.remove('disabled');
+        if (tabBtnAppearance) tabBtnAppearance.classList.remove('disabled');
+
+        // 2. 숨겼던 앵커 프리뷰 및 링크 섹션 복구
+        if (anchorPreviewBox) anchorPreviewBox.style.display = '';
+        if (linkDivider) linkDivider.style.display = '';
+        if (linkSection) linkSection.style.display = '';
+
+        if (count >= 2) {
+          singleTitleWrap.style.display = 'none';
+          multiIndicator.style.display = 'flex';
+          document.getElementById('multi-selection-text').innerText = `${count} nodes are selected`;
+
+          connSingle.style.display = 'none';
+          connMulti.style.display = 'flex';
+
+          // 캔버스 프리뷰 노드명 반영
+          document.getElementById('preview-node-1-text').innerText = nodes[0].title || nodes[0].name || 'Node 1';
+          document.getElementById('preview-node-2-text').innerText = nodes[1].title || nodes[1].name || 'Node 2';
+
+          // 커넥터 설정 기억 복원 (디폴트: Label 해제 및 Text 프리셋)
+          restoreLastConnectorConfig();
+        } else if (count === 1) {
+          singleTitleWrap.style.display = 'block';
+          multiIndicator.style.display = 'none';
+
+          connSingle.style.display = 'block';
+          connMulti.style.display = 'none';
+
+          titleInput.value = nodes[0].title || nodes[0].name || 'Untitled';
+          if (nodes[0].description) {
+            document.getElementById('node-description-input').value = nodes[0].description;
+          }
+          if (nodes[0].width) document.getElementById('input-size-w').value = nodes[0].width;
+          if (nodes[0].height) document.getElementById('input-size-h').value = nodes[0].height;
+        } else {
+          // [바탕화면 클릭: count === 0]
+          // 자동으로 새로운 노드 생성 모드(Node 탭) 활성화
+          switchMainTab('node');
+
+          singleTitleWrap.style.display = 'block';
+          multiIndicator.style.display = 'none';
+
+          connSingle.style.display = 'block';
+          connMulti.style.display = 'none';
+
+          titleInput.value = 'Welcome';
+          const descInput = document.getElementById('node-description-input');
+          if (descInput) descInput.value = '';
+
+          // 이전에 설정/기억된 상태를 그대로 복원하여 연속 생성 가능
+          restoreLastNodeConfig();
+          restoreLastConnectorConfig();
+        }
+      }
+
+      updateFooterForTab();
+      autoResizeWindow();
+    }
+
+    // 3. Node 탭 관련 함수
+    function selectNodeType(type) {
+      selectedNodeType = type;
+      lastNodeConfig.nodeType = type;
+      document.querySelectorAll('#node-type-chips .chip-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-type') === type);
+      });
+    }
+
+    function togglePhasePopover(event) {
+      event.stopPropagation();
+      closeAllPopovers();
+      const popover = document.getElementById('popover-phase');
+      const rect = event.currentTarget.getBoundingClientRect();
+      const popoverWidth = popover.offsetWidth || 180;
+      popover.style.top = `${rect.bottom + 4}px`;
+      popover.style.left = `${Math.max(8, rect.right - popoverWidth)}px`;
+      popover.classList.toggle('active');
+    }
+
+    function selectPhase(phaseId, name, color) {
+      selectedPhase = phaseId;
+      if (phaseId !== 'mixed') {
+        lastNodeConfig.phase = phaseId;
+        lastNodeConfig.phaseName = name || 'None';
+        lastNodeConfig.phaseColor = color || '#EA2039';
+      }
+      const textEl = document.getElementById('current-phase-text');
+      const iconEl = document.getElementById('current-phase-icon');
+
+      if (phaseId === 'none') {
+        textEl.innerText = 'None';
+        iconEl.innerHTML = '<div class="phase-checkerboard-24"></div>';
+      } else if (phaseId === 'mixed') {
+        textEl.innerText = 'Mixed';
+        iconEl.innerHTML = '<div class="icon-phase-mixed-24"><div class="phase-mixed-dash"></div></div>';
+      } else {
+        textEl.innerText = name || 'Phase';
+        iconEl.innerHTML = `<div class="phase-chip-24" style="background:${color || '#EA2039'};"></div>`;
+      }
+
+      // 팝오버 항목 선택 상태(selected) 갱신
+      document.querySelectorAll('#popover-phase .phase-menu-item').forEach(item => {
+        item.classList.toggle('selected', item.getAttribute('data-phase') === phaseId);
+      });
+
+      closeAllPopovers();
+    }
+
+    function toggleContextMenu(event) {
+      event.stopPropagation();
+      closeAllPopovers();
+      const popover = document.getElementById('popover-context');
+      const rect = event.currentTarget.getBoundingClientRect();
+      popover.style.top = `${rect.bottom + 4}px`;
+      popover.style.left = `${rect.right - 82}px`;
+      popover.classList.toggle('active');
+    }
+
+    function handleContextEdit() {
+      closeAllPopovers();
+      openEditPhaseModal();
+    }
+
+    function handleContextDelete() {
+      closeAllPopovers();
+      openDeleteModal();
+    }
+
+    let copyDescTimeout = null;
+    function copyDescription() {
+      const val = document.getElementById('node-description-input').value;
+      const btn = document.getElementById('btn-copy-desc');
+
+      const copyIconSvg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13.5 6C14.3284 6 15 6.67157 15 7.5V9H16.5C17.3284 9 18 9.67157 18 10.5V16.5C18 17.3284 17.3284 18 16.5 18H10.5C9.67157 18 9 17.3284 9 16.5V15H7.5C6.67157 15 6 14.3284 6 13.5V7.5C6 6.67157 6.67157 6 7.5 6H13.5ZM15 13.5C15 14.3284 14.3284 15 13.5 15H10V16.5C10 16.7761 10.2239 17 10.5 17H16.5C16.7761 17 17 16.7761 17 16.5V10.5C17 10.2239 16.7761 10 16.5 10H15V13.5ZM7.5 7C7.22386 7 7 7.22386 7 7.5V13.5C7 13.7761 7.22386 14 7.5 14H13.5C13.7761 14 14 13.7761 14 13.5V7.5C14 7.22386 13.7761 7 13.5 7H7.5Z" fill="currentColor" />
+      </svg>`;
+
+      const checkIconSvg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 12.5L10 16.5L18 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+
+      const handleSuccess = () => {
+        if (btn) {
+          btn.classList.add('copied');
+          btn.setAttribute('title', '복사 완료');
+          btn.innerHTML = checkIconSvg;
+          if (copyDescTimeout) clearTimeout(copyDescTimeout);
+          copyDescTimeout = setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.setAttribute('title', '내용 복사');
+            btn.innerHTML = copyIconSvg;
+          }, 1800);
+        }
+        showToast('설명이 클립보드에 복사되었습니다!');
+      };
+
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(val).then(handleSuccess).catch(() => {
+          fallbackCopyText(val);
+          handleSuccess();
+        });
+      } else {
+        fallbackCopyText(val);
+        handleSuccess();
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (e) {}
+      document.body.removeChild(textArea);
+    }
+
+    // 4. Appearance 탭 관련 함수
+    function applySizePreset(w, h, btnEl) {
+      document.getElementById('input-size-w').value = w;
+      document.getElementById('input-size-h').value = h;
+      lastNodeConfig.width = w;
+      lastNodeConfig.height = h;
+      document.querySelectorAll('#panel-appearance .chip-group .chip-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      triggerLiveResize();
+    }
+
+    function triggerLiveResize() {
+      const wVal = parseInt(document.getElementById('input-size-w').value, 10);
+      const hVal = parseInt(document.getElementById('input-size-h').value, 10);
+      if (!isNaN(wVal)) lastNodeConfig.width = wVal;
+      if (!isNaN(hVal)) lastNodeConfig.height = hVal;
+      const rVal = parseInt(document.getElementById('input-size-radius')?.value, 10);
+      if (!isNaN(rVal)) lastNodeConfig.cornerRadius = rVal;
+
+      if (selectedNodes.length === 1) {
+        const w = parseInt(document.getElementById('input-size-w').value, 10);
+        const h = parseInt(document.getElementById('input-size-h').value, 10);
+        parent.postMessage({
+          pluginMessage: {
+            type: 'RESIZE_NODE',
+            nodeId: selectedNodes[0].id,
+            width: w,
+            height: h
+          }
+        }, '*');
+      }
+    }
+
+    function selectSwatch(el) {
+      document.querySelectorAll('.swatch-item').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedColor = el.getAttribute('data-color');
+      lastNodeConfig.color = selectedColor;
+    }
+
+    function toggleElevationUI(isOn) {
+      lastNodeConfig.elevationOn = isOn;
+      document.getElementById('elevation-options').classList.toggle('active', isOn);
+      autoResizeWindow();
+    }
+
+    function selectElevation(level, el) {
+      selectedElevation = level;
+      lastNodeConfig.elevation = level;
+      document.querySelectorAll('.elevation-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function toggleStatusUI(isOn) {
+      lastNodeConfig.statusOn = isOn;
+      document.getElementById('status-options').classList.toggle('active', isOn);
+      autoResizeWindow();
+    }
+
+    function selectStatus(status, el) {
+      selectedStatus = status;
+      lastNodeConfig.status = status;
+      document.querySelectorAll('.status-pill').forEach(p => p.classList.remove('selected'));
+      el.classList.add('selected');
+
+      // 선택된 노드가 있을 경우 즉시 피그마 노드 상태 업데이트
+      if (selectedNodes.length > 0) {
+        parent.postMessage({
+          pluginMessage: {
+            type: 'SET_STATUS',
+            status: status
+          }
+        }, '*');
+      }
+    }
+
+    function toggleStepBadgesUI(isOn) {
+      lastNodeConfig.stepBadgesOn = isOn;
+      document.getElementById('step-badges-options').classList.toggle('active', isOn);
+      autoResizeWindow();
+    }
+
+    function selectBadgeCorner(pos, el) {
+      selectedBadgeCorner = pos;
+      lastNodeConfig.badgeCorner = pos;
+      document.querySelectorAll('.corner-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    function selectBadgeShape(shape, el) {
+      selectedBadgeShape = shape;
+      lastNodeConfig.badgeShape = shape;
+      document.querySelectorAll('#step-badges-options .chip-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    // 5. Connection 탭 관련 함수
+    function toggleSingleLinkInput(isOn) {
+      lastNodeConfig.singleLinkOn = isOn;
+      document.getElementById('single-figma-link-group').style.display = isOn ? 'block' : 'none';
+      autoResizeWindow();
+    }
+
+    function selectAnchor(nodeIndex, pos, el) {
+      document.querySelectorAll(`.anchor-handle[data-node="${nodeIndex}"]`).forEach(h => h.classList.remove('active'));
+      el.classList.add('active');
+      if (nodeIndex === 1) sourceMagnet = pos;
+      if (nodeIndex === 2) targetMagnet = pos;
+    }
+
+    function setConnectorColor(colorHex) {
+      if (!colorHex) return;
+      const select = document.getElementById('conn-line-color');
+      if (!select) return;
+      let found = false;
+      for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value.toUpperCase() === colorHex.toUpperCase()) {
+          select.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        const opt = document.createElement('option');
+        opt.value = colorHex;
+        opt.text = `■ ${colorHex.replace('#', '')}`;
+        select.appendChild(opt);
+        select.value = colorHex;
+      }
+    }
+
+    function selectLinePattern(pattern, el) {
+      selectedLinePattern = pattern;
+      document.querySelectorAll('.line-style-btn').forEach(b => {
+        b.classList.remove('active');
+        if (!el && b.getAttribute('onclick') && b.getAttribute('onclick').includes(`'${pattern}'`)) {
+          b.classList.add('active');
+        }
+      });
+      if (el) el.classList.add('active');
+    }
+
+    function selectRoutingType(type, el) {
+      selectedRoutingType = type;
+      document.querySelectorAll('.routing-btn').forEach(b => {
+        b.classList.remove('active');
+        if (!el && b.getAttribute('onclick') && b.getAttribute('onclick').includes(`'${type}'`)) {
+          b.classList.add('active');
+        }
+      });
+      if (el) el.classList.add('active');
+    }
+
+    function toggleLabelGroupUI(isOn) {
+      lastConnectorConfig.labelOn = isOn;
+      document.getElementById('conn-label-group').classList.toggle('active', isOn);
+      autoResizeWindow();
+    }
+
+    function toggleLinkGroupUI(isOn) {
+      lastConnectorConfig.linkOn = isOn;
+      document.getElementById('conn-link-group').classList.toggle('active', isOn);
+      autoResizeWindow();
+    }
+
+    function setLabelPreset(val, el) {
+      document.getElementById('input-conn-label').value = val;
+      lastConnectorConfig.labelText = val;
+      document.querySelectorAll('#conn-label-group .chip-btn').forEach(b => b.classList.remove('active'));
+      if (el) el.classList.add('active');
+    }
+
+    // 커넥터 적용/수정 버튼 클릭 시 1회 실행되는 연결 함수
+    function applyConnectionAction() {
+      // 1. 단일 커넥터 선택 모드: 기존 커넥터 옵션 수정
+      const isConn = isConnectorSelected || (selectedNodes.length === 1 && selectedNodes[0].isConnector);
+      if (isConn && selectedNodes.length === 1) {
+        const label = document.getElementById('toggle-conn-label').checked
+          ? document.getElementById('input-conn-label').value.trim()
+          : '';
+        const hasLabel = document.getElementById('toggle-conn-label').checked;
+        const color = document.getElementById('conn-line-color').value;
+        const weight = parseFloat(document.getElementById('input-stroke-weight').value) || 1.5;
+        const startTerm = document.getElementById('select-start-terminal') ? document.getElementById('select-start-terminal').value : 'NONE';
+        const endTerm = document.getElementById('select-end-terminal') ? document.getElementById('select-end-terminal').value : 'ARROW';
+
+        parent.postMessage({
+          pluginMessage: {
+            type: 'UPDATE_CONNECTOR_PROPERTIES',
+            payload: {
+              connectorId: selectedNodes[0].id,
+              colorHex: color,
+              strokeWeight: weight,
+              strokePattern: selectedLinePattern,
+              routingType: selectedRoutingType,
+              startTerminal: startTerm,
+              endTerminal: endTerm,
+              label: label,
+              hasLabel: hasLabel
+            }
+          }
+        }, '*');
         return;
       }
 
-      container.innerHTML = '';
-      items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'status-list-item';
-        div.onclick = () => focusFrame(item.id);
+      // 2. 2개 이상 노드 선택 모드: 신규 커넥터 연결
+      if (selectedNodes.length < 2) {
+        showToast('연결할 노드를 2개 이상 선택해 주세요.');
+        return;
+      }
+      const label = document.getElementById('toggle-conn-label').checked
+        ? document.getElementById('input-conn-label').value.trim()
+        : '';
+      const color = document.getElementById('conn-line-color').value;
+      const weight = parseFloat(document.getElementById('input-stroke-weight').value) || 1.5;
+      const startTerm = document.getElementById('select-start-terminal') ? document.getElementById('select-start-terminal').value : 'NONE';
+      const endTerm = document.getElementById('select-end-terminal') ? document.getElementById('select-end-terminal').value : 'ARROW';
+      const startOff = document.getElementById('input-start-offset') ? (parseFloat(document.getElementById('input-start-offset').value) || 0) : 0;
+      const endOff = document.getElementById('input-end-offset') ? (parseFloat(document.getElementById('input-end-offset').value) || 0) : 0;
+      const figmaLink = document.getElementById('toggle-conn-link') && document.getElementById('toggle-conn-link').checked && document.getElementById('input-conn-link-url')
+        ? document.getElementById('input-conn-link-url').value.trim()
+        : '';
 
-        const color = statusColorMap[item.status] || '#8C94A0';
-        const label = statusLabelMap[item.status] || item.status;
+      parent.postMessage({
+        pluginMessage: {
+          type: 'CONNECT_POINTS',
+          payload: {
+            sourceNodeId: selectedNodes[0].id,
+            sourceMagnet: sourceMagnet,
+            targetNodeId: selectedNodes[1].id,
+            targetMagnet: targetMagnet,
+            label: label,
+            colorHex: color,
+            strokeWeight: weight,
+            routingType: selectedRoutingType,
+            strokePattern: selectedLinePattern,
+            startTerminal: startTerm,
+            endTerminal: endTerm,
+            startOffset: startOff,
+            endOffset: endOff,
+            figmaLink: figmaLink
+          }
+        }
+      }, '*');
+    }
 
-        div.innerHTML = `
-          <span class="item-name" title="${item.name}">${item.name}</span>
-          <span class="item-badge" style="background-color: ${color};">${label}</span>
-        `;
-        container.appendChild(div);
+    // 6. 메인 CTA 버튼 액션
+    function handleMainAction() {
+      // 커넥터가 선택된 상태라면 어떤 탭에 있든 무조건 커넥터 수정 수행 (새 노드 생성 원천 차단)
+      const isConn = isConnectorSelected || (selectedNodes.length === 1 && selectedNodes[0] && selectedNodes[0].isConnector);
+      if (isConn || currentTab === 'connection') {
+        applyConnectionAction();
+        return;
+      }
+
+      const title = document.getElementById('node-title-input').value.trim() || 'Welcome';
+      const desc = document.getElementById('node-description-input').value.trim();
+      const w = parseInt(document.getElementById('input-size-w').value, 10) || 250;
+      const h = parseInt(document.getElementById('input-size-h').value, 10) || 90;
+      const radius = parseInt(document.getElementById('input-size-radius').value, 10) || 0;
+      const figmaUrl = document.getElementById('single-screen-url').value.trim();
+
+      // 현재 폼 값으로 lastNodeConfig 최신 동기화 (다음 신규 노드 생성 시 유지)
+      lastNodeConfig.width = w;
+      lastNodeConfig.height = h;
+      lastNodeConfig.cornerRadius = radius;
+      lastNodeConfig.nodeType = selectedNodeType;
+      lastNodeConfig.color = selectedColor;
+      lastNodeConfig.elevationOn = document.getElementById('toggle-elevation')?.checked || false;
+      lastNodeConfig.elevation = selectedElevation;
+      lastNodeConfig.statusOn = document.getElementById('toggle-status')?.checked || false;
+      lastNodeConfig.status = selectedStatus;
+      lastNodeConfig.stepBadgesOn = document.getElementById('toggle-step-badges')?.checked || false;
+      lastNodeConfig.stepNumber = parseInt(document.getElementById('input-step-number')?.value, 10) || 1;
+      lastNodeConfig.badgeCorner = selectedBadgeCorner;
+      lastNodeConfig.badgeShape = selectedBadgeShape;
+      lastNodeConfig.singleLinkOn = document.getElementById('toggle-single-figma-link')?.checked || false;
+      lastNodeConfig.singleLinkUrl = figmaUrl;
+
+      if (selectedNodes.length === 1) {
+        // 기존 노드 1개 업데이트
+        parent.postMessage({
+          pluginMessage: {
+            type: 'UPDATE_FLOW_NODE',
+            payload: {
+              nodeId: selectedNodes[0].id,
+              title: title,
+              description: desc,
+              width: w,
+              height: h,
+              cornerRadius: radius,
+              theme: 'light',
+              figmaLink: figmaUrl,
+              nodeType: selectedNodeType,
+              colorHex: selectedColor,
+              elevation: selectedElevation
+            }
+          }
+        }, '*');
+      } else if (selectedNodes.length >= 2) {
+        // 선택된 다중 노드 일괄 업데이트 (신규 노드 생성 방지!)
+        selectedNodes.forEach(node => {
+          parent.postMessage({
+            pluginMessage: {
+              type: 'UPDATE_FLOW_NODE',
+              payload: {
+                nodeId: node.id,
+                title: node.title || title,
+                description: desc,
+                width: w,
+                height: h,
+                cornerRadius: radius,
+                theme: 'light',
+                figmaLink: figmaUrl,
+                nodeType: selectedNodeType,
+                colorHex: selectedColor,
+                elevation: selectedElevation
+              }
+            }
+          }, '*');
+        });
+        showToast(`${selectedNodes.length}개 노드가 업데이트되었습니다.`);
+      } else {
+        // 선택된 노드가 전혀 없을 때만 신규 노드 생성
+        parent.postMessage({
+          pluginMessage: {
+            type: 'CREATE_FLOW_NODE',
+            payload: {
+              title: title,
+              description: desc,
+              width: w,
+              height: h,
+              cornerRadius: radius,
+              theme: 'light',
+              figmaLink: figmaUrl,
+              nodeType: selectedNodeType,
+              colorHex: selectedColor,
+              elevation: selectedElevation,
+              status: document.getElementById('toggle-status').checked ? selectedStatus : undefined
+            }
+          }
+        }, '*');
+      }
+    }
+
+    // 7. Undo / Redo / Close
+    function handleUndo() {
+      parent.postMessage({ pluginMessage: { type: 'UNDO' } }, '*');
+    }
+    function handleRedo() {
+      parent.postMessage({ pluginMessage: { type: 'REDO' } }, '*');
+    }
+    function closePlugin() {
+      parent.postMessage({ pluginMessage: { type: 'CLOSE_PLUGIN' } }, '*');
+    }
+
+    // 8. 모달 및 팝오버 제어 함수
+    function closeAllPopovers() {
+      document.querySelectorAll('.popover-phase-select, .popover-context-menu, .size-mode-menu-popover, .figma-dropdown-menu').forEach(el => {
+        el.classList.remove('active');
       });
+      document.querySelectorAll('.size-mode-dropdown-btn, .figma-dropdown-btn').forEach(el => el.classList.remove('active'));
+    }
+
+    function toggleSizeModeDropdown(e) {
+      if (e) e.stopPropagation();
+      const popover = document.getElementById('popover-size-mode');
+      const btn = document.getElementById('btn-size-mode-dropdown');
+      if (!popover || !btn) return;
+      const isOpened = popover.classList.contains('active');
+      closeAllPopovers();
+      if (!isOpened) {
+        // 현재 H 입력 필드 값을 Fixed height 우측 수치 라벨에 동기화
+        const currentH = document.getElementById('input-size-h')?.value;
+        const fixedValEl = document.getElementById('size-mode-val-fixed');
+        if (fixedValEl && currentH) {
+          fixedValEl.textContent = currentH;
+        }
+        popover.classList.add('active');
+        btn.classList.add('active');
+      }
+    }
+
+    function selectSizeMode(mode) {
+      if (mode !== 'mixed') {
+        lastNodeConfig.sizeMode = mode;
+      }
+      const hiddenInput = document.getElementById('select-size-mode');
+      if (hiddenInput) {
+        hiddenInput.value = mode;
+        hiddenInput.dispatchEvent(new Event('change'));
+      }
+      const textEl = document.getElementById('size-mode-current-text');
+      const iconEl = document.getElementById('size-mode-current-icon');
+      const fixedSvg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z" fill="currentColor"/></svg>`;
+      const hugSvg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z" fill="currentColor"/></svg>`;
+      const mixedSvg = `<span class="phase-dash-icon" style="display:inline-block; vertical-align:middle;"></span>`;
+
+      if (mode === 'fixed') {
+        if (textEl) textEl.textContent = 'Fixed height';
+        if (iconEl) iconEl.innerHTML = fixedSvg;
+      } else if (mode === 'hug') {
+        if (textEl) textEl.textContent = 'Hug contents';
+        if (iconEl) iconEl.innerHTML = hugSvg;
+      } else if (mode === 'mixed') {
+        if (textEl) textEl.textContent = 'Mixed';
+        if (iconEl) iconEl.innerHTML = mixedSvg;
+      }
+
+      document.querySelectorAll('#popover-size-mode .size-mode-menu-item').forEach(item => {
+        item.classList.toggle('selected', item.dataset.value === mode);
+      });
+
+      closeAllPopovers();
+    }
+
+    let phaseModalEditingId = null;
+
+    function openAddPhaseModal() {
+      closeAllPopovers();
+      closePhaseColorPickerPanel();
+      phaseModalEditingId = null;
+      document.getElementById('phase-modal-title-text').innerText = 'Add Phase';
+      document.getElementById('input-phase-modal-name').value = '';
+      setPhaseModalColor('EA2039');
+
+      document.getElementById('modal-backdrop').classList.add('active');
+      document.getElementById('modal-phase').style.display = 'flex';
+      document.getElementById('modal-confirmation').style.display = 'none';
+      document.getElementById('modal-delete').style.display = 'none';
+
+      setTimeout(() => {
+        document.getElementById('input-phase-modal-name').focus();
+      }, 50);
+    }
+
+    function parseColorToHex(str) {
+      if (!str) return 'EA2039';
+      str = str.trim();
+      if (str.startsWith('#')) return str.replace('#', '');
+      const match = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+      if (match) {
+        const toHex = c => parseInt(c, 10).toString(16).padStart(2, '0').toUpperCase();
+        return `${toHex(match[1])}${toHex(match[2])}${toHex(match[3])}`;
+      }
+      return str.replace('#', '');
+    }
+
+    function openEditPhaseModal() {
+      closeAllPopovers();
+      closePhaseColorPickerPanel();
+      let currentId = selectedPhase;
+      if (!currentId || currentId === 'none' || currentId === 'mixed') {
+        const firstPhaseItem = document.querySelector('#popover-phase .phase-menu-item[data-phase]:not([data-phase="mixed"]):not([data-phase="none"])');
+        if (firstPhaseItem) {
+          currentId = firstPhaseItem.getAttribute('data-phase');
+          const pName = firstPhaseItem.querySelector('.phase-item-label')?.innerText || 'Phase';
+          const pColor = firstPhaseItem.querySelector('.phase-chip-14')?.style.backgroundColor || '#EA2039';
+          selectPhase(currentId, pName, pColor);
+        } else {
+          showToast('편집할 Phase가 없습니다. 먼저 Phase를 추가해 주세요.');
+          return;
+        }
+      }
+      phaseModalEditingId = currentId;
+      document.getElementById('phase-modal-title-text').innerText = 'Edit Phase';
+
+      // 현재 선택된 Phase 정보 읽기
+      const currentItem = document.querySelector(`#popover-phase .phase-menu-item[data-phase="${currentId}"]`);
+      const currentName = currentItem ? currentItem.querySelector('.phase-item-label')?.innerText : 'Phase';
+      const currentColor = (currentItem && currentItem.querySelector('.phase-chip-14')?.style.backgroundColor) || lastNodeConfig.phaseColor || '#EA2039';
+
+      document.getElementById('input-phase-modal-name').value = currentName;
+      setPhaseModalColor(parseColorToHex(currentColor));
+
+      document.getElementById('modal-backdrop').classList.add('active');
+      document.getElementById('modal-phase').style.display = 'flex';
+      document.getElementById('modal-confirmation').style.display = 'none';
+      document.getElementById('modal-delete').style.display = 'none';
+
+      setTimeout(() => {
+        document.getElementById('input-phase-modal-name').focus();
+      }, 50);
+    }
+
+    let currentPhaseH = 352;
+    let currentPhaseS = 0.86;
+    let currentPhaseV = 0.92;
+    let isPhaseColorPanelOpen = false;
+
+    function togglePhaseColorPickerPanel() {
+      const panel = document.getElementById('phase-color-picker-panel');
+      const box = document.getElementById('phase-color-box-trigger');
+      if (!panel || !box) return;
+      isPhaseColorPanelOpen = !isPhaseColorPanelOpen;
+      panel.style.display = isPhaseColorPanelOpen ? 'flex' : 'none';
+      box.classList.toggle('is-open', isPhaseColorPanelOpen);
+      if (isPhaseColorPanelOpen) {
+        updateColorPickerUIFromHSV();
+      }
+    }
+
+    function openPhaseColorPickerPanel() {
+      const panel = document.getElementById('phase-color-picker-panel');
+      const box = document.getElementById('phase-color-box-trigger');
+      if (!panel || !box) return;
+      isPhaseColorPanelOpen = true;
+      panel.style.display = 'flex';
+      box.classList.add('is-open');
+      updateColorPickerUIFromHSV();
+    }
+
+    function closePhaseColorPickerPanel() {
+      const panel = document.getElementById('phase-color-picker-panel');
+      const box = document.getElementById('phase-color-box-trigger');
+      if (!panel || !box) return;
+      isPhaseColorPanelOpen = false;
+      panel.style.display = 'none';
+      box.classList.remove('is-open');
+    }
+
+    function hsvToRgb(h, s, v) {
+      let r, g, b;
+      let i = Math.floor(h / 60) % 6;
+      let f = h / 60 - Math.floor(h / 60);
+      let p = v * (1 - s);
+      let q = v * (1 - f * s);
+      let t = v * (1 - (1 - f) * s);
+      switch (i) {
+        case 0: r = v; g = t; b = p; break;
+        case 1: r = q; g = v; b = p; break;
+        case 2: r = p; g = v; b = t; break;
+        case 3: r = p; g = q; b = v; break;
+        case 4: r = t; g = p; b = v; break;
+        case 5: r = v; g = p; b = q; break;
+      }
+      return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+
+    function rgbToHsv(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      let max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0, v = max;
+      let d = max - min;
+      s = max === 0 ? 0 : d / max;
+      if (max !== min) {
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h *= 60;
+      }
+      return [h, s, v];
+    }
+
+    function hexToHsv(hex) {
+      hex = hex.replace('#', '').trim();
+      if (hex.length === 3) {
+        hex = hex.split('').map(c => c + c).join('');
+      }
+      if (hex.length !== 6) return [352, 0.86, 0.92];
+      let r = parseInt(hex.substring(0, 2), 16) || 0;
+      let g = parseInt(hex.substring(2, 4), 16) || 0;
+      let b = parseInt(hex.substring(4, 6), 16) || 0;
+      return rgbToHsv(r, g, b);
+    }
+
+    function hsvToHex(h, s, v) {
+      const [r, g, b] = hsvToRgb(h, s, v);
+      const toHex = c => c.toString(16).padStart(2, '0').toUpperCase();
+      return `${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function updateColorPickerUIFromHSV() {
+      const hex = hsvToHex(currentPhaseH, currentPhaseS, currentPhaseV);
+      const hexInput = document.getElementById('input-phase-modal-hex');
+      const chip = document.getElementById('phase-modal-color-chip');
+      if (hexInput) hexInput.value = hex;
+      if (chip) chip.style.background = `#${hex}`;
+
+      // Hue 슬라이더 갱신: 인디케이터는 채도/명도의 영향을 받지 않고 순수 색상(Hue) 유지
+      const hueThumb = document.getElementById('phase-hue-thumb');
+      if (hueThumb) {
+        const huePercent = (currentPhaseH / 360) * 100;
+        hueThumb.style.left = `${Math.min(100, Math.max(0, huePercent))}%`;
+        hueThumb.style.background = `hsl(${currentPhaseH}, 100%, 50%)`;
+      }
+
+      // SatVal 캔버스 갱신
+      const canvas = document.getElementById('phase-satval-canvas');
+      const ring = document.getElementById('phase-satval-ring');
+      if (canvas) {
+        canvas.style.backgroundColor = `hsl(${currentPhaseH}, 100%, 50%)`;
+      }
+      if (ring) {
+        ring.style.left = `${Math.min(100, Math.max(0, currentPhaseS * 100))}%`;
+        ring.style.top = `${Math.min(100, Math.max(0, (1 - currentPhaseV) * 100))}%`;
+      }
+    }
+
+    function setPhaseModalColor(hex) {
+      let cleanHex = hex.replace('#', '').trim();
+      if (!cleanHex) cleanHex = 'EA2039';
+      [currentPhaseH, currentPhaseS, currentPhaseV] = hexToHsv(cleanHex);
+      updateColorPickerUIFromHSV();
+    }
+
+    function handlePhaseHexManualInput(val) {
+      let cleanHex = val.replace('#', '').trim();
+      if (cleanHex.length === 6 || cleanHex.length === 3) {
+        [currentPhaseH, currentPhaseS, currentPhaseV] = hexToHsv(cleanHex);
+        updateColorPickerUIFromHSV();
+      } else {
+        const chip = document.getElementById('phase-modal-color-chip');
+        if (chip) chip.style.background = `#${cleanHex}`;
+      }
+    }
+
+
+
+    function initPhaseColorPickerListeners() {
+      const hueTrack = document.getElementById('phase-hue-track');
+      const satValCanvas = document.getElementById('phase-satval-canvas');
+      if (!hueTrack || !satValCanvas) return;
+
+      let isDraggingHue = false;
+      let isDraggingSatVal = false;
+
+      function handleHuePointer(e) {
+        const rect = hueTrack.getBoundingClientRect();
+        let x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        currentPhaseH = (x / rect.width) * 360;
+        if (currentPhaseH >= 360) currentPhaseH = 0;
+        updateColorPickerUIFromHSV();
+      }
+
+      function handleSatValPointer(e) {
+        const rect = satValCanvas.getBoundingClientRect();
+        let x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        let y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        currentPhaseS = Math.max(0, Math.min(1, x / rect.width));
+        currentPhaseV = Math.max(0, Math.min(1, 1 - (y / rect.height)));
+        updateColorPickerUIFromHSV();
+      }
+
+      hueTrack.addEventListener('mousedown', (e) => {
+        isDraggingHue = true;
+        handleHuePointer(e);
+        e.preventDefault();
+      });
+
+      satValCanvas.addEventListener('mousedown', (e) => {
+        isDraggingSatVal = true;
+        handleSatValPointer(e);
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (isDraggingHue) {
+          handleHuePointer(e);
+        } else if (isDraggingSatVal) {
+          handleSatValPointer(e);
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        isDraggingHue = false;
+        isDraggingSatVal = false;
+      });
+
+    }
+
+    function savePhaseFromModal() {
+      const nameInput = document.getElementById('input-phase-modal-name').value.trim();
+      const hexInput = document.getElementById('input-phase-modal-hex').value.replace('#', '').trim() || 'EA2039';
+      const color = `#${hexInput}`;
+      const name = nameInput || 'Phase';
+
+      if (phaseModalEditingId) {
+        // 기존 Phase 수정
+        const item = document.querySelector(`#popover-phase .phase-menu-item[data-phase="${phaseModalEditingId}"]`);
+        if (item) {
+          const labelEl = item.querySelector('.phase-item-label');
+          if (labelEl) labelEl.innerText = name;
+          const chipEl = item.querySelector('.phase-chip-14');
+          if (chipEl) chipEl.style.background = color;
+          item.setAttribute('onclick', `selectPhase('${phaseModalEditingId}', '${name}', '${color}')`);
+        }
+        selectPhase(phaseModalEditingId, name, color);
+        showToast('Phase가 수정되었습니다.');
+      } else {
+        // 새 Phase 생성 (Phase 팝오버 목록에 추가)
+        const newId = `phase_${Date.now()}`;
+        const container = document.getElementById('popover-phase');
+        if (container) {
+          const newItem = document.createElement('div');
+          newItem.className = 'phase-menu-item';
+          newItem.setAttribute('data-phase', newId);
+          newItem.setAttribute('onclick', `selectPhase('${newId}', '${name}', '${color}')`);
+          newItem.innerHTML = `
+            <div class="phase-item-check-slot">
+              <svg class="phase-check-icon" width="8" height="7" viewBox="0 0 8 7" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 3.5L3 5.5L7 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div class="phase-item-icon-slot">
+              <div class="phase-chip-14" style="background: ${color};"></div>
+            </div>
+            <span class="phase-item-label">${name}</span>
+          `;
+          container.appendChild(newItem);
+        }
+        selectPhase(newId, name, color);
+        showToast('새로운 Phase가 생성되었습니다.');
+      }
+
+      closeAllModals();
+    }
+
+    function openConfirmationModal() {
+      document.getElementById('modal-backdrop').classList.add('active');
+      document.getElementById('modal-confirmation').style.display = 'flex';
+      document.getElementById('modal-phase').style.display = 'none';
+      document.getElementById('modal-delete').style.display = 'none';
+    }
+
+    function openDeleteModal() {
+      let currentId = selectedPhase;
+      const targetItem = (currentId && currentId !== 'none' && currentId !== 'mixed')
+        ? document.querySelector(`#popover-phase .phase-menu-item[data-phase="${currentId}"]`)
+        : document.querySelector('#popover-phase .phase-menu-item[data-phase]:not([data-phase="mixed"]):not([data-phase="none"])');
+
+      const targetName = targetItem ? targetItem.querySelector('.phase-item-label')?.innerText : null;
+
+      const bodyEl = document.querySelector('#modal-delete .dialog-body');
+      if (bodyEl) {
+        if (targetName) {
+          bodyEl.textContent = `정말 '${targetName}'을(를) 삭제하시겠습니까?`;
+        } else {
+          bodyEl.textContent = '삭제할 수 있는 Phase 항목이 없습니다.';
+        }
+      }
+
+      document.getElementById('modal-backdrop').classList.add('active');
+      document.getElementById('modal-delete').style.display = 'flex';
+      document.getElementById('modal-phase').style.display = 'none';
+      document.getElementById('modal-confirmation').style.display = 'none';
+    }
+
+    function closeAllModals() {
+      closePhaseColorPickerPanel();
+      document.getElementById('modal-backdrop').classList.remove('active');
+      document.getElementById('modal-phase').style.display = 'none';
+      document.getElementById('modal-confirmation').style.display = 'none';
+      document.getElementById('modal-delete').style.display = 'none';
+    }
+
+    function handleBackdropClick(e) {
+      if (e.target.id === 'modal-backdrop') {
+        closeAllModals();
+      }
+    }
+
+    function confirmDeleteItem() {
+      let currentId = selectedPhase;
+      const targetItem = (currentId && currentId !== 'none' && currentId !== 'mixed')
+        ? document.querySelector(`#popover-phase .phase-menu-item[data-phase="${currentId}"]`)
+        : document.querySelector('#popover-phase .phase-menu-item[data-phase]:not([data-phase="mixed"]):not([data-phase="none"])');
+
+      if (targetItem) {
+        const deletedName = targetItem.querySelector('.phase-item-label')?.innerText || 'Phase';
+        targetItem.remove();
+        selectPhase('none');
+        showToast(`'${deletedName}'이(가) 삭제되었습니다.`);
+      } else {
+        showToast('삭제할 Phase가 없습니다.');
+      }
+      closeAllModals();
+    }
+
+    // 외부 클릭 시 팝오버 닫기
+    window.addEventListener('click', (e) => {
+      if (!e.target.closest('#btn-phase-select') && !e.target.closest('#popover-phase')) {
+        document.getElementById('popover-phase')?.classList.remove('active');
+      }
+      if (!e.target.closest('#btn-phase-more') && !e.target.closest('#popover-context')) {
+        document.getElementById('popover-context')?.classList.remove('active');
+      }
+      if (!e.target.closest('#size-mode-dropdown-wrapper')) {
+        document.getElementById('popover-size-mode')?.classList.remove('active');
+        document.getElementById('btn-size-mode-dropdown')?.classList.remove('active');
+      }
+    });
+
+    // 토스트 알림
+    let toastTimeout;
+    function showToast(msg) {
+      const toast = document.getElementById('toast-message');
+      toast.innerText = msg;
+      toast.style.display = 'block';
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.style.display = 'none';
+      }, 2500);
+    }
+
+    // 윈도우 전체 높이 Hug 자동 조절
+    let lastHeight = 0;
+    let resizeTimer = null;
+    function autoResizeWindow() {
+      if (resizeTimer) cancelAnimationFrame(resizeTimer);
+      resizeTimer = requestAnimationFrame(() => {
+        const root = document.getElementById('plugin-root');
+        if (!root) return;
+        const totalHeight = Math.ceil(root.offsetHeight || root.getBoundingClientRect().height);
+        if (totalHeight > 100 && Math.abs(totalHeight - lastHeight) >= 2) {
+          lastHeight = totalHeight;
+          parent.postMessage({
+            pluginMessage: {
+              type: 'RESIZE_WINDOW',
+              width: 360,
+              height: totalHeight
+            }
+          }, '*');
+        }
+      });
+    }
+
+    // ResizeObserver를 통해 탭 전환, 토글 등 모든 DOM 크기 변화 자동 감지
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => {
+        autoResizeWindow();
+      });
+      const root = document.getElementById('plugin-root');
+      if (root) ro.observe(root);
+    }
+
+    // 사용자 입력 필드 실시간 lastNodeConfig 동기화
+    document.getElementById('input-size-w')?.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (!isNaN(val)) lastNodeConfig.width = val;
+    });
+    document.getElementById('input-size-h')?.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (!isNaN(val)) lastNodeConfig.height = val;
+    });
+    document.getElementById('input-size-radius')?.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (!isNaN(val)) lastNodeConfig.cornerRadius = val;
+    });
+    document.getElementById('input-step-number')?.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (!isNaN(val)) lastNodeConfig.stepNumber = val;
+    });
+    document.getElementById('single-screen-url')?.addEventListener('input', (e) => {
+      lastNodeConfig.singleLinkUrl = e.target.value.trim();
+    });
+    document.getElementById('input-conn-label')?.addEventListener('input', (e) => {
+      lastConnectorConfig.labelText = e.target.value;
+    });
+    document.getElementById('input-conn-link-url')?.addEventListener('input', (e) => {
+      lastConnectorConfig.linkUrl = e.target.value.trim();
+    });
+
+    window.addEventListener('load', () => {
+      autoResizeWindow();
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+      initPhaseColorPickerListeners();
+      autoResizeWindow();
+    });
+
+    // 초기화 메시지 전송 및 테스트 파라미터 확인
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('nodes') === '2') {
+      setTimeout(() => {
+        switchMainTab('connection');
+        handleSelectionChange(2, [
+          { id: '1', title: 'dsfkjhjkfdhskjkhj kdsasadadsad dsa' },
+          { id: '2', title: 'False' }
+        ]);
+        autoResizeWindow();
+      }, 50);
+    } else {
+      parent.postMessage({ pluginMessage: { type: 'INIT' } }, '*');
+      setTimeout(autoResizeWindow, 50);
     }
   </script>
 </body>
+
 </html>
