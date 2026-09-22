@@ -12,6 +12,7 @@ import {
   ConnectorStrokePattern,
   ConnectorRoutingType,
   ConnectorTerminalType,
+  DiagramNodeType,
 } from './types';
 import {
   createOrthogonalVectorConnector,
@@ -48,10 +49,9 @@ function postToUI(msg: CoreToUIMessage) {
   figma.ui.postMessage(msg);
 }
 
-// 토스트 알림 전송
+// 토스트 알림 전송 (피그마/피그잼 네이티브 노티로만 표시)
 function notify(message: string, level: 'info' | 'success' | 'warning' | 'error' = 'info') {
   figma.notify(message, { error: level === 'error' });
-  postToUI({ type: 'TOAST', message, level });
 }
 
 // 선택된 요소 또는 조상 중 커넥터(Figma 네이티브 CONNECTOR 또는 커스텀 벡터 직각 커넥터) 탐색
@@ -116,6 +116,59 @@ function getNextFlowTag(): string {
   return `p${flowNodes.length + 1}`;
 }
 
+// FigJam Node 객체 자체를 Source of Truth로 하여 실제 Title/Description 텍스트 추출
+function extractNodeText(node: SceneNode): { title: string; description: string } {
+  let title = '';
+  let description = '';
+
+  if (node.type === 'FRAME' || 'findAll' in node) {
+    const frame = node as FrameNode;
+    // 1. node_role 플러그인 데이터 또는 이름으로 명시적 자식 검색
+    const titleTextNode = frame.findOne(
+      (c) => c.type === 'TEXT' && (c.name === 'TitleText' || c.getPluginData('node_role') === 'title')
+    ) as TextNode | null;
+    const descTextNode = frame.findOne(
+      (c) => c.type === 'TEXT' && (c.name === 'DescText' || c.getPluginData('node_role') === 'desc')
+    ) as TextNode | null;
+
+    if (titleTextNode) {
+      title = titleTextNode.characters;
+    }
+    if (descTextNode) {
+      description = descTextNode.characters;
+    }
+
+    // 2. 명시적 역할이 없는 일반 텍스트 노드인 경우 순서대로 추출
+    if (!title) {
+      const allTexts = frame.findAll((n) => n.type === 'TEXT') as TextNode[];
+      if (allTexts.length > 0) title = allTexts[0].characters;
+      if (allTexts.length > 1 && !description) {
+        description = allTexts[1].characters;
+      }
+    }
+  } else if (node.type === 'SHAPE_WITH_TEXT') {
+    const shape = node as ShapeWithTextNode;
+    const lines = shape.text.characters.split('\n');
+    if (lines.length > 0) title = lines[0];
+    if (lines.length > 1) description = lines.slice(1).join('\n');
+  } else if (node.type === 'STICKY') {
+    const sticky = node as StickyNode;
+    const lines = sticky.text.characters.split('\n');
+    if (lines.length > 0) title = lines[0];
+    if (lines.length > 1) description = lines.slice(1).join('\n');
+  }
+
+  // 3. Fallback: 노드 이름 및 하위 호환 레거시 pluginData
+  if (!title) {
+    title = node.name || node.getPluginData('node_title') || 'Untitled';
+  }
+  if (!description) {
+    description = node.getPluginData('node_desc') || '';
+  }
+
+  return { title, description };
+}
+
 // 선택 영역 변경 감지 시 UI 갱신 (바탕화면 클릭 ➔ 빈 폼 / 노드 클릭 ➔ 상세 수정 폼)
 function handleSelectionChange() {
   const rawSelection = figma.currentPage.selection;
@@ -137,7 +190,33 @@ function handleSelectionChange() {
     }
   }
 
-  const uniqueNodes = Array.from(resolvedNodesMap.values());
+  const allResolvedNodes = Array.from(resolvedNodesMap.values());
+
+  // 2. 카테고리별 엄격 분리:
+  // - connNodes: 커넥터 노드
+  // - flowNodes: UI 플로우 노드 (is_flow_node === 'true')
+  // - otherObjects: 그 외 일반 객체 (피그잼 스티키 노트, 기본 도형, 일반 프레임/텍스트 등)
+  const connNodes = allResolvedNodes.filter((n) => Boolean(findConnectorNode(n)));
+  const nonConnNodes = allResolvedNodes.filter((n) => !findConnectorNode(n));
+  const flowNodes = nonConnNodes.filter((n) => n.getPluginData('is_flow_node') === 'true');
+  const otherObjects = nonConnNodes.filter((n) => n.getPluginData('is_flow_node') !== 'true');
+
+  const flowNodeCount = flowNodes.length;
+  const otherObjectCount = otherObjects.length;
+  const connectorCount = connNodes.length;
+
+  // UI 편집 대상 노드 결정:
+  // - 플로우 노드가 1개 이상이면 플로우 노드만 전달하여 일반 객체의 속성 오염/훼손 방지
+  // - 플로우 노드가 전혀 없고 커넥터만 있으면 커넥터 전달
+  // - 플로우 노드와 커넥터가 없고 일반 객체만 있으면 일반 객체 전달
+  let uniqueNodes: SceneNode[] = [];
+  if (flowNodeCount > 0) {
+    uniqueNodes = flowNodes;
+  } else if (connectorCount > 0 && otherObjectCount === 0) {
+    uniqueNodes = connNodes;
+  } else {
+    uniqueNodes = otherObjects;
+  }
 
   const nodes: SelectedNodeInfo[] = uniqueNodes.map((node) => {
     const isFlowNode = node.getPluginData('is_flow_node') === 'true';
@@ -153,24 +232,40 @@ function handleSelectionChange() {
         frame.minHeight = h;
         frame.maxHeight = h;
       }
-      if (!frame.getPluginData('node_width')) {
-        frame.setPluginData('node_width', `${w}`);
-        frame.setPluginData('node_height', `${h}`);
-      }
 
-      // 기존 우상단에 있던 상태 뱃지를 하단 오른쪽 박스 안쪽으로 자동 이동
+      // 기존 우상단에 있던 상태 뱃지를 하단 오른쪽 박스 안쪽으로 자동 이동 및 텍스트 수정 차단(locked=true)
       const statusBadge = frame.children.find(
         (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
       ) as FrameNode | undefined;
-      if (statusBadge && statusBadge.y <= 0) {
-        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-        statusBadge.x = w - statusBadge.width - 10;
-        statusBadge.y = h - statusBadge.height - 10;
+      if (statusBadge) {
+        if (statusBadge.y <= 0) {
+          statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+          statusBadge.x = w - statusBadge.width - 10;
+          statusBadge.y = h - statusBadge.height - 10;
+        }
+        statusBadge.locked = true;
+        const textChild = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+        if (textChild) textChild.locked = true;
+      }
+
+      // 타이틀 텍스트 서식(블릿, 링크, 볼드, 취소선 등) 차단 및 표준 규격 검사
+      const headerFrame = frame.children.find((c) => c.name === 'Header') as FrameNode | undefined;
+      const titleText = headerFrame
+        ? (headerFrame.children.find((c) => c.type === 'TEXT') as TextNode | undefined)
+        : (frame.children.find((c) => c.type === 'TEXT' && (c.name === 'TitleText' || c.getPluginData('node_role') === 'title')) as TextNode | undefined);
+      if (titleText) {
+        enforceTitleStandardStyle(titleText, frame);
+      }
+      const descText = frame.children.find(
+        (c) => c.type === 'TEXT' && (c.name === 'DescText' || c.getPluginData('node_role') === 'desc')
+      ) as TextNode | undefined;
+      if (descText) {
+        lockTextFontSizeAndAutoResize(descText, 11);
       }
     }
 
-    let title = node.getPluginData('node_title') || node.name;
-    let description = node.getPluginData('node_desc') || '';
+    let title = '';
+    let description = '';
     let tag = node.getPluginData('node_tag') || '';
     let connectorLabel: string | undefined;
     let connectorLineType: 'ELBOWED' | 'STRAIGHT' | 'CURVED' | undefined;
@@ -243,22 +338,16 @@ function handleSelectionChange() {
         }
       }
       title = connectorLabel ? `커넥터: "${connectorLabel}"` : '연결선 (Connector)';
+    } else {
+      // 플로우 노드: 실제 FigJam 자식 텍스트 객체로부터 최신 텍스트 추출 (Source of Truth)
+      const extracted = extractNodeText(node);
+      title = extracted.title;
+      description = extracted.description;
     }
 
-    // 플러그인 데이터가 없는 경우 실제 자식 텍스트에서 스마트 추출
-    if (!node.getPluginData('node_title') && 'findAll' in node) {
-      const texts = (node as FrameNode).findAll((n) => n.type === 'TEXT') as TextNode[];
-      if (texts.length > 0) title = texts[0].characters;
-      if (texts.length > 1) {
-        if (texts[1].characters.length <= 8) tag = texts[1].characters;
-        else description = texts[1].characters;
-      }
-      if (texts.length > 2 && !description) description = texts[2].characters;
-    } else if (!node.getPluginData('node_title') && node.type === 'SHAPE_WITH_TEXT') {
-      const lines = (node as ShapeWithTextNode).text.characters.split('\n');
-      if (lines.length > 0) title = lines[0];
-      if (lines.length > 1) description = lines.slice(1).join('\n');
-    }
+    const savedType = node.getPluginData('node_type') as DiagramNodeType;
+    const flowNodeType: DiagramNodeType = savedType || 'Screen';
+    const savedStatus = node.getPluginData('workflow_status') as WorkflowStatus;
 
     return {
       id: node.id,
@@ -266,6 +355,8 @@ function handleSelectionChange() {
       isFlowNode,
       isConnector,
       nodeType: node.type,
+      flowNodeType,
+      status: savedStatus || undefined,
       title,
       description,
       tag,
@@ -292,10 +383,13 @@ function handleSelectionChange() {
 
   postToUI({
     type: 'SELECTION_CHANGED',
-    count: uniqueNodes.length,
+    count: flowNodeCount + otherObjectCount + connectorCount,
     nodes,
     currentStatus,
     nextSuggestedTag: getNextFlowTag(),
+    flowNodeCount,
+    otherObjectCount,
+    connectorCount,
   });
 }
 
@@ -304,7 +398,7 @@ figma.on('selectionchange', handleSelectionChange);
 // ----------------------------------------------------
 // 1. 안전한 폰트 로드 및 텍스트 변경 헬퍼
 // ----------------------------------------------------
-async function safeSetCharacters(textNode: TextNode, newText: string) {
+async function safeSetCharacters(textNode: TextNode | TextSublayerNode, newText: string) {
   if (!textNode) return;
   const len = textNode.characters.length;
   try {
@@ -327,14 +421,155 @@ async function safeSetCharacters(textNode: TextNode, newText: string) {
   textNode.characters = newText;
 }
 
+// 설명 텍스트용: 폰트 사이즈(11px) 및 텍스트 박스 자동 리사이즈 모드만 고정하고,
+// 나머지 서식(굵기, 색상, 이탤릭, 링크 등)은 모두 자유롭게 허용하는 헬퍼
+function lockTextFontSizeAndAutoResize(textNode: TextNode, targetSize: number) {
+  try {
+    // 1. 폰트 사이즈만 고정 (볼드, 색상, 이탤릭 등 다른 서식은 100% 보존)
+    if (textNode.fontSize !== targetSize) {
+      textNode.fontSize = targetSize;
+    }
+
+    // 2. 텍스트 박스 크기 조절 모드 고정 (너비는 부모 프레임에 맞춤, 높이는 내용에 맞춰 자동 조절)
+    if (textNode.textAutoResize !== 'HEIGHT') {
+      textNode.textAutoResize = 'HEIGHT';
+    }
+
+    if (textNode.layoutAlign !== 'STRETCH') {
+      textNode.layoutAlign = 'STRETCH';
+    }
+  } catch (err) {
+    console.warn('폰트 사이즈 및 리사이즈 모드 고정 실패:', err);
+  }
+}
+
+// 타이틀 텍스트용: 피그잼 캔버스 서식(블릿, 링크, 볼드, 취소선 등) 일체 반영 차단 및 Inter Bold 13px 표준 고정, 오직 텍스트 내용만 유지
+async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNode | BaseNode | null) {
+  try {
+    const targetFont: FontName = { family: 'Inter', style: 'Bold' };
+    const targetSize = 13;
+
+    // 테마 기본 글자 색상 결정
+    let isDark = false;
+    if (flowNode && 'getPluginData' in flowNode) {
+      isDark = flowNode.getPluginData('node_theme') === 'dark';
+    }
+    const expectedColor: RGB = isDark ? { r: 1, g: 1, b: 1 } : { r: 0.118, g: 0.118, b: 0.118 };
+
+    // 1. 필요한 폰트 사전 로드
+    try {
+      await Promise.all([
+        figma.loadFontAsync(targetFont),
+        figma.loadFontAsync({ family: 'Inter', style: 'Regular' }),
+        figma.loadFontAsync({ family: 'Inter', style: 'Medium' }),
+      ]);
+    } catch (_) {}
+
+    let len = textNode.characters.length;
+    if (len > 0) {
+      try {
+        const currentFonts = textNode.getRangeAllFontNames(0, len);
+        for (const fn of currentFonts) {
+          try { await figma.loadFontAsync(fn); } catch (_) {}
+        }
+      } catch (_) {}
+    }
+
+    // 2. 텍스트 내용에서 불릿 기호(•, -, *, 번호 등) 및 불필요한 줄바꿈 제거 (순수 타이틀 텍스트만 유지)
+    const originalText = textNode.characters;
+    const cleanedText = originalText
+      .split('\n')
+      .map((line) => line.replace(/^[\s\u2022\u25E6\u2023\u2043\u2219\u25AA\u25AB\-\*]+(?:\s+|$)/, '').trim())
+      .filter((line) => line.length > 0)
+      .join(' ');
+
+    if (cleanedText !== originalText && cleanedText.length > 0) {
+      textNode.characters = cleanedText;
+      len = textNode.characters.length;
+    }
+
+    if (len > 0) {
+      // 3. getStyledTextSegments로 세그먼트별 서식(링크, 블릿, 취소선, 볼드 등) 정밀 차단 및 제거
+      try {
+        const segments = textNode.getStyledTextSegments([
+          'hyperlink',
+          'textDecoration',
+          'listOptions',
+          'fontName',
+          'fontSize',
+        ]);
+        for (const seg of segments) {
+          // 링크 제거
+          if (seg.hyperlink !== null) {
+            try { textNode.setRangeHyperlink(seg.start, seg.end, null); } catch (_) {}
+          }
+          // 취소선, 밑줄 제거
+          if (seg.textDecoration !== 'NONE') {
+            try { textNode.setRangeTextDecoration(seg.start, seg.end, 'NONE'); } catch (_) {}
+          }
+          // 불릿 / 번호 목록 서식 제거
+          if (seg.listOptions && seg.listOptions.type !== 'NONE') {
+            try { textNode.setRangeListOptions(seg.start, seg.end, { type: 'NONE' }); } catch (_) {}
+          }
+          // 볼드 토글 및 폰트 변경 차단 (Inter Bold 고정)
+          if (seg.fontName.family !== targetFont.family || seg.fontName.style !== targetFont.style) {
+            try { textNode.setRangeFontName(seg.start, seg.end, targetFont); } catch (_) {}
+          }
+          // 폰트 크기 고정 (13px)
+          if (seg.fontSize !== targetSize) {
+            try { textNode.setRangeFontSize(seg.start, seg.end, targetSize); } catch (_) {}
+          }
+        }
+      } catch (_) {}
+
+      // 전체 범위 일괄 초기화 (이중 안전장치)
+      try { textNode.setRangeFontName(0, len, targetFont); } catch (_) {}
+      try { textNode.setRangeFontSize(0, len, targetSize); } catch (_) {}
+      try { textNode.setRangeFills(0, len, [{ type: 'SOLID', color: expectedColor }]); } catch (_) {}
+      try { textNode.setRangeTextDecoration(0, len, 'NONE'); } catch (_) {}
+      try { textNode.setRangeHyperlink(0, len, null); } catch (_) {}
+      try { textNode.setRangeListOptions(0, len, { type: 'NONE' }); } catch (_) {}
+      try { textNode.setRangeIndentation(0, len, 0); } catch (_) {}
+    } else {
+      try { textNode.fontName = targetFont; } catch (_) {}
+      try { textNode.fontSize = targetSize; } catch (_) {}
+      try { textNode.fills = [{ type: 'SOLID', color: expectedColor }]; } catch (_) {}
+      try { textNode.textDecoration = 'NONE'; } catch (_) {}
+      try { textNode.hyperlink = null; } catch (_) {}
+    }
+
+    // 4. 텍스트 박스 리사이즈 모드 고정
+    if (textNode.textAutoResize !== 'HEIGHT') {
+      textNode.textAutoResize = 'HEIGHT';
+    }
+    if (textNode.layoutGrow !== 1) {
+      textNode.layoutGrow = 1;
+    }
+
+    // 5. 카드 레이어 이름 동기화
+    if (flowNode && 'name' in flowNode && textNode.characters.trim()) {
+      if (flowNode.name !== textNode.characters.trim()) {
+        flowNode.name = textNode.characters.trim();
+      }
+    }
+  } catch (err) {
+    console.warn('타이틀 표준 스타일 고정 실패:', err);
+  }
+}
+
+
+
+
+
 // ----------------------------------------------------
 // 2. 쉐이프로 생성되었던 구형 노드를 완벽한 직각 프레임 카드로 마이그레이션
 // ----------------------------------------------------
 async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameNode> {
   await loadRequiredFonts();
 
-  const title = shape.getPluginData('node_title') || shape.name || 'Untitled';
-  const desc = shape.getPluginData('node_desc') || '';
+  const extracted = extractNodeText(shape);
+  const title = extracted.title;
+  const desc = extracted.description;
   const theme = (shape.getPluginData('node_theme') as 'light' | 'dark') || 'light';
   const status = (shape.getPluginData('workflow_status') as WorkflowStatus) || undefined;
   const stepStr = shape.getPluginData('step_number');
@@ -378,8 +613,6 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.maxWidth = width;
   card.minHeight = height;
   card.maxHeight = height;
-  card.setPluginData('node_width', `${width}`);
-  card.setPluginData('node_height', `${height}`);
 
   // 헤더 행 (타이틀 + 상태 뱃지 수용 공간)
   const headerRow = figma.createFrame();
@@ -429,8 +662,10 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
     badgeText.characters = cfg.label.toUpperCase();
     badgeText.textAutoResize = 'WIDTH_AND_HEIGHT';
     badgeText.fills = [{ type: 'SOLID', color: cfg.textColor }];
+    badgeText.locked = true; // 캔버스에서 텍스트 직접 편집 차단
     statusBadge.appendChild(badgeText);
 
+    statusBadge.locked = true; // 상태 배지 잠금
     card.appendChild(statusBadge);
     statusBadge.layoutPositioning = 'ABSOLUTE';
     statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
@@ -481,9 +716,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   }
 
   card.setPluginData('is_flow_node', 'true');
-  card.setPluginData('node_title', title);
-  card.setPluginData('node_desc', desc);
-  card.setPluginData('node_tag', '');
+  card.setPluginData('schema_version', '2');
   card.setPluginData('node_theme', theme);
   if (status) card.setPluginData('workflow_status', status);
   if (stepNumber) card.setPluginData('step_number', `${stepNumber}`);
@@ -550,8 +783,6 @@ async function createFlowNode(payload: FlowNodePayload) {
     card.maxWidth = width;
     card.minHeight = height;
     card.maxHeight = height;
-    card.setPluginData('node_width', `${width}`);
-    card.setPluginData('node_height', `${height}`);
 
     // 2. 헤더 행 (타이틀 + 상태 뱃지 배치용)
     const headerRow = figma.createFrame();
@@ -589,12 +820,49 @@ async function createFlowNode(payload: FlowNodePayload) {
     descText.setPluginData('node_role', 'desc');
     card.appendChild(descText);
 
-    // 메타데이터 보관
+    // 메타데이터 보관 (FigJam 네이티브 객체 속성을 Source of Truth로 사용하므로 중복 데이터 제거)
+    card.name = title;
     card.setPluginData('is_flow_node', 'true');
-    card.setPluginData('node_title', title);
-    card.setPluginData('node_desc', description);
-    card.setPluginData('node_tag', '');
+    card.setPluginData('schema_version', '2');
     card.setPluginData('node_theme', theme);
+    card.setPluginData('node_type', payload.nodeType || 'Screen');
+    if (payload.status) {
+      card.setPluginData('workflow_status', payload.status);
+      if (STATUS_CONFIG[payload.status]) {
+        const cfg = STATUS_CONFIG[payload.status];
+        const statusBadge = figma.createFrame();
+        statusBadge.name = 'StatusBadge';
+        statusBadge.layoutMode = 'HORIZONTAL';
+        statusBadge.primaryAxisSizingMode = 'AUTO';
+        statusBadge.counterAxisSizingMode = 'AUTO';
+        statusBadge.primaryAxisAlignItems = 'CENTER';
+        statusBadge.counterAxisAlignItems = 'CENTER';
+        statusBadge.paddingLeft = 7;
+        statusBadge.paddingRight = 7;
+        statusBadge.paddingTop = 3;
+        statusBadge.paddingBottom = 3;
+        statusBadge.cornerRadius = 0;
+        statusBadge.fills = [{ type: 'SOLID', color: cfg.color }];
+        statusBadge.setPluginData('is_status_badge', 'true');
+
+        const badgeText = figma.createText();
+        badgeText.name = 'StatusText';
+        badgeText.fontName = { family: 'Inter', style: 'Bold' };
+        badgeText.fontSize = 9;
+        badgeText.characters = cfg.label.toUpperCase();
+        badgeText.textAutoResize = 'WIDTH_AND_HEIGHT';
+        badgeText.fills = [{ type: 'SOLID', color: cfg.textColor }];
+        badgeText.locked = true; // 캔버스에서 텍스트 직접 수정 차단
+        statusBadge.appendChild(badgeText);
+
+        statusBadge.locked = true; // 상태 배지 잠금
+        card.appendChild(statusBadge);
+        statusBadge.layoutPositioning = 'ABSOLUTE';
+        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+        statusBadge.x = card.width - statusBadge.width - 10;
+        statusBadge.y = card.height - statusBadge.height - 10;
+      }
+    }
 
     // 위치 지정
     const selection = figma.currentPage.selection;
@@ -676,8 +944,6 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.maxWidth = w;
       card.minHeight = h;
       card.maxHeight = h;
-      card.setPluginData('node_width', `${w}`);
-      card.setPluginData('node_height', `${h}`);
 
       // 리사이즈 시 하단 오른쪽 박스 안쪽 상태 뱃지 위치 동기화
       const statusBadge = card.children.find(
@@ -723,7 +989,9 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     }
 
     await safeSetCharacters(titleText, title);
-    titleText.fills = [{ type: 'SOLID', color: titleColor }];
+    if (!Array.isArray(titleText.fills) || titleText.fills.length === 0) {
+      titleText.fills = [{ type: 'SOLID', color: titleColor }];
+    }
 
     // 설명 텍스트 갱신
     let descText = card.children.find(
@@ -742,14 +1010,23 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     }
 
     await safeSetCharacters(descText, description);
-    descText.fills = [{ type: 'SOLID', color: descColor }];
+    if (!Array.isArray(descText.fills) || descText.fills.length === 0) {
+      descText.fills = [{ type: 'SOLID', color: descColor }];
+    }
 
-    // 메타데이터 갱신
+    // 실제 FigJam 프레임 노드 이름 동기화
+    card.name = title;
+
+    // 메타데이터 갱신 (FigJam 네이티브 객체 속성을 Source of Truth로 유지하며, 중복 데이터 제거)
     card.setPluginData('is_flow_node', 'true');
-    card.setPluginData('node_title', title);
-    card.setPluginData('node_desc', description);
+    card.setPluginData('schema_version', '2');
+    card.setPluginData('node_title', '');
+    card.setPluginData('node_desc', '');
     card.setPluginData('node_tag', '');
-    card.setPluginData('node_theme', payload.theme);
+    card.setPluginData('node_width', '');
+    card.setPluginData('node_height', '');
+    if (payload.theme) card.setPluginData('node_theme', payload.theme);
+    if (payload.nodeType) card.setPluginData('node_type', payload.nodeType);
 
     figma.currentPage.selection = [card];
     handleSelectionChange();
@@ -795,9 +1072,6 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     frame.maxWidth = w;
     frame.minHeight = h;
     frame.maxHeight = h;
-
-    frame.setPluginData('node_width', `${w}`);
-    frame.setPluginData('node_height', `${h}`);
 
     // 리사이즈 시 하단 오른쪽 박스 안쪽 상태 뱃지 위치 동기화
     const statusBadge = frame.children.find(
@@ -872,7 +1146,7 @@ async function connectPoints(payload: ConnectPointsPayload) {
   }
 }
 
-// 단일 90도 칼각 직각 벡터 커넥터 생성 함수 (피그잼 기본 라운딩 제거)
+// 단일 커스텀 90도 칼각 직각 벡터 커넥터 생성 함수 (피그잼 기본 라운딩 제거)
 async function createSingleConnector(
   sourceNode: SceneNode,
   sourceMagnet: MagnetPosition,
@@ -882,25 +1156,18 @@ async function createSingleConnector(
   colorHex?: string,
   strokeWeight?: number
 ): Promise<VectorNode | GroupNode> {
-  let connectorStrokeWeight = strokeWeight || 1.5;
-  let connectorStrokeColor: RGB = colorHex ? hexToRgbColor(colorHex) : { r: 0.18, g: 0.18, b: 0.22 };
+  const connWeight = typeof strokeWeight === 'number' ? strokeWeight : 1.5;
+  const connColor: RGB = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
 
-  if (!colorHex && 'strokes' in sourceNode && Array.isArray(sourceNode.strokes) && sourceNode.strokes.length > 0) {
-    const firstStroke = sourceNode.strokes[0];
-    if (firstStroke.type === 'SOLID') {
-      connectorStrokeColor = firstStroke.color;
-    }
-  }
-
-  // 커스텀 90도 직각 벡터 커넥터 생성
+  // 커스텀 90도 직각 VectorNode 커넥터 생성 (라운딩 없는 완전한 칼각 직각)
   return await createOrthogonalVectorConnector(
     sourceNode,
     sourceMagnet,
     targetNode,
     targetMagnet,
     {
-      strokeWeight: connectorStrokeWeight,
-      strokeColor: connectorStrokeColor,
+      strokeWeight: connWeight,
+      strokeColor: connColor,
       label,
       sourceNodeId: sourceNode.id,
       targetNodeId: targetNode.id,
@@ -987,7 +1254,7 @@ async function autoConnectSelected(label?: string) {
       nodes.sort((a, b) => a.y - b.y);
     }
 
-    const createdConnectors: (VectorNode | GroupNode)[] = [];
+    const createdConnectors: SceneNode[] = [];
     for (let i = 0; i < nodes.length - 1; i++) {
       const src = nodes[i];
       const tgt = nodes[i + 1];
@@ -1291,10 +1558,11 @@ async function toggleNodeTheme(nodeId: string) {
   const currentTheme = node.getPluginData('node_theme') === 'dark' ? 'dark' : 'light';
   const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
+  const extracted = extractNodeText(node);
   await updateFlowNode({
     nodeId: node.id,
-    title: node.getPluginData('node_title') || node.name,
-    description: node.getPluginData('node_desc') || '',
+    title: extracted.title,
+    description: extracted.description,
     tag: node.getPluginData('node_tag') || 'p1',
     theme: newTheme,
     figmaLink: node.getPluginData('figma_link'),
@@ -1323,9 +1591,10 @@ function collectStatusItems(): FrameStatusItem[] {
         statusBadge.y = frame.height - statusBadge.height - 10;
       }
     }
+    const extracted = extractNodeText(node);
     return {
       id: node.id,
-      name: node.name,
+      name: extracted.title || node.name,
       status: status || 'draft',
       x: Math.round(node.x),
       y: Math.round(node.y),
@@ -1412,8 +1681,10 @@ async function applyStatusToSelected(status: WorkflowStatus) {
       statusBadge.fills = [{ type: 'SOLID', color: cfg.color }];
       const textNode = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode;
       if (textNode) {
+        textNode.locked = false;
         await safeSetCharacters(textNode, cfg.label.toUpperCase());
         textNode.fills = [{ type: 'SOLID', color: cfg.textColor }];
+        textNode.locked = true; // 캔버스에서 텍스트 직접 수정 차단
       }
 
       // 3. 하단 오른쪽 박스 안쪽에 절대 위치 배치
@@ -1424,10 +1695,12 @@ async function applyStatusToSelected(status: WorkflowStatus) {
       statusBadge.x = card.width - statusBadge.width - 10;
       statusBadge.y = card.height - statusBadge.height - 10;
       statusBadge.visible = true;
+      statusBadge.locked = true; // 상태 배지 잠금
     }
   }
 
   syncStatusList();
+  handleSelectionChange();
   notify(`${selection.length}개 노드에 [${cfg.label}] 상태 뱃지가 부착되었습니다.`, 'success');
 }
 
@@ -1769,6 +2042,9 @@ figma.ui.onmessage = async (msg: PluginAction) => {
     case 'REDO':
       notify('캔버스에서 Cmd+Shift+Z (Mac) 또는 Ctrl+Y (Windows)로 다시 실행할 수 있습니다.', 'info');
       break;
+    case 'NOTIFY':
+      notify(msg.message, msg.level);
+      break;
     case 'RESIZE_WINDOW': {
       const targetW = msg.width || 360;
       const targetH = Math.max(200, Math.min(1200, Math.round(msg.height)));
@@ -1787,19 +2063,10 @@ figma.ui.onmessage = async (msg: PluginAction) => {
 // 캔버스 변경 감지: 신규 커넥터 직각 포맷팅, 노드 이동 시 커넥터 실시간 추적, 기즈모 조작 차단
 figma.on('documentchange', async (event) => {
   const movedNodeIds = new Set<string>();
+  let connectorSelectionChanged = false;
 
   for (const change of event.documentChanges) {
-    if (change.type === 'CREATE') {
-      const node = figma.getNodeById(change.id);
-      if (node && node.type === 'CONNECTOR') {
-        const conn = node as ConnectorNode;
-        if (conn.connectorLineType !== 'ELBOWED') {
-          conn.connectorLineType = 'ELBOWED';
-        }
-        conn.strokeWeight = 1.5;
-        conn.connectorEndStrokeCap = 'ARROW_EQUILATERAL';
-      }
-    } else if (change.type === 'PROPERTY_CHANGE') {
+    if (change.type === 'PROPERTY_CHANGE') {
       // 1. 노드 이동(x, y) 또는 크기 변경(width, height) 감지 ➔ 연결된 커스텀 직각 커넥터 실시간 추적 갱신
       if (
         change.properties.includes('x') ||
@@ -1817,8 +2084,8 @@ figma.on('documentchange', async (event) => {
         const flowNode = findFlowNode(node);
         if (flowNode && flowNode.type === 'FRAME' && flowNode.getPluginData('is_flow_node') === 'true') {
           const frame = flowNode as FrameNode;
-          const savedW = parseInt(frame.getPluginData('node_width'), 10);
-          const savedH = parseInt(frame.getPluginData('node_height'), 10);
+          const savedW = (frame.minWidth && frame.minWidth > 0) ? frame.minWidth : parseInt(frame.getPluginData('node_width'), 10);
+          const savedH = (frame.minHeight && frame.minHeight > 0) ? frame.minHeight : parseInt(frame.getPluginData('node_height'), 10);
           if (savedW && savedH && (Math.round(frame.width) !== savedW || Math.round(frame.height) !== savedH)) {
             frame.minWidth = null;
             frame.maxWidth = null;
@@ -1836,12 +2103,111 @@ figma.on('documentchange', async (event) => {
           }
         }
       }
+
+      // 3. 캔버스에서 텍스트 직접 편집 시 타이틀(13px Bold) 및 설명(11px Regular) 스타일 실시간 보정 및 유지
+      const textNodeCandidate = figma.getNodeById(change.id);
+      if (textNodeCandidate && textNodeCandidate.type === 'TEXT') {
+        const textNode = textNodeCandidate as TextNode;
+        const role = textNode.getPluginData('node_role');
+        const isHeaderChild = textNode.parent && textNode.parent.name === 'Header';
+        const isTitle = role === 'title' || textNode.name === 'TitleText' || isHeaderChild;
+        const isDesc = role === 'desc' || textNode.name === 'DescText';
+
+        if (isTitle || isDesc) {
+          const flowNode = findFlowNode(textNode);
+          if (flowNode) {
+            if (isTitle) {
+              // 타이틀 텍스트: 블릿, 링크, 볼드, 취소선 등 일체 반영 차단 및 Inter Bold 13px 표준 규격 강제 고정
+              await enforceTitleStandardStyle(textNode, flowNode);
+            } else if (isDesc) {
+              // 설명 텍스트: 11px 폰트 사이즈 및 리사이즈 모드 고정, 나머지 서식(굵기, 색상, 이탤릭 등)은 모두 자유롭게 허용
+              lockTextFontSizeAndAutoResize(textNode, 11);
+            }
+          }
+        }
+      }
+
+      // 4. 상태(Status) 뱃지 텍스트는 캔버스에서 수정 일체 불가 -> 원래 status 라벨로 강제 원복 및 잠금(locked=true) 유지
+      const maybeStatusNode = figma.getNodeById(change.id);
+      if (maybeStatusNode) {
+        let statusTextNode: TextNode | null = null;
+        let badgeFrame: FrameNode | null = null;
+
+        if (maybeStatusNode.type === 'TEXT') {
+          const t = maybeStatusNode as TextNode;
+          if (
+            t.name === 'StatusText' ||
+            (t.parent && (t.parent.name === 'StatusBadge' || t.parent.getPluginData('is_status_badge') === 'true'))
+          ) {
+            statusTextNode = t;
+            badgeFrame = t.parent && t.parent.type === 'FRAME' ? (t.parent as FrameNode) : null;
+          }
+        } else if (maybeStatusNode.type === 'FRAME') {
+          const f = maybeStatusNode as FrameNode;
+          if (f.name === 'StatusBadge' || f.getPluginData('is_status_badge') === 'true') {
+            badgeFrame = f;
+            statusTextNode = f.children.find((c) => c.type === 'TEXT') as TextNode | null;
+          }
+        }
+
+        if (statusTextNode) {
+          const flowNode = findFlowNode(statusTextNode);
+          if (flowNode) {
+            const currentStatus = flowNode.getPluginData('workflow_status') as WorkflowStatus;
+            const expectedLabel = currentStatus && STATUS_CONFIG[currentStatus]
+              ? STATUS_CONFIG[currentStatus].label.toUpperCase()
+              : 'DRAFT';
+
+            if (statusTextNode.characters !== expectedLabel) {
+              statusTextNode.locked = false;
+              await safeSetCharacters(statusTextNode, expectedLabel);
+            }
+            statusTextNode.locked = true;
+            if (badgeFrame) {
+              badgeFrame.locked = true;
+            }
+          }
+        }
+      }
+
+      // 5. 커넥터의 피그잼 네이티브 설정값(컬러, 두께, 패턴 등) 변경 감지 ➔ pluginData 최신화 및 선택된 경우 UI 실시간 연동
+      if (
+        change.properties.includes('strokes') ||
+        change.properties.includes('strokeWeight') ||
+        change.properties.includes('dashPattern') ||
+        change.properties.includes('connectorLineType')
+      ) {
+        const changedNode = figma.getNodeById(change.id);
+        const connNode = findConnectorNode(changedNode);
+        if (connNode) {
+          if (connNode.type === 'CONNECTOR') {
+            const conn = connNode as ConnectorNode;
+            if (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === 'SOLID') {
+              const hex = rgbToHexColor(conn.strokes[0].color);
+              conn.setPluginData('connector_color', hex);
+            }
+            if (typeof conn.strokeWeight === 'number') {
+              conn.setPluginData('connector_weight', String(conn.strokeWeight));
+            }
+          }
+          // 현재 선택된 노드들 중 이 커넥터가 포함되어 있다면 UI 갱신 플래그 활성화
+          const currentSelection = figma.currentPage.selection;
+          if (currentSelection.some((sel) => sel.id === connNode.id || findConnectorNode(sel)?.id === connNode.id)) {
+            connectorSelectionChanged = true;
+          }
+        }
+      }
     }
   }
 
   // 연결된 커스텀 직각 커넥터들 실시간 동기화
   if (movedNodeIds.size > 0) {
     await syncConnectorsForMovedNodes(movedNodeIds);
+  }
+
+  // 피그잼 캔버스에서 변경된 커넥터 컬러/두께 등 설정값을 UI 창에 실시간 연동
+  if (connectorSelectionChanged) {
+    handleSelectionChange();
   }
 });
 

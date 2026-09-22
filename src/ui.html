@@ -159,9 +159,9 @@
       font-family: inherit;
       border: 1px solid transparent;
       background: transparent;
-      font-size: 11px;
-      font-weight: 600;
-      line-height: 16px;
+      font-size: 13px;
+      font-weight: 550;
+      line-height: 18px;
       color: var(--color-text-primary);
       outline: none;
       width: calc(100% + 8px);
@@ -185,8 +185,9 @@
       display: none;
       align-items: center;
       gap: 6px;
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: 550;
+      line-height: 18px;
       color: var(--color-text-primary);
     }
 
@@ -486,11 +487,11 @@
       transform: translateX(14px);
     }
 
-    /* 칩 / 탭 버튼 (Type 탭 등 피그마 18:865 스펙) */
+    /* 칩 / 탭 버튼 (Type 탭, Status 탭 등 범용 탭 표준 규격) */
     .chip-group {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
     }
 
     .chip-btn {
@@ -503,31 +504,148 @@
       font-weight: 450;
       color: rgba(0, 0, 0, 0.6);
       cursor: pointer;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 4px;
-      transition: background 0.15s, color 0.15s;
+      transition: background 0.15s ease, color 0.15s ease;
       user-select: none;
       box-sizing: border-box;
       letter-spacing: 0;
     }
 
-    .chip-btn:hover {
+    .chip-btn:not(.active):hover {
       background: #f5f5f5;
       color: rgba(0, 0, 0, 0.9);
     }
 
-    .chip-btn.active {
-      background: #8C4CF6;
-      /* 피그잼 시그니처 퍼플 컬러 */
-      color: #ffffff;
+    /* Mixed 상태 스타일: 버튼 배경 투명 및 텍스트는 디폴트(default) 컬러 상태 유지 */
+    .chip-btn.mixed,
+    .tab-btn.mixed {
+      background: transparent;
+      color: rgba(0, 0, 0, 0.6);
       font-weight: 450;
-      /* 볼드 처리 금지 */
     }
 
-    .chip-btn.active:hover {
-      background: #7B3EE4;
+    .chip-btn.active {
+      background: #8C4CF6;
+      /* 기본 피그잼 퍼플 컬러 */
+      color: #ffffff;
+      font-weight: 450;
+    }
+
+    /* 탭 내 블릿(Bullet Dot) 표준 스타일 */
+    .chip-btn .tab-bullet,
+    .tab-btn .tab-bullet {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: inline-block;
+      box-sizing: border-box;
+      border: 0.5px solid rgba(0, 0, 0, 0.12);
+      transition: background-color 0.15s ease;
+    }
+
+    /* 탭 내 아이콘(SVG / Icon) 표준 스타일 */
+    .chip-btn .tab-icon,
+    .tab-btn .tab-icon {
+      width: 12px;
+      height: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* 탭 내 텍스트 라벨 표준 스타일 */
+    .chip-btn .tab-label,
+    .tab-btn .tab-label {
+      display: inline-block;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* 탭 내 카운트 배지 표준 스타일 (피그마 UI3 1027263:6421 규격) */
+    .chip-btn .tab-badge,
+    .tab-btn .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 5px;
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.6);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 16px;
+      margin-left: 4px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      user-select: none;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    /* 탭 호버(Hover) 시 카운트 배지 배경색 흰색(#ffffff) */
+    .chip-btn:not(.active):hover .tab-badge {
+      background: #ffffff;
+      color: rgba(0, 0, 0, 0.9);
+    }
+
+    /* 탭이 active 상태일 때 배지 스타일 (유색 배경 대비) */
+    .chip-btn.active .tab-badge,
+    .tab-btn.active .tab-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+
+    /* Active 시 블릿 처리: 텍스트 색상과 동일하게 반전되어 선명하게 유지 */
+    .chip-btn.active .tab-bullet,
+    .tab-btn.active .tab-bullet {
+      background-color: currentColor !important;
+      border-color: transparent;
+    }
+
+    /* Status 탭 전용: active 시 각 상태 고유 블릿 컬러로 배경 적용 */
+    .chip-btn[data-status="draft"].active {
+      background: #9CA3AF;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="wireframe"].active {
+      background: #6B7280;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="in_progress"].active {
+      background: #3B82F6;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="in_review"].active {
+      background: #CA8A04;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="revision"].active {
+      background: #EA580C;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="approved"].active {
+      background: #8B5CF6;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="ready_for_dev"].active {
+      background: #16A34A;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="done"].active {
+      background: #374151;
       color: #ffffff;
     }
 
@@ -1036,13 +1154,13 @@
       box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
     }
 
-    /* 선택되지 않은 칩 호버 시: 딱 2px 보더 크기만큼 사이즈 확대 (보더 크기 초과 방지) */
+    /* 선택되지 않은 칩 호버 시: 상하좌우 1px씩만 섬세하게 확대 (scale 1.065) */
     .swatch-item:hover:not(.selected) {
-      transform: scale(1.13);
+      transform: scale(1.065);
       z-index: 4;
     }
     .swatch-item[data-color="#ffffff"]:hover:not(.selected) {
-      transform: scale(1.13);
+      transform: scale(1.065);
       z-index: 4;
       box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
     }
@@ -1166,49 +1284,14 @@
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 24px rgba(0, 0, 0, 0.18), 0 0 0.5px rgba(0, 0, 0, 0.08);
     }
 
-    /* 상태 뱃지 옵션 (Status Pills) */
-    .status-pills-container {
+    /* 상태 뱃지 옵션 (Status Tabs) */
+    #status-options {
       display: none;
-      flex-wrap: wrap;
-      gap: 6px;
       padding: 4px 0;
     }
 
-    .status-pills-container.active {
+    #status-options.active {
       display: flex;
-    }
-
-    .status-pill {
-      height: 24px;
-      padding: 0 10px;
-      border-radius: var(--radius-sm);
-      background: var(--color-bg-secondary);
-      color: var(--color-text-primary);
-      font-size: 11px;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      border: 1px solid transparent;
-      transition: all 0.15s ease;
-    }
-
-    .status-pill:hover {
-      background: #eaeaea;
-    }
-
-    .status-pill.selected {
-      background: #5f92f3;
-      color: #ffffff;
-      font-weight: 600;
-    }
-
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
     }
 
     /* 스텝 배지 옵션 */
@@ -1422,9 +1505,126 @@
 
     .terminal-offset-row {
       display: grid;
-      grid-template-columns: 1fr 1.2fr 1.2fr 1fr;
-      gap: 6px;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 4px;
       align-items: center;
+    }
+
+    /* 커스텀 터미널 드롭다운 */
+    .terminal-dropdown-wrap {
+      position: relative;
+    }
+
+    .terminal-dropdown-btn {
+      width: 100%;
+      height: 28px;
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 0 4px;
+      color: var(--color-text-primary);
+      transition: background 0.12s;
+    }
+
+    .terminal-dropdown-btn:hover {
+      background: var(--color-bg-hover, #f0f0f0);
+    }
+
+    .terminal-dropdown-btn svg {
+      flex-shrink: 0;
+    }
+
+    .terminal-dropdown-btn .td-chevron {
+      color: var(--color-text-secondary);
+      margin-left: 1px;
+    }
+
+    /* 팝업 메뉴 */
+    .terminal-dropdown-popup {
+      position: fixed;
+      z-index: 9999;
+      background: #2c2c2c;
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.32);
+      padding: 4px;
+      min-width: 160px;
+      display: none;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .terminal-dropdown-popup.open {
+      display: flex;
+    }
+
+    .terminal-popup-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #e8e8e8;
+      font-size: 11px;
+      font-weight: 400;
+      transition: background 0.1s;
+      user-select: none;
+    }
+
+    .terminal-popup-item:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .terminal-popup-item.selected {
+      background: #7B61FF;
+      color: #ffffff;
+    }
+
+    .terminal-popup-item.selected .td-check {
+      opacity: 1;
+    }
+
+    .td-check {
+      width: 12px;
+      flex-shrink: 0;
+      opacity: 0;
+      color: #ffffff;
+    }
+
+    .td-btn-icon {
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      max-width: 52px;
+    }
+
+    .td-btn-icon svg {
+      display: block;
+      max-width: 52px;
+      height: 16px;
+    }
+
+    .td-icon-wrap {
+      display: flex;
+      align-items: center;
+      width: 52px;
+      overflow: hidden;
+    }
+
+    .td-icon-wrap svg {
+      display: block;
+      max-width: 52px;
+      height: 16px;
+    }
+
+    .td-label {
+      flex: 1;
+      white-space: nowrap;
     }
 
     /* 토글에 따른 가변 컨텐츠 */
@@ -1442,27 +1642,66 @@
     /* 하단 고정 푸터 액션 바                                        */
     /* ============================================================ */
     .app-footer {
-      padding: 8px 16px 12px 16px;
+      padding: 10px 16px;
       background: var(--color-bg);
       border-top: 1px solid var(--color-border);
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
     }
 
-    .btn-cta-primary {
-      width: 100%;
+    .btn-cta-secondary {
       height: 32px;
-      background: var(--color-brand-cta);
-      color: #ffffff;
-      border: none;
-      border-radius: var(--radius-sm);
+      padding: 0 14px;
+      background: transparent;
+      color: var(--color-text-primary, #000000);
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: var(--radius-sm, 5px);
       font-size: 11px;
       font-weight: 500;
       cursor: pointer;
-      display: flex;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      box-sizing: border-box;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn-cta-secondary:hover {
+      background: #f5f5f5;
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-cta-secondary:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+      background: transparent;
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-cta-primary {
+      height: 32px;
+      padding: 0 16px;
+      background: var(--color-brand-cta);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm, 5px);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
       transition: background 0.15s ease;
+      box-sizing: border-box;
+      white-space: nowrap;
+      user-select: none;
     }
 
     .btn-cta-primary:hover {
@@ -2183,21 +2422,257 @@
       background: #7A39E3;
     }
 
-    /* 토스트 메시지 */
-    .toast-container {
-      position: fixed;
-      bottom: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(30, 30, 30, 0.92);
-      color: #ffffff;
-      padding: 6px 14px;
-      border-radius: 9999px;
+    /* 피그마 공식 UI3 규격 모달 3종 (Add Size, Edit Size, Add Style) */
+    .size-modal-card,
+    .style-modal-card {
+      width: 200px;
+      background: #1E1E1E;
+      color: #FFFFFF;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease-out;
+    }
+
+    .size-modal-header,
+    .style-modal-header {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px 0 16px;
+      border-bottom: 1px solid #383838;
+      box-sizing: border-box;
+    }
+
+    .size-modal-title,
+    .style-modal-title {
       font-size: 11px;
-      box-shadow: var(--shadow-md);
-      display: none;
-      z-index: 2000;
-      pointer-events: none;
+      font-weight: 550;
+      color: #FFFFFF;
+      line-height: 16px;
+    }
+
+    .size-modal-close-btn,
+    .style-modal-close-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .size-modal-close-btn:hover,
+    .style-modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+
+    .size-modal-body,
+    .style-modal-body {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    /* 접두사(W, H) 인풋 박스 */
+    .prefix-input-box {
+      flex: 1;
+      min-width: 0;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      box-sizing: border-box;
+    }
+
+    .prefix-input-box:focus-within {
+      border-color: #8C4CF6;
+    }
+
+    .prefix-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-right: 5px;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .prefix-input {
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    /* 아이콘 인풋 박스 (Corner Radius 등) */
+    .icon-input-box {
+      width: 100%;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      box-sizing: border-box;
+    }
+
+    .icon-input-box:focus-within {
+      border-color: #8C4CF6;
+    }
+
+    .icon-input-slot {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.6);
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    /* 높이 모드 선택 드롭다운 버튼 */
+    .size-dropdown-box {
+      width: 100%;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6px;
+      box-sizing: border-box;
+      cursor: pointer;
+      color: #FFFFFF;
+      font-size: 11px;
+      user-select: none;
+    }
+
+    .size-dropdown-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .size-dropdown-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .size-dropdown-left span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Style 모달 전용 레이아웃 */
+    .style-control-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .style-color-box {
+      flex: 1;
+      min-width: 0;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px 0 4px;
+      box-sizing: border-box;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .style-color-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .style-color-chip {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: #EA2039;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      flex-shrink: 0;
+      margin-right: 6px;
+      box-sizing: border-box;
+    }
+
+    .style-color-hex-text {
+      flex: 1;
+      min-width: 0;
+      font-size: 11px;
+      color: #FFFFFF;
+      font-family: inherit;
+    }
+
+    .style-chevron-icon {
+      color: rgba(255, 255, 255, 0.5);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .stroke-width-box {
+      width: 58px;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+
+    .stroke-width-box:focus-within {
+      border-color: #8C4CF6;
+    }
+
+    .style-divider {
+      width: 100%;
+      height: 1px;
+      background: #383838;
+      border: none;
+      margin: 8px 0;
+    }
+
+    .size-modal-footer,
+    .style-modal-footer {
+      height: 48px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      border-top: 1px solid #383838;
+      box-sizing: border-box;
     }
 
     /* 피그마 공식 UI3 툴팁 (말꼬리 삼각형 팁 포함) */
@@ -2257,15 +2732,10 @@
 
       <!-- 단일/신규 노드 상태 -->
       <div id="single-title-wrap" style="width: 100%;">
-        <input type="text" id="node-title-input" class="node-title-input" value="Untitled" placeholder="노드 제목을 입력하세요" />
+        <input type="text" id="node-title-input" class="node-title-input" value="Untitled" placeholder="Enter node title" oninput="debouncedApplyNode()" />
       </div>
       <!-- 2개 이상 선택 상태 -->
       <div id="multi-selection-indicator" class="multi-selection-indicator">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M10.2246 13.0822C10.4187 12.9541 10.6826 12.9758 10.8535 13.1467L12.8535 15.1467C13.0487 15.342 13.0487 15.6585 12.8535 15.8537L10.8535 17.8537C10.6582 18.049 10.3417 18.049 10.1464 17.8537L8.14645 15.8537C7.95118 15.6585 7.95118 15.342 8.14645 15.1467L10.1464 13.1467L10.2246 13.0822ZM15.1464 15.1467C15.3417 14.9514 15.6582 14.9514 15.8535 15.1467C16.0487 15.342 16.0487 15.6585 15.8535 15.8537L13.8535 17.8537C13.6582 18.049 13.3417 18.049 13.1464 17.8537C12.9512 17.6585 12.9512 17.342 13.1464 17.1467L15.1464 15.1467ZM9.20699 15.5002L10.5 16.7932L11.7929 15.5002L10.5 14.2072L9.20699 15.5002ZM6.72457 9.58224C6.91865 9.45407 7.18261 9.47583 7.35348 9.64669L9.35348 11.6467C9.54874 11.842 9.54874 12.1585 9.35348 12.3537L7.35348 14.3537C7.15822 14.549 6.84171 14.549 6.64645 14.3537L4.64645 12.3537C4.45118 12.1585 4.45118 11.842 4.64645 11.6467L6.64645 9.64669L6.72457 9.58224ZM13.7246 9.58224C13.9187 9.45407 14.1826 9.47583 14.3535 9.64669L16.3535 11.6467C16.5487 11.842 16.5487 12.1585 16.3535 12.3537L14.3535 14.3537C14.1582 14.549 13.8417 14.549 13.6464 14.3537L11.6464 12.3537C11.4512 12.1585 11.4512 11.842 11.6464 11.6467L13.6464 9.64669L13.7246 9.58224ZM16.6464 9.64669C16.8417 9.45143 17.1582 9.45143 17.3535 9.64669L19.3535 11.6467C19.5487 11.842 19.5487 12.1585 19.3535 12.3537L17.3535 14.3537C17.1582 14.549 16.8417 14.549 16.6464 14.3537C16.4512 14.1585 16.4512 13.842 16.6464 13.6467L18.2929 12.0002L16.6464 10.3537C16.4512 10.1585 16.4512 9.84195 16.6464 9.64669ZM5.70699 12.0002L6.99996 13.2932L8.29293 12.0002L6.99996 10.7072L5.70699 12.0002ZM12.707 12.0002L14 13.2932L15.2929 12.0002L14 10.7072L12.707 12.0002ZM10.2246 6.08224C10.4187 5.95407 10.6826 5.97583 10.8535 6.14669L12.8535 8.14669C13.0487 8.34195 13.0487 8.65846 12.8535 8.85372L10.8535 10.8537C10.6582 11.049 10.3417 11.049 10.1464 10.8537L8.14645 8.85372C7.95118 8.65846 7.95118 8.34195 8.14645 8.14669L10.1464 6.14669L10.2246 6.08224ZM9.20699 8.50021L10.5 9.79318L11.7929 8.50021L10.5 7.20724L9.20699 8.50021ZM13.1464 6.14669C13.3417 5.95143 13.6582 5.95143 13.8535 6.14669L15.8535 8.14669C16.0487 8.34195 16.0487 8.65846 15.8535 8.85372C15.6582 9.04898 15.3417 9.04898 15.1464 8.85372L13.1464 6.85372C12.9512 6.65846 12.9512 6.34195 13.1464 6.14669Z"
-            fill="currentColor" />
-        </svg>
         <span id="multi-selection-text">2 nodes are selected</span>
       </div>
     </div>
@@ -2307,7 +2777,7 @@
                     fill="currentColor" />
                 </svg>
               </button>
-              <button id="btn-phase-more" class="btn-action-icon btn-more-icon" title="더보기 옵션"
+              <button id="btn-phase-more" class="btn-action-icon btn-more-icon" title="More options"
                 onclick="toggleContextMenu(event)">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="4" cy="8" r="1" fill="currentColor" />
@@ -2364,7 +2834,7 @@
           <div class="section-header">
             <span class="section-title">Description</span>
             <div class="section-actions">
-              <button id="btn-copy-desc" class="btn-action-icon" title="내용 복사" onclick="copyDescription()">
+              <button id="btn-copy-desc" class="btn-action-icon" title="Copy" onclick="copyDescription()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M13.5 6C14.3284 6 15 6.67157 15 7.5V9H16.5C17.3284 9 18 9.67157 18 10.5V16.5C18 17.3284 17.3284 18 16.5 18H10.5C9.67157 18 9 17.3284 9 16.5V15H7.5C6.67157 15 6 14.3284 6 13.5V7.5C6 6.67157 6.67157 6 7.5 6H13.5ZM15 13.5C15 14.3284 14.3284 15 13.5 15H10V16.5C10 16.7761 10.2239 17 10.5 17H16.5C16.7761 17 17 16.7761 17 16.5V10.5C17 10.2239 16.7761 10 16.5 10H15V13.5ZM7.5 7C7.22386 7 7 7.22386 7 7.5V13.5C7 13.7761 7.22386 14 7.5 14H13.5C13.7761 14 14 13.7761 14 13.5V7.5C14 7.22386 13.7761 7 13.5 7H7.5Z"
@@ -2374,7 +2844,7 @@
             </div>
           </div>
           <div class="section-body">
-            <textarea id="node-description-input" class="desc-textarea" placeholder="Add a description"></textarea>
+            <textarea id="node-description-input" class="desc-textarea" placeholder="Add a description" oninput="debouncedApplyNode()"></textarea>
           </div>
         </div>
       </section>
@@ -2388,14 +2858,14 @@
           <div class="section-header">
             <span class="section-title">Size</span>
             <div class="section-actions">
-              <button class="btn-action-icon" title="사이즈 추가" onclick="showToast('기본 사이즈 규격')">
+              <button class="btn-action-icon" title="Add size" onclick="openAddSizeModal()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z"
                     fill="currentColor" />
                 </svg>
               </button>
-              <button class="btn-action-icon btn-more-icon" title="더보기 옵션" onclick="toggleContextMenu(event)">
+              <button class="btn-action-icon btn-more-icon" title="Edit size" onclick="openEditSizeModal()">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="4" cy="8" r="1" fill="currentColor" />
                   <circle cx="8" cy="8" r="1" fill="currentColor" />
@@ -2409,11 +2879,11 @@
             <div class="numeric-inputs-row">
               <div class="input-scrubber-box">
                 <span class="scrubber-label" data-tooltip="Width">W</span>
-                <input type="number" id="input-size-w" value="250" min="50" onchange="triggerLiveResize()" />
+                <input type="number" id="input-size-w" value="250" min="50" onblur="applyCurrentNodeState()" onkeydown="if(event.key==='Enter'){applyCurrentNodeState()}" />
               </div>
               <div class="input-scrubber-box">
                 <span class="scrubber-label" data-tooltip="Height">H</span>
-                <input type="number" id="input-size-h" value="90" min="40" onchange="triggerLiveResize()" />
+                <input type="number" id="input-size-h" value="90" min="40" onblur="applyCurrentNodeState()" onkeydown="if(event.key==='Enter'){applyCurrentNodeState()}" />
               </div>
               <div class="input-scrubber-box">
                 <svg data-tooltip="Corner radius" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2421,11 +2891,11 @@
                     d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z"
                     fill="currentColor" />
                 </svg>
-                <input type="number" id="input-size-radius" value="0" min="0" max="40" />
+                <input type="number" id="input-size-radius" value="0" min="0" max="40" onblur="applyCurrentNodeState()" onkeydown="if(event.key==='Enter'){applyCurrentNodeState()}" />
               </div>
               <div class="size-mode-dropdown-wrapper figma-dropdown-wrapper" id="size-mode-dropdown-wrapper">
                 <button type="button" id="btn-size-mode-dropdown" class="size-mode-dropdown-btn figma-dropdown-btn"
-                  title="높이 모드 선택" onclick="toggleSizeModeDropdown(event)">
+                  title="Select height mode" onclick="toggleSizeModeDropdown(event)">
                   <div class="size-mode-btn-content figma-dropdown-btn-content">
                     <span class="size-mode-current-icon figma-dropdown-current-icon" id="size-mode-current-icon">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2516,10 +2986,9 @@
             <!-- 규격 프리셋 칩 -->
             <div class="chip-group" style="margin-top: 6px;">
               <button class="chip-btn active" onclick="applySizePreset(250, 90, this)">Default</button>
-              <button class="chip-btn" onclick="applySizePreset(160, 160, this)">Square</button>
-              <button class="chip-btn" onclick="applySizePreset(1200, 800, this)">Web</button>
-              <button class="chip-btn" onclick="applySizePreset(375, 812, this)">Mobile</button>
-              <button class="chip-btn" onclick="applySizePreset(375, 188, this)">Custom</button>
+              <button class="chip-btn" onclick="applySizePreset(180, 180, this)">Square</button>
+              <button class="chip-btn" onclick="applySizePreset(320, 180, this)">Web</button>
+              <button class="chip-btn" onclick="applySizePreset(160, 280, this)">Mobile</button>
             </div>
           </div>
         </div>
@@ -2531,14 +3000,14 @@
           <div class="section-header">
             <span class="section-title">Style</span>
             <div class="section-actions">
-              <button class="btn-action-icon" title="스타일 추가" onclick="showToast('스타일 프리셋')">
+              <button class="btn-action-icon" title="Add style" onclick="openAddStyleModal()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z"
                     fill="currentColor" />
                 </svg>
               </button>
-              <button class="btn-action-icon btn-more-icon" title="더보기 옵션" onclick="toggleContextMenu(event)">
+              <button class="btn-action-icon btn-more-icon" title="More options" onclick="toggleContextMenu(event)">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="4" cy="8" r="1" fill="currentColor" />
                   <circle cx="8" cy="8" r="1" fill="currentColor" />
@@ -2616,31 +3085,39 @@
             </label>
           </div>
           <div class="section-body">
-            <div class="status-pills-container active" id="status-options">
-              <div class="status-pill" data-status="draft" onclick="selectStatus('draft', this)">
-                <span class="status-dot" style="background: #8E949F;"></span>
-                <span>Draft</span>
-              </div>
-              <div class="status-pill" data-status="wireframe" onclick="selectStatus('wireframe', this)">
-                <span class="status-dot" style="background: #D9D9D9;"></span>
-                <span>Wireframe</span>
-              </div>
-              <div class="status-pill selected" data-status="in_progress" onclick="selectStatus('in_progress', this)">
-                <span class="status-dot" style="background: #ffffff;"></span>
-                <span>In Progress</span>
-              </div>
-              <div class="status-pill" data-status="in_review" onclick="selectStatus('in_review', this)">
-                <span class="status-dot" style="background: #E9A23B;"></span>
-                <span>In Review</span>
-              </div>
-              <div class="status-pill" data-status="approved" onclick="selectStatus('approved', this)">
-                <span class="status-dot" style="background: #8638E5;"></span>
-                <span>Approved</span>
-              </div>
-              <div class="status-pill" data-status="ready_for_dev" onclick="selectStatus('ready_for_dev', this)">
-                <span class="status-dot" style="background: #55B685;"></span>
-                <span>Ready for Dev</span>
-              </div>
+            <div class="chip-group active" id="status-options">
+              <button type="button" class="chip-btn" data-status="draft" data-bullet-color="#9CA3AF" onclick="selectStatus('draft', this)">
+                <span class="tab-bullet" style="background-color: #9CA3AF;"></span>
+                <span class="tab-label">Draft</span>
+              </button>
+              <button type="button" class="chip-btn" data-status="wireframe" data-bullet-color="#6B7280" onclick="selectStatus('wireframe', this)">
+                <span class="tab-bullet" style="background-color: #6B7280;"></span>
+                <span class="tab-label">Wireframe</span>
+              </button>
+              <button type="button" class="chip-btn active" data-status="in_progress" data-bullet-color="#3B82F6" onclick="selectStatus('in_progress', this)">
+                <span class="tab-bullet" style="background-color: #3B82F6;"></span>
+                <span class="tab-label">In Progress</span>
+              </button>
+              <button type="button" class="chip-btn" data-status="in_review" data-bullet-color="#CA8A04" onclick="selectStatus('in_review', this)">
+                <span class="tab-bullet" style="background-color: #CA8A04;"></span>
+                <span class="tab-label">In Review</span>
+              </button>
+              <button type="button" class="chip-btn" data-status="revision" data-bullet-color="#EA580C" onclick="selectStatus('revision', this)">
+                <span class="tab-bullet" style="background-color: #EA580C;"></span>
+                <span class="tab-label">Revision</span>
+              </button>
+              <button type="button" class="chip-btn" data-status="approved" data-bullet-color="#8B5CF6" onclick="selectStatus('approved', this)">
+                <span class="tab-bullet" style="background-color: #8B5CF6;"></span>
+                <span class="tab-label">Approved</span>
+              </button>
+              <button type="button" class="chip-btn" data-status="ready_for_dev" data-bullet-color="#16A34A" onclick="selectStatus('ready_for_dev', this)">
+                <span class="tab-bullet" style="background-color: #16A34A;"></span>
+                <span class="tab-label">Ready for Dev</span>
+              </button>
+              <button type="button" class="chip-btn" data-status="done" data-bullet-color="#374151" onclick="selectStatus('done', this)">
+                <span class="tab-bullet" style="background-color: #374151;"></span>
+                <span class="tab-label">Done</span>
+              </button>
             </div>
           </div>
         </div>
@@ -2738,26 +3215,26 @@
             <div class="section-body">
               <!-- 연결선 색상 및 선 패턴 (solid, dashed, dotted) -->
               <div style="display: flex; gap: 6px;">
-                <select id="conn-line-color" class="select-dropdown-box" style="width: 110px;">
+                <select id="conn-line-color" class="select-dropdown-box" style="width: 110px;" onchange="applyCurrentConnectorState()">
                   <option value="#EA2039">■ EA2039</option>
                   <option value="#8638E5">■ 8638E5</option>
                   <option value="#000000">■ 000000</option>
                   <option value="#5F92F3">■ 5F92F3</option>
                 </select>
                 <div class="line-style-segment" style="flex: 1;">
-                  <button class="line-style-btn active" title="실선" onclick="selectLinePattern('SOLID', this)"><svg
+                  <button class="line-style-btn active" title="Solid" onclick="selectLinePattern('SOLID', this)"><svg
                       width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path
                         d="M18.5 11C18.7761 11 19 11.2239 19 11.5C19 11.7761 18.7761 12 18.5 12H5.5C5.22386 12 5 11.7761 5 11.5C5 11.2239 5.22386 11 5.5 11H18.5Z"
                         fill="currentColor" />
                     </svg></button>
-                  <button class="line-style-btn" title="파선" onclick="selectLinePattern('DASHED', this)"><svg width="24"
+                  <button class="line-style-btn" title="Dashed" onclick="selectLinePattern('DASHED', this)"><svg width="24"
                       height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path
                         d="M7.5 12C7.77614 12 8 12.2239 8 12.5C8 12.7761 7.77614 13 7.5 13H5.5C5.22386 13 5 12.7761 5 12.5C5 12.2239 5.22386 12 5.5 12H7.5ZM13 12C13.2761 12 13.5 12.2239 13.5 12.5C13.5 12.7761 13.2761 13 13 13H11C10.7239 13 10.5 12.7761 10.5 12.5C10.5 12.2239 10.7239 12 11 12H13ZM18.5 12C18.7761 12 19 12.2239 19 12.5C19 12.7761 18.7761 13 18.5 13H16.5C16.2239 13 16 12.7761 16 12.5C16 12.2239 16.2239 12 16.5 12H18.5Z"
                         fill="currentColor" />
                     </svg></button>
-                  <button class="line-style-btn" title="점선" onclick="selectLinePattern('DOTTED', this)"><svg width="24"
+                  <button class="line-style-btn" title="Dotted" onclick="selectLinePattern('DOTTED', this)"><svg width="24"
                       height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="6" cy="12" r="1.2" fill="currentColor" />
                       <circle cx="9" cy="12" r="1.2" fill="currentColor" />
@@ -2805,7 +3282,7 @@
                       d="M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z"
                       fill="currentColor" />
                   </svg>
-                  <input type="number" id="input-stroke-weight" value="1.5" step="0.5" min="1" max="10" />
+                  <input type="number" id="input-stroke-weight" value="1.5" step="0.5" min="1" max="10" onblur="applyCurrentConnectorState()" onkeydown="if(event.key==='Enter'){applyCurrentConnectorState()}" />
                 </div>
                 <div class="routing-types-grid" style="flex: 1;">
                   <button class="routing-btn active" title="직각 (Orthogonal)"
@@ -2862,20 +3339,121 @@
                 <div class="input-scrubber-box">
                   <input type="number" id="input-start-offset" placeholder="Offset" value="0" />
                 </div>
-                <select id="select-start-terminal" class="select-dropdown-box" title="시작 단자">
-                  <option value="NONE">None</option>
-                  <option value="ARROW">◆──</option>
-                  <option value="DIAMOND">◇──</option>
-                  <option value="CIRCLE">●──</option>
-                </select>
-                <select id="select-end-terminal" class="select-dropdown-box" title="끝 단자">
-                  <option value="ARROW">──▶</option>
-                  <option value="DIAMOND">──◆</option>
-                  <option value="CIRCLE">──●</option>
-                  <option value="NONE">None</option>
-                </select>
+
+                <!-- 시작 단자 커스텀 드롭다운 -->
+                <div class="terminal-dropdown-wrap" id="wrap-start-terminal">
+                  <button class="terminal-dropdown-btn" id="btn-start-terminal"
+                    onclick="toggleTerminalDropdown('start', event)" title="Start terminal">
+                    <span id="icon-start-terminal" class="td-btn-icon">
+                      <!-- 기본: None (start) — icon.16.stroke.start.point.line.svg -->
+                      <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H51.5C51.78 7.5 52 7.72 52 8C52 8.28 51.78 8.5 51.5 8.5Z" fill="currentColor"/></svg>
+                    </span>
+                    <svg class="td-chevron" width="8" height="8" viewBox="0 0 8 8" fill="none">
+                      <path d="M2 3L4 5L6 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <select id="select-start-terminal" style="display:none">
+                    <option value="NONE">None</option>
+                    <option value="ARROW">Arrow</option>
+                    <option value="DIAMOND">Diamond</option>
+                    <option value="CIRCLE">Circle</option>
+                  </select>
+                </div>
+
+                <!-- 끝 단자 커스텀 드롭다운 -->
+                <div class="terminal-dropdown-wrap" id="wrap-end-terminal">
+                  <button class="terminal-dropdown-btn" id="btn-end-terminal"
+                    onclick="toggleTerminalDropdown('end', event)" title="End terminal">
+                    <span id="icon-end-terminal" class="td-btn-icon">
+                      <!-- 기본: Arrow (end) — icon.16.stroke.end.point.line.arrow.svg -->
+                      <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-ea-clip)"><path d="M0.5 8.50001L50.29 8.50001L47.4 11.4C47.2 11.6 47.2 11.91 47.4 12.11C47.6 12.31 47.91 12.31 48.11 12.11L51.85 8.35001C52.05 8.15001 52.05 7.84001 51.85 7.64001L48.1 3.89001C48 3.79001 47.87 3.74001 47.75 3.74001C47.63 3.74001 47.49 3.79001 47.4 3.89001C47.2 4.09001 47.2 4.40001 47.4 4.60001L50.3 7.50001L0.5 7.50001C0.22 7.50001 0 7.73 0 8C0 8.27001 0.22 8.50001 0.5 8.50001Z" fill="currentColor"/></g><defs><clipPath id="td-ea-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
+                    </span>
+                    <svg class="td-chevron" width="8" height="8" viewBox="0 0 8 8" fill="none">
+                      <path d="M2 3L4 5L6 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <select id="select-end-terminal" style="display:none">
+                    <option value="ARROW">Arrow</option>
+                    <option value="DIAMOND">Diamond</option>
+                    <option value="CIRCLE">Circle</option>
+                    <option value="NONE">None</option>
+                  </select>
+                </div>
+
                 <div class="input-scrubber-box">
                   <input type="number" id="input-end-offset" placeholder="Offset" value="0" />
+                </div>
+              </div>
+
+              <!-- 터미널 팝업 메뉴 (start) — 실제 Figma 아이콘 사용 -->
+              <div class="terminal-dropdown-popup" id="popup-start-terminal">
+                <div class="terminal-popup-item selected" data-value="NONE" onclick="selectTerminal('start','NONE',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap">
+                    <!-- icon.16.stroke.start.point.line.svg -->
+                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H51.5C51.78 7.5 52 7.72 52 8C52 8.28 51.78 8.5 51.5 8.5Z" fill="currentColor"/></svg>
+                  </span>
+                  <span class="td-label">None</span>
+                </div>
+                <div class="terminal-popup-item" data-value="ARROW" onclick="selectTerminal('start','ARROW',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap">
+                    <!-- icon.16.stroke.start.point.line.arrow.svg -->
+                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.49999H1.71L4.6 4.59999C4.8 4.39999 4.8 4.08999 4.6 3.88999C4.4 3.68999 4.09 3.68999 3.89 3.88999L0.15 7.64999C-0.05 7.84999 -0.05 8.15999 0.15 8.35999L3.9 12.11C4 12.21 4.13 12.26 4.25 12.26C4.37 12.26 4.51 12.21 4.6 12.11C4.8 11.91 4.8 11.6 4.6 11.4L1.7 8.49999H51.5C51.78 8.49999 52 8.26999 52 7.99999C52 7.72999 51.78 7.49999 51.5 7.49999Z" fill="currentColor"/></svg>
+                  </span>
+                  <span class="td-label">Arrow</span>
+                </div>
+                <div class="terminal-popup-item" data-value="DIAMOND" onclick="selectTerminal('start','DIAMOND',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap">
+                    <!-- icon.16.stroke.start.point.line.diamond.svg -->
+                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-sd-clip)"><path d="M51.4999 7.466L7.67213 7.49622L4.35121 4.15113C4.15115 3.94962 3.77105 3.94962 3.58099 4.15113L0.150042 7.60705C-0.0500139 7.80856 -0.0500139 8.19144 0.150042 8.38287L3.591 11.8489C3.69102 11.9496 3.83106 12 3.98111 12C4.13115 12 4.27119 11.9496 4.37121 11.8489L7.69214 8.50378L51.5199 8.47355C51.7999 8.47355 52.02 8.25189 52.02 7.96977C52.02 7.68766 51.7999 7.466 51.5199 7.466H51.4999ZM3.9711 10.8111L1.17032 8L3.9711 5.17884L6.76188 7.98992L3.9711 10.801V10.8111Z" fill="currentColor"/></g><defs><clipPath id="td-sd-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
+                  </span>
+                  <span class="td-label">Diamond</span>
+                </div>
+                <div class="terminal-popup-item" data-value="CIRCLE" onclick="selectTerminal('start','CIRCLE',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap">
+                    <!-- icon.16.stroke.start.point.line.circle.svg -->
+                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.5H6.95C6.7 5.81 5.26 4.5 3.5 4.5C1.57 4.5 0 6.07 0 8C0 9.93 1.57 11.5 3.5 11.5C5.26 11.5 6.7 10.19 6.95 8.5H51.5C51.78 8.5 52 8.28 52 8C52 7.72 51.78 7.5 51.5 7.5ZM3.5 10.5C2.12 10.5 1 9.38 1 8C1 6.62 2.12 5.5 3.5 5.5C4.88 5.5 6 6.62 6 8C6 9.38 4.88 10.5 3.5 10.5Z" fill="currentColor"/></svg>
+                  </span>
+                  <span class="td-label">Circle</span>
+                </div>
+              </div>
+
+              <!-- 터미널 팝업 메뉴 (end) — 실제 Figma 아이콘 사용 -->
+              <div class="terminal-dropdown-popup" id="popup-end-terminal">
+                <div class="terminal-popup-item" data-value="NONE" onclick="selectTerminal('end','NONE',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap">
+                    <!-- icon.16.stroke.end.none.svg -->
+                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M35.5 7.5C35.7761 7.5 36 7.72386 36 8C36 8.27614 35.7761 8.5 35.5 8.5H0.5C0.223858 8.5 0 8.27614 0 8C0 7.72386 0.223858 7.5 0.5 7.5H35.5Z" fill="currentColor"/></svg>
+                  </span>
+                  <span class="td-label">None</span>
+                </div>
+                <div class="terminal-popup-item selected" data-value="ARROW" onclick="selectTerminal('end','ARROW',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap">
+                    <!-- icon.16.stroke.end.point.line.arrow.svg -->
+                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-ea-p-clip)"><path d="M0.5 8.50001L50.29 8.50001L47.4 11.4C47.2 11.6 47.2 11.91 47.4 12.11C47.6 12.31 47.91 12.31 48.11 12.11L51.85 8.35001C52.05 8.15001 52.05 7.84001 51.85 7.64001L48.1 3.89001C48 3.79001 47.87 3.74001 47.75 3.74001C47.63 3.74001 47.49 3.79001 47.4 3.89001C47.2 4.09001 47.2 4.40001 47.4 4.60001L50.3 7.50001L0.5 7.50001C0.22 7.50001 0 7.73 0 8C0 8.27001 0.22 8.50001 0.5 8.50001Z" fill="currentColor"/></g><defs><clipPath id="td-ea-p-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
+                  </span>
+                  <span class="td-label">Arrow</span>
+                </div>
+                <div class="terminal-popup-item" data-value="DIAMOND" onclick="selectTerminal('end','DIAMOND',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap">
+                    <!-- icon.16.stroke.end.point.line.diamond.svg -->
+                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-ed-clip)"><path d="M0.500141 8.534L44.3279 8.50378L47.6488 11.8489C47.8488 12.0504 48.229 12.0504 48.419 11.8489L51.85 8.39295C52.05 8.19144 52.05 7.80856 51.85 7.61713L48.409 4.15113C48.309 4.05038 48.1689 4 48.0189 4C47.8689 4 47.7288 4.05038 47.6288 4.15113L44.3079 7.49622L0.480137 7.52644C0.200059 7.52644 -0.02 7.74811 -0.02 8.03022C-0.02 8.31234 0.200059 8.534 0.480137 8.534L0.500141 8.534ZM48.0289 5.18892L50.8297 8L48.0289 10.8212L45.2381 8.01007L48.0289 5.19899L48.0289 5.18892Z" fill="currentColor"/></g><defs><clipPath id="td-ed-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
+                  </span>
+                  <span class="td-label">Diamond</span>
+                </div>
+                <div class="terminal-popup-item" data-value="CIRCLE" onclick="selectTerminal('end','CIRCLE',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap">
+                    <!-- icon.16.stroke.end.point.line.circle.svg -->
+                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-ec-clip)"><path d="M0.5 8.5L45.05 8.5C45.3 10.19 46.74 11.5 48.5 11.5C50.43 11.5 52 9.93 52 8C52 6.07 50.43 4.5 48.5 4.5C46.74 4.5 45.3 5.81 45.05 7.5L0.5 7.5C0.22 7.5 0 7.72 0 8C0 8.28 0.22 8.5 0.5 8.5ZM48.5 5.5C49.88 5.5 51 6.62 51 8C51 9.38 49.88 10.5 48.5 10.5C47.12 10.5 46 9.38 46 8C46 6.62 47.12 5.5 48.5 5.5Z" fill="currentColor"/></g><defs><clipPath id="td-ec-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
+                  </span>
+                  <span class="td-label">Circle</span>
                 </div>
               </div>
             </div>
@@ -2894,12 +3472,12 @@
             </div>
             <div class="section-body collapsible-body collapsible-group" id="conn-label-group">
               <div class="chip-group">
-                <button class="chip-btn active" onclick="setLabelPreset('Text', this)">Text</button>
-                <button class="chip-btn" onclick="setLabelPreset('True', this)">True</button>
-                <button class="chip-btn" onclick="setLabelPreset('False', this)">False</button>
-                <button class="chip-btn" onclick="setLabelPreset('Error', this)">Error</button>
+                <button class="chip-btn active" data-label="Text" onclick="setLabelPreset('Text', this)">Text</button>
+                <button class="chip-btn" data-label="True" onclick="setLabelPreset('True', this)">True</button>
+                <button class="chip-btn" data-label="False" onclick="setLabelPreset('False', this)">False</button>
+                <button class="chip-btn" data-label="Error" onclick="setLabelPreset('Error', this)">Error</button>
               </div>
-              <input type="text" id="input-conn-label" class="form-input" value="Text" placeholder="Add a label" />
+              <input type="text" id="input-conn-label" class="form-input" value="Text" placeholder="Add a label" oninput="debouncedApplyConnector()" />
             </div>
           </div>
 
@@ -2922,10 +3500,10 @@
       </section>
     </main>
 
-    <!-- 5. 하단 액션 영역 (메인 CTA 적용 버튼) -->
+    <!-- 5. 하단 액션 영역 (Create / Connect 액션에서만 표시) -->
     <footer class="app-footer">
-      <button id="btn-main-cta" class="btn-cta-primary" onclick="handleMainAction()">
-        Create a new node
+      <button id="btn-main-cta" class="btn-cta-primary" type="button" onclick="handleMainAction()">
+        Create
       </button>
     </footer>
   </div> <!-- /#plugin-root -->
@@ -3020,7 +3598,7 @@
     <div id="modal-phase" class="phase-modal-card" style="display: none;">
       <div class="phase-modal-header">
         <span id="phase-modal-title-text" class="phase-modal-title">Add Phase</span>
-        <button class="phase-modal-close-btn" onclick="closeAllModals()" title="닫기">
+        <button class="phase-modal-close-btn" onclick="closeAllModals()" title="Close">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z"
@@ -3077,7 +3655,210 @@
       </div>
     </div>
 
-    <!-- 3. Confirmation 모달 (피그마 18:2522) -->
+    <!-- 2. Add Size 모달 (피그마 1027248-4544) -->
+    <div id="modal-add-size" class="size-modal-card" style="display: none;">
+      <div class="size-modal-header">
+        <span class="size-modal-title">Add Size</span>
+        <button class="size-modal-close-btn" onclick="closeAllModals()" title="Close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+      <div class="size-modal-body">
+        <div class="phase-field-group">
+          <div class="phase-field-label-row">
+            <span class="phase-field-label">Name</span>
+          </div>
+          <div class="phase-input-row-wrapper">
+            <input type="text" id="input-add-size-name" class="phase-text-input" placeholder="Custom" />
+          </div>
+        </div>
+
+        <div class="phase-field-group" style="padding-bottom: 0;">
+          <div class="phase-field-label-row">
+            <span class="phase-field-label">Size</span>
+          </div>
+          <div class="phase-input-row-wrapper" style="gap: 6px;">
+            <div class="prefix-input-box">
+              <span class="prefix-label">W</span>
+              <input type="number" id="input-add-size-w" class="prefix-input" value="375" min="20" />
+            </div>
+            <div class="prefix-input-box">
+              <span class="prefix-label">H</span>
+              <input type="number" id="input-add-size-h" class="prefix-input" value="812" min="20" />
+            </div>
+          </div>
+          <div class="phase-input-row-wrapper">
+            <div class="icon-input-box">
+              <span class="icon-input-slot">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 12V6C4 4.89543 4.89543 4 6 4H12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <input type="number" id="input-add-size-radius" class="prefix-input" value="0" min="0" max="100" />
+            </div>
+          </div>
+          <div class="phase-input-row-wrapper">
+            <div class="size-dropdown-box" onclick="toggleModalSizeMode('add')">
+              <div class="size-dropdown-left">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M5 3H11M8 3V13M5 13H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+                <span id="text-add-size-mode">Fixed height</span>
+              </div>
+              <svg width="8" height="6" viewBox="0 0 8 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1.5 2L4 4.5L6.5 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="size-modal-footer">
+        <button class="btn-phase-modal-cancel" onclick="closeAllModals()">Cancel</button>
+        <button class="btn-phase-modal-save" onclick="saveSizeFromModal(false)">Save</button>
+      </div>
+    </div>
+
+    <!-- 3. Edit Size 모달 (피그마 1027248-4596) -->
+    <div id="modal-edit-size" class="size-modal-card" style="display: none;">
+      <div class="size-modal-header">
+        <span class="size-modal-title">Edit Size</span>
+        <button class="size-modal-close-btn" onclick="closeAllModals()" title="닫기">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+      <div class="size-modal-body">
+        <div class="phase-field-group">
+          <div class="phase-field-label-row">
+            <span class="phase-field-label">Name</span>
+          </div>
+          <div class="phase-input-row-wrapper">
+            <input type="text" id="input-edit-size-name" class="phase-text-input" value="Custom" />
+          </div>
+        </div>
+
+        <div class="phase-field-group" style="padding-bottom: 0;">
+          <div class="phase-field-label-row">
+            <span class="phase-field-label">Size</span>
+          </div>
+          <div class="phase-input-row-wrapper" style="gap: 6px;">
+            <div class="prefix-input-box">
+              <span class="prefix-label">W</span>
+              <input type="number" id="input-edit-size-w" class="prefix-input" value="375" min="20" />
+            </div>
+            <div class="prefix-input-box">
+              <span class="prefix-label">H</span>
+              <input type="number" id="input-edit-size-h" class="prefix-input" value="812" min="20" />
+            </div>
+          </div>
+          <div class="phase-input-row-wrapper">
+            <div class="icon-input-box">
+              <span class="icon-input-slot">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 12V6C4 4.89543 4.89543 4 6 4H12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <input type="number" id="input-edit-size-radius" class="prefix-input" value="0" min="0" max="100" />
+            </div>
+          </div>
+          <div class="phase-input-row-wrapper">
+            <div class="size-dropdown-box" onclick="toggleModalSizeMode('edit')">
+              <div class="size-dropdown-left">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M5 3H11M8 3V13M5 13H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+                <span id="text-edit-size-mode">Fixed height</span>
+              </div>
+              <svg width="8" height="6" viewBox="0 0 8 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1.5 2L4 4.5L6.5 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="size-modal-footer">
+        <button class="btn-phase-modal-cancel" onclick="closeAllModals()">Cancel</button>
+        <button class="btn-phase-modal-save" onclick="saveSizeFromModal(true)">Save</button>
+      </div>
+    </div>
+
+    <!-- 4. Add Style 모달 (피그마 1027248-4648) -->
+    <div id="modal-add-style" class="style-modal-card" style="display: none;">
+      <div class="style-modal-header">
+        <span class="style-modal-title">Add Style</span>
+        <button class="style-modal-close-btn" onclick="closeAllModals()" title="닫기">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+      <div class="style-modal-body">
+        <!-- Fill 섹션 -->
+        <div class="phase-field-group" style="padding-bottom: 4px;">
+          <div class="phase-field-label-row">
+            <span class="phase-field-label">Fill</span>
+            <button type="button" class="phase-eyedropper-btn" title="Eyedropper" onclick="triggerEyedropper('style-fill')">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12.5 1.5C13.0523 0.947715 13.9477 0.947715 14.5 1.5C15.0523 2.05228 15.0523 2.94772 14.5 3.5L13 5L11 3L12.5 1.5ZM10 4L2.5 11.5L1.5 14.5L4.5 13.5L12 6L10 4Z" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
+          <div class="phase-input-row-wrapper">
+            <div class="style-color-box" onclick="toggleStyleColorPicker('fill')">
+              <div id="style-fill-chip" class="style-color-chip" style="background: #EA2039;"></div>
+              <input type="text" id="input-style-fill-hex" class="phase-color-hex-input" value="EA2039" maxlength="7" onclick="event.stopPropagation()" oninput="handleStyleHexInput('fill', this.value)" />
+              <div class="style-chevron-icon">
+                <svg width="8" height="6" viewBox="0 0 8 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1.5 2L4 4.5L6.5 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="style-divider" />
+
+        <!-- Stroke 섹션 -->
+        <div class="phase-field-group" style="padding-bottom: 0;">
+          <div class="phase-field-label-row">
+            <span class="phase-field-label">Stroke</span>
+            <button type="button" class="phase-eyedropper-btn" title="Eyedropper" onclick="triggerEyedropper('style-stroke')">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12.5 1.5C13.0523 0.947715 13.9477 0.947715 14.5 1.5C15.0523 2.05228 15.0523 2.94772 14.5 3.5L13 5L11 3L12.5 1.5ZM10 4L2.5 11.5L1.5 14.5L4.5 13.5L12 6L10 4Z" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
+          <div class="phase-input-row-wrapper" style="gap: 6px;">
+            <div class="style-color-box" onclick="toggleStyleColorPicker('stroke')">
+              <div id="style-stroke-chip" class="style-color-chip" style="background: #EA2039;"></div>
+              <input type="text" id="input-style-stroke-hex" class="phase-color-hex-input" value="EA2039" maxlength="7" onclick="event.stopPropagation()" oninput="handleStyleHexInput('stroke', this.value)" />
+              <div class="style-chevron-icon">
+                <svg width="8" height="6" viewBox="0 0 8 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1.5 2L4 4.5L6.5 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+            <div class="stroke-width-box">
+              <span class="icon-input-slot">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2.5 4H13.5M2.5 8H13.5M2.5 12H13.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <input type="number" id="input-style-stroke-width" class="prefix-input" value="0" min="0" max="20" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="style-modal-footer">
+        <button class="btn-phase-modal-cancel" onclick="closeAllModals()">Cancel</button>
+        <button class="btn-phase-modal-save" onclick="saveStyleFromModal()">Save</button>
+      </div>
+    </div>
+
+    <!-- 5. Confirmation 모달 (피그마 18:2522) -->
     <div id="modal-confirmation" class="dialog-modal-card" style="display: none;">
       <div class="dialog-header">
         <span class="dialog-title">Confirmation</span>
@@ -3117,9 +3898,6 @@
     </div>
 
   </div>
-
-  <!-- 토스트 알림 메시지 레이어 -->
-  <div id="toast-message" class="toast-container"></div>
 
   <!-- 피그마 공식 UI3 툴팁 플로팅 요소 -->
   <div id="figma-tooltip" class="figma-tooltip">
@@ -3194,13 +3972,7 @@
       if (rInput) rInput.value = lastNodeConfig.cornerRadius;
       selectSizeMode(lastNodeConfig.sizeMode || 'fixed');
 
-      document.querySelectorAll('#panel-appearance .chip-group .chip-btn').forEach(btn => {
-        const isDefault = lastNodeConfig.width === 250 && lastNodeConfig.height === 90 && btn.innerText === 'Default';
-        const isSquare = lastNodeConfig.width === 160 && lastNodeConfig.height === 160 && btn.innerText === 'Square';
-        const isWeb = lastNodeConfig.width === 1200 && lastNodeConfig.height === 800 && btn.innerText === 'Web';
-        const isMobile = lastNodeConfig.width === 375 && lastNodeConfig.height === 812 && btn.innerText === 'Mobile';
-        btn.classList.toggle('active', isDefault || isSquare || isWeb || isMobile);
-      });
+      updateSizePresetChips(lastNodeConfig.width, lastNodeConfig.height);
 
       // 4. Style / Color 복원
       selectedColor = lastNodeConfig.color;
@@ -3226,9 +3998,7 @@
         toggleStatusUI(lastNodeConfig.statusOn);
       }
       selectedStatus = lastNodeConfig.status;
-      document.querySelectorAll('#status-options .status-pill').forEach(pill => {
-        pill.classList.toggle('selected', pill.dataset.status === lastNodeConfig.status);
-      });
+      updateTabGroupCounts('#status-options', 'data-status', [lastNodeConfig.status || 'in_progress']);
 
       // 7. Step Badges 복원
       const stepToggle = document.getElementById('toggle-step-badges');
@@ -3306,41 +4076,25 @@
       const ctaBtn = document.getElementById('btn-main-cta');
       if (!ctaBtn) return;
 
-      ctaBtn.style.display = 'flex';
+      const hasSelection = Boolean(selectedNodes && selectedNodes.length > 0);
 
-      if (currentTab === 'connection') {
-        if (isConnectorSelected) {
-          ctaBtn.innerText = 'Update connector';
-          ctaBtn.disabled = false;
-          ctaBtn.style.opacity = '1';
-          ctaBtn.style.cursor = 'pointer';
-        } else if (selectedNodes.length >= 2) {
-          ctaBtn.innerText = 'Connect';
-          ctaBtn.disabled = false;
-          ctaBtn.style.opacity = '1';
-          ctaBtn.style.cursor = 'pointer';
-        } else {
-          ctaBtn.innerText = 'Connect (2개 노드 선택 필요)';
-          ctaBtn.disabled = true;
-          ctaBtn.style.opacity = '0.5';
-          ctaBtn.style.cursor = 'not-allowed';
-        }
-      } else if (currentTab === 'appearance') {
+      if (currentTab === 'connection' && !isConnectorSelected && selectedNodes.length >= 2) {
+        // 2개+ 노드 선택 → Connect 버튼 (신규 커넥터 생성)
+        ctaBtn.style.display = 'inline-flex';
+        ctaBtn.innerText = 'Connect';
         ctaBtn.disabled = false;
         ctaBtn.style.opacity = '1';
         ctaBtn.style.cursor = 'pointer';
-        ctaBtn.innerText = selectedNodes.length > 0 ? 'Update style' : 'Apply style';
+      } else if (hasSelection) {
+        // 노드 선택 / 커넥터 선택 → 실시간 반영, 버튼 불필요
+        ctaBtn.style.display = 'none';
       } else {
+        // 아무것도 선택 안 함 → Create 버튼
+        ctaBtn.style.display = 'inline-flex';
+        ctaBtn.innerText = 'Create';
         ctaBtn.disabled = false;
         ctaBtn.style.opacity = '1';
         ctaBtn.style.cursor = 'pointer';
-        if (selectedNodes.length === 1) {
-          ctaBtn.innerText = 'Update node';
-        } else if (selectedNodes.length >= 2) {
-          ctaBtn.innerText = 'Update selected nodes';
-        } else {
-          ctaBtn.innerText = 'Create a new node';
-        }
       }
     }
 
@@ -3352,10 +4106,11 @@
       switch (msg.type) {
         case 'SELECTION_CHANGED':
           selectedNodes = msg.nodes || [];
-          handleSelectionChange(msg.count, selectedNodes);
-          break;
-        case 'TOAST':
-          showToast(msg.message);
+          handleSelectionChange(msg.count, selectedNodes, {
+            flowNodeCount: msg.flowNodeCount,
+            otherObjectCount: msg.otherObjectCount,
+            connectorCount: msg.connectorCount,
+          });
           break;
       }
     };
@@ -3439,7 +4194,151 @@
       if (icon) icon.setAttribute('data-tooltip', tooltipText);
     }
 
-    function handleSelectionChange(count, nodes) {
+    /**
+     * 탭 버튼 내 라벨 요소를 탐색하거나 안전하게 생성하여 반환 (불릿/아이콘 보존 표준 규격)
+     */
+    function getOrInitTabLabel(btn) {
+      let labelEl = btn.querySelector('.tab-label');
+      if (!labelEl) {
+        const prefixEl = btn.querySelector('.tab-bullet, .status-dot, .tab-icon, svg');
+        if (prefixEl) {
+          for (let i = 0; i < btn.childNodes.length; i++) {
+            const child = btn.childNodes[i];
+            if (child.nodeType === Node.TEXT_NODE && child.textContent.trim()) {
+              labelEl = document.createElement('span');
+              labelEl.className = 'tab-label';
+              labelEl.textContent = child.textContent.trim();
+              btn.replaceChild(labelEl, child);
+              break;
+            }
+          }
+        }
+        if (!labelEl) {
+          const rawText = btn.innerText.trim();
+          btn.innerHTML = `<span class="tab-label">${rawText}</span>`;
+          labelEl = btn.querySelector('.tab-label');
+        }
+      }
+      return labelEl;
+    }
+
+    /**
+     * 탭/칩 그룹의 Mixed 상태에 따른 카운트 배지 표기 및 활성화 공통 관리 함수 (피그마 UI3 1027263:6420 규격)
+     * - 여러 개 선택 시 속성값이 Mixed인 경우: 각 탭 라벨 뒤에 둥근 알약 배지(.tab-badge)로 카운트 표기
+     * - 단일 선택이거나 단일 속성으로 일치하는 경우: 원본 라벨 유지, 배지 제거 및 해당 단일 탭만 active 유지
+     * @param {string} containerSelector - 대상 컨테이너 선택자
+     * @param {string|null} valueAttr - 비교할 HTML 속성명 (예: 'data-type', 'data-status', 'data-label')
+     * @param {Array<string>} selectedValues - 선택된 노드들에서 추출한 해당 속성값 목록
+     */
+    function updateTabGroupCounts(containerSelector, valueAttr, selectedValues) {
+      const container = document.querySelector(containerSelector);
+      if (!container) return;
+      const buttons = container.querySelectorAll('.chip-btn, .tab-btn');
+
+      // 탭 카운트 배지 갱신/제거 헬퍼 (피그마 UI3 1027263:6421 규격)
+      const setTabBadge = (btn, count) => {
+        let badgeEl = btn.querySelector('.tab-badge');
+        if (count && count > 0) {
+          if (!badgeEl) {
+            badgeEl = document.createElement('span');
+            badgeEl.className = 'tab-badge';
+            btn.appendChild(badgeEl);
+          }
+          badgeEl.innerText = `${count}`;
+        } else {
+          if (badgeEl) badgeEl.remove();
+        }
+      };
+
+      // 1. 초기 원본 라벨 캐싱
+      buttons.forEach(btn => {
+        const labelEl = getOrInitTabLabel(btn);
+        if (!btn.dataset.originalLabel) {
+          btn.dataset.originalLabel = labelEl ? labelEl.innerText.trim() : (valueAttr ? btn.getAttribute(valueAttr) : btn.innerText.trim());
+        }
+      });
+
+      // 유효한 선택값 필터링
+      const validValues = (selectedValues || []).filter(v => typeof v === 'string' && v.trim() !== '');
+
+      // 2. 선택된 노드가 없거나 1개인 경우: 원본 라벨 복원, 배지 제거 및 단일 active 유지
+      if (validValues.length <= 1) {
+        const targetVal = validValues[0];
+        buttons.forEach(btn => {
+          const labelEl = getOrInitTabLabel(btn);
+          if (labelEl) labelEl.innerText = btn.dataset.originalLabel;
+          setTabBadge(btn, 0);
+          btn.classList.remove('mixed');
+          if (targetVal !== undefined) {
+            const btnVal = valueAttr ? btn.getAttribute(valueAttr) : btn.dataset.originalLabel;
+            btn.classList.toggle('active', btnVal === targetVal);
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+        return;
+      }
+
+      // 3. 빈도수(카운트) 계산
+      const counts = {};
+      validValues.forEach(val => {
+        counts[val] = (counts[val] || 0) + 1;
+      });
+
+      const uniqueKeys = Object.keys(counts);
+      const isMixed = uniqueKeys.length > 1;
+
+      if (!isMixed) {
+        // 모든 노드가 동일한 단일 속성이면 배지 없이 원본 라벨 및 active 유지
+        const singleVal = uniqueKeys[0];
+        buttons.forEach(btn => {
+          const labelEl = getOrInitTabLabel(btn);
+          if (labelEl) labelEl.innerText = btn.dataset.originalLabel;
+          setTabBadge(btn, 0);
+          btn.classList.remove('mixed');
+          const btnVal = valueAttr ? btn.getAttribute(valueAttr) : btn.dataset.originalLabel;
+          btn.classList.toggle('active', btnVal === singleVal);
+        });
+      } else {
+        // 속성이 서로 다른 Mixed 상태: 해당 탭에 둥근 알약 배지(.tab-badge)로 카운트 표시 및 mixed 처리
+        buttons.forEach(btn => {
+          const labelEl = getOrInitTabLabel(btn);
+          if (labelEl) labelEl.innerText = btn.dataset.originalLabel;
+          const btnVal = valueAttr ? btn.getAttribute(valueAttr) : btn.dataset.originalLabel;
+          const count = counts[btnVal] || 0;
+          if (count > 0) {
+            setTabBadge(btn, count);
+            btn.classList.remove('active');
+            btn.classList.add('mixed');
+          } else {
+            setTabBadge(btn, 0);
+            btn.classList.remove('active');
+            btn.classList.remove('mixed');
+          }
+        });
+      }
+    }
+
+    // 선택 요소 텍스트 포맷팅 (노드와 일반 객체, 커넥터 분리 표현)
+    function formatSelectionText(nodeCount, objectCount, connCount) {
+      if (connCount > 0 && nodeCount === 0 && objectCount === 0) {
+        return `${connCount} ${connCount === 1 ? 'connector is' : 'connectors are'} selected`;
+      }
+      if (nodeCount > 0 && objectCount > 0) {
+        const nodeStr = `${nodeCount} ${nodeCount === 1 ? 'node' : 'nodes'}`;
+        const objStr = `${objectCount} ${objectCount === 1 ? 'object' : 'objects'}`;
+        return `${nodeStr} and ${objStr} are selected`;
+      }
+      if (nodeCount > 0) {
+        return `${nodeCount} ${nodeCount === 1 ? 'node is' : 'nodes are'} selected`;
+      }
+      if (objectCount > 0) {
+        return `${objectCount} ${objectCount === 1 ? 'object is' : 'objects are'} selected`;
+      }
+      return '';
+    }
+
+    function handleSelectionChange(count, nodes, meta) {
       selectedNodes = nodes || [];
       const singleTitleWrap = document.getElementById('single-title-wrap');
       const multiIndicator = document.getElementById('multi-selection-indicator');
@@ -3454,15 +4353,30 @@
       const linkDivider = document.getElementById('conn-link-divider');
       const linkSection = document.getElementById('conn-link-section-block');
 
-      // 멀티 선택 시 Step Badge 샵 아이콘 툴팁을 'Start Number', 단일 선택 시 'Number'로 전환
-      updateStepBadgeTooltip(count >= 2);
+      // 노드, 일반 객체, 커넥터 개수 산출 (meta 우선, 없을 시 fallback)
+      const flowNodeCount = typeof meta?.flowNodeCount === 'number'
+        ? meta.flowNodeCount
+        : selectedNodes.filter(n => n && (n.isFlowNode || (!n.isConnector && n.flowNodeType))).length;
+      const otherObjectCount = typeof meta?.otherObjectCount === 'number'
+        ? meta.otherObjectCount
+        : Math.max(0, count - flowNodeCount - (meta?.connectorCount || 0));
+      const connectorCount = typeof meta?.connectorCount === 'number'
+        ? meta.connectorCount
+        : selectedNodes.filter(n => n && n.isConnector).length;
 
-      // 단일 커넥터 선택 여부 판별
-      const isSingleConn = count === 1 && Boolean(nodes[0] && nodes[0].isConnector);
-      isConnectorSelected = isSingleConn;
+      // 커넥터 선택 여부 판별 (커넥터만 선택된 경우)
+      const allConnectors = (connectorCount > 0 && flowNodeCount === 0 && otherObjectCount === 0) ||
+        (count > 0 && nodes.length > 0 && nodes.every(n => n && n.isConnector));
+      const isSingleConn = count === 1 && allConnectors;
+      const isMultiConn = count >= 2 && allConnectors;
+      isConnectorSelected = isSingleConn || isMultiConn;
 
-      if (isSingleConn) {
-        // [커넥터 단일 선택 모드]
+      // 멀티 선택 모드 여부: 전체 개수가 2개 이상이거나 노드와 객체가 섞여 선택된 경우
+      const isMultiMode = count >= 2 || (flowNodeCount > 0 && otherObjectCount > 0);
+      updateStepBadgeTooltip(isMultiMode);
+
+      if (isSingleConn || isMultiConn) {
+        // [커넥터 선택 모드]
         // 1. 노드 & 어피어런스 탭 비활성화 (클릭 차단 및 반투명)
         if (tabBtnNode) tabBtnNode.classList.add('disabled');
         if (tabBtnAppearance) tabBtnAppearance.classList.add('disabled');
@@ -3470,40 +4384,51 @@
         // 2. 자동으로 커넥션 탭 활성화
         switchMainTab('connection');
 
-        // 3. 헤더 타이틀 표시
-        singleTitleWrap.style.display = 'block';
-        multiIndicator.style.display = 'none';
-        titleInput.value = nodes[0].title || nodes[0].name || 'Connector';
+        if (isMultiConn) {
+          // 커넥터 멀티 선택
+          singleTitleWrap.style.display = 'none';
+          multiIndicator.style.display = 'flex';
+          document.getElementById('multi-selection-text').innerText = formatSelectionText(0, 0, connectorCount || count);
+        } else {
+          // Single connector selected — always show 'Connector' label
+          singleTitleWrap.style.display = 'block';
+          multiIndicator.style.display = 'none';
+          titleInput.value = 'Connector';
+          titleInput.readOnly = true;
+        }
 
         // 4. Figma Screen Link 섹션 및 2노드 앵커 프리뷰 캔버스 숨김
         connSingle.style.display = 'none';
         connMulti.style.display = 'flex';
-        if (anchorPreviewBox) anchorPreviewBox.style.display = 'none';
+        // Show anchor preview box for single connector (user can edit connection positions)
+        if (anchorPreviewBox) anchorPreviewBox.style.display = isSingleConn ? '' : 'none';
         if (linkDivider) linkDivider.style.display = 'none';
         if (linkSection) linkSection.style.display = 'none';
 
-        // 5. 선택된 커넥터의 속성을 UI에 로드
-        if (nodes[0].connectorColorHex) {
-          setConnectorColor(nodes[0].connectorColorHex);
+        // 5. 선택된 커넥터의 속성을 UI에 로드 (피그마 -> UI 단방향 바인딩, 역전송 skipApply=true)
+        if (nodes[0]?.connectorColorHex) {
+          setConnectorColor(nodes[0].connectorColorHex, true);
         }
-        if (nodes[0].connectorStrokePattern) {
-          selectLinePattern(nodes[0].connectorStrokePattern);
+        if (nodes[0]?.connectorStrokePattern) {
+          selectLinePattern(nodes[0].connectorStrokePattern, null, true);
         }
-        if (typeof nodes[0].connectorStrokeWeight === 'number') {
+        if (typeof nodes[0]?.connectorStrokeWeight === 'number') {
           document.getElementById('input-stroke-weight').value = nodes[0].connectorStrokeWeight;
         }
-        if (nodes[0].connectorRoutingType) {
-          selectRoutingType(nodes[0].connectorRoutingType);
+        if (nodes[0]?.connectorRoutingType) {
+          selectRoutingType(nodes[0].connectorRoutingType, null, true);
         }
-        if (nodes[0].connectorStartTerminal) {
+        if (nodes[0]?.connectorStartTerminal) {
           document.getElementById('select-start-terminal').value = nodes[0].connectorStartTerminal;
+          syncTerminalSelectToUI('start');
         }
-        if (nodes[0].connectorEndTerminal) {
+        if (nodes[0]?.connectorEndTerminal) {
           document.getElementById('select-end-terminal').value = nodes[0].connectorEndTerminal;
+          syncTerminalSelectToUI('end');
         }
 
         // 라벨 바인딩
-        const labelVal = nodes[0].connectorLabel || '';
+        const labelVal = nodes[0]?.connectorLabel || '';
         const hasLabel = Boolean(labelVal.trim());
         const toggleLabel = document.getElementById('toggle-conn-label');
         if (toggleLabel) {
@@ -3512,49 +4437,23 @@
         }
         if (hasLabel) {
           document.getElementById('input-conn-label').value = labelVal;
-          document.querySelectorAll('#conn-label-group .chip-btn').forEach(b => {
-            b.classList.toggle('active', b.innerText === labelVal);
-          });
         }
+        updateTabGroupCounts('#conn-label-group .chip-group', 'data-label', [labelVal || 'Text']);
       } else {
-        // [일반 노드 선택 모드]
+        // [일반 노드 / 객체 선택 모드]
         // 1. 노드 & 어피어런스 탭 정상 활성화 복구
         if (tabBtnNode) tabBtnNode.classList.remove('disabled');
         if (tabBtnAppearance) tabBtnAppearance.classList.remove('disabled');
 
-        // 2. 숨겼던 앵커 프리뷰 및 링크 섹션 복구
+        // Restore title input to editable for non-connector nodes
+        titleInput.readOnly = false;
+
+        // Restore hidden anchor preview and link section
         if (anchorPreviewBox) anchorPreviewBox.style.display = '';
         if (linkDivider) linkDivider.style.display = '';
         if (linkSection) linkSection.style.display = '';
 
-        if (count >= 2) {
-          singleTitleWrap.style.display = 'none';
-          multiIndicator.style.display = 'flex';
-          document.getElementById('multi-selection-text').innerText = `${count} nodes are selected`;
-
-          connSingle.style.display = 'none';
-          connMulti.style.display = 'flex';
-
-          // 캔버스 프리뷰 노드명 반영
-          document.getElementById('preview-node-1-text').innerText = nodes[0].title || nodes[0].name || 'Node 1';
-          document.getElementById('preview-node-2-text').innerText = nodes[1].title || nodes[1].name || 'Node 2';
-
-          // 커넥터 설정 기억 복원 (디폴트: Label 해제 및 Text 프리셋)
-          restoreLastConnectorConfig();
-        } else if (count === 1) {
-          singleTitleWrap.style.display = 'block';
-          multiIndicator.style.display = 'none';
-
-          connSingle.style.display = 'block';
-          connMulti.style.display = 'none';
-
-          titleInput.value = nodes[0].title || nodes[0].name || 'Untitled';
-          if (nodes[0].description) {
-            document.getElementById('node-description-input').value = nodes[0].description;
-          }
-          if (nodes[0].width) document.getElementById('input-size-w').value = nodes[0].width;
-          if (nodes[0].height) document.getElementById('input-size-h').value = nodes[0].height;
-        } else {
+        if (count === 0) {
           // [바탕화면 클릭: count === 0]
           // 자동으로 새로운 노드 생성 모드(Node 탭) 활성화
           switchMainTab('node');
@@ -3572,6 +4471,90 @@
           // 이전에 설정/기억된 상태를 그대로 복원하여 연속 생성 가능
           restoreLastNodeConfig();
           restoreLastConnectorConfig();
+
+          updateTabGroupCounts('#node-type-chips', 'data-type', [lastNodeConfig.nodeType || 'Screen']);
+          updateTabGroupCounts('#conn-label-group .chip-group', 'data-label', [lastConnectorConfig.labelText || 'Text']);
+          updateTabGroupCounts('#status-options', 'data-status', [lastNodeConfig.status || 'in_progress']);
+        } else if (flowNodeCount === 1 && otherObjectCount === 0) {
+          // [단일 플로우 노드 선택]
+          singleTitleWrap.style.display = 'block';
+          multiIndicator.style.display = 'none';
+
+          connSingle.style.display = 'block';
+          connMulti.style.display = 'none';
+
+          titleInput.value = nodes[0]?.title || nodes[0]?.name || 'Untitled';
+          if (nodes[0]?.description) {
+            document.getElementById('node-description-input').value = nodes[0].description;
+          }
+          if (nodes[0]?.width) document.getElementById('input-size-w').value = nodes[0].width;
+          if (nodes[0]?.height) document.getElementById('input-size-h').value = nodes[0].height;
+          const curW = nodes[0]?.width || lastNodeConfig.width;
+          const curH = nodes[0]?.height || lastNodeConfig.height;
+          lastNodeConfig.width = curW;
+          lastNodeConfig.height = curH;
+          updateSizePresetChips(curW, curH);
+
+          // 단일 노드 탭 원본 라벨 복원 및 해당 속성 활성화
+          const singleType = nodes[0]?.flowNodeType || 'Screen';
+          updateTabGroupCounts('#node-type-chips', 'data-type', [singleType]);
+
+          const singleLabel = nodes[0]?.connectorLabel || 'Text';
+          updateTabGroupCounts('#conn-label-group .chip-group', 'data-label', [singleLabel]);
+
+          const singleStatus = nodes[0]?.status;
+          if (singleStatus) {
+            const statusToggle = document.getElementById('toggle-status');
+            if (statusToggle) statusToggle.checked = true;
+            document.getElementById('status-options')?.classList.add('active');
+            selectedStatus = singleStatus;
+            updateTabGroupCounts('#status-options', 'data-status', [singleStatus]);
+          } else {
+            updateTabGroupCounts('#status-options', 'data-status', [lastNodeConfig.status || 'in_progress']);
+          }
+        } else {
+          // [다중 선택 또는 노드+객체 혼합 선택 또는 일반 객체 단독 선택]
+          singleTitleWrap.style.display = 'none';
+          multiIndicator.style.display = 'flex';
+          document.getElementById('multi-selection-text').innerText = formatSelectionText(flowNodeCount, otherObjectCount, connectorCount);
+
+          connSingle.style.display = 'none';
+          connMulti.style.display = 'flex';
+
+          // 캔버스 프리뷰 노드명 반영
+          if (nodes.length >= 2) {
+            document.getElementById('preview-node-1-text').innerText = nodes[0]?.title || nodes[0]?.name || 'Node 1';
+            document.getElementById('preview-node-2-text').innerText = nodes[1]?.title || nodes[1]?.name || 'Node 2';
+          } else if (nodes.length === 1) {
+            document.getElementById('preview-node-1-text').innerText = nodes[0]?.title || nodes[0]?.name || 'Node 1';
+            document.getElementById('preview-node-2-text').innerText = 'Target Object';
+          }
+
+          // 커넥터 설정 기억 복원 (디폴트: Label 해제 및 Text 프리셋)
+          restoreLastConnectorConfig();
+
+          // 탭 Mixed 카운트 업데이트 (Node Type & Connection Label & Status)
+          const flowNodes = nodes.filter(n => n && !n.isConnector && n.isFlowNode !== false);
+          const typeList = flowNodes.map(n => n.flowNodeType || 'Screen');
+          updateTabGroupCounts('#node-type-chips', 'data-type', typeList);
+
+          const statusList = flowNodes.map(n => n.status).filter(Boolean);
+          if (statusList.length > 0) {
+            const statusToggle = document.getElementById('toggle-status');
+            if (statusToggle) statusToggle.checked = true;
+            document.getElementById('status-options')?.classList.add('active');
+            updateTabGroupCounts('#status-options', 'data-status', statusList);
+          } else {
+            updateTabGroupCounts('#status-options', 'data-status', []);
+          }
+
+          const connNodes = nodes.filter(n => n && n.isConnector);
+          if (connNodes.length >= 2) {
+            const labelList = connNodes.map(n => n.connectorLabel || 'Text');
+            updateTabGroupCounts('#conn-label-group .chip-group', 'data-label', labelList);
+          } else {
+            updateTabGroupCounts('#conn-label-group .chip-group', 'data-label', [lastConnectorConfig.labelText || 'Text']);
+          }
         }
       }
 
@@ -3579,13 +4562,113 @@
       autoResizeWindow();
     }
 
+    // ----------------------------------------------------
+    // 실시간 반영 함수들
+    // ----------------------------------------------------
+
+    // 선택된 노드 전체에 현재 폼 값을 즉시 적용
+    function applyCurrentNodeState() {
+      if (!selectedNodes || selectedNodes.length === 0) return;
+      const title = document.getElementById('node-title-input').value.trim() || 'Untitled';
+      const desc = document.getElementById('node-description-input').value.trim();
+      const w = parseInt(document.getElementById('input-size-w').value, 10) || 250;
+      const h = parseInt(document.getElementById('input-size-h').value, 10) || 90;
+      const radius = parseInt(document.getElementById('input-size-radius')?.value, 10) || 0;
+      const figmaUrl = document.getElementById('single-screen-url')?.value?.trim() || '';
+
+      // lastNodeConfig 동기화
+      lastNodeConfig.width = w;
+      lastNodeConfig.height = h;
+      lastNodeConfig.cornerRadius = radius;
+      lastNodeConfig.nodeType = selectedNodeType;
+      lastNodeConfig.color = selectedColor;
+      lastNodeConfig.elevation = selectedElevation;
+      lastNodeConfig.singleLinkUrl = figmaUrl;
+
+      selectedNodes.forEach(node => {
+        parent.postMessage({
+          pluginMessage: {
+            type: 'UPDATE_FLOW_NODE',
+            payload: {
+              nodeId: node.id,
+              title: selectedNodes.length === 1 ? title : (node.title || title),
+              description: desc,
+              width: w,
+              height: h,
+              cornerRadius: radius,
+              theme: 'light',
+              figmaLink: figmaUrl,
+              nodeType: selectedNodeType,
+              colorHex: selectedColor,
+              elevation: selectedElevation
+            }
+          }
+        }, '*');
+      });
+
+      // Status 즉시 적용 (토글 ON + status 지정 시)
+      const isStatusOn = document.getElementById('toggle-status')?.checked || false;
+      if (isStatusOn && selectedStatus && selectedNodes.length > 0) {
+        parent.postMessage({ pluginMessage: { type: 'SET_STATUS', status: selectedStatus } }, '*');
+      }
+    }
+
+    // 선택된 커넥터에 현재 폼 값을 즉시 적용
+    function applyCurrentConnectorState() {
+      if (!isConnectorSelected || !selectedNodes || selectedNodes.length !== 1) return;
+      const label = document.getElementById('toggle-conn-label')?.checked
+        ? (document.getElementById('input-conn-label')?.value?.trim() || '')
+        : '';
+      const hasLabel = document.getElementById('toggle-conn-label')?.checked || false;
+      const color = document.getElementById('conn-line-color')?.value || '#000000';
+      const weight = parseFloat(document.getElementById('input-stroke-weight')?.value) || 1.5;
+      const startTerm = document.getElementById('select-start-terminal')?.value || 'NONE';
+      const endTerm = document.getElementById('select-end-terminal')?.value || 'ARROW';
+
+      parent.postMessage({
+        pluginMessage: {
+          type: 'UPDATE_CONNECTOR_PROPERTIES',
+          payload: {
+            connectorId: selectedNodes[0].id,
+            colorHex: color,
+            strokeWeight: weight,
+            strokePattern: selectedLinePattern,
+            routingType: selectedRoutingType,
+            startTerminal: startTerm,
+            endTerminal: endTerm,
+            label: label,
+            hasLabel: hasLabel
+          }
+        }
+      }, '*');
+    }
+
+    // 텍스트 입력 debounce (400ms)
+    let _nodeUpdateTimer = null;
+    function debouncedApplyNode() {
+      if (!selectedNodes || selectedNodes.length === 0) return;
+      clearTimeout(_nodeUpdateTimer);
+      _nodeUpdateTimer = setTimeout(() => applyCurrentNodeState(), 400);
+    }
+
+    let _connUpdateTimer = null;
+    function debouncedApplyConnector() {
+      if (!isConnectorSelected) return;
+      clearTimeout(_connUpdateTimer);
+      _connUpdateTimer = setTimeout(() => applyCurrentConnectorState(), 400);
+    }
+
+
     // 3. Node 탭 관련 함수
     function selectNodeType(type) {
       selectedNodeType = type;
       lastNodeConfig.nodeType = type;
       document.querySelectorAll('#node-type-chips .chip-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-type') === type);
+        const original = btn.dataset.originalLabel || btn.getAttribute('data-type') || btn.innerText.trim();
+        btn.innerText = original;
+        btn.classList.toggle('active', (btn.getAttribute('data-type') || original) === type);
       });
+      applyCurrentNodeState();
     }
 
     function togglePhasePopover(event) {
@@ -3626,6 +4709,7 @@
       });
 
       closeAllPopovers();
+      applyCurrentNodeState();
     }
 
     function toggleContextMenu(event) {
@@ -3673,7 +4757,7 @@
             btn.innerHTML = copyIconSvg;
           }, 1800);
         }
-        showToast('설명이 클립보드에 복사되었습니다!');
+        showToast('Description copied to clipboard!');
       };
 
       if (navigator.clipboard) {
@@ -3702,14 +4786,23 @@
     }
 
     // 4. Appearance 탭 관련 함수
+    function updateSizePresetChips(w, h) {
+      document.querySelectorAll('#panel-appearance .chip-group .chip-btn').forEach(btn => {
+        const isDefault = w === 250 && h === 90 && btn.innerText === 'Default';
+        const isSquare = w === 180 && h === 180 && btn.innerText === 'Square';
+        const isWeb = w === 320 && h === 180 && btn.innerText === 'Web';
+        const isMobile = w === 160 && h === 280 && btn.innerText === 'Mobile';
+        btn.classList.toggle('active', isDefault || isSquare || isWeb || isMobile);
+      });
+    }
+
     function applySizePreset(w, h, btnEl) {
       document.getElementById('input-size-w').value = w;
       document.getElementById('input-size-h').value = h;
       lastNodeConfig.width = w;
       lastNodeConfig.height = h;
-      document.querySelectorAll('#panel-appearance .chip-group .chip-btn').forEach(b => b.classList.remove('active'));
-      if (btnEl) btnEl.classList.add('active');
-      triggerLiveResize();
+      updateSizePresetChips(w, h);
+      applyCurrentNodeState();
     }
 
     function triggerLiveResize() {
@@ -3717,21 +4810,10 @@
       const hVal = parseInt(document.getElementById('input-size-h').value, 10);
       if (!isNaN(wVal)) lastNodeConfig.width = wVal;
       if (!isNaN(hVal)) lastNodeConfig.height = hVal;
+      updateSizePresetChips(lastNodeConfig.width, lastNodeConfig.height);
       const rVal = parseInt(document.getElementById('input-size-radius')?.value, 10);
       if (!isNaN(rVal)) lastNodeConfig.cornerRadius = rVal;
-
-      if (selectedNodes.length === 1) {
-        const w = parseInt(document.getElementById('input-size-w').value, 10);
-        const h = parseInt(document.getElementById('input-size-h').value, 10);
-        parent.postMessage({
-          pluginMessage: {
-            type: 'RESIZE_NODE',
-            nodeId: selectedNodes[0].id,
-            width: w,
-            height: h
-          }
-        }, '*');
-      }
+      applyCurrentNodeState();
     }
 
     function selectSwatch(el) {
@@ -3739,11 +4821,13 @@
       el.classList.add('selected');
       selectedColor = el.getAttribute('data-color');
       lastNodeConfig.color = selectedColor;
+      applyCurrentNodeState();
     }
 
     function toggleElevationUI(isOn) {
       lastNodeConfig.elevationOn = isOn;
       document.getElementById('elevation-options').classList.toggle('active', isOn);
+      applyCurrentNodeState();
       autoResizeWindow();
     }
 
@@ -3752,34 +4836,42 @@
       lastNodeConfig.elevation = level;
       document.querySelectorAll('.elevation-card').forEach(c => c.classList.remove('selected'));
       el.classList.add('selected');
+      applyCurrentNodeState();
     }
 
     function toggleStatusUI(isOn) {
       lastNodeConfig.statusOn = isOn;
       document.getElementById('status-options').classList.toggle('active', isOn);
+      applyCurrentNodeState();
       autoResizeWindow();
     }
 
     function selectStatus(status, el) {
       selectedStatus = status;
       lastNodeConfig.status = status;
-      document.querySelectorAll('.status-pill').forEach(p => p.classList.remove('selected'));
-      el.classList.add('selected');
+      document.querySelectorAll('#status-options .chip-btn').forEach(p => {
+        p.classList.remove('active');
+        p.classList.remove('mixed');
+      });
+      el.classList.add('active');
 
-      // 선택된 노드가 있을 경우 즉시 피그마 노드 상태 업데이트
-      if (selectedNodes.length > 0) {
-        parent.postMessage({
-          pluginMessage: {
-            type: 'SET_STATUS',
-            status: status
-          }
-        }, '*');
+      // 단일 선택 탭 상태 갱신으로 mixed 카운트 해제 및 원본 라벨 복원
+      updateTabGroupCounts('#status-options', 'data-status', [status]);
+
+      // 상태 토글이 꺼져있었다면 켬
+      const statusToggle = document.getElementById('toggle-status');
+      if (statusToggle && !statusToggle.checked) {
+        statusToggle.checked = true;
+        document.getElementById('status-options').classList.toggle('active', true);
+        autoResizeWindow();
       }
+      applyCurrentNodeState();
     }
 
     function toggleStepBadgesUI(isOn) {
       lastNodeConfig.stepBadgesOn = isOn;
       document.getElementById('step-badges-options').classList.toggle('active', isOn);
+      applyCurrentNodeState();
       autoResizeWindow();
     }
 
@@ -3788,6 +4880,7 @@
       lastNodeConfig.badgeCorner = pos;
       document.querySelectorAll('.corner-btn').forEach(b => b.classList.remove('active'));
       el.classList.add('active');
+      applyCurrentNodeState();
     }
 
     function selectBadgeShape(shape, el) {
@@ -3795,6 +4888,7 @@
       lastNodeConfig.badgeShape = shape;
       document.querySelectorAll('#step-badges-options .chip-btn').forEach(b => b.classList.remove('active'));
       el.classList.add('active');
+      applyCurrentNodeState();
     }
 
     // 5. Connection 탭 관련 함수
@@ -3809,9 +4903,10 @@
       el.classList.add('active');
       if (nodeIndex === 1) sourceMagnet = pos;
       if (nodeIndex === 2) targetMagnet = pos;
+      // 앵커 선택은 Connect 실행 시 사용되므로 즉시 반영 없음
     }
 
-    function setConnectorColor(colorHex) {
+    function setConnectorColor(colorHex, skipApply = false) {
       if (!colorHex) return;
       const select = document.getElementById('conn-line-color');
       if (!select) return;
@@ -3830,9 +4925,12 @@
         select.appendChild(opt);
         select.value = colorHex;
       }
+      if (!skipApply) {
+        applyCurrentConnectorState();
+      }
     }
 
-    function selectLinePattern(pattern, el) {
+    function selectLinePattern(pattern, el, skipApply = false) {
       selectedLinePattern = pattern;
       document.querySelectorAll('.line-style-btn').forEach(b => {
         b.classList.remove('active');
@@ -3841,9 +4939,12 @@
         }
       });
       if (el) el.classList.add('active');
+      if (!skipApply) {
+        applyCurrentConnectorState();
+      }
     }
 
-    function selectRoutingType(type, el) {
+    function selectRoutingType(type, el, skipApply = false) {
       selectedRoutingType = type;
       document.querySelectorAll('.routing-btn').forEach(b => {
         b.classList.remove('active');
@@ -3852,6 +4953,9 @@
         }
       });
       if (el) el.classList.add('active');
+      if (!skipApply) {
+        applyCurrentConnectorState();
+      }
     }
 
     function toggleLabelGroupUI(isOn) {
@@ -3869,8 +4973,13 @@
     function setLabelPreset(val, el) {
       document.getElementById('input-conn-label').value = val;
       lastConnectorConfig.labelText = val;
-      document.querySelectorAll('#conn-label-group .chip-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#conn-label-group .chip-btn').forEach(b => {
+        const original = b.dataset.originalLabel || b.getAttribute('data-label') || b.innerText.trim();
+        b.innerText = original;
+        b.classList.remove('active');
+      });
       if (el) el.classList.add('active');
+      applyCurrentConnectorState();
     }
 
     // 커넥터 적용/수정 버튼 클릭 시 1회 실행되는 연결 함수
@@ -3908,7 +5017,7 @@
 
       // 2. 2개 이상 노드 선택 모드: 신규 커넥터 연결
       if (selectedNodes.length < 2) {
-        showToast('연결할 노드를 2개 이상 선택해 주세요.');
+        showToast('Select 2 or more nodes to connect.');
         return;
       }
       const label = document.getElementById('toggle-conn-label').checked
@@ -4022,7 +5131,20 @@
             }
           }, '*');
         });
+      // 상태(Status) 일괄 적용: 토글이 켜져있고 status가 지정되어 있으면 적용
+      const isStatusOn = document.getElementById('toggle-status')?.checked || false;
+      if (isStatusOn && selectedStatus && selectedNodes.length > 0) {
+        parent.postMessage({
+          pluginMessage: {
+            type: 'SET_STATUS',
+            status: selectedStatus
+          }
+        }, '*');
+      }
+
+      if (selectedNodes.length >= 2) {
         showToast(`${selectedNodes.length}개 노드가 업데이트되었습니다.`);
+      }
       } else {
         // 선택된 노드가 전혀 없을 때만 신규 노드 생성
         parent.postMessage({
@@ -4044,6 +5166,8 @@
           }
         }, '*');
       }
+      // 변경 사항 적용 완료 후 dirty 해제 (Cancel 버튼 disabled)
+      // [실시간 반영 모드] 노드 선택 중이면 이 시점에서 사실 실행 안 됨 (updateFooterForTab이 CTA 숨김)
     }
 
     // 7. Undo / Redo / Close
@@ -4063,6 +5187,8 @@
         el.classList.remove('active');
       });
       document.querySelectorAll('.size-mode-dropdown-btn, .figma-dropdown-btn').forEach(el => el.classList.remove('active'));
+      // 터미널 팝업 닫기
+      document.querySelectorAll('.terminal-dropdown-popup').forEach(el => el.classList.remove('open'));
     }
 
     function toggleSizeModeDropdown(e) {
@@ -4161,7 +5287,7 @@
           const pColor = firstPhaseItem.querySelector('.phase-chip-14')?.style.backgroundColor || '#EA2039';
           selectPhase(currentId, pName, pColor);
         } else {
-          showToast('편집할 Phase가 없습니다. 먼저 Phase를 추가해 주세요.');
+          showToast('No phases found. Add a phase first.');
           return;
         }
       }
@@ -4415,7 +5541,7 @@
           container.appendChild(newItem);
         }
         selectPhase(newId, name, color);
-        showToast('새로운 Phase가 생성되었습니다.');
+        showToast('New phase created.');
       }
 
       closeAllModals();
@@ -4439,9 +5565,9 @@
       const bodyEl = document.querySelector('#modal-delete .dialog-body');
       if (bodyEl) {
         if (targetName) {
-          bodyEl.textContent = `정말 '${targetName}'을(를) 삭제하시겠습니까?`;
+          bodyEl.textContent = `Delete '${targetName}'?`;
         } else {
-          bodyEl.textContent = '삭제할 수 있는 Phase 항목이 없습니다.';
+          bodyEl.textContent = 'No phases available to delete.';
         }
       }
 
@@ -4455,8 +5581,182 @@
       closePhaseColorPickerPanel();
       document.getElementById('modal-backdrop').classList.remove('active');
       document.getElementById('modal-phase').style.display = 'none';
+      const addSizeEl = document.getElementById('modal-add-size');
+      if (addSizeEl) addSizeEl.style.display = 'none';
+      const editSizeEl = document.getElementById('modal-edit-size');
+      if (editSizeEl) editSizeEl.style.display = 'none';
+      const addStyleEl = document.getElementById('modal-add-style');
+      if (addStyleEl) addStyleEl.style.display = 'none';
       document.getElementById('modal-confirmation').style.display = 'none';
       document.getElementById('modal-delete').style.display = 'none';
+    }
+
+    function openAddSizeModal() {
+      closeAllPopovers();
+      document.getElementById('input-add-size-name').value = '';
+      document.getElementById('input-add-size-w').value = '375';
+      document.getElementById('input-add-size-h').value = '812';
+      document.getElementById('input-add-size-radius').value = '0';
+      document.getElementById('text-add-size-mode').textContent = 'Fixed height';
+
+      document.getElementById('modal-backdrop').classList.add('active');
+      document.getElementById('modal-add-size').style.display = 'flex';
+      document.getElementById('modal-edit-size').style.display = 'none';
+      document.getElementById('modal-add-style').style.display = 'none';
+      document.getElementById('modal-phase').style.display = 'none';
+      document.getElementById('modal-confirmation').style.display = 'none';
+      document.getElementById('modal-delete').style.display = 'none';
+
+      setTimeout(() => {
+        document.getElementById('input-add-size-name').focus();
+      }, 50);
+    }
+
+    function openEditSizeModal() {
+      closeAllPopovers();
+      const currentW = document.getElementById('input-size-w')?.value || '250';
+      const currentH = document.getElementById('input-size-h')?.value || '90';
+      const currentRadius = document.getElementById('input-size-radius')?.value || '0';
+      const currentMode = document.getElementById('select-size-mode')?.value || 'fixed';
+
+      document.getElementById('input-edit-size-name').value = 'Custom';
+      document.getElementById('input-edit-size-w').value = currentW;
+      document.getElementById('input-edit-size-h').value = currentH;
+      document.getElementById('input-edit-size-radius').value = currentRadius;
+      document.getElementById('text-edit-size-mode').textContent = currentMode === 'hug' ? 'Hug contents' : 'Fixed height';
+
+      document.getElementById('modal-backdrop').classList.add('active');
+      document.getElementById('modal-edit-size').style.display = 'flex';
+      document.getElementById('modal-add-size').style.display = 'none';
+      document.getElementById('modal-add-style').style.display = 'none';
+      document.getElementById('modal-phase').style.display = 'none';
+      document.getElementById('modal-confirmation').style.display = 'none';
+      document.getElementById('modal-delete').style.display = 'none';
+
+      setTimeout(() => {
+        document.getElementById('input-edit-size-name').focus();
+      }, 50);
+    }
+
+    function toggleModalSizeMode(type) {
+      const textEl = document.getElementById(`text-${type}-size-mode`);
+      if (!textEl) return;
+      if (textEl.textContent === 'Fixed height') {
+        textEl.textContent = 'Hug contents';
+      } else {
+        textEl.textContent = 'Fixed height';
+      }
+    }
+
+    function saveSizeFromModal(isEdit) {
+      const prefix = isEdit ? 'edit' : 'add';
+      const name = document.getElementById(`input-${prefix}-size-name`).value.trim() || 'Custom';
+      const w = parseInt(document.getElementById(`input-${prefix}-size-w`).value, 10) || 250;
+      const h = parseInt(document.getElementById(`input-${prefix}-size-h`).value, 10) || 90;
+      const radius = parseInt(document.getElementById(`input-${prefix}-size-radius`).value, 10) || 0;
+
+      const wInput = document.getElementById('input-size-w');
+      const hInput = document.getElementById('input-size-h');
+      const rInput = document.getElementById('input-size-radius');
+      if (wInput) wInput.value = w;
+      if (hInput) hInput.value = h;
+      if (rInput) rInput.value = radius;
+
+      triggerLiveResize();
+      if (typeof updateSizePresetChips === 'function') {
+        updateSizePresetChips(w, h);
+      }
+
+      showToast(`사이즈 '${name}' (${w}×${h})이(가) 적용되었습니다.`);
+      closeAllModals();
+    }
+
+    function openAddStyleModal() {
+      closeAllPopovers();
+      const activeSwatch = document.querySelector('#style-swatches .swatch-item.selected');
+      const currentColor = activeSwatch ? (activeSwatch.getAttribute('data-color') || '#EA2039') : '#EA2039';
+      const hexVal = parseColorToHex(currentColor);
+
+      document.getElementById('input-style-fill-hex').value = hexVal;
+      document.getElementById('style-fill-chip').style.background = `#${hexVal}`;
+
+      document.getElementById('input-style-stroke-hex').value = hexVal;
+      document.getElementById('style-stroke-chip').style.background = `#${hexVal}`;
+      document.getElementById('input-style-stroke-width').value = '0';
+
+      document.getElementById('modal-backdrop').classList.add('active');
+      document.getElementById('modal-add-style').style.display = 'flex';
+      document.getElementById('modal-add-size').style.display = 'none';
+      document.getElementById('modal-edit-size').style.display = 'none';
+      document.getElementById('modal-phase').style.display = 'none';
+      document.getElementById('modal-confirmation').style.display = 'none';
+      document.getElementById('modal-delete').style.display = 'none';
+
+      setTimeout(() => {
+        document.getElementById('input-style-fill-hex').focus();
+      }, 50);
+    }
+
+    function handleStyleHexInput(type, val) {
+      const cleanHex = val.replace('#', '').trim();
+      const chipEl = document.getElementById(`style-${type}-chip`);
+      if (/^[0-9A-Fa-f]{6}$/.test(cleanHex) && chipEl) {
+        chipEl.style.background = `#${cleanHex.toUpperCase()}`;
+      }
+    }
+
+    function toggleStyleColorPicker(type) {
+      const hexInput = document.getElementById(`input-style-${type}-hex`);
+      if (hexInput) {
+        hexInput.focus();
+        hexInput.select();
+      }
+    }
+
+    async function triggerEyedropper(targetId) {
+      if (window.EyeDropper) {
+        try {
+          const eyeDropper = new EyeDropper();
+          const result = await eyeDropper.open();
+          if (result && result.sRGBHex) {
+            const cleanHex = result.sRGBHex.replace('#', '').toUpperCase();
+            if (targetId === 'style-fill') {
+              document.getElementById('input-style-fill-hex').value = cleanHex;
+              document.getElementById('style-fill-chip').style.background = `#${cleanHex}`;
+            } else if (targetId === 'style-stroke') {
+              document.getElementById('input-style-stroke-hex').value = cleanHex;
+              document.getElementById('style-stroke-chip').style.background = `#${cleanHex}`;
+            }
+          }
+        } catch (e) {
+          // 사용자 취소 시 무시
+        }
+      } else {
+        showToast('Eyedropper is not supported in this browser.');
+      }
+    }
+
+    function saveStyleFromModal() {
+      const fillHex = document.getElementById('input-style-fill-hex').value.replace('#', '').trim() || 'EA2039';
+      const fillColor = `#${fillHex.toUpperCase()}`;
+
+      const swatchesContainer = document.getElementById('style-swatches');
+      if (swatchesContainer) {
+        let existing = swatchesContainer.querySelector(`.swatch-item[data-color="${fillColor}"]`);
+        if (!existing) {
+          const newSwatch = document.createElement('div');
+          newSwatch.className = 'swatch-item';
+          newSwatch.style.background = fillColor;
+          newSwatch.setAttribute('data-color', fillColor);
+          newSwatch.setAttribute('onclick', 'selectSwatch(this)');
+          swatchesContainer.appendChild(newSwatch);
+          existing = newSwatch;
+        }
+        selectSwatch(existing);
+      }
+
+      showToast(`스타일 (Fill: ${fillColor})이(가) 적용되었습니다.`);
+      closeAllModals();
     }
 
     function handleBackdropClick(e) {
@@ -4475,9 +5775,9 @@
         const deletedName = targetItem.querySelector('.phase-item-label')?.innerText || 'Phase';
         targetItem.remove();
         selectPhase('none');
-        showToast(`'${deletedName}'이(가) 삭제되었습니다.`);
+        showToast(`'${deletedName}' deleted.`);
       } else {
-        showToast('삭제할 Phase가 없습니다.');
+        showToast('No phase to delete.');
       }
       closeAllModals();
     }
@@ -4496,16 +5796,16 @@
       }
     });
 
-    // 토스트 알림
-    let toastTimeout;
-    function showToast(msg) {
-      const toast = document.getElementById('toast-message');
-      toast.innerText = msg;
-      toast.style.display = 'block';
-      clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => {
-        toast.style.display = 'none';
-      }, 2500);
+    // 알림 전송 (에디터 iframe 내 중복 토스트를 제거하고 피그마/피그잼 네이티브 노티로 통합)
+    function showToast(msg, level = 'info') {
+      if (!msg) return;
+      parent.postMessage({
+        pluginMessage: {
+          type: 'NOTIFY',
+          message: msg,
+          level: level
+        }
+      }, '*');
     }
 
     // 윈도우 전체 높이 Hug 자동 조절
@@ -4566,6 +5866,8 @@
       lastConnectorConfig.linkUrl = e.target.value.trim();
     });
 
+    // [실시간 반영 모드] 전역 폼 change → setFormDirty 리스너 제거 (각 핸들러가 직접 applyCurrentNodeState/applyCurrentConnectorState 호출)
+
     window.addEventListener('load', () => {
       autoResizeWindow();
     });
@@ -4589,6 +5891,97 @@
       parent.postMessage({ pluginMessage: { type: 'INIT' } }, '*');
       setTimeout(autoResizeWindow, 50);
     }
+    // ============================================================
+    // 커스텀 터미널 드롭다운 핸들러
+    // ============================================================
+
+    const TERMINAL_ICONS = {
+      start: {
+        // icon.16.stroke.start.point.line.svg
+        NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H51.5C51.78 7.5 52 7.72 52 8C52 8.28 51.78 8.5 51.5 8.5Z" fill="currentColor"/></svg>`,
+        // icon.16.stroke.start.point.line.arrow.svg
+        ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.49999H1.71L4.6 4.59999C4.8 4.39999 4.8 4.08999 4.6 3.88999C4.4 3.68999 4.09 3.68999 3.89 3.88999L0.15 7.64999C-0.05 7.84999 -0.05 8.15999 0.15 8.35999L3.9 12.11C4 12.21 4.13 12.26 4.25 12.26C4.37 12.26 4.51 12.21 4.6 12.11C4.8 11.91 4.8 11.6 4.6 11.4L1.7 8.49999H51.5C51.78 8.49999 52 8.26999 52 7.99999C52 7.72999 51.78 7.49999 51.5 7.49999Z" fill="currentColor"/></svg>`,
+        // icon.16.stroke.start.point.line.diamond.svg
+        DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.4999 7.466L7.67213 7.49622L4.35121 4.15113C4.15115 3.94962 3.77105 3.94962 3.58099 4.15113L0.150042 7.60705C-0.0500139 7.80856 -0.0500139 8.19144 0.150042 8.38287L3.591 11.8489C3.69102 11.9496 3.83106 12 3.98111 12C4.13115 12 4.27119 11.9496 4.37121 11.8489L7.69214 8.50378L51.5199 8.47355C51.7999 8.47355 52.02 8.25189 52.02 7.96977C52.02 7.68766 51.7999 7.466 51.5199 7.466H51.4999ZM3.9711 10.8111L1.17032 8L3.9711 5.17884L6.76188 7.98992L3.9711 10.801V10.8111Z" fill="currentColor"/></svg>`,
+        // icon.16.stroke.start.point.line.circle.svg
+        CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.5H6.95C6.7 5.81 5.26 4.5 3.5 4.5C1.57 4.5 0 6.07 0 8C0 9.93 1.57 11.5 3.5 11.5C5.26 11.5 6.7 10.19 6.95 8.5H51.5C51.78 8.5 52 8.28 52 8C52 7.72 51.78 7.5 51.5 7.5ZM3.5 10.5C2.12 10.5 1 9.38 1 8C1 6.62 2.12 5.5 3.5 5.5C4.88 5.5 6 6.62 6 8C6 9.38 4.88 10.5 3.5 10.5Z" fill="currentColor"/></svg>`,
+      },
+      end: {
+        // icon.16.stroke.end.none.svg
+        NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M35.5 7.5C35.7761 7.5 36 7.72386 36 8C36 8.27614 35.7761 8.5 35.5 8.5H0.5C0.223858 8.5 0 8.27614 0 8C0 7.72386 0.223858 7.5 0.5 7.5H35.5Z" fill="currentColor"/></svg>`,
+        // icon.16.stroke.end.point.line.arrow.svg
+        ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.5 8.50001L50.29 8.50001L47.4 11.4C47.2 11.6 47.2 11.91 47.4 12.11C47.6 12.31 47.91 12.31 48.11 12.11L51.85 8.35001C52.05 8.15001 52.05 7.84001 51.85 7.64001L48.1 3.89001C48 3.79001 47.87 3.74001 47.75 3.74001C47.63 3.74001 47.49 3.79001 47.4 3.89001C47.2 4.09001 47.2 4.40001 47.4 4.60001L50.3 7.50001L0.5 7.50001C0.22 7.50001 0 7.73 0 8C0 8.27001 0.22 8.50001 0.5 8.50001Z" fill="currentColor"/></svg>`,
+        // icon.16.stroke.end.point.line.diamond.svg
+        DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.500141 8.534L44.3279 8.50378L47.6488 11.8489C47.8488 12.0504 48.229 12.0504 48.419 11.8489L51.85 8.39295C52.05 8.19144 52.05 7.80856 51.85 7.61713L48.409 4.15113C48.309 4.05038 48.1689 4 48.0189 4C47.8689 4 47.7288 4.05038 47.6288 4.15113L44.3079 7.49622L0.480137 7.52644C0.200059 7.52644 -0.02 7.74811 -0.02 8.03022C-0.02 8.31234 0.200059 8.534 0.480137 8.534L0.500141 8.534ZM48.0289 5.18892L50.8297 8L48.0289 10.8212L45.2381 8.01007L48.0289 5.19899L48.0289 5.18892Z" fill="currentColor"/></svg>`,
+        // icon.16.stroke.end.point.line.circle.svg
+        CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.5 8.5L45.05 8.5C45.3 10.19 46.74 11.5 48.5 11.5C50.43 11.5 52 9.93 52 8C52 6.07 50.43 4.5 48.5 4.5C46.74 4.5 45.3 5.81 45.05 7.5L0.5 7.5C0.22 7.5 0 7.72 0 8C0 8.28 0.22 8.5 0.5 8.5ZM48.5 5.5C49.88 5.5 51 6.62 51 8C51 9.38 49.88 10.5 48.5 10.5C47.12 10.5 46 9.38 46 8C46 6.62 47.12 5.5 48.5 5.5Z" fill="currentColor"/></svg>`,
+      },
+    };
+
+    function updateTerminalIcon(side, value) {
+      const iconEl = document.getElementById(`icon-${side}-terminal`);
+      if (iconEl && TERMINAL_ICONS[side] && TERMINAL_ICONS[side][value]) {
+        iconEl.innerHTML = TERMINAL_ICONS[side][value];
+      }
+    }
+
+    function toggleTerminalDropdown(side, event) {
+      if (event) event.stopPropagation();
+      const popup = document.getElementById(`popup-${side}-terminal`);
+      const btn = document.getElementById(`btn-${side}-terminal`);
+      if (!popup || !btn) return;
+
+      const isOpen = popup.classList.contains('open');
+      closeAllPopovers();
+
+      if (!isOpen) {
+        const rect = btn.getBoundingClientRect();
+        popup.style.top = `${rect.bottom + 4}px`;
+        popup.style.left = `${Math.min(rect.left, window.innerWidth - 180)}px`;
+        popup.classList.add('open');
+      }
+    }
+
+    function selectTerminal(side, value, itemEl) {
+      // 숨겨진 select 값 업데이트
+      const selectEl = document.getElementById(`select-${side}-terminal`);
+      if (selectEl) selectEl.value = value;
+
+      // 선택 표시 업데이트
+      const popup = document.getElementById(`popup-${side}-terminal`);
+      if (popup) {
+        popup.querySelectorAll('.terminal-popup-item').forEach(el => el.classList.remove('selected'));
+      }
+      if (itemEl) itemEl.classList.add('selected');
+
+      // 버튼 아이콘 업데이트
+      updateTerminalIcon(side, value);
+
+      // 팝업 닫기
+      closeAllPopovers();
+
+      // 코드에 적용
+      applyCurrentConnectorState();
+    }
+
+    function syncTerminalSelectToUI(side) {
+      const selectEl = document.getElementById(`select-${side}-terminal`);
+      if (!selectEl) return;
+      const val = selectEl.value;
+      updateTerminalIcon(side, val);
+      const popup = document.getElementById(`popup-${side}-terminal`);
+      if (popup) {
+        popup.querySelectorAll('.terminal-popup-item').forEach(el => {
+          el.classList.toggle('selected', el.dataset.value === val);
+        });
+      }
+    }
+
+    // window 클릭 시 터미널 팝업 닫기 (이벤트 전파 차단 없는 클릭)
+    window.addEventListener('click', () => {
+      document.querySelectorAll('.terminal-dropdown-popup').forEach(el => el.classList.remove('open'));
+    });
+
   </script>
 </body>
 

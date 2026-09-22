@@ -3,8 +3,10 @@ export type WorkflowStatus =
   | 'wireframe'
   | 'in_progress'
   | 'in_review'
+  | 'revision'
   | 'approved'
-  | 'ready_for_dev';
+  | 'ready_for_dev'
+  | 'done';
 
 export interface StatusMeta {
   label: string;
@@ -16,39 +18,51 @@ export interface StatusMeta {
 export const STATUS_CONFIG: Record<WorkflowStatus, StatusMeta> = {
   draft: {
     label: 'Draft',
-    color: { r: 0.55, g: 0.58, b: 0.63 }, // #8C94A0
+    color: { r: 0.612, g: 0.639, b: 0.686 }, // #9CA3AF
     textColor: { r: 1, g: 1, b: 1 },
-    hex: '#8C94A0',
+    hex: '#9CA3AF',
   },
   wireframe: {
     label: 'Wireframe',
-    color: { r: 0.85, g: 0.85, b: 0.85 }, // #D9D9D9
-    textColor: { r: 0.2, g: 0.2, b: 0.2 },
-    hex: '#D9D9D9',
+    color: { r: 0.42, g: 0.447, b: 0.502 }, // #6B7280
+    textColor: { r: 1, g: 1, b: 1 },
+    hex: '#6B7280',
   },
   in_progress: {
     label: 'In Progress',
-    color: { r: 0.16, g: 0.5, b: 0.98 }, // #2980FA
+    color: { r: 0.231, g: 0.51, b: 0.965 }, // #3B82F6
     textColor: { r: 1, g: 1, b: 1 },
-    hex: '#2980FA',
+    hex: '#3B82F6',
   },
   in_review: {
     label: 'In Review',
-    color: { r: 0.96, g: 0.62, b: 0.05 }, // #F59E0B
-    textColor: { r: 0.1, g: 0.1, b: 0.1 },
-    hex: '#F59E0B',
+    color: { r: 0.792, g: 0.541, b: 0.016 }, // #CA8A04
+    textColor: { r: 1, g: 1, b: 1 },
+    hex: '#CA8A04',
+  },
+  revision: {
+    label: 'Revision',
+    color: { r: 0.918, g: 0.345, b: 0.047 }, // #EA580C
+    textColor: { r: 1, g: 1, b: 1 },
+    hex: '#EA580C',
   },
   approved: {
     label: 'Approved',
-    color: { r: 0.55, g: 0.36, b: 0.96 }, // #8C5CF6
+    color: { r: 0.545, g: 0.361, b: 0.965 }, // #8B5CF6
     textColor: { r: 1, g: 1, b: 1 },
-    hex: '#8C5CF6',
+    hex: '#8B5CF6',
   },
   ready_for_dev: {
     label: 'Ready for Dev',
-    color: { r: 0.06, g: 0.72, b: 0.51 }, // #10B981
+    color: { r: 0.086, g: 0.639, b: 0.29 }, // #16A34A
     textColor: { r: 1, g: 1, b: 1 },
-    hex: '#10B981',
+    hex: '#16A34A',
+  },
+  done: {
+    label: 'Done',
+    color: { r: 0.216, g: 0.255, b: 0.318 }, // #374151
+    textColor: { r: 1, g: 1, b: 1 },
+    hex: '#374151',
   },
 };
 
@@ -196,6 +210,7 @@ export type PluginAction =
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'CLOSE_PLUGIN' }
+  | { type: 'NOTIFY'; message: string; level?: 'info' | 'success' | 'warning' | 'error' }
   | { type: 'RESIZE_WINDOW'; width?: number; height: number }
   | { type: 'INIT' };
 
@@ -205,6 +220,7 @@ export interface SelectedNodeInfo {
   isFlowNode: boolean;
   isConnector?: boolean;
   nodeType?: string;
+  flowNodeType?: DiagramNodeType;
   title?: string;
   description?: string;
   tag?: string;
@@ -220,6 +236,7 @@ export interface SelectedNodeInfo {
   connectorEndTerminal?: ConnectorTerminalType;
   width?: number;
   height?: number;
+  status?: WorkflowStatus;
 }
 
 export type CoreToUIMessage =
@@ -229,6 +246,9 @@ export type CoreToUIMessage =
       nodes: SelectedNodeInfo[];
       currentStatus?: WorkflowStatus;
       nextSuggestedTag?: string;
+      flowNodeCount?: number;
+      otherObjectCount?: number;
+      connectorCount?: number;
     }
   | {
       type: 'STATUS_LIST_UPDATED';

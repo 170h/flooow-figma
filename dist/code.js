@@ -4,45 +4,59 @@
   var STATUS_CONFIG = {
     draft: {
       label: "Draft",
-      color: { r: 0.55, g: 0.58, b: 0.63 },
-      // #8C94A0
+      color: { r: 0.612, g: 0.639, b: 0.686 },
+      // #9CA3AF
       textColor: { r: 1, g: 1, b: 1 },
-      hex: "#8C94A0"
+      hex: "#9CA3AF"
     },
     wireframe: {
       label: "Wireframe",
-      color: { r: 0.85, g: 0.85, b: 0.85 },
-      // #D9D9D9
-      textColor: { r: 0.2, g: 0.2, b: 0.2 },
-      hex: "#D9D9D9"
+      color: { r: 0.42, g: 0.447, b: 0.502 },
+      // #6B7280
+      textColor: { r: 1, g: 1, b: 1 },
+      hex: "#6B7280"
     },
     in_progress: {
       label: "In Progress",
-      color: { r: 0.16, g: 0.5, b: 0.98 },
-      // #2980FA
+      color: { r: 0.231, g: 0.51, b: 0.965 },
+      // #3B82F6
       textColor: { r: 1, g: 1, b: 1 },
-      hex: "#2980FA"
+      hex: "#3B82F6"
     },
     in_review: {
       label: "In Review",
-      color: { r: 0.96, g: 0.62, b: 0.05 },
-      // #F59E0B
-      textColor: { r: 0.1, g: 0.1, b: 0.1 },
-      hex: "#F59E0B"
+      color: { r: 0.792, g: 0.541, b: 0.016 },
+      // #CA8A04
+      textColor: { r: 1, g: 1, b: 1 },
+      hex: "#CA8A04"
+    },
+    revision: {
+      label: "Revision",
+      color: { r: 0.918, g: 0.345, b: 0.047 },
+      // #EA580C
+      textColor: { r: 1, g: 1, b: 1 },
+      hex: "#EA580C"
     },
     approved: {
       label: "Approved",
-      color: { r: 0.55, g: 0.36, b: 0.96 },
-      // #8C5CF6
+      color: { r: 0.545, g: 0.361, b: 0.965 },
+      // #8B5CF6
       textColor: { r: 1, g: 1, b: 1 },
-      hex: "#8C5CF6"
+      hex: "#8B5CF6"
     },
     ready_for_dev: {
       label: "Ready for Dev",
-      color: { r: 0.06, g: 0.72, b: 0.51 },
-      // #10B981
+      color: { r: 0.086, g: 0.639, b: 0.29 },
+      // #16A34A
       textColor: { r: 1, g: 1, b: 1 },
-      hex: "#10B981"
+      hex: "#16A34A"
+    },
+    done: {
+      label: "Done",
+      color: { r: 0.216, g: 0.255, b: 0.318 },
+      // #374151
+      textColor: { r: 1, g: 1, b: 1 },
+      hex: "#374151"
     }
   };
 
@@ -492,7 +506,6 @@
   }
   function notify(message, level = "info") {
     figma.notify(message, { error: level === "error" });
-    postToUI({ type: "TOAST", message, level });
   }
   function findConnectorNode(node) {
     if (!node) return null;
@@ -537,6 +550,49 @@
     );
     return `p${flowNodes.length + 1}`;
   }
+  function extractNodeText(node) {
+    let title = "";
+    let description = "";
+    if (node.type === "FRAME" || "findAll" in node) {
+      const frame = node;
+      const titleTextNode = frame.findOne(
+        (c) => c.type === "TEXT" && (c.name === "TitleText" || c.getPluginData("node_role") === "title")
+      );
+      const descTextNode = frame.findOne(
+        (c) => c.type === "TEXT" && (c.name === "DescText" || c.getPluginData("node_role") === "desc")
+      );
+      if (titleTextNode) {
+        title = titleTextNode.characters;
+      }
+      if (descTextNode) {
+        description = descTextNode.characters;
+      }
+      if (!title) {
+        const allTexts = frame.findAll((n) => n.type === "TEXT");
+        if (allTexts.length > 0) title = allTexts[0].characters;
+        if (allTexts.length > 1 && !description) {
+          description = allTexts[1].characters;
+        }
+      }
+    } else if (node.type === "SHAPE_WITH_TEXT") {
+      const shape = node;
+      const lines = shape.text.characters.split("\n");
+      if (lines.length > 0) title = lines[0];
+      if (lines.length > 1) description = lines.slice(1).join("\n");
+    } else if (node.type === "STICKY") {
+      const sticky = node;
+      const lines = sticky.text.characters.split("\n");
+      if (lines.length > 0) title = lines[0];
+      if (lines.length > 1) description = lines.slice(1).join("\n");
+    }
+    if (!title) {
+      title = node.name || node.getPluginData("node_title") || "Untitled";
+    }
+    if (!description) {
+      description = node.getPluginData("node_desc") || "";
+    }
+    return { title, description };
+  }
   function handleSelectionChange() {
     const rawSelection = figma.currentPage.selection;
     const resolvedNodesMap = /* @__PURE__ */ new Map();
@@ -553,7 +609,22 @@
         resolvedNodesMap.set(node.id, node);
       }
     }
-    const uniqueNodes = Array.from(resolvedNodesMap.values());
+    const allResolvedNodes = Array.from(resolvedNodesMap.values());
+    const connNodes = allResolvedNodes.filter((n) => Boolean(findConnectorNode(n)));
+    const nonConnNodes = allResolvedNodes.filter((n) => !findConnectorNode(n));
+    const flowNodes = nonConnNodes.filter((n) => n.getPluginData("is_flow_node") === "true");
+    const otherObjects = nonConnNodes.filter((n) => n.getPluginData("is_flow_node") !== "true");
+    const flowNodeCount = flowNodes.length;
+    const otherObjectCount = otherObjects.length;
+    const connectorCount = connNodes.length;
+    let uniqueNodes = [];
+    if (flowNodeCount > 0) {
+      uniqueNodes = flowNodes;
+    } else if (connectorCount > 0 && otherObjectCount === 0) {
+      uniqueNodes = connNodes;
+    } else {
+      uniqueNodes = otherObjects;
+    }
     const nodes = uniqueNodes.map((node) => {
       const isFlowNode = node.getPluginData("is_flow_node") === "true";
       if (isFlowNode && node.type === "FRAME") {
@@ -566,21 +637,33 @@
           frame.minHeight = h;
           frame.maxHeight = h;
         }
-        if (!frame.getPluginData("node_width")) {
-          frame.setPluginData("node_width", `${w}`);
-          frame.setPluginData("node_height", `${h}`);
-        }
         const statusBadge = frame.children.find(
           (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
         );
-        if (statusBadge && statusBadge.y <= 0) {
-          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-          statusBadge.x = w - statusBadge.width - 10;
-          statusBadge.y = h - statusBadge.height - 10;
+        if (statusBadge) {
+          if (statusBadge.y <= 0) {
+            statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+            statusBadge.x = w - statusBadge.width - 10;
+            statusBadge.y = h - statusBadge.height - 10;
+          }
+          statusBadge.locked = true;
+          const textChild = statusBadge.children.find((c) => c.type === "TEXT");
+          if (textChild) textChild.locked = true;
+        }
+        const headerFrame = frame.children.find((c) => c.name === "Header");
+        const titleText = headerFrame ? headerFrame.children.find((c) => c.type === "TEXT") : frame.children.find((c) => c.type === "TEXT" && (c.name === "TitleText" || c.getPluginData("node_role") === "title"));
+        if (titleText) {
+          enforceTitleStandardStyle(titleText, frame);
+        }
+        const descText = frame.children.find(
+          (c) => c.type === "TEXT" && (c.name === "DescText" || c.getPluginData("node_role") === "desc")
+        );
+        if (descText) {
+          lockTextFontSizeAndAutoResize(descText, 11);
         }
       }
-      let title = node.getPluginData("node_title") || node.name;
-      let description = node.getPluginData("node_desc") || "";
+      let title = "";
+      let description = "";
       let tag = node.getPluginData("node_tag") || "";
       let connectorLabel;
       let connectorLineType;
@@ -643,26 +726,22 @@
           }
         }
         title = connectorLabel ? `\uCEE4\uB125\uD130: "${connectorLabel}"` : "\uC5F0\uACB0\uC120 (Connector)";
+      } else {
+        const extracted = extractNodeText(node);
+        title = extracted.title;
+        description = extracted.description;
       }
-      if (!node.getPluginData("node_title") && "findAll" in node) {
-        const texts = node.findAll((n) => n.type === "TEXT");
-        if (texts.length > 0) title = texts[0].characters;
-        if (texts.length > 1) {
-          if (texts[1].characters.length <= 8) tag = texts[1].characters;
-          else description = texts[1].characters;
-        }
-        if (texts.length > 2 && !description) description = texts[2].characters;
-      } else if (!node.getPluginData("node_title") && node.type === "SHAPE_WITH_TEXT") {
-        const lines = node.text.characters.split("\n");
-        if (lines.length > 0) title = lines[0];
-        if (lines.length > 1) description = lines.slice(1).join("\n");
-      }
+      const savedType = node.getPluginData("node_type");
+      const flowNodeType = savedType || "Screen";
+      const savedStatus = node.getPluginData("workflow_status");
       return {
         id: node.id,
         name: node.name,
         isFlowNode,
         isConnector,
         nodeType: node.type,
+        flowNodeType,
+        status: savedStatus || void 0,
         title,
         description,
         tag,
@@ -687,10 +766,13 @@
     }
     postToUI({
       type: "SELECTION_CHANGED",
-      count: uniqueNodes.length,
+      count: flowNodeCount + otherObjectCount + connectorCount,
       nodes,
       currentStatus,
-      nextSuggestedTag: getNextFlowTag()
+      nextSuggestedTag: getNextFlowTag(),
+      flowNodeCount,
+      otherObjectCount,
+      connectorCount
     });
   }
   figma.on("selectionchange", handleSelectionChange);
@@ -716,10 +798,170 @@
     }
     textNode.characters = newText;
   }
+  function lockTextFontSizeAndAutoResize(textNode, targetSize) {
+    try {
+      if (textNode.fontSize !== targetSize) {
+        textNode.fontSize = targetSize;
+      }
+      if (textNode.textAutoResize !== "HEIGHT") {
+        textNode.textAutoResize = "HEIGHT";
+      }
+      if (textNode.layoutAlign !== "STRETCH") {
+        textNode.layoutAlign = "STRETCH";
+      }
+    } catch (err) {
+      console.warn("\uD3F0\uD2B8 \uC0AC\uC774\uC988 \uBC0F \uB9AC\uC0AC\uC774\uC988 \uBAA8\uB4DC \uACE0\uC815 \uC2E4\uD328:", err);
+    }
+  }
+  async function enforceTitleStandardStyle(textNode, flowNode) {
+    try {
+      const targetFont = { family: "Inter", style: "Bold" };
+      const targetSize = 13;
+      let isDark = false;
+      if (flowNode && "getPluginData" in flowNode) {
+        isDark = flowNode.getPluginData("node_theme") === "dark";
+      }
+      const expectedColor = isDark ? { r: 1, g: 1, b: 1 } : { r: 0.118, g: 0.118, b: 0.118 };
+      try {
+        await Promise.all([
+          figma.loadFontAsync(targetFont),
+          figma.loadFontAsync({ family: "Inter", style: "Regular" }),
+          figma.loadFontAsync({ family: "Inter", style: "Medium" })
+        ]);
+      } catch (_) {
+      }
+      let len = textNode.characters.length;
+      if (len > 0) {
+        try {
+          const currentFonts = textNode.getRangeAllFontNames(0, len);
+          for (const fn of currentFonts) {
+            try {
+              await figma.loadFontAsync(fn);
+            } catch (_) {
+            }
+          }
+        } catch (_) {
+        }
+      }
+      const originalText = textNode.characters;
+      const cleanedText = originalText.split("\n").map((line) => line.replace(/^[\s\u2022\u25E6\u2023\u2043\u2219\u25AA\u25AB\-\*]+(?:\s+|$)/, "").trim()).filter((line) => line.length > 0).join(" ");
+      if (cleanedText !== originalText && cleanedText.length > 0) {
+        textNode.characters = cleanedText;
+        len = textNode.characters.length;
+      }
+      if (len > 0) {
+        try {
+          const segments = textNode.getStyledTextSegments([
+            "hyperlink",
+            "textDecoration",
+            "listOptions",
+            "fontName",
+            "fontSize"
+          ]);
+          for (const seg of segments) {
+            if (seg.hyperlink !== null) {
+              try {
+                textNode.setRangeHyperlink(seg.start, seg.end, null);
+              } catch (_) {
+              }
+            }
+            if (seg.textDecoration !== "NONE") {
+              try {
+                textNode.setRangeTextDecoration(seg.start, seg.end, "NONE");
+              } catch (_) {
+              }
+            }
+            if (seg.listOptions && seg.listOptions.type !== "NONE") {
+              try {
+                textNode.setRangeListOptions(seg.start, seg.end, { type: "NONE" });
+              } catch (_) {
+              }
+            }
+            if (seg.fontName.family !== targetFont.family || seg.fontName.style !== targetFont.style) {
+              try {
+                textNode.setRangeFontName(seg.start, seg.end, targetFont);
+              } catch (_) {
+              }
+            }
+            if (seg.fontSize !== targetSize) {
+              try {
+                textNode.setRangeFontSize(seg.start, seg.end, targetSize);
+              } catch (_) {
+              }
+            }
+          }
+        } catch (_) {
+        }
+        try {
+          textNode.setRangeFontName(0, len, targetFont);
+        } catch (_) {
+        }
+        try {
+          textNode.setRangeFontSize(0, len, targetSize);
+        } catch (_) {
+        }
+        try {
+          textNode.setRangeFills(0, len, [{ type: "SOLID", color: expectedColor }]);
+        } catch (_) {
+        }
+        try {
+          textNode.setRangeTextDecoration(0, len, "NONE");
+        } catch (_) {
+        }
+        try {
+          textNode.setRangeHyperlink(0, len, null);
+        } catch (_) {
+        }
+        try {
+          textNode.setRangeListOptions(0, len, { type: "NONE" });
+        } catch (_) {
+        }
+        try {
+          textNode.setRangeIndentation(0, len, 0);
+        } catch (_) {
+        }
+      } else {
+        try {
+          textNode.fontName = targetFont;
+        } catch (_) {
+        }
+        try {
+          textNode.fontSize = targetSize;
+        } catch (_) {
+        }
+        try {
+          textNode.fills = [{ type: "SOLID", color: expectedColor }];
+        } catch (_) {
+        }
+        try {
+          textNode.textDecoration = "NONE";
+        } catch (_) {
+        }
+        try {
+          textNode.hyperlink = null;
+        } catch (_) {
+        }
+      }
+      if (textNode.textAutoResize !== "HEIGHT") {
+        textNode.textAutoResize = "HEIGHT";
+      }
+      if (textNode.layoutGrow !== 1) {
+        textNode.layoutGrow = 1;
+      }
+      if (flowNode && "name" in flowNode && textNode.characters.trim()) {
+        if (flowNode.name !== textNode.characters.trim()) {
+          flowNode.name = textNode.characters.trim();
+        }
+      }
+    } catch (err) {
+      console.warn("\uD0C0\uC774\uD2C0 \uD45C\uC900 \uC2A4\uD0C0\uC77C \uACE0\uC815 \uC2E4\uD328:", err);
+    }
+  }
   async function convertShapeToFrameNode(shape) {
     await loadRequiredFonts();
-    const title = shape.getPluginData("node_title") || shape.name || "Untitled";
-    const desc = shape.getPluginData("node_desc") || "";
+    const extracted = extractNodeText(shape);
+    const title = extracted.title;
+    const desc = extracted.description;
     const theme = shape.getPluginData("node_theme") || "light";
     const status = shape.getPluginData("workflow_status") || void 0;
     const stepStr = shape.getPluginData("step_number");
@@ -758,8 +1000,6 @@
     card.maxWidth = width;
     card.minHeight = height;
     card.maxHeight = height;
-    card.setPluginData("node_width", `${width}`);
-    card.setPluginData("node_height", `${height}`);
     const headerRow = figma.createFrame();
     headerRow.name = "Header";
     headerRow.layoutMode = "HORIZONTAL";
@@ -802,7 +1042,9 @@
       badgeText.characters = cfg.label.toUpperCase();
       badgeText.textAutoResize = "WIDTH_AND_HEIGHT";
       badgeText.fills = [{ type: "SOLID", color: cfg.textColor }];
+      badgeText.locked = true;
       statusBadge.appendChild(badgeText);
+      statusBadge.locked = true;
       card.appendChild(statusBadge);
       statusBadge.layoutPositioning = "ABSOLUTE";
       statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
@@ -847,9 +1089,7 @@
       stepBadge.appendChild(numText);
     }
     card.setPluginData("is_flow_node", "true");
-    card.setPluginData("node_title", title);
-    card.setPluginData("node_desc", desc);
-    card.setPluginData("node_tag", "");
+    card.setPluginData("schema_version", "2");
     card.setPluginData("node_theme", theme);
     if (status) card.setPluginData("workflow_status", status);
     if (stepNumber) card.setPluginData("step_number", `${stepNumber}`);
@@ -901,8 +1141,6 @@
       card.maxWidth = width;
       card.minHeight = height;
       card.maxHeight = height;
-      card.setPluginData("node_width", `${width}`);
-      card.setPluginData("node_height", `${height}`);
       const headerRow = figma.createFrame();
       headerRow.name = "Header";
       headerRow.layoutMode = "HORIZONTAL";
@@ -932,11 +1170,46 @@
       descText.textAutoResize = "HEIGHT";
       descText.setPluginData("node_role", "desc");
       card.appendChild(descText);
+      card.name = title;
       card.setPluginData("is_flow_node", "true");
-      card.setPluginData("node_title", title);
-      card.setPluginData("node_desc", description);
-      card.setPluginData("node_tag", "");
+      card.setPluginData("schema_version", "2");
       card.setPluginData("node_theme", theme);
+      card.setPluginData("node_type", payload.nodeType || "Screen");
+      if (payload.status) {
+        card.setPluginData("workflow_status", payload.status);
+        if (STATUS_CONFIG[payload.status]) {
+          const cfg = STATUS_CONFIG[payload.status];
+          const statusBadge = figma.createFrame();
+          statusBadge.name = "StatusBadge";
+          statusBadge.layoutMode = "HORIZONTAL";
+          statusBadge.primaryAxisSizingMode = "AUTO";
+          statusBadge.counterAxisSizingMode = "AUTO";
+          statusBadge.primaryAxisAlignItems = "CENTER";
+          statusBadge.counterAxisAlignItems = "CENTER";
+          statusBadge.paddingLeft = 7;
+          statusBadge.paddingRight = 7;
+          statusBadge.paddingTop = 3;
+          statusBadge.paddingBottom = 3;
+          statusBadge.cornerRadius = 0;
+          statusBadge.fills = [{ type: "SOLID", color: cfg.color }];
+          statusBadge.setPluginData("is_status_badge", "true");
+          const badgeText = figma.createText();
+          badgeText.name = "StatusText";
+          badgeText.fontName = { family: "Inter", style: "Bold" };
+          badgeText.fontSize = 9;
+          badgeText.characters = cfg.label.toUpperCase();
+          badgeText.textAutoResize = "WIDTH_AND_HEIGHT";
+          badgeText.fills = [{ type: "SOLID", color: cfg.textColor }];
+          badgeText.locked = true;
+          statusBadge.appendChild(badgeText);
+          statusBadge.locked = true;
+          card.appendChild(statusBadge);
+          statusBadge.layoutPositioning = "ABSOLUTE";
+          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+          statusBadge.x = card.width - statusBadge.width - 10;
+          statusBadge.y = card.height - statusBadge.height - 10;
+        }
+      }
       const selection = figma.currentPage.selection;
       if (selection.length > 0) {
         const last = selection[selection.length - 1];
@@ -999,8 +1272,6 @@
         card.maxWidth = w;
         card.minHeight = h;
         card.maxHeight = h;
-        card.setPluginData("node_width", `${w}`);
-        card.setPluginData("node_height", `${h}`);
         const statusBadge = card.children.find(
           (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
         );
@@ -1038,7 +1309,9 @@
         headerRow.insertChild(0, titleText);
       }
       await safeSetCharacters(titleText, title);
-      titleText.fills = [{ type: "SOLID", color: titleColor }];
+      if (!Array.isArray(titleText.fills) || titleText.fills.length === 0) {
+        titleText.fills = [{ type: "SOLID", color: titleColor }];
+      }
       let descText = card.children.find(
         (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
       );
@@ -1053,12 +1326,19 @@
         card.appendChild(descText);
       }
       await safeSetCharacters(descText, description);
-      descText.fills = [{ type: "SOLID", color: descColor }];
+      if (!Array.isArray(descText.fills) || descText.fills.length === 0) {
+        descText.fills = [{ type: "SOLID", color: descColor }];
+      }
+      card.name = title;
       card.setPluginData("is_flow_node", "true");
-      card.setPluginData("node_title", title);
-      card.setPluginData("node_desc", description);
+      card.setPluginData("schema_version", "2");
+      card.setPluginData("node_title", "");
+      card.setPluginData("node_desc", "");
       card.setPluginData("node_tag", "");
-      card.setPluginData("node_theme", payload.theme);
+      card.setPluginData("node_width", "");
+      card.setPluginData("node_height", "");
+      if (payload.theme) card.setPluginData("node_theme", payload.theme);
+      if (payload.nodeType) card.setPluginData("node_type", payload.nodeType);
       figma.currentPage.selection = [card];
       handleSelectionChange();
       notify(`[${title}] \uB178\uB4DC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, "success");
@@ -1092,8 +1372,6 @@
       frame.maxWidth = w;
       frame.minHeight = h;
       frame.maxHeight = h;
-      frame.setPluginData("node_width", `${w}`);
-      frame.setPluginData("node_height", `${h}`);
       const statusBadge = frame.children.find(
         (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
       );
@@ -1152,22 +1430,16 @@
     }
   }
   async function createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label, colorHex, strokeWeight) {
-    let connectorStrokeWeight = strokeWeight || 1.5;
-    let connectorStrokeColor = colorHex ? hexToRgbColor(colorHex) : { r: 0.18, g: 0.18, b: 0.22 };
-    if (!colorHex && "strokes" in sourceNode && Array.isArray(sourceNode.strokes) && sourceNode.strokes.length > 0) {
-      const firstStroke = sourceNode.strokes[0];
-      if (firstStroke.type === "SOLID") {
-        connectorStrokeColor = firstStroke.color;
-      }
-    }
+    const connWeight = typeof strokeWeight === "number" ? strokeWeight : 1.5;
+    const connColor = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
     return await createOrthogonalVectorConnector(
       sourceNode,
       sourceMagnet,
       targetNode,
       targetMagnet,
       {
-        strokeWeight: connectorStrokeWeight,
-        strokeColor: connectorStrokeColor,
+        strokeWeight: connWeight,
+        strokeColor: connColor,
         label,
         sourceNodeId: sourceNode.id,
         targetNodeId: targetNode.id
@@ -1478,10 +1750,11 @@
     if (!node || node.getPluginData("is_flow_node") !== "true") return;
     const currentTheme = node.getPluginData("node_theme") === "dark" ? "dark" : "light";
     const newTheme = currentTheme === "dark" ? "light" : "dark";
+    const extracted = extractNodeText(node);
     await updateFlowNode({
       nodeId: node.id,
-      title: node.getPluginData("node_title") || node.name,
-      description: node.getPluginData("node_desc") || "",
+      title: extracted.title,
+      description: extracted.description,
       tag: node.getPluginData("node_tag") || "p1",
       theme: newTheme,
       figmaLink: node.getPluginData("figma_link"),
@@ -1505,9 +1778,10 @@
           statusBadge.y = frame.height - statusBadge.height - 10;
         }
       }
+      const extracted = extractNodeText(node);
       return {
         id: node.id,
-        name: node.name,
+        name: extracted.title || node.name,
         status: status || "draft",
         x: Math.round(node.x),
         y: Math.round(node.y)
@@ -1576,8 +1850,10 @@
         statusBadge.fills = [{ type: "SOLID", color: cfg.color }];
         const textNode = statusBadge.children.find((c) => c.type === "TEXT");
         if (textNode) {
+          textNode.locked = false;
           await safeSetCharacters(textNode, cfg.label.toUpperCase());
           textNode.fills = [{ type: "SOLID", color: cfg.textColor }];
+          textNode.locked = true;
         }
         if (card.layoutMode !== "NONE") {
           statusBadge.layoutPositioning = "ABSOLUTE";
@@ -1586,9 +1862,11 @@
         statusBadge.x = card.width - statusBadge.width - 10;
         statusBadge.y = card.height - statusBadge.height - 10;
         statusBadge.visible = true;
+        statusBadge.locked = true;
       }
     }
     syncStatusList();
+    handleSelectionChange();
     notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 [${cfg.label}] \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uBD80\uCC29\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
   }
   async function addStepBadges(startNumber = 1) {
@@ -1889,6 +2167,9 @@
       case "REDO":
         notify("\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Shift+Z (Mac) \uB610\uB294 Ctrl+Y (Windows)\uB85C \uB2E4\uC2DC \uC2E4\uD589\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "info");
         break;
+      case "NOTIFY":
+        notify(msg.message, msg.level);
+        break;
       case "RESIZE_WINDOW": {
         const targetW = msg.width || 360;
         const targetH = Math.max(200, Math.min(1200, Math.round(msg.height)));
@@ -1904,18 +2185,9 @@
   };
   figma.on("documentchange", async (event) => {
     const movedNodeIds = /* @__PURE__ */ new Set();
+    let connectorSelectionChanged = false;
     for (const change of event.documentChanges) {
-      if (change.type === "CREATE") {
-        const node = figma.getNodeById(change.id);
-        if (node && node.type === "CONNECTOR") {
-          const conn = node;
-          if (conn.connectorLineType !== "ELBOWED") {
-            conn.connectorLineType = "ELBOWED";
-          }
-          conn.strokeWeight = 1.5;
-          conn.connectorEndStrokeCap = "ARROW_EQUILATERAL";
-        }
-      } else if (change.type === "PROPERTY_CHANGE") {
+      if (change.type === "PROPERTY_CHANGE") {
         if (change.properties.includes("x") || change.properties.includes("y") || change.properties.includes("width") || change.properties.includes("height")) {
           movedNodeIds.add(change.id);
         }
@@ -1925,8 +2197,8 @@
           const flowNode = findFlowNode(node);
           if (flowNode && flowNode.type === "FRAME" && flowNode.getPluginData("is_flow_node") === "true") {
             const frame = flowNode;
-            const savedW = parseInt(frame.getPluginData("node_width"), 10);
-            const savedH = parseInt(frame.getPluginData("node_height"), 10);
+            const savedW = frame.minWidth && frame.minWidth > 0 ? frame.minWidth : parseInt(frame.getPluginData("node_width"), 10);
+            const savedH = frame.minHeight && frame.minHeight > 0 ? frame.minHeight : parseInt(frame.getPluginData("node_height"), 10);
             if (savedW && savedH && (Math.round(frame.width) !== savedW || Math.round(frame.height) !== savedH)) {
               frame.minWidth = null;
               frame.maxWidth = null;
@@ -1942,10 +2214,84 @@
             }
           }
         }
+        const textNodeCandidate = figma.getNodeById(change.id);
+        if (textNodeCandidate && textNodeCandidate.type === "TEXT") {
+          const textNode = textNodeCandidate;
+          const role = textNode.getPluginData("node_role");
+          const isHeaderChild = textNode.parent && textNode.parent.name === "Header";
+          const isTitle = role === "title" || textNode.name === "TitleText" || isHeaderChild;
+          const isDesc = role === "desc" || textNode.name === "DescText";
+          if (isTitle || isDesc) {
+            const flowNode = findFlowNode(textNode);
+            if (flowNode) {
+              if (isTitle) {
+                await enforceTitleStandardStyle(textNode, flowNode);
+              } else if (isDesc) {
+                lockTextFontSizeAndAutoResize(textNode, 11);
+              }
+            }
+          }
+        }
+        const maybeStatusNode = figma.getNodeById(change.id);
+        if (maybeStatusNode) {
+          let statusTextNode = null;
+          let badgeFrame = null;
+          if (maybeStatusNode.type === "TEXT") {
+            const t = maybeStatusNode;
+            if (t.name === "StatusText" || t.parent && (t.parent.name === "StatusBadge" || t.parent.getPluginData("is_status_badge") === "true")) {
+              statusTextNode = t;
+              badgeFrame = t.parent && t.parent.type === "FRAME" ? t.parent : null;
+            }
+          } else if (maybeStatusNode.type === "FRAME") {
+            const f = maybeStatusNode;
+            if (f.name === "StatusBadge" || f.getPluginData("is_status_badge") === "true") {
+              badgeFrame = f;
+              statusTextNode = f.children.find((c) => c.type === "TEXT");
+            }
+          }
+          if (statusTextNode) {
+            const flowNode = findFlowNode(statusTextNode);
+            if (flowNode) {
+              const currentStatus = flowNode.getPluginData("workflow_status");
+              const expectedLabel = currentStatus && STATUS_CONFIG[currentStatus] ? STATUS_CONFIG[currentStatus].label.toUpperCase() : "DRAFT";
+              if (statusTextNode.characters !== expectedLabel) {
+                statusTextNode.locked = false;
+                await safeSetCharacters(statusTextNode, expectedLabel);
+              }
+              statusTextNode.locked = true;
+              if (badgeFrame) {
+                badgeFrame.locked = true;
+              }
+            }
+          }
+        }
+        if (change.properties.includes("strokes") || change.properties.includes("strokeWeight") || change.properties.includes("dashPattern") || change.properties.includes("connectorLineType")) {
+          const changedNode = figma.getNodeById(change.id);
+          const connNode = findConnectorNode(changedNode);
+          if (connNode) {
+            if (connNode.type === "CONNECTOR") {
+              const conn = connNode;
+              if (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === "SOLID") {
+                const hex = rgbToHexColor(conn.strokes[0].color);
+                conn.setPluginData("connector_color", hex);
+              }
+              if (typeof conn.strokeWeight === "number") {
+                conn.setPluginData("connector_weight", String(conn.strokeWeight));
+              }
+            }
+            const currentSelection = figma.currentPage.selection;
+            if (currentSelection.some((sel) => sel.id === connNode.id || findConnectorNode(sel)?.id === connNode.id)) {
+              connectorSelectionChanged = true;
+            }
+          }
+        }
       }
     }
     if (movedNodeIds.size > 0) {
       await syncConnectorsForMovedNodes(movedNodeIds);
+    }
+    if (connectorSelectionChanged) {
+      handleSelectionChange();
     }
   });
   refreshConnectorRegistry();
