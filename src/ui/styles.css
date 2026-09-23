@@ -1,0 +1,2735 @@
+/* ============================================================ */
+    /* 피그마 UI3 공식 디자인 시스템 토큰 (Light Mode Primary)       */
+    /* ============================================================ */
+    :root {
+      /* 표면 및 배경 색상 */
+      --color-bg: #ffffff;
+      --color-bg-secondary: #f5f5f5;
+      --color-bg-tertiary: #ebebeb;
+      --color-bg-hover: var(--figma-color-bg-hover, rgba(0, 0, 0, 0.04));
+      --color-bg-dark-modal: #1e1e1e;
+      --color-bg-dark-hover: rgba(255, 255, 255, 0.08);
+
+      /* 브랜드 및 인터랙션 액센트 (피그마 바이올렛/퍼플) */
+      --color-brand: #8638e5;
+      --color-brand-hover: #7528d4;
+      --color-brand-cta: #9747ff;
+      --color-brand-cta-hover: #8636ee;
+      --color-brand-subtle: rgba(134, 56, 229, 0.12);
+
+      /* 텍스트 색상 */
+      --color-text-primary: #000000;
+      --color-text-secondary: rgba(0, 0, 0, 0.6);
+      --color-text-tertiary: rgba(0, 0, 0, 0.4);
+      --color-text-onbrand: #ffffff;
+      --color-text-ondark: #ffffff;
+      --color-text-ondark-muted: rgba(255, 255, 255, 0.65);
+
+      /* 보더 및 구분선 */
+      --color-border: var(--figma-color-border, rgba(0, 0, 0, 0.08));
+      --color-border-subtle: var(--figma-color-border-subtle, rgba(0, 0, 0, 0.05));
+      --color-border-strong: var(--figma-color-border-strong, rgba(0, 0, 0, 0.16));
+      --color-border-focus: var(--figma-color-border-brand, #8638e5);
+      --color-border-dark: rgba(255, 255, 255, 0.12);
+
+      /* 고도 및 그림자 */
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+      --shadow-popover: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+      /* 반경 규격 */
+      --radius-xs: 4px;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-full: 9999px;
+    }
+
+    /* 다크 테마 자동 감지 시 */
+    @media (prefers-color-scheme: dark) {
+      body.figma-dark-auto {
+        --color-bg: #2c2c2c;
+        --color-bg-secondary: #1e1e1e;
+        --color-bg-tertiary: #383838;
+        --color-bg-hover: var(--figma-color-bg-hover, rgba(255, 255, 255, 0.06));
+        --color-text-primary: #ffffff;
+        --color-text-secondary: rgba(255, 255, 255, 0.65);
+        --color-text-tertiary: rgba(255, 255, 255, 0.4);
+        --color-border: rgba(255, 255, 255, 0.12);
+      }
+    }
+
+    /* ============================================================ */
+    /* 기초 리셋 및 타이포그래피 (사용자 규칙: 글자 간격 금지)       */
+    /* ============================================================ */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      /* ★ 사용자 규칙: 일체의 글자 간격(tracking/letter-spacing) 적용 금지 */
+      letter-spacing: 0 !important;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    input,
+    button,
+    select,
+    textarea {
+      font-family: inherit;
+      font-size: inherit;
+      letter-spacing: 0 !important;
+    }
+
+    /* 숫자 입력필드 우측 브라우저 기본 화살표 증감 버튼(스피너) 전역 제거 */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none !important;
+      margin: 0 !important;
+    }
+
+    input[type="number"] {
+      -moz-appearance: textfield !important;
+      appearance: textfield !important;
+    }
+
+    html {
+      height: auto;
+    }
+
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text-primary);
+      font-size: 11px;
+      line-height: 1.45;
+      margin: 0;
+      padding: 0;
+      height: auto;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #plugin-root {
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    /* 슬림 커스텀 스크롤바 */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: var(--radius-full);
+    }
+
+
+    /* 서브 헤더 / 노드 제목 또는 선택 상태 */
+    .title-banner {
+      height: 40px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+
+    .node-title-input {
+      font-family: inherit;
+      border: 1px solid transparent;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 550;
+      line-height: 18px;
+      color: var(--color-text-primary);
+      outline: none;
+      width: calc(100% + 8px);
+      margin-left: -4px;
+      margin-right: -4px;
+      border-radius: var(--radius-xs);
+      padding: 3px 4px;
+      transition: border 0.15s, background 0.15s;
+    }
+
+    .node-title-input:hover {
+      background: var(--color-bg-hover);
+    }
+
+    .node-title-input:focus {
+      background: #ffffff;
+      border-color: var(--color-brand);
+    }
+
+    .multi-selection-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 550;
+      line-height: 18px;
+      color: var(--color-text-primary);
+    }
+
+    /* ============================================================ */
+    /* 3-세그먼트 메인 탭 네비게이션                                */
+    /* ============================================================ */
+    .main-tabs-wrapper {
+      padding: 4px 16px 8px 16px;
+      flex-shrink: 0;
+    }
+
+    .segmented-control {
+      display: flex;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 1px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: var(--radius-xs);
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--color-text-primary);
+    }
+
+    .tab-btn.active {
+      background: #ffffff;
+      color: var(--color-text-primary);
+      font-weight: 400;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .tab-btn.disabled {
+      opacity: 0.35;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+
+    /* ============================================================ */
+    /* 탭 본문 스크롤 영역                                          */
+    /* ============================================================ */
+    .tab-panels {
+      flex: none;
+      overflow: visible;
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .tab-panel.active {
+      display: flex;
+    }
+
+    /* 구분선 */
+    .section-divider {
+      height: 1px;
+      background: var(--color-border);
+      margin: 0;
+      border: none;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================ */
+    /* [COMPONENT] Standard Section Layout System                   */
+    /*                                                              */
+    /* 모든 섹션은 아래의 일관된 3단 컴포넌트 레이아웃을 준수합니다:     */
+    /* .section-block                                               */
+    /*   ├─ .section-header (.toggle-row)  (height: 40px 고정)      */
+    /*   │    ├─ .section-title (11px / 500)                    */
+    /*   │    └─ .section-actions 또는 .switch (32×24px)        */
+    /*   └─ .section-body (.collapsible-body)                       */
+    /* ============================================================ */
+
+    /* 1. 섹션 컨테이너 */
+    /* 기본적으로 모든 섹션은 하단 패딩 12px 적용 (Figma UI3 표준) */
+    .section-block {
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 12px;
+    }
+
+    /* 접힐 수 있는 토글 섹션: 접혀 있을 때(체크박스 OFF)는 하단 패딩이 0으로 사라짐 */
+    .section-block:has(.toggle-row) {
+      padding-bottom: 0;
+    }
+
+    /* 토글 섹션이 활성화(체크박스 ON)되어 펼쳐졌을 때는 하단 패딩 12px 복원 */
+    .section-block:has(.toggle-row input:checked) {
+      padding-bottom: 12px;
+    }
+
+    /* 2. 섹션 헤더 — height 40px 고정 (Figma UI3 표준) */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      flex-shrink: 0;
+    }
+
+    /* 토글 스위치형 헤더 */
+    .section-header.toggle-row,
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      flex-shrink: 0;
+      cursor: default;
+      margin: 0;
+    }
+
+    /* 섹션 타이틀 텍스트 (UI3 표준 11px / 500) */
+    .section-title,
+    .toggle-row-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      line-height: 16px;
+      user-select: none;
+    }
+
+    /* 섹션 헤더 우측 아이콘 그룹 */
+    .section-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* 섹션 헤더 아이콘 버튼 — 24×24px 터치 영역 및 아이콘 */
+    .btn-action-icon {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-action-icon:hover {
+      background: var(--color-bg-hover);
+      color: var(--color-text-primary);
+    }
+
+    /* 섹션 헤더 아이콘 SVG — 기본 24×24px 규격 */
+    .btn-action-icon svg {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      display: block;
+    }
+
+    /* 섹션 헤더 모어(More) 버튼 — 버튼 사이즈 24×24px 유지, 아이콘만 16×16px (icon.16.more) */
+    .btn-action-icon.btn-more-icon {
+      width: 24px;
+      height: 24px;
+    }
+
+    .btn-action-icon.btn-more-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* 복사 완료 후 체크 상태 스타일 */
+    .btn-action-icon.copied {
+      color: #10B981 !important;
+    }
+
+    .btn-action-icon.copied svg {
+      animation: checkPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes checkPop {
+      0% {
+        transform: scale(0.6);
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* 3. 섹션 본문 컨테이너 (Section Body) — 상하 4px 패딩 적용 (피그마 18:848, 18:949 표준) */
+    .section-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 4px 0;
+    }
+
+    /* 접혀 있는 토글 섹션의 본문은 완전히 숨김 (0px) */
+    .section-block:has(.toggle-row input:not(:checked)) .section-body {
+      display: none;
+    }
+
+    /* 펼쳐진 토글 섹션의 본문은 표시 */
+    .section-block:has(.toggle-row input:checked) .section-body {
+      display: flex;
+    }
+
+    /* 인풋 및 셀렉트 박스 */
+    .form-input {
+      height: 32px;
+      background: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 10px;
+      font-size: 11px;
+      color: var(--color-text-primary);
+      outline: none;
+      width: 100%;
+      transition: border 0.15s, background 0.15s;
+    }
+
+    .form-input:focus {
+      border-color: var(--color-brand);
+      background: #ffffff;
+    }
+
+    .form-input::placeholder {
+      color: var(--color-text-tertiary);
+    }
+
+    .switch {
+      position: relative;
+      width: 32px;
+      height: 18px;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #e0e0e0;
+      transition: 0.2s;
+      border-radius: 9999px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: 0.2s;
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    input:checked+.slider {
+      background-color: var(--color-brand);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(14px);
+    }
+
+    /* 칩 / 탭 버튼 (Type 탭, Status 탭 등 범용 탭 표준 규격) */
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip-btn {
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      font-size: 11px;
+      font-weight: 450;
+      color: rgba(0, 0, 0, 0.6);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background 0.15s ease, color 0.15s ease;
+      user-select: none;
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    .chip-btn:not(.active):hover {
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.9);
+    }
+
+    /* Mixed 상태 스타일: 버튼 배경 투명 및 텍스트는 디폴트(default) 컬러 상태 유지 */
+    .chip-btn.mixed,
+    .tab-btn.mixed {
+      background: transparent;
+      color: rgba(0, 0, 0, 0.6);
+      font-weight: 450;
+    }
+
+    .chip-btn.active {
+      background: #8C4CF6;
+      /* 기본 피그잼 퍼플 컬러 */
+      color: #ffffff;
+      font-weight: 450;
+    }
+
+    /* 탭 내 블릿(Bullet Dot) 표준 스타일 */
+    .chip-btn .tab-bullet,
+    .tab-btn .tab-bullet {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: inline-block;
+      box-sizing: border-box;
+      border: 0.5px solid rgba(0, 0, 0, 0.12);
+      transition: background-color 0.15s ease;
+    }
+
+    /* 탭 내 아이콘(SVG / Icon) 표준 스타일 */
+    .chip-btn .tab-icon,
+    .tab-btn .tab-icon {
+      width: 12px;
+      height: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* 탭 내 텍스트 라벨 표준 스타일 */
+    .chip-btn .tab-label,
+    .tab-btn .tab-label {
+      display: inline-block;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* 탭 내 카운트 배지 표준 스타일 (피그마 UI3 1027263:6421 규격) */
+    .chip-btn .tab-badge,
+    .tab-btn .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 5px;
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.6);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 16px;
+      margin-left: 4px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      user-select: none;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    /* 탭 호버(Hover) 시 카운트 배지 배경색 흰색(#ffffff) */
+    .chip-btn:not(.active):hover .tab-badge {
+      background: #ffffff;
+      color: rgba(0, 0, 0, 0.9);
+    }
+
+    /* 탭이 active 상태일 때 배지 스타일 (유색 배경 대비) */
+    .chip-btn.active .tab-badge,
+    .tab-btn.active .tab-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+
+    /* Active 시 블릿 처리: 텍스트 색상과 동일하게 반전되어 선명하게 유지 */
+    .chip-btn.active .tab-bullet,
+    .tab-btn.active .tab-bullet {
+      background-color: currentColor !important;
+      border-color: transparent;
+    }
+
+    /* Status 탭 전용: active 시 각 상태 고유 블릿 컬러로 배경 적용 */
+    .chip-btn[data-status="draft"].active {
+      background: #9CA3AF;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="wireframe"].active {
+      background: #6B7280;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="in_progress"].active {
+      background: #3B82F6;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="in_review"].active {
+      background: #CA8A04;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="revision"].active {
+      background: #EA580C;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="approved"].active {
+      background: #8B5CF6;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="ready_for_dev"].active {
+      background: #16A34A;
+      color: #ffffff;
+    }
+
+    .chip-btn[data-status="done"].active {
+      background: #374151;
+      color: #ffffff;
+    }
+
+    /* ============================================================ */
+    /* 1. [ Node ] 탭 세부 스타일 (18:819)                           */
+    /* ============================================================ */
+    .phase-dropdown-btn {
+      width: 100%;
+      height: 32px;
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 5px;
+      padding: 0 4px 0 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .phase-dropdown-btn:hover {
+      border-color: rgba(0, 0, 0, 0.2);
+      background: #fafafa;
+    }
+
+    .phase-btn-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .phase-btn-icon-wrap {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .phase-checkerboard-24 {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: repeating-conic-gradient(#e1e1e1 0% 25%, #ffffff 0% 50%) 50% / 8px 8px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    .phase-chip-24 {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    /* 피그마 정품 icon-phase-mixed (18:814 / 18:918) */
+    .icon-phase-mixed-24 {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    .icon-phase-mixed-24 .phase-mixed-dash {
+      width: 10px;
+      height: 1.5px;
+      background: #2c2c2c;
+      border-radius: 1px;
+    }
+
+    .phase-btn-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(0, 0, 0, 0.9);
+      line-height: 16px;
+      letter-spacing: 0;
+    }
+
+    .phase-btn-arrow {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(0, 0, 0, 0.9);
+    }
+
+    .desc-textarea {
+      width: 100%;
+      height: 110px;
+      background: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      font-size: 11px;
+      color: var(--color-text-primary);
+      outline: none;
+      resize: none;
+      line-height: 1.5;
+      transition: border 0.15s, background 0.15s;
+    }
+
+    .desc-textarea:focus {
+      background: #ffffff;
+      border-color: var(--color-brand);
+    }
+
+    .desc-textarea::placeholder {
+      color: var(--color-text-tertiary);
+    }
+
+    /* ============================================================ */
+    /* 피그마 공통 표준 아이콘 컴포넌트 규격 (Icon-24, Icon-16)       */
+    /* ============================================================ */
+    .icon-24,
+    .figma-icon-24 {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .icon-24 svg,
+    .figma-icon-24 svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .icon-16,
+    .figma-icon-16 {
+      width: 16px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .icon-16 svg,
+    .figma-icon-16 svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+
+    /* ============================================================ */
+    /* 2. [ Appearance ] 탭 세부 스타일 (18:4487, 18:4347)          */
+    /* ============================================================ */
+    .numeric-inputs-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.45fr;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .input-scrubber-box {
+      display: flex;
+      align-items: center;
+      background: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      height: 28px;
+      padding: 0 6px 0 8px;
+      gap: 5px;
+      box-sizing: border-box;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .input-scrubber-box:hover {
+      border-color: var(--color-border);
+    }
+
+    .input-scrubber-box:focus-within {
+      background: #ffffff;
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 1px var(--color-brand);
+    }
+
+    .input-scrubber-box span,
+    .input-scrubber-box .scrubber-label {
+      color: var(--color-text-secondary);
+      font-weight: 500;
+      font-size: 11px;
+      line-height: 1;
+      cursor: default;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .input-scrubber-box svg {
+      width: 24px;
+      height: 24px;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+      cursor: default;
+    }
+
+    .input-scrubber-box:has(svg) {
+      padding: 0 6px 0 2px;
+      gap: 2px;
+    }
+
+    .input-scrubber-box input {
+      border: none;
+      background: transparent;
+      width: 100%;
+      min-width: 0;
+      padding: 0;
+      margin: 0;
+      font-size: 11px;
+      color: var(--color-text-primary);
+      outline: none;
+      font-variant-numeric: tabular-nums;
+      -webkit-appearance: none !important;
+      -moz-appearance: textfield !important;
+      appearance: textfield !important;
+    }
+
+    .select-dropdown-box {
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      height: 28px;
+      padding: 0 20px 0 8px;
+      font-size: 11px;
+      color: var(--color-text-primary);
+      outline: none;
+      cursor: pointer;
+      box-sizing: border-box;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L4 4L7 1' stroke='%23808080' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 7px center;
+      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .select-dropdown-box:hover {
+      border-color: var(--color-border);
+    }
+
+    .select-dropdown-box:focus {
+      background-color: #ffffff;
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 1px var(--color-brand);
+    }
+
+    /* ============================================================ */
+    /* 피그마 UI3 표준 드롭다운 시스템 (Figma 18:2877, 18:3076)     */
+    /* ============================================================ */
+    .figma-dropdown-wrapper,
+    .size-mode-dropdown-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .figma-dropdown-btn,
+    .size-mode-dropdown-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      height: 28px;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 4px 0 2px;
+      gap: 2px;
+      cursor: pointer;
+      box-sizing: border-box;
+      color: var(--color-text-primary);
+      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .figma-dropdown-btn:hover,
+    .size-mode-dropdown-btn:hover {
+      border-color: var(--color-border);
+    }
+
+    .figma-dropdown-btn:focus,
+    .figma-dropdown-btn.active,
+    .size-mode-dropdown-btn:focus,
+    .size-mode-dropdown-btn.active {
+      background-color: #ffffff;
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 1px var(--color-brand);
+      outline: none;
+    }
+
+    .figma-dropdown-btn-content,
+    .size-mode-btn-content {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .figma-dropdown-current-icon,
+    .size-mode-current-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+    }
+
+    .figma-dropdown-current-icon svg,
+    .size-mode-current-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .figma-dropdown-current-text,
+    .size-mode-current-text {
+      font-size: 11px;
+      color: var(--color-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1;
+      letter-spacing: 0 !important;
+    }
+
+    .figma-dropdown-chevron-icon,
+    .size-mode-chevron-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+      margin-left: 2px;
+    }
+
+    /* 피그마 표준 드롭다운 팝오버 메뉴 (Select Size Option, 18:3076) */
+    .figma-dropdown-menu,
+    .size-mode-menu-popover {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      width: 180px;
+      background: #1e1e1e;
+      color: #ffffff;
+      border-radius: 13px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 1050;
+      box-sizing: border-box;
+    }
+
+    .figma-dropdown-menu.active,
+    .size-mode-menu-popover.active {
+      display: flex;
+    }
+
+    /* 메뉴 각 행 (Menu Row) */
+    .figma-dropdown-item,
+    .size-mode-menu-item {
+      width: 164px;
+      height: 24px;
+      padding: 0 8px 0 0;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #ffffff;
+      transition: background 0.12s, color 0.12s;
+      user-select: none;
+      box-sizing: border-box;
+    }
+
+    /* 호버 시: 피그마 공식 보라색(#8C4CF6) 하이라이트 */
+    .figma-dropdown-item:hover,
+    .size-mode-menu-item:hover {
+      background: #8C4CF6;
+      color: #ffffff;
+    }
+
+    .figma-dropdown-item:hover .figma-dropdown-label,
+    .size-mode-menu-item:hover .size-mode-menu-item-label,
+    .figma-dropdown-item:hover .figma-dropdown-value,
+    .size-mode-menu-item:hover .size-mode-menu-item-value,
+    .figma-dropdown-item:hover svg,
+    .size-mode-menu-item:hover svg {
+      color: #ffffff !important;
+      fill: #ffffff;
+      opacity: 1 !important;
+    }
+
+    /* 선택된 항목 */
+    .figma-dropdown-item.selected,
+    .size-mode-menu-item.selected {
+      color: #ffffff;
+    }
+
+    /* 선두 체크 슬롯 (20px) */
+    .figma-dropdown-check-slot,
+    .size-mode-menu-item-check {
+      width: 20px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #ffffff;
+    }
+
+    .figma-dropdown-check-slot svg,
+    .size-mode-menu-item-check svg {
+      display: none;
+      width: 16px;
+      height: 16px;
+    }
+
+    .figma-dropdown-item.selected .figma-dropdown-check-slot svg,
+    .size-mode-menu-item.selected .size-mode-menu-item-check svg {
+      display: block;
+    }
+
+    /* 항목 선두 아이콘 슬롯 (24px) */
+    .figma-dropdown-icon-slot,
+    .size-mode-menu-item-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #ffffff;
+    }
+
+    .figma-dropdown-icon-slot svg,
+    .size-mode-menu-item-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* 텍스트 라벨 */
+    .figma-dropdown-label,
+    .size-mode-menu-item-label {
+      flex: 1;
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 16px;
+      color: #ffffff;
+    }
+
+    /* 우측 수치 라벨 (예: 250, 328) */
+    .figma-dropdown-value,
+    .size-mode-menu-item-value {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.65);
+      text-align: right;
+      font-feature-settings: "tnum";
+      font-variant-numeric: tabular-nums;
+    }
+
+    .figma-dropdown-item.selected .figma-dropdown-value,
+    .size-mode-menu-item.selected .size-mode-menu-item-value {
+      color: #ffffff;
+    }
+
+    /* 스타일 컬러 스와치 그리드 (9개 스와치 균등 9열 배치) */
+    .swatches-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 6px;
+      margin-top: 4px;
+      padding: 4px 2px;
+    }
+
+    .swatch-item {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: none;
+      box-sizing: border-box;
+      transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.15s ease;
+      position: relative;
+    }
+
+    /* 흰색 칩은 배경 구분을 위한 1px 내부 미세 경계선 유지 */
+    .swatch-item[data-color="#ffffff"] {
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 선택되지 않은 칩 호버 시: 상하좌우 1px씩만 섬세하게 확대 (scale 1.065) */
+    .swatch-item:hover:not(.selected) {
+      transform: scale(1.065);
+      z-index: 4;
+    }
+    .swatch-item[data-color="#ffffff"]:hover:not(.selected) {
+      transform: scale(1.065);
+      z-index: 4;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 선택 시: 외곽 2px 브랜드 보더 적용 */
+    .swatch-item.selected {
+      box-shadow: 0 0 0 2px var(--color-brand);
+      z-index: 2;
+      transform: none;
+    }
+    .swatch-item[data-color="#ffffff"].selected {
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 0 0 2px var(--color-brand);
+      z-index: 2;
+      transform: none;
+    }
+
+    /* 선택된 칩은 호버되어도 애니메이션 없이 2px 보더 유지 */
+    .swatch-item.selected:hover {
+      transform: none !important;
+      box-shadow: 0 0 0 2px var(--color-brand);
+      z-index: 2;
+    }
+    .swatch-item[data-color="#ffffff"].selected:hover {
+      transform: none !important;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 0 0 2px var(--color-brand);
+      z-index: 2;
+    }
+
+    /* 고도(Elevation) 5단계 프리뷰 카드 */
+    .elevation-cards-container {
+      display: none;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      padding: 4px 2px;
+    }
+
+    .elevation-cards-container.active {
+      display: grid;
+    }
+
+    .elevation-card {
+      height: 56px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: none;
+      box-sizing: border-box;
+      background: transparent;
+    }
+
+    /* 배경 박스 (가상 요소로 분리하여 가운데 사각형은 놔두고 배경만 확대) */
+    .elevation-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      transition: inset 0.15s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.15s ease;
+      z-index: 1;
+    }
+
+    /* 선택되지 않은 카드 호버 시: 사방 정확히 2px 보더 크기(inset: -2px)만큼만 확장 */
+    .elevation-card:hover:not(.selected) {
+      z-index: 4;
+    }
+    .elevation-card:hover:not(.selected)::before {
+      inset: -2px;
+    }
+
+    /* 선택 시: 외곽 2px 브랜드 보더 적용 */
+    .elevation-card.selected {
+      z-index: 2;
+    }
+    .elevation-card.selected::before {
+      inset: 0;
+      box-shadow: 0 0 0 2px var(--color-brand);
+      transform: none;
+    }
+
+    /* 선택된 카드는 호버되어도 애니메이션 없이 2px 보더 유지 */
+    .elevation-card.selected:hover::before {
+      inset: 0 !important;
+      transform: none !important;
+      box-shadow: 0 0 0 2px var(--color-brand);
+    }
+
+    .elevation-inner-box {
+      width: 24px;
+      height: 24px;
+      background: #ffffff;
+      border-radius: 3px;
+      position: relative;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .elev-0 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0.5px rgba(0, 0, 0, 0.30);
+    }
+
+    .elev-1 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 3px 8px rgba(0, 0, 0, 0.10), 0 0 0.5px rgba(0, 0, 0, 0.18);
+    }
+
+    .elev-2 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 5px 12px rgba(0, 0, 0, 0.13), 0 0 0.5px rgba(0, 0, 0, 0.15);
+    }
+
+    .elev-3 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12), 0 0 0.5px rgba(0, 0, 0, 0.12);
+    }
+
+    .elev-4 .elevation-inner-box {
+      border: none;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 24px rgba(0, 0, 0, 0.18), 0 0 0.5px rgba(0, 0, 0, 0.08);
+    }
+
+    /* 상태 뱃지 옵션 (Status Tabs) */
+    #status-options {
+      display: none;
+      padding: 4px 0;
+    }
+
+    #status-options.active {
+      display: flex;
+    }
+
+    /* 스텝 배지 옵션 */
+    .step-badges-container {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      padding: 4px 0;
+    }
+
+    .step-badges-container.active {
+      display: flex;
+    }
+
+    .step-badges-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .corner-position-group {
+      display: flex;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+      flex: 1;
+      height: 28px;
+      box-sizing: border-box;
+      align-items: center;
+    }
+
+    .corner-btn {
+      flex: 1;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+
+    .corner-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .corner-btn:hover {
+      color: var(--color-text-primary);
+    }
+
+    .corner-btn.active {
+      background: #ffffff;
+      color: var(--color-text-primary);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ============================================================ */
+    /* 3. [ Connection ] 탭 세부 스타일 (18:4622, 18:4656, 18:4748)   */
+    /* ============================================================ */
+    .connect-canvas-box {
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      position: relative;
+      min-height: 120px;
+    }
+
+    .node-preview-card {
+      width: 120px;
+      height: 74px;
+      background: #ffffff;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-xs);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      text-align: center;
+      word-break: break-all;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .anchor-handle {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      background: #ffffff;
+      border: 1.5px solid #b0b0b0;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      z-index: 2;
+    }
+
+    .anchor-handle:hover {
+      border-color: var(--color-brand);
+      transform: scale(1.2);
+    }
+
+    .anchor-handle.active {
+      background: var(--color-brand) !important;
+      border-color: var(--color-brand) !important;
+      box-shadow: 0 0 0 2px #ffffff;
+    }
+
+    .anchor-top {
+      top: -5px;
+      left: calc(50% - 4.5px);
+    }
+
+    .anchor-bottom {
+      bottom: -5px;
+      left: calc(50% - 4.5px);
+    }
+
+    .anchor-left {
+      left: -5px;
+      top: calc(50% - 4.5px);
+    }
+
+    .anchor-right {
+      right: -5px;
+      top: calc(50% - 4.5px);
+    }
+
+    .line-style-segment {
+      display: flex;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .line-style-btn {
+      flex: 1;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      font-size: 11px;
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+
+    .line-style-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .line-style-btn.active {
+      background: #ffffff;
+      color: var(--color-text-primary);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .routing-types-grid {
+      display: flex;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .routing-btn {
+      flex: 1;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+
+    .routing-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .routing-btn.active {
+      background: #ffffff;
+      color: var(--color-text-primary);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .terminal-offset-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 1fr 70px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .terminal-offset-row .input-scrubber-box {
+      width: 70px;
+      box-sizing: border-box;
+    }
+
+    /* 커스텀 터미널 드롭다운 */
+    .terminal-dropdown-wrap {
+      position: relative;
+    }
+
+    .terminal-dropdown-btn {
+      width: 100%;
+      height: 28px;
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 0 4px;
+      color: var(--color-text-primary);
+      transition: background 0.12s;
+    }
+
+    .terminal-dropdown-btn:hover {
+      background: var(--color-bg-hover, #f0f0f0);
+    }
+
+    .terminal-dropdown-btn svg {
+      flex-shrink: 0;
+    }
+
+    .terminal-dropdown-btn .td-chevron {
+      color: var(--color-text-secondary);
+      margin-left: 1px;
+    }
+
+    /* 피그마 UI3 표준 드롭다운 팝업 메뉴 */
+    .terminal-dropdown-popup {
+      position: fixed;
+      z-index: 9999;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      padding: 6px;
+      min-width: unset;
+      width: max-content;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      box-sizing: border-box;
+    }
+
+    .terminal-dropdown-popup.open {
+      display: flex;
+    }
+
+    .terminal-popup-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      transition: background 0.12s, color 0.12s;
+      user-select: none;
+      box-sizing: border-box;
+    }
+
+    /* 피그마 공식 보라색(#8C4CF6) 하이라이트 */
+    .terminal-popup-item:hover {
+      background: #8C4CF6;
+      color: #ffffff;
+    }
+
+    .terminal-popup-item:hover svg,
+    .terminal-popup-item:hover .phase-dash-icon {
+      color: #ffffff !important;
+      fill: #ffffff;
+    }
+
+    .terminal-popup-item.selected {
+      color: #ffffff;
+    }
+
+    .terminal-popup-item.selected .td-check {
+      opacity: 1;
+    }
+
+    .td-check {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      opacity: 0;
+      color: #ffffff;
+    }
+
+    .td-btn-icon {
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      max-width: 52px;
+    }
+
+    .td-btn-icon svg {
+      display: block;
+      max-width: 52px;
+      height: 16px;
+    }
+
+    .td-icon-wrap {
+      display: flex;
+      align-items: center;
+      width: 36px;
+      height: 16px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .td-icon-wrap svg {
+      display: block;
+      width: 36px;
+      height: 16px;
+    }
+
+    .td-label {
+      flex: 1;
+      white-space: nowrap;
+    }
+
+    /* 토글에 따른 가변 컨텐츠 */
+    .collapsible-group {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .collapsible-group.active {
+      display: flex;
+    }
+
+    /* ============================================================ */
+    /* 하단 고정 푸터 액션 바                                        */
+    /* ============================================================ */
+    .app-footer {
+      padding: 10px 16px;
+      background: var(--color-bg);
+      border-top: 1px solid var(--color-border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn-cta-secondary {
+      height: 32px;
+      padding: 0 14px;
+      background: transparent;
+      color: var(--color-text-primary, #000000);
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: var(--radius-sm, 5px);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      box-sizing: border-box;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn-cta-secondary:hover {
+      background: #f5f5f5;
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-cta-secondary:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+      background: transparent;
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-cta-primary {
+      height: 32px;
+      padding: 0 16px;
+      background: var(--color-brand-cta);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm, 5px);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+      box-sizing: border-box;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn-cta-primary:hover {
+      background: var(--color-brand-cta-hover);
+    }
+
+    /* 커넥션 탭 2노드 선택 시 표시되는 서브 푸터 */
+    .footer-undo-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .plan-status-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+
+    .undo-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-outline-action {
+      height: 28px;
+      padding: 0 12px;
+      background: #ffffff;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-outline-action:hover {
+      background: var(--color-bg-secondary);
+    }
+
+    /* ============================================================ */
+    /* 팝오버 및 모달 다이얼로그 (18:2325, 18:2522, 18:2498, 18:2568)*/
+    /* ============================================================ */
+    .popover-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(2px);
+    }
+
+    .popover-backdrop.active {
+      display: flex;
+    }
+
+    /* 1. Phase Select 팝오버 (피그마 18:2325) */
+    .popover-phase-select {
+      position: absolute;
+      width: 180px;
+      background: #1e1e1e;
+      color: #ffffff;
+      border-radius: 13px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 0;
+      z-index: 1010;
+      box-sizing: border-box;
+    }
+
+    .popover-phase-select.active {
+      display: flex;
+    }
+
+    .phase-menu-item {
+      width: 164px;
+      height: 24px;
+      padding: 0 8px 0 0;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #ffffff;
+      transition: background 0.15s;
+      user-select: none;
+      box-sizing: border-box;
+    }
+
+    .phase-menu-item:hover {
+      background: #8C4CF6;
+      color: #ffffff;
+    }
+
+    .phase-menu-item:hover svg,
+    .phase-menu-item:hover .phase-item-label,
+    .phase-menu-item:hover .phase-check-icon {
+      color: #ffffff !important;
+      fill: #ffffff;
+    }
+
+    .phase-menu-item.selected {
+      color: #ffffff;
+    }
+
+    .phase-item-check-slot {
+      width: 20px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .phase-item-check-slot .phase-check-icon {
+      display: none;
+    }
+
+    .phase-menu-item.selected .phase-item-check-slot .phase-check-icon {
+      display: block;
+    }
+
+    .phase-item-icon-slot {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .phase-dash-icon {
+      width: 8px;
+      height: 1px;
+      background: #ffffff;
+      opacity: 0.9;
+      border-radius: 1px;
+    }
+
+    .icon-phase-mixed-14 {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    .icon-phase-mixed-14 .phase-mixed-dash {
+      width: 8px;
+      height: 1px;
+      background: #ffffff;
+      border-radius: 1px;
+    }
+
+    .phase-checkerboard-14 {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: repeating-conic-gradient(#e1e1e1 0% 25%, #ffffff 0% 50%) 50% / 6px 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-sizing: border-box;
+    }
+
+    .phase-chip-14 {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      box-sizing: border-box;
+    }
+
+    .phase-item-label {
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 16px;
+      color: #ffffff;
+      letter-spacing: 0;
+      flex: 1;
+    }
+
+    .phase-popover-divider {
+      width: 164px;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.15);
+      margin: 8px 0;
+      border: none;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--color-border-dark);
+      margin: 4px 0;
+      border: none;
+    }
+
+    /* 2. more 컨텍스트 메뉴 (피그마 18:2568 규격: 82x80, R13, padding 8px 0, 아이템 66x24 R5, 구분선 16px) */
+    .popover-context-menu {
+      position: absolute;
+      width: 82px;
+      background: #1e1e1e;
+      color: #ffffff;
+      border-radius: 13px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12), 0 0 0.5px rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 0;
+      display: none;
+      flex-direction: column;
+      gap: 0;
+      z-index: 1050;
+      box-sizing: border-box;
+    }
+
+    .popover-context-menu.active {
+      display: flex;
+    }
+
+    .context-row {
+      width: 82px;
+      height: 24px;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    .context-item {
+      width: 66px;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 16px;
+      cursor: pointer;
+      color: #ffffff;
+      background: transparent;
+      transition: background 0.12s, color 0.12s;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    .context-item:hover {
+      background: #8C4CF6;
+      color: #ffffff;
+    }
+
+    .context-divider-row {
+      width: 82px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    .context-divider-line {
+      width: 100%;
+      height: 1px;
+      background: #383838;
+      border: none;
+      margin: 0;
+    }
+
+    /* 3. 심플 다이얼로그 모달 공통 (18:2522 Confirmation, 18:2498 Delete Item) */
+    .dialog-modal-card {
+      width: 240px;
+      background: var(--color-bg-dark-modal);
+      color: var(--color-text-ondark);
+      border-radius: 13px;
+      box-shadow: var(--shadow-popover);
+      border: 1px solid var(--color-border-dark);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .dialog-header {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--color-border-dark);
+    }
+
+    .dialog-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-ondark);
+    }
+
+    .dialog-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--color-text-ondark-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dialog-close-btn:hover {
+      color: #ffffff;
+    }
+
+    .dialog-body {
+      padding: 12px;
+      font-size: 11px;
+      color: var(--color-text-ondark-muted);
+      line-height: 1.45;
+    }
+
+    .dialog-footer {
+      padding: 8px 12px 12px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .btn-dialog-cancel {
+      height: 26px;
+      padding: 0 10px;
+      background: transparent;
+      border: 1px solid var(--color-border-dark);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .btn-dialog-cancel:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-dialog-cta {
+      height: 26px;
+      padding: 0 12px;
+      background: var(--color-brand-cta);
+      border: none;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-dialog-cta:hover {
+      background: var(--color-brand-cta-hover);
+    }
+
+    /* Add / Edit Phase 전용 모달 (피그마 18:2289, 18:2351, 18:3034 규격) */
+    .phase-modal-card {
+      width: 200px;
+      background: #1E1E1E;
+      color: #FFFFFF;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease-out;
+    }
+
+    .phase-modal-header {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px 0 16px;
+      border-bottom: 1px solid #444444;
+      box-sizing: border-box;
+    }
+
+    .phase-modal-title {
+      font-size: 11px;
+      font-weight: 550;
+      color: #FFFFFF;
+      line-height: 16px;
+    }
+
+    .phase-modal-close-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .phase-modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+
+    .phase-modal-body {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    .phase-field-group {
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 12px;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    /* 타이틀 라벨 행: 높이 40px 피그마 표준 규격 */
+    .phase-field-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      box-sizing: border-box;
+    }
+
+    .phase-field-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #FFFFFF;
+      line-height: 16px;
+    }
+
+    /* 요소 그룹 래퍼: 높이 32px, 상하 패딩 4px 피그마 표준 규격 */
+    .phase-input-row-wrapper {
+      width: 100%;
+      height: 32px;
+      padding: 4px 0;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+    }
+
+    .phase-eyedropper-btn {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 0;
+    }
+
+    .phase-eyedropper-btn:hover {
+      color: #FFFFFF;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .phase-text-input {
+      width: 100%;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      padding: 0 8px;
+      font-size: 11px;
+      color: #FFFFFF;
+      box-sizing: border-box;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .phase-text-input:focus {
+      border-color: #8C4CF6;
+    }
+
+    .phase-text-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .phase-color-picker-box {
+      width: 100%;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .phase-color-picker-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .phase-color-picker-box:focus-within {
+      border-color: #8C4CF6;
+    }
+
+    .phase-color-preview-wrap {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .phase-color-preview-chip {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: #EA2039;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    .phase-color-hex-input {
+      flex: 1;
+      min-width: 0;
+      height: 24px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #FFFFFF;
+      font-size: 11px;
+      padding: 0 4px;
+      font-family: inherit;
+      text-transform: uppercase;
+      cursor: text;
+      box-sizing: border-box;
+    }
+
+    .phase-color-chevron-wrap {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: rgba(255, 255, 255, 0.7);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+
+    .phase-color-picker-box.is-open {
+      border-color: #8C4CF6;
+    }
+
+    .phase-color-picker-box.is-open .phase-color-chevron-wrap {
+      transform: rotate(180deg);
+    }
+
+    .phase-color-dropdown-panel {
+      display: flex;
+      flex-direction: column;
+      margin-top: 0;
+      animation: modalFadeIn 0.15s ease-out;
+      user-select: none;
+    }
+
+    /* 피그마 Frame 1 (18:3053): 높이 52px, paddingTop 20px, paddingBottom 20px */
+    .phase-hue-container {
+      width: 100%;
+      height: 52px;
+      padding: 20px 0;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+    }
+
+    .phase-hue-track {
+      width: 100%;
+      height: 12px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, #FF0000 0%, #FFFF00 17%, #00FF00 33%, #00FFFF 50%, #0000FF 67%, #FF00FF 83%, #FF0000 100%);
+      position: relative;
+      cursor: pointer;
+      box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 피그마 Ellipse 314 규격: 24x24px 순색 유지 핸들 */
+    .phase-hue-thumb {
+      position: absolute;
+      top: 50%;
+      left: 0%;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #FF0000;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    /* 피그마 Frame 14694 규격: 너비 168px, 높이 148px */
+    .phase-satval-canvas {
+      width: 100%;
+      height: 148px;
+      border-radius: 6px;
+      background-color: #FF0000;
+      position: relative;
+      cursor: crosshair;
+      overflow: hidden;
+      box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
+    }
+
+    .phase-satval-white-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, #FFFFFF, rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+
+    .phase-satval-black-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, #000000, rgba(0, 0, 0, 0));
+      pointer-events: none;
+    }
+
+    /* 피그마 Ellipse 315 규격: 24x24px 링 */
+    .phase-satval-ring {
+      position: absolute;
+      top: 0%;
+      left: 0%;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.8), inset 0 0 2px rgba(0, 0, 0, 0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    .phase-modal-footer {
+      height: 40px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: #1E1E1E;
+      box-sizing: border-box;
+    }
+
+    .btn-phase-modal-cancel {
+      height: 24px;
+      padding: 0 8px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 5px;
+      color: #FFFFFF;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .btn-phase-modal-cancel:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-phase-modal-save {
+      height: 24px;
+      padding: 0 10px;
+      background: #8C4CF6;
+      border: none;
+      border-radius: 5px;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-phase-modal-save:hover {
+      background: #7A39E3;
+    }
+
+    /* 피그마 공식 UI3 규격 모달 3종 (Add Size, Edit Size, Add Style) */
+    .size-modal-card,
+    .style-modal-card {
+      width: 200px;
+      background: #1E1E1E;
+      color: #FFFFFF;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease-out;
+    }
+
+    .size-modal-header,
+    .style-modal-header {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px 0 16px;
+      border-bottom: 1px solid #383838;
+      box-sizing: border-box;
+    }
+
+    .size-modal-title,
+    .style-modal-title {
+      font-size: 11px;
+      font-weight: 550;
+      color: #FFFFFF;
+      line-height: 16px;
+    }
+
+    .size-modal-close-btn,
+    .style-modal-close-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .size-modal-close-btn:hover,
+    .style-modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+
+    .size-modal-body,
+    .style-modal-body {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    /* 접두사(W, H) 인풋 박스 */
+    .prefix-input-box {
+      flex: 1;
+      min-width: 0;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      box-sizing: border-box;
+    }
+
+    .prefix-input-box:focus-within {
+      border-color: #8C4CF6;
+    }
+
+    .prefix-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-right: 5px;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .prefix-input {
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    /* 아이콘 인풋 박스 (Corner Radius 등) */
+    .icon-input-box {
+      width: 100%;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      box-sizing: border-box;
+    }
+
+    .icon-input-box:focus-within {
+      border-color: #8C4CF6;
+    }
+
+    .icon-input-slot {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.6);
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    /* 높이 모드 선택 드롭다운 버튼 */
+    .size-dropdown-box {
+      width: 100%;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6px;
+      box-sizing: border-box;
+      cursor: pointer;
+      color: #FFFFFF;
+      font-size: 11px;
+      user-select: none;
+    }
+
+    .size-dropdown-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .size-dropdown-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .size-dropdown-left span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Style 모달 전용 레이아웃 */
+    .style-control-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .style-color-box {
+      flex: 1;
+      min-width: 0;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px 0 4px;
+      box-sizing: border-box;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .style-color-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .style-color-chip {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: #EA2039;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      flex-shrink: 0;
+      margin-right: 6px;
+      box-sizing: border-box;
+    }
+
+    .style-color-hex-text {
+      flex: 1;
+      min-width: 0;
+      font-size: 11px;
+      color: #FFFFFF;
+      font-family: inherit;
+    }
+
+    .style-chevron-icon {
+      color: rgba(255, 255, 255, 0.5);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .stroke-width-box {
+      width: 58px;
+      height: 24px;
+      background: #383838;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+
+    .stroke-width-box:focus-within {
+      border-color: #8C4CF6;
+    }
+
+    .style-divider {
+      width: 100%;
+      height: 1px;
+      background: #383838;
+      border: none;
+      margin: 8px 0;
+    }
+
+    .size-modal-footer,
+    .style-modal-footer {
+      height: 48px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      border-top: 1px solid #383838;
+      box-sizing: border-box;
+    }
+
+    /* 피그마 공식 UI3 툴팁 (말꼬리 삼각형 팁 포함) */
+    .figma-tooltip {
+      position: fixed;
+      background: #222222;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 14px;
+      letter-spacing: 0 !important;
+      padding: 5px 8px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+      pointer-events: none;
+      z-index: 99999;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      white-space: nowrap;
+      display: none;
+    }
+
+    .figma-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+      display: block;
+    }
+
+    /* 하단 삼각형 꼬리 (대상 요소 상단 배치 시) */
+    .figma-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px 5px 0 5px;
+      border-style: solid;
+      border-color: #222222 transparent transparent transparent;
+    }
+
+    /* 상단 삼각형 꼬리 (화면 상단 공간 부족으로 하단 배치 시) */
+    .figma-tooltip.arrow-top::after {
+      top: auto;
+      bottom: 100%;
+      border-width: 0 5px 5px 5px;
+      border-color: transparent transparent #222222 transparent;
+    }

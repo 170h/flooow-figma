@@ -1,0 +1,15 @@
+# 의존성
+node_modules/
+
+# 빌드 번들 (dist/ui.html은 Figma 플러그인 실행에 필요하여 포함)
+dist/ui-bundle.js
+
+# 환경 설정
+.env
+.env.local
+
+# 에디터
+.DS_Store
+*.swp
+*.swo
+.vscode/settings.json
