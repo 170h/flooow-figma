@@ -4397,11 +4397,33 @@
           titleInput.readOnly = true;
         }
 
-        // 4. Figma Screen Link 섹션 및 2노드 앵커 프리뷰 캔버스 숨김
+        // 4. Figma Screen Link 섹션 및 2노드 앵커 프리뷰 캔버스 숨김/노출
         connSingle.style.display = 'none';
         connMulti.style.display = 'flex';
         // Show anchor preview box for single connector (user can edit connection positions)
-        if (anchorPreviewBox) anchorPreviewBox.style.display = isSingleConn ? '' : 'none';
+        if (anchorPreviewBox) {
+          anchorPreviewBox.style.display = isSingleConn ? '' : 'none';
+          if (isSingleConn) {
+            const srcName = nodes[0]?.connectorSourceNodeName || 'Source Node';
+            const tgtName = nodes[0]?.connectorTargetNodeName || 'Target Node';
+            const node1Text = document.getElementById('preview-node-1-text');
+            const node2Text = document.getElementById('preview-node-2-text');
+            if (node1Text) node1Text.innerText = srcName;
+            if (node2Text) node2Text.innerText = tgtName;
+
+            const sMag = nodes[0]?.connectorSourceMagnet || 'RIGHT';
+            const tMag = nodes[0]?.connectorTargetMagnet || 'LEFT';
+            sourceMagnet = sMag;
+            targetMagnet = tMag;
+
+            document.querySelectorAll('.anchor-handle[data-node="1"]').forEach(h => {
+              h.classList.toggle('active', h.getAttribute('data-pos') === sMag);
+            });
+            document.querySelectorAll('.anchor-handle[data-node="2"]').forEach(h => {
+              h.classList.toggle('active', h.getAttribute('data-pos') === tMag);
+            });
+          }
+        }
         if (linkDivider) linkDivider.style.display = 'none';
         if (linkSection) linkSection.style.display = 'none';
 
@@ -4636,6 +4658,8 @@
             routingType: selectedRoutingType,
             startTerminal: startTerm,
             endTerminal: endTerm,
+            sourceMagnet: sourceMagnet,
+            targetMagnet: targetMagnet,
             label: label,
             hasLabel: hasLabel
           }
@@ -4677,7 +4701,17 @@
       const popover = document.getElementById('popover-phase');
       const rect = event.currentTarget.getBoundingClientRect();
       const popoverWidth = popover.offsetWidth || 180;
-      popover.style.top = `${rect.bottom + 4}px`;
+      const popoverHeight = 160;
+      const spaceBelow = window.innerHeight - rect.bottom;
+
+      if (spaceBelow < popoverHeight + 8 && rect.top > popoverHeight + 8) {
+        popover.style.top = `${Math.max(8, rect.top - popoverHeight - 4)}px`;
+      } else if (spaceBelow < popoverHeight + 8) {
+        popover.style.top = `${Math.max(8, window.innerHeight - popoverHeight - 8)}px`;
+      } else {
+        popover.style.top = `${rect.bottom + 4}px`;
+      }
+
       popover.style.left = `${Math.max(8, rect.right - popoverWidth)}px`;
       popover.classList.toggle('active');
     }
@@ -4717,8 +4751,18 @@
       closeAllPopovers();
       const popover = document.getElementById('popover-context');
       const rect = event.currentTarget.getBoundingClientRect();
-      popover.style.top = `${rect.bottom + 4}px`;
-      popover.style.left = `${rect.right - 82}px`;
+      const popoverHeight = 85;
+      const spaceBelow = window.innerHeight - rect.bottom;
+
+      if (spaceBelow < popoverHeight + 8 && rect.top > popoverHeight + 8) {
+        popover.style.top = `${Math.max(8, rect.top - popoverHeight - 4)}px`;
+      } else if (spaceBelow < popoverHeight + 8) {
+        popover.style.top = `${Math.max(8, window.innerHeight - popoverHeight - 8)}px`;
+      } else {
+        popover.style.top = `${rect.bottom + 4}px`;
+      }
+
+      popover.style.left = `${Math.max(8, rect.right - 82)}px`;
       popover.classList.toggle('active');
     }
 
@@ -4903,7 +4947,11 @@
       el.classList.add('active');
       if (nodeIndex === 1) sourceMagnet = pos;
       if (nodeIndex === 2) targetMagnet = pos;
-      // 앵커 선택은 Connect 실행 시 사용되므로 즉시 반영 없음
+
+      // 단일 커넥터가 선택된 상태라면 앵커 변경 시 즉시 피그마 커넥터 위치 업데이트
+      if (isConnectorSelected && selectedNodes && selectedNodes.length === 1) {
+        applyCurrentConnectorState();
+      }
     }
 
     function setConnectorColor(colorHex, skipApply = false) {
@@ -5007,6 +5055,8 @@
               routingType: selectedRoutingType,
               startTerminal: startTerm,
               endTerminal: endTerm,
+              sourceMagnet: sourceMagnet,
+              targetMagnet: targetMagnet,
               label: label,
               hasLabel: hasLabel
             }
@@ -5205,6 +5255,18 @@
         if (fixedValEl && currentH) {
           fixedValEl.textContent = currentH;
         }
+
+        const rect = btn.getBoundingClientRect();
+        const popoverHeight = 110;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        if (spaceBelow < popoverHeight + 8 && rect.top > popoverHeight + 8) {
+          popover.style.top = 'auto';
+          popover.style.bottom = 'calc(100% + 4px)';
+        } else {
+          popover.style.top = 'calc(100% + 4px)';
+          popover.style.bottom = 'auto';
+        }
+
         popover.classList.add('active');
         btn.classList.add('active');
       }
@@ -5936,8 +5998,19 @@
 
       if (!isOpen) {
         const rect = btn.getBoundingClientRect();
-        popup.style.top = `${rect.bottom + 4}px`;
-        popup.style.left = `${Math.min(rect.left, window.innerWidth - 180)}px`;
+        const popupHeight = 150; // 4개 아이템 + 패딩 기준 약 145~150px
+        const spaceBelow = window.innerHeight - rect.bottom;
+
+        // 아래쪽 여유가 부족하면 위쪽으로 띄우고, 위쪽도 부족할 경우 화면 내 안전 레이어로 클램프
+        if (spaceBelow < popupHeight + 8 && rect.top > popupHeight + 8) {
+          popup.style.top = `${Math.max(8, rect.top - popupHeight - 4)}px`;
+        } else if (spaceBelow < popupHeight + 8) {
+          popup.style.top = `${Math.max(8, window.innerHeight - popupHeight - 8)}px`;
+        } else {
+          popup.style.top = `${rect.bottom + 4}px`;
+        }
+
+        popup.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 180))}px`;
         popup.classList.add('open');
       }
     }

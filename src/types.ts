@@ -198,6 +198,8 @@ export type PluginAction =
         routingType?: ConnectorRoutingType;
         startTerminal?: ConnectorTerminalType;
         endTerminal?: ConnectorTerminalType;
+        sourceMagnet?: MagnetPosition;
+        targetMagnet?: MagnetPosition;
         label?: string;
         hasLabel?: boolean;
       };
@@ -234,6 +236,10 @@ export interface SelectedNodeInfo {
   connectorRoutingType?: ConnectorRoutingType;
   connectorStartTerminal?: ConnectorTerminalType;
   connectorEndTerminal?: ConnectorTerminalType;
+  connectorSourceNodeName?: string;
+  connectorTargetNodeName?: string;
+  connectorSourceMagnet?: MagnetPosition;
+  connectorTargetMagnet?: MagnetPosition;
   width?: number;
   height?: number;
   status?: WorkflowStatus;

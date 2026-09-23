@@ -468,8 +468,12 @@ export function getOptimalMagnetPair(
   }
 }
 
-// 단일 커넥터의 직각 패스 및 라벨 좌표 실시간 재계산 (최단거리 자동 스냅 지원)
-export async function updateOrthogonalVectorConnector(connectorNode: SceneNode) {
+// 단일 커넥터의 직각 패스 및 라벨 좌표 실시간 재계산 (최단거리 자동 스냅 및 수동 마그넷 포트 지원)
+export async function updateOrthogonalVectorConnector(
+  connectorNode: SceneNode,
+  explicitSourceMagnet?: MagnetPosition,
+  explicitTargetMagnet?: MagnetPosition
+) {
   const srcId = connectorNode.getPluginData('source_node_id');
   const tgtId = connectorNode.getPluginData('target_node_id');
 
@@ -511,8 +515,15 @@ export async function updateOrthogonalVectorConnector(connectorNode: SceneNode) 
     height: targetNode.height,
   };
 
-  // 🔥 핵심: 두 노드의 현재 위치에 따라 최단거리 마그넷 포트 실시간 자동 판별
-  const { sourceMagnet, targetMagnet } = getOptimalMagnetPair(srcBox, tgtBox);
+  // 수동 지정 마그넷이 있으면 우선 사용, 없으면 기존 저장값 또는 최적 마그넷 자동 판별
+  let sourceMagnet = explicitSourceMagnet || (connectorNode.getPluginData('source_magnet') as MagnetPosition);
+  let targetMagnet = explicitTargetMagnet || (connectorNode.getPluginData('target_magnet') as MagnetPosition);
+
+  if (!sourceMagnet || !targetMagnet) {
+    const optimal = getOptimalMagnetPair(srcBox, tgtBox);
+    if (!sourceMagnet) sourceMagnet = optimal.sourceMagnet;
+    if (!targetMagnet) targetMagnet = optimal.targetMagnet;
+  }
 
   // 최신 마그넷 정보 동기화 저장
   connectorNode.setPluginData('source_magnet', sourceMagnet);

@@ -16,6 +16,7 @@ import {
 } from './types';
 import {
   createOrthogonalVectorConnector,
+  updateOrthogonalVectorConnector,
   refreshConnectorRegistry,
   syncConnectorsForMovedNodes,
 } from './customConnector';
@@ -276,6 +277,11 @@ function handleSelectionChange() {
     let connectorStartTerminal: ConnectorTerminalType | undefined;
     let connectorEndTerminal: ConnectorTerminalType | undefined;
 
+    let connectorSourceNodeName: string | undefined;
+    let connectorTargetNodeName: string | undefined;
+    let connectorSourceMagnet: MagnetPosition | undefined;
+    let connectorTargetMagnet: MagnetPosition | undefined;
+
     const isCustomConnector =
       node.getPluginData('is_custom_connector') === 'true' ||
       node.getPluginData('is_flow_connector') === 'true';
@@ -308,6 +314,22 @@ function handleSelectionChange() {
         };
         connectorStartTerminal = mapCapToTerm(String(conn.connectorStartStrokeCap || 'NONE'));
         connectorEndTerminal = mapCapToTerm(String(conn.connectorEndStrokeCap || 'NONE'));
+
+        // Figma 네이티브 커넥터의 연결 엔드포인트 노드 정보 확인
+        if (conn.connectorStart && 'endpointNodeId' in conn.connectorStart && conn.connectorStart.endpointNodeId) {
+          const sNode = figma.getNodeById(conn.connectorStart.endpointNodeId);
+          if (sNode) connectorSourceNodeName = sNode.name;
+          if ('magnet' in conn.connectorStart) {
+            connectorSourceMagnet = conn.connectorStart.magnet as MagnetPosition;
+          }
+        }
+        if (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
+          const tNode = figma.getNodeById(conn.connectorEnd.endpointNodeId);
+          if (tNode) connectorTargetNodeName = tNode.name;
+          if ('magnet' in conn.connectorEnd) {
+            connectorTargetMagnet = conn.connectorEnd.magnet as MagnetPosition;
+          }
+        }
       } else {
         // 커스텀 벡터 직각 커넥터 (그룹 또는 벡터 노드)
         connectorLabel = node.getPluginData('connector_label') || '';
@@ -319,6 +341,20 @@ function handleSelectionChange() {
         connectorStrokePattern = (node.getPluginData('connector_pattern') as ConnectorStrokePattern) || 'SOLID';
         connectorStartTerminal = (node.getPluginData('start_terminal') as ConnectorTerminalType) || 'NONE';
         connectorEndTerminal = (node.getPluginData('end_terminal') as ConnectorTerminalType) || 'ARROW';
+
+        // 연결된 소스 및 타깃 노드 정보 및 마그넷 위치 추출
+        const srcId = node.getPluginData('source_node_id');
+        const tgtId = node.getPluginData('target_node_id');
+        if (srcId) {
+          const sNode = figma.getNodeById(srcId);
+          if (sNode) connectorSourceNodeName = sNode.name;
+        }
+        if (tgtId) {
+          const tNode = figma.getNodeById(tgtId);
+          if (tNode) connectorTargetNodeName = tNode.name;
+        }
+        connectorSourceMagnet = (node.getPluginData('source_magnet') as MagnetPosition) || 'RIGHT';
+        connectorTargetMagnet = (node.getPluginData('target_magnet') as MagnetPosition) || 'LEFT';
 
         let vectorChild: VectorNode | null = null;
         if (node.type === 'VECTOR') {
@@ -335,9 +371,15 @@ function handleSelectionChange() {
           if (connectorStrokeWeight === undefined && typeof vectorChild.strokeWeight === 'number') {
             connectorStrokeWeight = vectorChild.strokeWeight;
           }
+          if (!connectorSourceMagnet) {
+            connectorSourceMagnet = (vectorChild.getPluginData('source_magnet') as MagnetPosition) || 'RIGHT';
+          }
+          if (!connectorTargetMagnet) {
+            connectorTargetMagnet = (vectorChild.getPluginData('target_magnet') as MagnetPosition) || 'LEFT';
+          }
         }
       }
-      title = connectorLabel ? `커넥터: "${connectorLabel}"` : '연결선 (Connector)';
+      title = 'Connector';
     } else {
       // 플로우 노드: 실제 FigJam 자식 텍스트 객체로부터 최신 텍스트 추출 (Source of Truth)
       const extracted = extractNodeText(node);
@@ -370,6 +412,10 @@ function handleSelectionChange() {
       connectorRoutingType,
       connectorStartTerminal,
       connectorEndTerminal,
+      connectorSourceNodeName,
+      connectorTargetNodeName,
+      connectorSourceMagnet,
+      connectorTargetMagnet,
       width: Math.round(node.width),
       height: Math.round(node.height),
     };
@@ -1344,6 +1390,8 @@ async function updateConnectorProperties(payload: {
   routingType?: ConnectorRoutingType;
   startTerminal?: ConnectorTerminalType;
   endTerminal?: ConnectorTerminalType;
+  sourceMagnet?: MagnetPosition;
+  targetMagnet?: MagnetPosition;
   label?: string;
   hasLabel?: boolean;
 }) {
@@ -1414,6 +1462,20 @@ async function updateConnectorProperties(payload: {
       } else if (payload.hasLabel === false && conn.text) {
         await safeSetCharacters(conn.text, '');
       }
+
+      // 7. Figma 네이티브 커넥터 마그넷 위치 갱신
+      if (payload.sourceMagnet && conn.connectorStart && 'endpointNodeId' in conn.connectorStart) {
+        conn.connectorStart = {
+          endpointNodeId: conn.connectorStart.endpointNodeId,
+          magnet: payload.sourceMagnet,
+        };
+      }
+      if (payload.targetMagnet && conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd) {
+        conn.connectorEnd = {
+          endpointNodeId: conn.connectorEnd.endpointNodeId,
+          magnet: payload.targetMagnet,
+        };
+      }
     } else {
       // 커스텀 직각 벡터 커넥터 (그룹 또는 벡터)
       let vectorNode: VectorNode | null = null;
@@ -1477,6 +1539,16 @@ async function updateConnectorProperties(payload: {
       if (payload.routingType) node.setPluginData('connector_routing', payload.routingType);
       if (payload.startTerminal) node.setPluginData('start_terminal', payload.startTerminal);
       if (payload.endTerminal) node.setPluginData('end_terminal', payload.endTerminal);
+
+      if (payload.sourceMagnet) {
+        node.setPluginData('source_magnet', payload.sourceMagnet);
+      }
+      if (payload.targetMagnet) {
+        node.setPluginData('target_magnet', payload.targetMagnet);
+      }
+
+      // 마그넷 또는 라우팅 변경 시 커스텀 벡터 직각 경로 즉시 재계산
+      await updateOrthogonalVectorConnector(node, payload.sourceMagnet, payload.targetMagnet);
     }
 
     notify('커넥터 옵션이 성공적으로 수정되었습니다.', 'success');

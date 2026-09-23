@@ -357,7 +357,7 @@
       return dy >= 0 ? { sourceMagnet: "BOTTOM", targetMagnet: "TOP" } : { sourceMagnet: "TOP", targetMagnet: "BOTTOM" };
     }
   }
-  async function updateOrthogonalVectorConnector(connectorNode) {
+  async function updateOrthogonalVectorConnector(connectorNode, explicitSourceMagnet, explicitTargetMagnet) {
     const srcId = connectorNode.getPluginData("source_node_id");
     const tgtId = connectorNode.getPluginData("target_node_id");
     if (!srcId || !tgtId) return;
@@ -388,7 +388,13 @@
       width: targetNode.width,
       height: targetNode.height
     };
-    const { sourceMagnet, targetMagnet } = getOptimalMagnetPair(srcBox, tgtBox);
+    let sourceMagnet = explicitSourceMagnet || connectorNode.getPluginData("source_magnet");
+    let targetMagnet = explicitTargetMagnet || connectorNode.getPluginData("target_magnet");
+    if (!sourceMagnet || !targetMagnet) {
+      const optimal = getOptimalMagnetPair(srcBox, tgtBox);
+      if (!sourceMagnet) sourceMagnet = optimal.sourceMagnet;
+      if (!targetMagnet) targetMagnet = optimal.targetMagnet;
+    }
     connectorNode.setPluginData("source_magnet", sourceMagnet);
     connectorNode.setPluginData("target_magnet", targetMagnet);
     if (vector !== connectorNode) {
@@ -673,6 +679,10 @@
       let connectorRoutingType;
       let connectorStartTerminal;
       let connectorEndTerminal;
+      let connectorSourceNodeName;
+      let connectorTargetNodeName;
+      let connectorSourceMagnet;
+      let connectorTargetMagnet;
       const isCustomConnector = node.getPluginData("is_custom_connector") === "true" || node.getPluginData("is_flow_connector") === "true";
       const isFigmaConnector = node.type === "CONNECTOR";
       const isConnector = isFigmaConnector || isCustomConnector;
@@ -699,6 +709,20 @@
           };
           connectorStartTerminal = mapCapToTerm(String(conn.connectorStartStrokeCap || "NONE"));
           connectorEndTerminal = mapCapToTerm(String(conn.connectorEndStrokeCap || "NONE"));
+          if (conn.connectorStart && "endpointNodeId" in conn.connectorStart && conn.connectorStart.endpointNodeId) {
+            const sNode = figma.getNodeById(conn.connectorStart.endpointNodeId);
+            if (sNode) connectorSourceNodeName = sNode.name;
+            if ("magnet" in conn.connectorStart) {
+              connectorSourceMagnet = conn.connectorStart.magnet;
+            }
+          }
+          if (conn.connectorEnd && "endpointNodeId" in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
+            const tNode = figma.getNodeById(conn.connectorEnd.endpointNodeId);
+            if (tNode) connectorTargetNodeName = tNode.name;
+            if ("magnet" in conn.connectorEnd) {
+              connectorTargetMagnet = conn.connectorEnd.magnet;
+            }
+          }
         } else {
           connectorLabel = node.getPluginData("connector_label") || "";
           connectorLineType = "ELBOWED";
@@ -709,6 +733,18 @@
           connectorStrokePattern = node.getPluginData("connector_pattern") || "SOLID";
           connectorStartTerminal = node.getPluginData("start_terminal") || "NONE";
           connectorEndTerminal = node.getPluginData("end_terminal") || "ARROW";
+          const srcId = node.getPluginData("source_node_id");
+          const tgtId = node.getPluginData("target_node_id");
+          if (srcId) {
+            const sNode = figma.getNodeById(srcId);
+            if (sNode) connectorSourceNodeName = sNode.name;
+          }
+          if (tgtId) {
+            const tNode = figma.getNodeById(tgtId);
+            if (tNode) connectorTargetNodeName = tNode.name;
+          }
+          connectorSourceMagnet = node.getPluginData("source_magnet") || "RIGHT";
+          connectorTargetMagnet = node.getPluginData("target_magnet") || "LEFT";
           let vectorChild = null;
           if (node.type === "VECTOR") {
             vectorChild = node;
@@ -723,9 +759,15 @@
             if (connectorStrokeWeight === void 0 && typeof vectorChild.strokeWeight === "number") {
               connectorStrokeWeight = vectorChild.strokeWeight;
             }
+            if (!connectorSourceMagnet) {
+              connectorSourceMagnet = vectorChild.getPluginData("source_magnet") || "RIGHT";
+            }
+            if (!connectorTargetMagnet) {
+              connectorTargetMagnet = vectorChild.getPluginData("target_magnet") || "LEFT";
+            }
           }
         }
-        title = connectorLabel ? `\uCEE4\uB125\uD130: "${connectorLabel}"` : "\uC5F0\uACB0\uC120 (Connector)";
+        title = "Connector";
       } else {
         const extracted = extractNodeText(node);
         title = extracted.title;
@@ -755,6 +797,10 @@
         connectorRoutingType,
         connectorStartTerminal,
         connectorEndTerminal,
+        connectorSourceNodeName,
+        connectorTargetNodeName,
+        connectorSourceMagnet,
+        connectorTargetMagnet,
         width: Math.round(node.width),
         height: Math.round(node.height)
       };
@@ -1629,6 +1675,18 @@
         } else if (payload.hasLabel === false && conn.text) {
           await safeSetCharacters(conn.text, "");
         }
+        if (payload.sourceMagnet && conn.connectorStart && "endpointNodeId" in conn.connectorStart) {
+          conn.connectorStart = {
+            endpointNodeId: conn.connectorStart.endpointNodeId,
+            magnet: payload.sourceMagnet
+          };
+        }
+        if (payload.targetMagnet && conn.connectorEnd && "endpointNodeId" in conn.connectorEnd) {
+          conn.connectorEnd = {
+            endpointNodeId: conn.connectorEnd.endpointNodeId,
+            magnet: payload.targetMagnet
+          };
+        }
       } else {
         let vectorNode = null;
         if (node.type === "VECTOR") {
@@ -1685,6 +1743,13 @@
         if (payload.routingType) node.setPluginData("connector_routing", payload.routingType);
         if (payload.startTerminal) node.setPluginData("start_terminal", payload.startTerminal);
         if (payload.endTerminal) node.setPluginData("end_terminal", payload.endTerminal);
+        if (payload.sourceMagnet) {
+          node.setPluginData("source_magnet", payload.sourceMagnet);
+        }
+        if (payload.targetMagnet) {
+          node.setPluginData("target_magnet", payload.targetMagnet);
+        }
+        await updateOrthogonalVectorConnector(node, payload.sourceMagnet, payload.targetMagnet);
       }
       notify("\uCEE4\uB125\uD130 \uC635\uC158\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
       handleSelectionChange();
