@@ -246,6 +246,11 @@ export function ConnectSection() {
               </div>
             )}
           </div>
+
+          {/* 끝 오프셋 */}
+          <div className="input-scrubber-box" style={{ width: '70px' }}>
+            <input type="number" id="input-end-offset" placeholder="Offset" defaultValue={0} />
+          </div>
         </div>
       </div>
     </div>
