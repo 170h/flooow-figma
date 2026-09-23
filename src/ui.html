@@ -1505,9 +1505,14 @@
 
     .terminal-offset-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      gap: 4px;
+      grid-template-columns: 70px 1fr 1fr 70px;
+      gap: 6px;
       align-items: center;
+    }
+
+    .terminal-offset-row .input-scrubber-box {
+      width: 70px;
+      box-sizing: border-box;
     }
 
     /* 커스텀 터미널 드롭다운 */
@@ -1544,18 +1549,21 @@
       margin-left: 1px;
     }
 
-    /* 팝업 메뉴 */
+    /* 피그마 UI3 표준 드롭다운 팝업 메뉴 */
     .terminal-dropdown-popup {
       position: fixed;
       z-index: 9999;
-      background: #2c2c2c;
-      border-radius: 6px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.32);
-      padding: 4px;
-      min-width: 160px;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      padding: 6px;
+      min-width: unset;
+      width: max-content;
       display: none;
       flex-direction: column;
-      gap: 1px;
+      gap: 2px;
+      box-sizing: border-box;
     }
 
     .terminal-dropdown-popup.open {
@@ -1565,23 +1573,31 @@
     .terminal-popup-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 5px 8px;
-      border-radius: 4px;
+      gap: 6px;
+      padding: 4px 6px;
+      border-radius: 6px;
       cursor: pointer;
-      color: #e8e8e8;
+      color: #ffffff;
       font-size: 11px;
-      font-weight: 400;
-      transition: background 0.1s;
+      font-weight: 500;
+      transition: background 0.12s, color 0.12s;
       user-select: none;
+      box-sizing: border-box;
     }
 
+    /* 피그마 공식 보라색(#8C4CF6) 하이라이트 */
     .terminal-popup-item:hover {
-      background: rgba(255,255,255,0.08);
+      background: #8C4CF6;
+      color: #ffffff;
+    }
+
+    .terminal-popup-item:hover svg,
+    .terminal-popup-item:hover .phase-dash-icon {
+      color: #ffffff !important;
+      fill: #ffffff;
     }
 
     .terminal-popup-item.selected {
-      background: #7B61FF;
       color: #ffffff;
     }
 
@@ -1590,7 +1606,8 @@
     }
 
     .td-check {
-      width: 12px;
+      width: 14px;
+      height: 14px;
       flex-shrink: 0;
       opacity: 0;
       color: #ffffff;
@@ -1612,13 +1629,15 @@
     .td-icon-wrap {
       display: flex;
       align-items: center;
-      width: 52px;
+      width: 36px;
+      height: 16px;
       overflow: hidden;
+      flex-shrink: 0;
     }
 
     .td-icon-wrap svg {
       display: block;
-      max-width: 52px;
+      width: 36px;
       height: 16px;
     }
 
@@ -3336,7 +3355,7 @@
 
               <!-- 단자 및 오프셋 스크러버 -->
               <div class="terminal-offset-row">
-                <div class="input-scrubber-box">
+                <div class="input-scrubber-box" style="width: 70px;">
                   <input type="number" id="input-start-offset" placeholder="Offset" value="0" />
                 </div>
 
@@ -3345,7 +3364,7 @@
                   <button class="terminal-dropdown-btn" id="btn-start-terminal"
                     onclick="toggleTerminalDropdown('start', event)" title="Start terminal">
                     <span id="icon-start-terminal" class="td-btn-icon">
-                      <!-- 기본: None (start) — icon.16.stroke.start.point.line.svg -->
+                      <!-- 기본: None (start) 52x16 -->
                       <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H51.5C51.78 7.5 52 7.72 52 8C52 8.28 51.78 8.5 51.5 8.5Z" fill="currentColor"/></svg>
                     </span>
                     <svg class="td-chevron" width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -3353,10 +3372,13 @@
                     </svg>
                   </button>
                   <select id="select-start-terminal" style="display:none">
+                    <option value="MIXED">Mixed</option>
                     <option value="NONE">None</option>
                     <option value="ARROW">Arrow</option>
-                    <option value="DIAMOND">Diamond</option>
+                    <option value="TRIANGLE_ARROW">Triangle arrow</option>
+                    <option value="REVERSED_TRIANGLE_ARROW">Reversed triangle arrow</option>
                     <option value="CIRCLE">Circle</option>
+                    <option value="DIAMOND">Diamond</option>
                   </select>
                 </div>
 
@@ -3365,7 +3387,7 @@
                   <button class="terminal-dropdown-btn" id="btn-end-terminal"
                     onclick="toggleTerminalDropdown('end', event)" title="End terminal">
                     <span id="icon-end-terminal" class="td-btn-icon">
-                      <!-- 기본: Arrow (end) — icon.16.stroke.end.point.line.arrow.svg -->
+                      <!-- 기본: Arrow (end) 52x16 -->
                       <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-ea-clip)"><path d="M0.5 8.50001L50.29 8.50001L47.4 11.4C47.2 11.6 47.2 11.91 47.4 12.11C47.6 12.31 47.91 12.31 48.11 12.11L51.85 8.35001C52.05 8.15001 52.05 7.84001 51.85 7.64001L48.1 3.89001C48 3.79001 47.87 3.74001 47.75 3.74001C47.63 3.74001 47.49 3.79001 47.4 3.89001C47.2 4.09001 47.2 4.40001 47.4 4.60001L50.3 7.50001L0.5 7.50001C0.22 7.50001 0 7.73 0 8C0 8.27001 0.22 8.50001 0.5 8.50001Z" fill="currentColor"/></g><defs><clipPath id="td-ea-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
                     </span>
                     <svg class="td-chevron" width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -3373,89 +3395,90 @@
                     </svg>
                   </button>
                   <select id="select-end-terminal" style="display:none">
-                    <option value="ARROW">Arrow</option>
-                    <option value="DIAMOND">Diamond</option>
-                    <option value="CIRCLE">Circle</option>
+                    <option value="MIXED">Mixed</option>
                     <option value="NONE">None</option>
+                    <option value="ARROW">Arrow</option>
+                    <option value="TRIANGLE_ARROW">Triangle arrow</option>
+                    <option value="REVERSED_TRIANGLE_ARROW">Reversed triangle arrow</option>
+                    <option value="CIRCLE">Circle</option>
+                    <option value="DIAMOND">Diamond</option>
                   </select>
                 </div>
 
-                <div class="input-scrubber-box">
+                <div class="input-scrubber-box" style="width: 70px;">
                   <input type="number" id="input-end-offset" placeholder="Offset" value="0" />
                 </div>
               </div>
 
-              <!-- 터미널 팝업 메뉴 (start) — 실제 Figma 아이콘 사용 -->
+              <!-- 터미널 팝업 메뉴 (start) — 피그마 UI3 표준 규격, 36x16 short 아이콘, Mixed 지원 -->
               <div class="terminal-dropdown-popup" id="popup-start-terminal">
+                <div class="terminal-popup-item" data-value="MIXED" onclick="selectTerminal('start','MIXED',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap" style="display:flex;justify-content:center;align-items:center;">
+                    <span class="phase-dash-icon"></span>
+                  </span>
+                </div>
+                <hr class="phase-popover-divider" style="margin: 3px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);" />
                 <div class="terminal-popup-item selected" data-value="NONE" onclick="selectTerminal('start','NONE',this)">
                   <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span class="td-icon-wrap">
-                    <!-- icon.16.stroke.start.point.line.svg -->
-                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H51.5C51.78 7.5 52 7.72 52 8C52 8.28 51.78 8.5 51.5 8.5Z" fill="currentColor"/></svg>
-                  </span>
-                  <span class="td-label">None</span>
+                  <span class="td-icon-wrap" id="td-item-icon-start-NONE"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="ARROW" onclick="selectTerminal('start','ARROW',this)">
                   <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span class="td-icon-wrap">
-                    <!-- icon.16.stroke.start.point.line.arrow.svg -->
-                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.49999H1.71L4.6 4.59999C4.8 4.39999 4.8 4.08999 4.6 3.88999C4.4 3.68999 4.09 3.68999 3.89 3.88999L0.15 7.64999C-0.05 7.84999 -0.05 8.15999 0.15 8.35999L3.9 12.11C4 12.21 4.13 12.26 4.25 12.26C4.37 12.26 4.51 12.21 4.6 12.11C4.8 11.91 4.8 11.6 4.6 11.4L1.7 8.49999H51.5C51.78 8.49999 52 8.26999 52 7.99999C52 7.72999 51.78 7.49999 51.5 7.49999Z" fill="currentColor"/></svg>
-                  </span>
-                  <span class="td-label">Arrow</span>
+                  <span class="td-icon-wrap" id="td-item-icon-start-ARROW"></span>
                 </div>
-                <div class="terminal-popup-item" data-value="DIAMOND" onclick="selectTerminal('start','DIAMOND',this)">
+                <div class="terminal-popup-item" data-value="TRIANGLE_ARROW" onclick="selectTerminal('start','TRIANGLE_ARROW',this)">
                   <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span class="td-icon-wrap">
-                    <!-- icon.16.stroke.start.point.line.diamond.svg -->
-                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-sd-clip)"><path d="M51.4999 7.466L7.67213 7.49622L4.35121 4.15113C4.15115 3.94962 3.77105 3.94962 3.58099 4.15113L0.150042 7.60705C-0.0500139 7.80856 -0.0500139 8.19144 0.150042 8.38287L3.591 11.8489C3.69102 11.9496 3.83106 12 3.98111 12C4.13115 12 4.27119 11.9496 4.37121 11.8489L7.69214 8.50378L51.5199 8.47355C51.7999 8.47355 52.02 8.25189 52.02 7.96977C52.02 7.68766 51.7999 7.466 51.5199 7.466H51.4999ZM3.9711 10.8111L1.17032 8L3.9711 5.17884L6.76188 7.98992L3.9711 10.801V10.8111Z" fill="currentColor"/></g><defs><clipPath id="td-sd-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
-                  </span>
-                  <span class="td-label">Diamond</span>
+                  <span class="td-icon-wrap" id="td-item-icon-start-TRIANGLE_ARROW"></span>
+                </div>
+                <div class="terminal-popup-item" data-value="REVERSED_TRIANGLE_ARROW" onclick="selectTerminal('start','REVERSED_TRIANGLE_ARROW',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap" id="td-item-icon-start-REVERSED_TRIANGLE_ARROW"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="CIRCLE" onclick="selectTerminal('start','CIRCLE',this)">
                   <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span class="td-icon-wrap">
-                    <!-- icon.16.stroke.start.point.line.circle.svg -->
-                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.5H6.95C6.7 5.81 5.26 4.5 3.5 4.5C1.57 4.5 0 6.07 0 8C0 9.93 1.57 11.5 3.5 11.5C5.26 11.5 6.7 10.19 6.95 8.5H51.5C51.78 8.5 52 8.28 52 8C52 7.72 51.78 7.5 51.5 7.5ZM3.5 10.5C2.12 10.5 1 9.38 1 8C1 6.62 2.12 5.5 3.5 5.5C4.88 5.5 6 6.62 6 8C6 9.38 4.88 10.5 3.5 10.5Z" fill="currentColor"/></svg>
-                  </span>
-                  <span class="td-label">Circle</span>
+                  <span class="td-icon-wrap" id="td-item-icon-start-CIRCLE"></span>
+                </div>
+                <div class="terminal-popup-item" data-value="DIAMOND" onclick="selectTerminal('start','DIAMOND',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap" id="td-item-icon-start-DIAMOND"></span>
                 </div>
               </div>
 
-              <!-- 터미널 팝업 메뉴 (end) — 실제 Figma 아이콘 사용 -->
+              <!-- 터미널 팝업 메뉴 (end) — 피그마 UI3 표준 규격, 36x16 short 아이콘, Mixed 지원 -->
               <div class="terminal-dropdown-popup" id="popup-end-terminal">
+                <div class="terminal-popup-item" data-value="MIXED" onclick="selectTerminal('end','MIXED',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap" style="display:flex;justify-content:center;align-items:center;">
+                    <span class="phase-dash-icon"></span>
+                  </span>
+                </div>
+                <hr class="phase-popover-divider" style="margin: 3px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);" />
                 <div class="terminal-popup-item" data-value="NONE" onclick="selectTerminal('end','NONE',this)">
                   <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span class="td-icon-wrap">
-                    <!-- icon.16.stroke.end.none.svg -->
-                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M35.5 7.5C35.7761 7.5 36 7.72386 36 8C36 8.27614 35.7761 8.5 35.5 8.5H0.5C0.223858 8.5 0 8.27614 0 8C0 7.72386 0.223858 7.5 0.5 7.5H35.5Z" fill="currentColor"/></svg>
-                  </span>
-                  <span class="td-label">None</span>
+                  <span class="td-icon-wrap" id="td-item-icon-end-NONE"></span>
                 </div>
                 <div class="terminal-popup-item selected" data-value="ARROW" onclick="selectTerminal('end','ARROW',this)">
                   <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span class="td-icon-wrap">
-                    <!-- icon.16.stroke.end.point.line.arrow.svg -->
-                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-ea-p-clip)"><path d="M0.5 8.50001L50.29 8.50001L47.4 11.4C47.2 11.6 47.2 11.91 47.4 12.11C47.6 12.31 47.91 12.31 48.11 12.11L51.85 8.35001C52.05 8.15001 52.05 7.84001 51.85 7.64001L48.1 3.89001C48 3.79001 47.87 3.74001 47.75 3.74001C47.63 3.74001 47.49 3.79001 47.4 3.89001C47.2 4.09001 47.2 4.40001 47.4 4.60001L50.3 7.50001L0.5 7.50001C0.22 7.50001 0 7.73 0 8C0 8.27001 0.22 8.50001 0.5 8.50001Z" fill="currentColor"/></g><defs><clipPath id="td-ea-p-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
-                  </span>
-                  <span class="td-label">Arrow</span>
+                  <span class="td-icon-wrap" id="td-item-icon-end-ARROW"></span>
                 </div>
-                <div class="terminal-popup-item" data-value="DIAMOND" onclick="selectTerminal('end','DIAMOND',this)">
+                <div class="terminal-popup-item" data-value="TRIANGLE_ARROW" onclick="selectTerminal('end','TRIANGLE_ARROW',this)">
                   <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span class="td-icon-wrap">
-                    <!-- icon.16.stroke.end.point.line.diamond.svg -->
-                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-ed-clip)"><path d="M0.500141 8.534L44.3279 8.50378L47.6488 11.8489C47.8488 12.0504 48.229 12.0504 48.419 11.8489L51.85 8.39295C52.05 8.19144 52.05 7.80856 51.85 7.61713L48.409 4.15113C48.309 4.05038 48.1689 4 48.0189 4C47.8689 4 47.7288 4.05038 47.6288 4.15113L44.3079 7.49622L0.480137 7.52644C0.200059 7.52644 -0.02 7.74811 -0.02 8.03022C-0.02 8.31234 0.200059 8.534 0.480137 8.534L0.500141 8.534ZM48.0289 5.18892L50.8297 8L48.0289 10.8212L45.2381 8.01007L48.0289 5.19899L48.0289 5.18892Z" fill="currentColor"/></g><defs><clipPath id="td-ed-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
-                  </span>
-                  <span class="td-label">Diamond</span>
+                  <span class="td-icon-wrap" id="td-item-icon-end-TRIANGLE_ARROW"></span>
+                </div>
+                <div class="terminal-popup-item" data-value="REVERSED_TRIANGLE_ARROW" onclick="selectTerminal('end','REVERSED_TRIANGLE_ARROW',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap" id="td-item-icon-end-REVERSED_TRIANGLE_ARROW"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="CIRCLE" onclick="selectTerminal('end','CIRCLE',this)">
                   <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span class="td-icon-wrap">
-                    <!-- icon.16.stroke.end.point.line.circle.svg -->
-                    <svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#td-ec-clip)"><path d="M0.5 8.5L45.05 8.5C45.3 10.19 46.74 11.5 48.5 11.5C50.43 11.5 52 9.93 52 8C52 6.07 50.43 4.5 48.5 4.5C46.74 4.5 45.3 5.81 45.05 7.5L0.5 7.5C0.22 7.5 0 7.72 0 8C0 8.28 0.22 8.5 0.5 8.5ZM48.5 5.5C49.88 5.5 51 6.62 51 8C51 9.38 49.88 10.5 48.5 10.5C47.12 10.5 46 9.38 46 8C46 6.62 47.12 5.5 48.5 5.5Z" fill="currentColor"/></g><defs><clipPath id="td-ec-clip"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>
-                  </span>
-                  <span class="td-label">Circle</span>
+                  <span class="td-icon-wrap" id="td-item-icon-end-CIRCLE"></span>
                 </div>
-              </div>
+                <div class="terminal-popup-item" data-value="DIAMOND" onclick="selectTerminal('end','DIAMOND',this)">
+                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="td-icon-wrap" id="td-item-icon-end-DIAMOND"></span>
+                </div>
+              </div></div>
             </div>
           </div>
 
@@ -4440,13 +4463,28 @@
         if (nodes[0]?.connectorRoutingType) {
           selectRoutingType(nodes[0].connectorRoutingType, null, true);
         }
-        if (nodes[0]?.connectorStartTerminal) {
-          document.getElementById('select-start-terminal').value = nodes[0].connectorStartTerminal;
-          syncTerminalSelectToUI('start');
-        }
-        if (nodes[0]?.connectorEndTerminal) {
-          document.getElementById('select-end-terminal').value = nodes[0].connectorEndTerminal;
-          syncTerminalSelectToUI('end');
+        if (nodes.length > 1) {
+          const startTerms = nodes.map(n => n.connectorStartTerminal).filter(Boolean);
+          const endTerms = nodes.map(n => n.connectorEndTerminal).filter(Boolean);
+          if (startTerms.length > 0) {
+            const allSame = startTerms.every(t => t === startTerms[0]);
+            document.getElementById('select-start-terminal').value = allSame ? startTerms[0] : 'MIXED';
+            syncTerminalSelectToUI('start');
+          }
+          if (endTerms.length > 0) {
+            const allSame = endTerms.every(t => t === endTerms[0]);
+            document.getElementById('select-end-terminal').value = allSame ? endTerms[0] : 'MIXED';
+            syncTerminalSelectToUI('end');
+          }
+        } else {
+          if (nodes[0]?.connectorStartTerminal) {
+            document.getElementById('select-start-terminal').value = nodes[0].connectorStartTerminal;
+            syncTerminalSelectToUI('start');
+          }
+          if (nodes[0]?.connectorEndTerminal) {
+            document.getElementById('select-end-terminal').value = nodes[0].connectorEndTerminal;
+            syncTerminalSelectToUI('end');
+          }
         }
 
         // 라벨 바인딩
@@ -5957,33 +5995,65 @@
     // 커스텀 터미널 드롭다운 핸들러
     // ============================================================
 
-    const TERMINAL_ICONS = {
+    const TERMINAL_ICONS_POPUP = {
       start: {
-        // icon.16.stroke.start.point.line.svg
-        NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H51.5C51.78 7.5 52 7.72 52 8C52 8.28 51.78 8.5 51.5 8.5Z" fill="currentColor"/></svg>`,
-        // icon.16.stroke.start.point.line.arrow.svg
-        ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.49999H1.71L4.6 4.59999C4.8 4.39999 4.8 4.08999 4.6 3.88999C4.4 3.68999 4.09 3.68999 3.89 3.88999L0.15 7.64999C-0.05 7.84999 -0.05 8.15999 0.15 8.35999L3.9 12.11C4 12.21 4.13 12.26 4.25 12.26C4.37 12.26 4.51 12.21 4.6 12.11C4.8 11.91 4.8 11.6 4.6 11.4L1.7 8.49999H51.5C51.78 8.49999 52 8.26999 52 7.99999C52 7.72999 51.78 7.49999 51.5 7.49999Z" fill="currentColor"/></svg>`,
-        // icon.16.stroke.start.point.line.diamond.svg
-        DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.4999 7.466L7.67213 7.49622L4.35121 4.15113C4.15115 3.94962 3.77105 3.94962 3.58099 4.15113L0.150042 7.60705C-0.0500139 7.80856 -0.0500139 8.19144 0.150042 8.38287L3.591 11.8489C3.69102 11.9496 3.83106 12 3.98111 12C4.13115 12 4.27119 11.9496 4.37121 11.8489L7.69214 8.50378L51.5199 8.47355C51.7999 8.47355 52.02 8.25189 52.02 7.96977C52.02 7.68766 51.7999 7.466 51.5199 7.466H51.4999ZM3.9711 10.8111L1.17032 8L3.9711 5.17884L6.76188 7.98992L3.9711 10.801V10.8111Z" fill="currentColor"/></svg>`,
-        // icon.16.stroke.start.point.line.circle.svg
-        CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.5H6.95C6.7 5.81 5.26 4.5 3.5 4.5C1.57 4.5 0 6.07 0 8C0 9.93 1.57 11.5 3.5 11.5C5.26 11.5 6.7 10.19 6.95 8.5H51.5C51.78 8.5 52 8.28 52 8C52 7.72 51.78 7.5 51.5 7.5ZM3.5 10.5C2.12 10.5 1 9.38 1 8C1 6.62 2.12 5.5 3.5 5.5C4.88 5.5 6 6.62 6 8C6 9.38 4.88 10.5 3.5 10.5Z" fill="currentColor"/></svg>`,
+        NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#sp_n)"><path d="M35.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H35.5C35.78 7.5 36 7.72 36 8C36 8.28 35.78 8.5 35.5 8.5Z" fill="currentColor"/></g><defs><clipPath id="sp_n"><rect width="36" height="1" fill="white" transform="translate(0 7.5)"/></clipPath></defs></svg>`,
+        ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#sp_a)"><path d="M35.5 7.49999H1.71L4.6 4.59999C4.8 4.39999 4.8 4.08999 4.6 3.88999C4.4 3.68999 4.09 3.68999 3.89 3.88999L0.15 7.64999C-0.05 7.84999 -0.05 8.15999 0.15 8.35999L3.9 12.11C4 12.21 4.13 12.26 4.25 12.26C4.37 12.26 4.51 12.21 4.6 12.11C4.8 11.91 4.8 11.6 4.6 11.4L1.7 8.49999H35.5C35.78 8.49999 36 8.26999 36 7.99999C36 7.72999 35.78 7.49999 35.5 7.49999Z" fill="currentColor"/></g><defs><clipPath id="sp_a"><rect width="36" height="8.5" fill="white" transform="translate(0 3.75)"/></clipPath></defs></svg>`,
+        TRIANGLE_ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#sp_ta)"><path d="M5.15027 5.09492C5.60741 4.82826 6.18152 5.15847 6.18152 5.68769V7.99336H35.1825C35.4584 7.9936 35.6825 8.21736 35.6825 8.49336C35.6822 8.76914 35.4583 8.99312 35.1825 8.99336H6.18152V11.299C6.18124 11.795 5.67682 12.1163 5.23718 11.9348L5.15027 11.8918L0.339724 9.08613C-0.113523 8.82157 -0.113285 8.16536 0.339724 7.90059L5.15027 5.09492ZM1.30945 8.49336L5.18152 10.7521V6.23359L1.30945 8.49336Z" fill="currentColor"/></g><defs><clipPath id="sp_ta"><rect width="36" height="16" fill="white"/></clipPath></defs></svg>`,
+        REVERSED_TRIANGLE_ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 5.68769C0 5.15847 0.574114 4.82826 1.03125 5.09492L5.8418 7.90059C5.88887 7.92807 5.93047 7.96026 5.96777 7.99531C5.97846 7.99463 5.98914 7.99238 6 7.99238H35.5C35.7761 7.99238 35.9999 8.21634 36 8.49238C36 8.76852 35.7761 8.99238 35.5 8.99238H6C5.98911 8.99238 5.97849 8.98916 5.96777 8.98848C5.93018 9.02394 5.88937 9.05838 5.8418 9.08613L1.03125 11.8918L0.944336 11.9348C0.504762 12.1162 0.000329443 11.7949 0 11.299V5.68769ZM1 10.7521L4.87207 8.49336L1 6.23359V10.7521Z" fill="currentColor"/></svg>`,
+        CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 4.5C5.2642 4.5 6.72245 5.80543 6.96387 7.50293C6.97584 7.50207 6.98781 7.5 7 7.5H35.5C35.7761 7.5 36 7.72386 36 8C36 8.27611 35.7761 8.5 35.5 8.5H7C6.98779 8.5 6.97586 8.49695 6.96387 8.49609C6.72286 10.1941 5.26453 11.5 3.5 11.5C1.567 11.5 0 9.933 0 8C0 6.067 1.567 4.5 3.5 4.5ZM3.5 5.5C2.11929 5.5 1 6.61929 1 8C1 9.38071 2.11929 10.5 3.5 10.5C4.88071 10.5 6 9.38071 6 8C6 6.61929 4.88071 5.5 3.5 5.5Z" fill="currentColor"/></svg>`,
+        DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.29282 4.70706C3.68332 4.31664 4.31637 4.31664 4.70688 4.70706L7.49985 7.50003H35.4998C35.7759 7.50011 35.9998 7.72394 35.9998 8.00003C35.9998 8.27605 35.7759 8.49995 35.4998 8.50003H7.49985L4.70688 11.293C4.34083 11.659 3.76173 11.6815 3.36899 11.3614L3.29282 11.293L0.70688 8.70706C0.316456 8.31656 0.316457 7.68351 0.70688 7.293L3.29282 4.70706ZM1.41391 8.00003L3.99985 10.586L6.58579 8.00003L3.99985 5.4141L1.41391 8.00003Z" fill="currentColor"/></svg>`,
       },
       end: {
-        // icon.16.stroke.end.none.svg
-        NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M35.5 7.5C35.7761 7.5 36 7.72386 36 8C36 8.27614 35.7761 8.5 35.5 8.5H0.5C0.223858 8.5 0 8.27614 0 8C0 7.72386 0.223858 7.5 0.5 7.5H35.5Z" fill="currentColor"/></svg>`,
-        // icon.16.stroke.end.point.line.arrow.svg
-        ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.5 8.50001L50.29 8.50001L47.4 11.4C47.2 11.6 47.2 11.91 47.4 12.11C47.6 12.31 47.91 12.31 48.11 12.11L51.85 8.35001C52.05 8.15001 52.05 7.84001 51.85 7.64001L48.1 3.89001C48 3.79001 47.87 3.74001 47.75 3.74001C47.63 3.74001 47.49 3.79001 47.4 3.89001C47.2 4.09001 47.2 4.40001 47.4 4.60001L50.3 7.50001L0.5 7.50001C0.22 7.50001 0 7.73 0 8C0 8.27001 0.22 8.50001 0.5 8.50001Z" fill="currentColor"/></svg>`,
-        // icon.16.stroke.end.point.line.diamond.svg
-        DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.500141 8.534L44.3279 8.50378L47.6488 11.8489C47.8488 12.0504 48.229 12.0504 48.419 11.8489L51.85 8.39295C52.05 8.19144 52.05 7.80856 51.85 7.61713L48.409 4.15113C48.309 4.05038 48.1689 4 48.0189 4C47.8689 4 47.7288 4.05038 47.6288 4.15113L44.3079 7.49622L0.480137 7.52644C0.200059 7.52644 -0.02 7.74811 -0.02 8.03022C-0.02 8.31234 0.200059 8.534 0.480137 8.534L0.500141 8.534ZM48.0289 5.18892L50.8297 8L48.0289 10.8212L45.2381 8.01007L48.0289 5.19899L48.0289 5.18892Z" fill="currentColor"/></svg>`,
-        // icon.16.stroke.end.point.line.circle.svg
-        CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.5 8.5L45.05 8.5C45.3 10.19 46.74 11.5 48.5 11.5C50.43 11.5 52 9.93 52 8C52 6.07 50.43 4.5 48.5 4.5C46.74 4.5 45.3 5.81 45.05 7.5L0.5 7.5C0.22 7.5 0 7.72 0 8C0 8.28 0.22 8.5 0.5 8.5ZM48.5 5.5C49.88 5.5 51 6.62 51 8C51 9.38 49.88 10.5 48.5 10.5C47.12 10.5 46 9.38 46 8C46 6.62 47.12 5.5 48.5 5.5Z" fill="currentColor"/></svg>`,
+        NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#ep_n)"><path d="M35.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H35.5C35.78 7.5 36 7.72 36 8C36 8.28 35.78 8.5 35.5 8.5Z" fill="currentColor"/></g><defs><clipPath id="ep_n"><rect width="36" height="1" fill="white" transform="translate(0 7.5)"/></clipPath></defs></svg>`,
+        ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#ep_a0)"><g clip-path="url(#ep_a1)"><path d="M0.5 8.50001L34.29 8.50001L31.4 11.4C31.2 11.6 31.2 11.91 31.4 12.11C31.6 12.31 31.91 12.31 32.11 12.11L35.85 8.35001C36.05 8.15001 36.05 7.84001 35.85 7.64001L32.1 3.89001C32 3.79001 31.87 3.74001 31.75 3.74001C31.63 3.74001 31.49 3.79001 31.4 3.89001C31.2 4.09001 31.2 4.40001 31.4 4.60001L34.3 7.50001L0.5 7.50001C0.220002 7.50001 3.96025e-07 7.73001 3.72421e-07 8.00001C3.48817e-07 8.27001 0.220002 8.50001 0.5 8.50001Z" fill="currentColor"/></g></g><defs><clipPath id="ep_a0"><rect width="36" height="16" fill="white"/></clipPath><clipPath id="ep_a1"><rect width="36" height="8.5" fill="white" transform="translate(36 12.25) rotate(-180)"/></clipPath></defs></svg>`,
+        TRIANGLE_ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#ep_ta)"><path d="M30.5318 11.8909C30.0747 12.1575 29.5006 11.8273 29.5006 11.2981V8.99242L0.499601 8.99242C0.223664 8.99218 -0.000398606 8.76841 -0.000398606 8.49242C-0.000148638 8.21664 0.223817 7.99266 0.499601 7.99242L29.5006 7.99242V5.68676C29.5009 5.19081 30.0053 4.86944 30.4449 5.05101L30.5318 5.09398L35.3424 7.89965C35.7956 8.16421 35.7954 8.82042 35.3424 9.08519L30.5318 11.8909ZM34.3726 8.49242L30.5006 6.23363V10.7522L34.3726 8.49242Z" fill="currentColor"/></g><defs><clipPath id="ep_ta"><rect width="36" height="16" fill="white"/></clipPath></defs></svg>`,
+        REVERSED_TRIANGLE_ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M36 11.2981C36 11.8273 35.4259 12.1575 34.9688 11.8909L30.1582 9.08519C30.1111 9.05771 30.0695 9.02552 30.0322 8.99047C30.0215 8.99115 30.0109 8.9934 30 8.9934L0.5 8.9934C0.223931 8.9934 0.000117217 8.76944 0 8.4934C0 8.21725 0.223859 7.9934 0.5 7.9934L30 7.9934C30.0109 7.9934 30.0215 7.99662 30.0322 7.9973C30.0698 7.96184 30.1106 7.9274 30.1582 7.89965L34.9688 5.09398L35.0557 5.05101C35.4952 4.8696 35.9997 5.19092 36 5.68676V11.2981ZM35 6.23363L31.1279 8.49242L35 10.7522V6.23363Z" fill="currentColor"/></svg>`,
+        CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M32.5 11.5C30.7358 11.5 29.2776 10.1946 29.0361 8.49707C29.0242 8.49793 29.0122 8.5 29 8.5L0.5 8.5C0.223859 8.5 0 8.27614 0 8C3.29828e-05 7.72389 0.223879 7.5 0.5 7.5L29 7.5C29.0122 7.5 29.0241 7.50305 29.0361 7.50391C29.2771 5.80594 30.7355 4.5 32.5 4.5C34.433 4.5 36 6.067 36 8C36 9.933 34.433 11.5 32.5 11.5ZM32.5 10.5C33.8807 10.5 35 9.38071 35 8C35 6.61929 33.8807 5.5 32.5 5.5C31.1193 5.5 30 6.61929 30 8C30 9.38071 31.1193 10.5 32.5 10.5Z" fill="currentColor"/></svg>`,
+        DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M33.1212 11.293C32.7307 11.6834 32.0977 11.6834 31.7072 11.293L28.9142 8.50003L0.914213 8.50003C0.638141 8.49995 0.414213 8.27612 0.414213 8.00003C0.414296 7.72401 0.638192 7.50011 0.914213 7.50003L28.9142 7.50003L31.7072 4.70706C32.0732 4.34109 32.6523 4.31858 33.0451 4.6387L33.1212 4.70706L35.7072 7.293C36.0976 7.6835 36.0976 8.31655 35.7072 8.70706L33.1212 11.293ZM35.0002 8.00003L32.4142 5.41409L29.8283 8.00003L32.4142 10.586L35.0002 8.00003Z" fill="currentColor"/></svg>`,
       },
     };
 
+    const TERMINAL_ICONS_BTN = {
+      start: {
+        MIXED: `<span class="phase-dash-icon" style="background:currentColor;display:inline-block;margin:auto;"></span>`,
+        NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H51.5C51.78 7.5 52 7.72 52 8C52 8.28 51.78 8.5 51.5 8.5Z" fill="currentColor"/></svg>`,
+        ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.49999H1.71L4.6 4.59999C4.8 4.39999 4.8 4.08999 4.6 3.88999C4.4 3.68999 4.09 3.68999 3.89 3.88999L0.15 7.64999C-0.05 7.84999 -0.05 8.15999 0.15 8.35999L3.9 12.11C4 12.21 4.13 12.26 4.25 12.26C4.37 12.26 4.51 12.21 4.6 12.11C4.8 11.91 4.8 11.6 4.6 11.4L1.7 8.49999H51.5C51.78 8.49999 52 8.26999 52 7.99999C52 7.72999 51.78 7.49999 51.5 7.49999Z" fill="currentColor"/></svg>`,
+        TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#sb_ta)"><path d="M5.46814 5.10914C5.92528 4.84248 6.49939 5.17269 6.49939 5.70192V8.00758H51.5004C51.7763 8.00782 52.0004 8.23158 52.0004 8.50758C52.0001 8.78337 51.7762 9.00734 51.5004 9.00758H6.49939V11.3132C6.49913 11.8092 5.9947 12.1306 5.55506 11.949L5.46814 11.906L0.657595 9.10035C0.204355 8.83578 0.20458 8.17957 0.657595 7.91481L5.46814 5.10914ZM1.62732 8.50758L5.49939 10.7664V6.24781L1.62732 8.50758Z" fill="currentColor"/></g><defs><clipPath id="sb_ta"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
+        REVERSED_TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 5.68769C0 5.15847 0.574114 4.82826 1.03125 5.09492L5.8418 7.90059C5.88887 7.92807 5.93047 7.96026 5.96777 7.99531C5.97846 7.99463 5.98914 7.99238 6 7.99238H51.5C51.7761 7.99238 51.9999 8.21634 52 8.49238C52 8.76852 51.7761 8.99238 51.5 8.99238H6C5.98911 8.99238 5.97849 8.98916 5.96777 8.98848C5.93018 9.02394 5.88937 9.05838 5.8418 9.08613L1.03125 11.8918L0.944336 11.9348C0.504762 12.1162 0.000329443 11.7949 0 11.299V5.68769ZM1 10.7521L4.87207 8.49336L1 6.23359V10.7521Z" fill="currentColor"/></svg>`,
+        CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 4.5C5.2642 4.5 6.72245 5.80543 6.96387 7.50293C6.97584 7.50207 6.98781 7.5 7 7.5H51.5C51.7761 7.5 52 7.72386 52 8C52 8.27611 51.7761 8.5 51.5 8.5H7C6.98779 8.5 6.97586 8.49695 6.96387 8.49609C6.72286 10.1941 5.26453 11.5 3.5 11.5C1.567 11.5 0 9.933 0 8C0 6.067 1.567 4.5 3.5 4.5ZM3.5 5.5C2.11929 5.5 1 6.61929 1 8C1 9.38071 2.11929 10.5 3.5 10.5C4.88071 10.5 6 9.38071 6 8C6 6.61929 4.88071 5.5 3.5 5.5Z" fill="currentColor"/></svg>`,
+        DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.29294 4.70706C3.68345 4.31664 4.3165 4.31664 4.707 4.70706L7.49997 7.50003H51.5C51.776 7.50011 52 7.72394 52 8.00003C51.9999 8.27605 51.776 8.49995 51.5 8.50003H7.49997L4.707 11.293C4.34096 11.659 3.76185 11.6815 3.36911 11.3614L3.29294 11.293L0.707002 8.70706C0.316578 8.31656 0.316579 7.68351 0.707002 7.293L3.29294 4.70706ZM1.41403 8.00003L3.99997 10.586L6.58591 8.00003L3.99997 5.4141L1.41403 8.00003Z" fill="currentColor"/></svg>`,
+      },
+      end: {
+        MIXED: `<span class="phase-dash-icon" style="background:currentColor;display:inline-block;margin:auto;"></span>`,
+        NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 9H0.5C0.22 9 0 8.78 0 8.5C0 8.22 0.22 8 0.5 8H51.5C51.78 8 52 8.22 52 8.5C52 8.78 51.78 9 51.5 9Z" fill="currentColor"/></svg>`,
+        ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#eb_a)"><path d="M0.5 8.50001L50.29 8.50001L47.4 11.4C47.2 11.6 47.2 11.91 47.4 12.11C47.6 12.31 47.91 12.31 48.11 12.11L51.85 8.35001C52.05 8.15001 52.05 7.84001 51.85 7.64001L48.1 3.89001C48 3.79001 47.87 3.74001 47.75 3.74001C47.63 3.74001 47.49 3.79001 47.4 3.89001C47.2 4.09001 47.2 4.40001 47.4 4.60001L50.3 7.50001L0.5 7.50001C0.22 7.50001 3.96025e-07 7.73 3.72421e-07 8C3.48817e-07 8.27001 0.22 8.50001 0.5 8.50001Z" fill="currentColor"/></g><defs><clipPath id="eb_a"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
+        TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#eb_ta)"><path d="M46.5319 11.8909C46.0747 12.1575 45.5006 11.8273 45.5006 11.2981V8.99242L0.499632 8.99242C0.223691 8.99218 -0.000368451 8.76842 -0.000368451 8.49242C-0.000126574 8.21663 0.22384 7.99266 0.499632 7.99242L45.5006 7.99242V5.68676C45.5009 5.1908 46.0053 4.86943 46.4449 5.05101L46.5319 5.09398L51.3424 7.89965C51.7956 8.16422 51.7954 8.82043 51.3424 9.08519L46.5319 11.8909ZM50.3727 8.49242L46.5006 6.23363V10.7522L50.3727 8.49242Z" fill="currentColor"/></g><defs><clipPath id="eb_ta"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
+        REVERSED_TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M52 11.2981C52 11.8273 51.4259 12.1575 50.9688 11.8909L46.1582 9.08519C46.1111 9.05771 46.0695 9.02552 46.0322 8.99047C46.0215 8.99115 46.0109 8.9934 46 8.9934L0.5 8.9934C0.223931 8.9934 0.000117217 8.76944 0 8.4934C0 8.21725 0.223859 7.9934 0.5 7.9934L46 7.9934C46.0109 7.9934 46.0215 7.99662 46.0322 7.9973C46.0698 7.96184 46.1106 7.9274 46.1582 7.89965L50.9688 5.09398L51.0557 5.05101C51.4952 4.8696 51.9997 5.19092 52 5.68676V11.2981ZM51 6.23363L47.1279 8.49242L51 10.7522V6.23363Z" fill="currentColor"/></svg>`,
+        CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#eb_c)"><path d="M48.5 11.5C46.7358 11.5 45.2776 10.1946 45.0361 8.49707C45.0242 8.49793 45.0122 8.5 45 8.5L0.500001 8.49999C0.223859 8.49999 5.63677e-07 8.27613 6.11959e-07 7.99999C3.3643e-05 7.72388 0.22388 7.49999 0.500001 7.49999L45 7.5C45.0122 7.5 45.0241 7.50304 45.0361 7.50391C45.2771 5.80594 46.7355 4.5 48.5 4.5C50.433 4.5 52 6.067 52 8C52 9.933 50.433 11.5 48.5 11.5ZM48.5 10.5C49.8807 10.5 51 9.38071 51 8C51 6.61929 49.8807 5.5 48.5 5.5C47.1193 5.5 46 6.61929 46 8C46 9.38071 47.1193 10.5 48.5 10.5Z" fill="currentColor"/></g><defs><clipPath id="eb_c"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
+        DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M47.293 4.69229C47.659 4.32662 48.2382 4.30408 48.6309 4.62393L48.707 4.69229L51.293 7.27823C51.6833 7.66865 51.6832 8.30177 51.293 8.69229L48.707 11.2782C48.3165 11.6687 47.6835 11.6687 47.293 11.2782L44.5 8.48526H0.5C0.223928 8.48518 2.72038e-08 8.26135 0 7.98526C0.000344652 7.70946 0.224141 7.48534 0.5 7.48526H44.5L47.293 4.69229ZM45.4141 7.98526L48 10.5712L50.5859 7.98526L48 5.39932L45.4141 7.98526Z" fill="currentColor"/></svg>`,
+      },
+    };
+
+    function initTerminalPopupIcons() {
+      const keys = ['NONE', 'ARROW', 'TRIANGLE_ARROW', 'REVERSED_TRIANGLE_ARROW', 'CIRCLE', 'DIAMOND'];
+      ['start', 'end'].forEach(side => {
+        keys.forEach(val => {
+          const wrap = document.getElementById(`td-item-icon-${side}-${val}`);
+          if (wrap && TERMINAL_ICONS_POPUP[side] && TERMINAL_ICONS_POPUP[side][val]) {
+            wrap.innerHTML = TERMINAL_ICONS_POPUP[side][val];
+          }
+        });
+      });
+    }
+
     function updateTerminalIcon(side, value) {
       const iconEl = document.getElementById(`icon-${side}-terminal`);
-      if (iconEl && TERMINAL_ICONS[side] && TERMINAL_ICONS[side][value]) {
-        iconEl.innerHTML = TERMINAL_ICONS[side][value];
+      if (!iconEl) return;
+      if (value === 'MIXED') {
+        iconEl.innerHTML = `<span class="phase-dash-icon" style="background:currentColor;display:inline-block;margin:auto;"></span>`;
+      } else if (TERMINAL_ICONS_BTN[side] && TERMINAL_ICONS_BTN[side][value]) {
+        iconEl.innerHTML = TERMINAL_ICONS_BTN[side][value];
       }
     }
 
@@ -5997,21 +6067,23 @@
       closeAllPopovers();
 
       if (!isOpen) {
+        popup.classList.add('open');
         const rect = btn.getBoundingClientRect();
-        const popupHeight = 150; // 4개 아이템 + 패딩 기준 약 145~150px
-        const spaceBelow = window.innerHeight - rect.bottom;
+        const popupHeight = popup.offsetHeight || 220;
+        const popupWidth = popup.offsetWidth || 78;
 
-        // 아래쪽 여유가 부족하면 위쪽으로 띄우고, 위쪽도 부족할 경우 화면 내 안전 레이어로 클램프
-        if (spaceBelow < popupHeight + 8 && rect.top > popupHeight + 8) {
-          popup.style.top = `${Math.max(8, rect.top - popupHeight - 4)}px`;
-        } else if (spaceBelow < popupHeight + 8) {
-          popup.style.top = `${Math.max(8, window.innerHeight - popupHeight - 8)}px`;
-        } else {
-          popup.style.top = `${rect.bottom + 4}px`;
+        // 항상 위쪽(Top)으로 나오게 배치 (버튼 상단 4px 위)
+        let top = rect.top - popupHeight - 4;
+        if (top < 8) top = 8;
+
+        let left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        if (left < 8) left = 8;
+        if (left + popupWidth > window.innerWidth - 8) {
+          left = window.innerWidth - popupWidth - 8;
         }
 
-        popup.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 180))}px`;
-        popup.classList.add('open');
+        popup.style.top = `${top}px`;
+        popup.style.left = `${left}px`;
       }
     }
 
@@ -6033,8 +6105,10 @@
       // 팝업 닫기
       closeAllPopovers();
 
-      // 코드에 적용
-      applyCurrentConnectorState();
+      // MIXED 선택 시에는 단자 속성 덮어쓰기를 건너뛰어 개별 값 유지
+      if (value !== 'MIXED') {
+        applyCurrentConnectorState();
+      }
     }
 
     function syncTerminalSelectToUI(side) {
@@ -6054,6 +6128,11 @@
     window.addEventListener('click', () => {
       document.querySelectorAll('.terminal-dropdown-popup').forEach(el => el.classList.remove('open'));
     });
+
+    // 초기 단자 아이콘 렌더링
+    initTerminalPopupIcons();
+    updateTerminalIcon('start', 'NONE');
+    updateTerminalIcon('end', 'ARROW');
 
   </script>
 </body>

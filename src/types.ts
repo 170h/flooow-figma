@@ -94,8 +94,14 @@ export type BadgeShape = 'Square' | 'Circle' | 'RoundBox';
 
 // 연결선 라우팅 및 단자 타입
 export type ConnectorRoutingType = 'ORTHOGONAL' | 'S_CURVE' | 'CURVED' | 'STRAIGHT';
-export type ConnectorStrokePattern = 'SOLID' | 'DASHED' | 'DOTTED';
-export type ConnectorTerminalType = 'NONE' | 'ARROW' | 'DIAMOND' | 'CIRCLE';
+export type ConnectorTerminalType =
+  | 'NONE'
+  | 'ARROW'
+  | 'TRIANGLE_ARROW'
+  | 'REVERSED_TRIANGLE_ARROW'
+  | 'CIRCLE'
+  | 'DIAMOND'
+  | 'MIXED';
 
 export interface FlowNodePayload {
   title: string;

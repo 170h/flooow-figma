@@ -702,9 +702,11 @@
             connectorStrokePattern = "SOLID";
           }
           const mapCapToTerm = (cap) => {
-            if (cap.includes("ARROW")) return "ARROW";
-            if (cap.includes("DIAMOND")) return "DIAMOND";
-            if (cap.includes("CIRCLE")) return "CIRCLE";
+            if (cap.includes("REVERSED_TRIANGLE")) return "REVERSED_TRIANGLE_ARROW";
+            if (cap.includes("TRIANGLE_ARROW") || cap.includes("ARROW_EQUILATERAL")) return "TRIANGLE_ARROW";
+            if (cap.includes("ARROW_LINES") || cap === "ARROW") return "ARROW";
+            if (cap.includes("DIAMOND_FILLED") || cap === "DIAMOND") return "DIAMOND";
+            if (cap.includes("CIRCLE_FILLED") || cap === "CIRCLE") return "CIRCLE";
             return "NONE";
           };
           connectorStartTerminal = mapCapToTerm(String(conn.connectorStartStrokeCap || "NONE"));
@@ -1657,6 +1659,10 @@
         const mapCap = (term) => {
           switch (term) {
             case "ARROW":
+              return "ARROW_LINES";
+            case "TRIANGLE_ARROW":
+              return "ARROW_EQUILATERAL";
+            case "REVERSED_TRIANGLE_ARROW":
               return "ARROW_EQUILATERAL";
             case "DIAMOND":
               return "DIAMOND_FILLED";
@@ -1666,8 +1672,12 @@
               return "NONE";
           }
         };
-        conn.connectorStartStrokeCap = mapCap(payload.startTerminal);
-        conn.connectorEndStrokeCap = mapCap(payload.endTerminal);
+        if (payload.startTerminal && payload.startTerminal !== "MIXED") {
+          conn.connectorStartStrokeCap = mapCap(payload.startTerminal);
+        }
+        if (payload.endTerminal && payload.endTerminal !== "MIXED") {
+          conn.connectorEndStrokeCap = mapCap(payload.endTerminal);
+        }
         if (payload.hasLabel && payload.label !== void 0) {
           if (conn.text) {
             await safeSetCharacters(conn.text, payload.label.trim());
