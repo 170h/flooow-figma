@@ -1052,6 +1052,8 @@
     headerRow.name = "Header";
     headerRow.layoutMode = "HORIZONTAL";
     headerRow.layoutAlign = "STRETCH";
+    headerRow.primaryAxisSizingMode = "AUTO";
+    headerRow.counterAxisSizingMode = "AUTO";
     headerRow.primaryAxisAlignItems = "CENTER";
     headerRow.counterAxisAlignItems = "CENTER";
     headerRow.itemSpacing = 8;
@@ -1196,6 +1198,8 @@
       headerRow.name = "Header";
       headerRow.layoutMode = "HORIZONTAL";
       headerRow.layoutAlign = "STRETCH";
+      headerRow.primaryAxisSizingMode = "AUTO";
+      headerRow.counterAxisSizingMode = "AUTO";
       headerRow.primaryAxisAlignItems = "CENTER";
       headerRow.counterAxisAlignItems = "CENTER";
       headerRow.itemSpacing = 8;
