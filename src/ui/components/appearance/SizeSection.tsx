@@ -156,13 +156,7 @@ export function SizeSection() {
           </div>
 
           {/* 사이즈 모드 드롭다운 */}
-          <div
-            className="size-mode-dropdown-wrapper figma-dropdown-wrapper"
-            id="size-mode-dropdown-wrapper"
-            onMouseLeave={() => {
-              if (sizeModeDropdownOpen) setSizeModeDropdownOpen(false);
-            }}
-          >
+          <div className="size-mode-dropdown-wrapper figma-dropdown-wrapper" id="size-mode-dropdown-wrapper">
             <button type="button" id="btn-size-mode-dropdown"
               className={`size-mode-dropdown-btn figma-dropdown-btn${sizeModeDropdownOpen ? ' active' : ''}`}
               title="Select height mode"
@@ -176,13 +170,7 @@ export function SizeSection() {
               <svg className="size-mode-chevron-icon figma-dropdown-chevron-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z" fill="currentColor"/></svg>
             </button>
 
-            <div
-              className={`size-mode-menu-popover figma-dropdown-menu${sizeModeDropdownOpen ? ' active' : ''}`}
-              id="popover-size-mode"
-              onMouseLeave={() => {
-                if (sizeModeDropdownOpen) setSizeModeDropdownOpen(false);
-              }}
-            >
+            <div className={`size-mode-menu-popover figma-dropdown-menu${sizeModeDropdownOpen ? ' active' : ''}`} id="popover-size-mode">
               <div className="size-mode-menu-item figma-dropdown-item" data-value="mixed" onClick={() => selectSizeMode('mixed')}>
                 <span className="size-mode-menu-item-check figma-dropdown-check-slot"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg></span>
                 <span className="size-mode-menu-item-icon figma-dropdown-icon-slot"><span className="phase-dash-icon"></span></span>
