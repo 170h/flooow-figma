@@ -291,6 +291,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: selectedColor, elevation: selectedElevation, singleLinkUrl: figmaUrl });
 
+    const cfg = lastNodeConfigRef.current;
+    const sizeMode = cfg.sizeMode || 'fixed';
+
     nodes.forEach(node => {
       parent.postMessage({
         pluginMessage: {
@@ -305,6 +308,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             nodeType: selectedNodeType,
             colorHex: selectedColor,
             elevation: selectedElevation,
+            sizeMode,
           }
         }
       }, '*');
