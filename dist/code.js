@@ -778,6 +778,41 @@
       const savedType = node.getPluginData("node_type");
       const flowNodeType = savedType || "Screen";
       const savedStatus = node.getPluginData("workflow_status");
+      let sizeMode = "fixed";
+      let hugHeight = Math.round(node.height);
+      if (isFlowNode && node.type === "FRAME") {
+        const frame = node;
+        const isAuto = frame.primaryAxisSizingMode === "AUTO";
+        sizeMode = isAuto ? "hug" : "fixed";
+        if (isAuto) {
+          hugHeight = Math.round(frame.height);
+        } else {
+          const headerRow = frame.children.find(
+            (c) => c.name === "Header" || c.type === "FRAME" && c.layoutMode === "HORIZONTAL"
+          );
+          const headerH = headerRow ? headerRow.height : 20;
+          const descText = frame.children.find(
+            (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+          );
+          if (descText && descText.characters.trim()) {
+            try {
+              const temp = figma.createText();
+              temp.fontName = { family: "Inter", style: "Regular" };
+              temp.fontSize = 11;
+              temp.resize(Math.max(50, frame.width - 32), 10);
+              temp.textAutoResize = "HEIGHT";
+              temp.characters = descText.characters;
+              const fullDescH = Math.round(temp.height);
+              temp.remove();
+              hugHeight = Math.max(50, 14 + 16 + Math.round(headerH) + 8 + fullDescH);
+            } catch (_) {
+              hugHeight = Math.round(frame.height);
+            }
+          } else {
+            hugHeight = Math.max(50, 14 + 16 + Math.round(headerH) + 8);
+          }
+        }
+      }
       return {
         id: node.id,
         name: node.name,
@@ -804,7 +839,9 @@
         connectorSourceMagnet,
         connectorTargetMagnet,
         width: Math.round(node.width),
-        height: Math.round(node.height)
+        height: Math.round(node.height),
+        hugHeight,
+        sizeMode
       };
     });
     let currentStatus;

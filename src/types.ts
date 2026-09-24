@@ -251,6 +251,8 @@ export interface SelectedNodeInfo {
   connectorTargetMagnet?: MagnetPosition;
   width?: number;
   height?: number;
+  hugHeight?: number;
+  sizeMode?: 'fixed' | 'hug';
   status?: WorkflowStatus;
 }
 

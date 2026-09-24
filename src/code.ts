@@ -393,6 +393,47 @@ function handleSelectionChange() {
     const flowNodeType: DiagramNodeType = savedType || 'Screen';
     const savedStatus = node.getPluginData('workflow_status') as WorkflowStatus;
 
+    let sizeMode: 'fixed' | 'hug' = 'fixed';
+    let hugHeight = Math.round(node.height);
+
+    if (isFlowNode && node.type === 'FRAME') {
+      const frame = node as FrameNode;
+      const isAuto = frame.primaryAxisSizingMode === 'AUTO';
+      sizeMode = isAuto ? 'hug' : 'fixed';
+
+      if (isAuto) {
+        hugHeight = Math.round(frame.height);
+      } else {
+        // Fixed 상태인 경우에도, 만약 Hug contents로 전환했을 때 늘어날 전체 높이를 미리 정밀 산출
+        const headerRow = frame.children.find(
+          c => c.name === 'Header' || (c.type === 'FRAME' && (c as FrameNode).layoutMode === 'HORIZONTAL')
+        ) as FrameNode | undefined;
+        const headerH = headerRow ? headerRow.height : 20;
+
+        const descText = frame.children.find(
+          c => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+        ) as TextNode | undefined;
+
+        if (descText && descText.characters.trim()) {
+          try {
+            const temp = figma.createText();
+            temp.fontName = { family: 'Inter', style: 'Regular' };
+            temp.fontSize = 11;
+            temp.resize(Math.max(50, frame.width - 32), 10);
+            temp.textAutoResize = 'HEIGHT';
+            temp.characters = descText.characters;
+            const fullDescH = Math.round(temp.height);
+            temp.remove();
+            hugHeight = Math.max(50, 14 + 16 + Math.round(headerH) + 8 + fullDescH);
+          } catch (_) {
+            hugHeight = Math.round(frame.height);
+          }
+        } else {
+          hugHeight = Math.max(50, 14 + 16 + Math.round(headerH) + 8);
+        }
+      }
+    }
+
     return {
       id: node.id,
       name: node.name,
@@ -420,6 +461,8 @@ function handleSelectionChange() {
       connectorTargetMagnet,
       width: Math.round(node.width),
       height: Math.round(node.height),
+      hugHeight,
+      sizeMode,
     };
   });
 
