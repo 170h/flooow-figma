@@ -1316,17 +1316,26 @@
       if (payload.width && payload.height) {
         const w = Math.max(120, payload.width);
         const h = Math.max(50, payload.height);
+        const isHug = payload.sizeMode === "hug";
         card.minWidth = null;
         card.maxWidth = null;
         card.minHeight = null;
         card.maxHeight = null;
-        card.resize(w, h);
-        card.primaryAxisSizingMode = "FIXED";
-        card.counterAxisSizingMode = "FIXED";
-        card.minWidth = w;
-        card.maxWidth = w;
-        card.minHeight = h;
-        card.maxHeight = h;
+        if (isHug) {
+          card.primaryAxisSizingMode = "AUTO";
+          card.counterAxisSizingMode = "FIXED";
+          card.resize(w, card.height);
+          card.minWidth = w;
+          card.maxWidth = w;
+        } else {
+          card.resize(w, h);
+          card.primaryAxisSizingMode = "FIXED";
+          card.counterAxisSizingMode = "FIXED";
+          card.minWidth = w;
+          card.maxWidth = w;
+          card.minHeight = h;
+          card.maxHeight = h;
+        }
         const statusBadge = card.children.find(
           (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
         );

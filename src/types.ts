@@ -121,6 +121,7 @@ export interface FlowNodePayload {
   badgePosition?: BadgePosition;
   badgeShape?: BadgeShape;
   colorHex?: string;
+  sizeMode?: 'fixed' | 'hug';
 }
 
 export interface ConnectPointsPayload {
@@ -176,6 +177,7 @@ export interface UpdateNodePayload {
   badgePosition?: BadgePosition;
   badgeShape?: BadgeShape;
   colorHex?: string;
+  sizeMode?: 'fixed' | 'hug';
 }
 
 // 메시지 액션 타입

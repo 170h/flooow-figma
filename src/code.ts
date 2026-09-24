@@ -986,19 +986,31 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     if (payload.width && payload.height) {
       const w = Math.max(120, payload.width);
       const h = Math.max(50, payload.height);
+      const isHug = payload.sizeMode === 'hug';
+
       card.minWidth = null;
       card.maxWidth = null;
       card.minHeight = null;
       card.maxHeight = null;
 
-      card.resize(w, h);
-      card.primaryAxisSizingMode = 'FIXED';
-      card.counterAxisSizingMode = 'FIXED';
-
-      card.minWidth = w;
-      card.maxWidth = w;
-      card.minHeight = h;
-      card.maxHeight = h;
+      if (isHug) {
+        // Hug contents: 너비만 고정, 높이는 자동
+        card.primaryAxisSizingMode = 'AUTO';
+        card.counterAxisSizingMode = 'FIXED';
+        card.resize(w, card.height); // 너비만 적용
+        card.minWidth = w;
+        card.maxWidth = w;
+        // 높이는 min/max 잠금 해제 유지 (콘텐츠에 맞게 자유 확장)
+      } else {
+        // Fixed height: 너비·높이 모두 고정
+        card.resize(w, h);
+        card.primaryAxisSizingMode = 'FIXED';
+        card.counterAxisSizingMode = 'FIXED';
+        card.minWidth = w;
+        card.maxWidth = w;
+        card.minHeight = h;
+        card.maxHeight = h;
+      }
 
       // 리사이즈 시 하단 오른쪽 박스 안쪽 상태 뱃지 위치 동기화
       const statusBadge = card.children.find(
