@@ -56,8 +56,10 @@ export interface NodeInfo {
   description?: string;
   width?: number;
   height?: number;
+  cornerRadius?: number;
   flowNodeType?: string;
   status?: string;
+  figmaLink?: string;
   isConnector?: boolean;
   isFlowNode?: boolean;
   connectorColorHex?: string;
@@ -74,6 +76,7 @@ export interface NodeInfo {
   stepNumber?: number;
   badgeCorner?: string;
   badgeShape?: string;
+  badgeColorMode?: 'White' | 'Black' | 'Style';
   elevationOn?: boolean;
   elevation?: number;
   fillColorHex?: string;
@@ -101,6 +104,7 @@ export interface LastNodeConfig {
   stepNumber: number;
   badgeCorner: string;
   badgeShape: string;
+  badgeColorMode?: 'White' | 'Black' | 'Style';
   singleLinkOn: boolean;
   singleLinkUrl: string;
 }
@@ -121,6 +125,7 @@ export interface UIState {
   selectedStatus: string;
   selectedBadgeCorner: string;
   selectedBadgeShape: string;
+  selectedBadgeColorMode: 'White' | 'Black' | 'Style';
   selectedLinePattern: string;
   selectedRoutingType: string;
   sourceMagnet: string;
@@ -198,11 +203,15 @@ export interface AppContextValue {
       colorHex?: string;
       strokeWeight?: number;
       strokeColor?: string;
+    },
+    linkOverrides?: {
+      figmaLink?: string;
+      clearLinkCache?: boolean;
     }
   ) => void;
   applyStatusToNode: (status?: string) => void;
   applyElevationToNodes: (level: number | null) => void;
-  applyStepBadges: (startNumber?: number, corner?: string, shape?: string) => void;
+  applyStepBadges: (startNumber?: number, corner?: string, shape?: string, colorMode?: 'White' | 'Black' | 'Style') => void;
   removeStepBadgesFromNodes: () => void;
   applyCurrentConnectorState: () => void;
   handleMainAction: () => void;
@@ -238,6 +247,7 @@ const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
   stepNumber: 1,
   badgeCorner: 'TOP_LEFT',
   badgeShape: 'Square',
+  badgeColorMode: 'Style',
   singleLinkOn: false,
   singleLinkUrl: '',
 };
@@ -255,6 +265,7 @@ const DEFAULT_UI_STATE: UIState = {
   selectedStatus: 'in_progress',
   selectedBadgeCorner: 'TOP_LEFT',
   selectedBadgeShape: 'Square',
+  selectedBadgeColorMode: 'Style',
   selectedLinePattern: 'SOLID',
   selectedRoutingType: 'ORTHOGONAL',
   sourceMagnet: 'RIGHT',
@@ -413,6 +424,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       colorHex?: string;
       strokeWeight?: number;
       strokeColor?: string;
+    },
+    linkOverrides?: {
+      figmaLink?: string;
+      clearLinkCache?: boolean;
     }
   ) => {
     const nodes = selectedNodesRef.current;
@@ -424,6 +439,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
     const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
     const urlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
+    const singleLinkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
     const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
 
     const title = titleEl?.value.trim() || 'Untitled';
@@ -431,7 +447,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const w = parseInt(wEl?.value || '250', 10) || 250;
     const h = parseInt(hEl?.value || '90', 10) || 90;
     const radius = parseInt(rEl?.value || '0', 10) || 0;
-    const figmaUrl = urlEl?.value.trim() || '';
+    const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
+    const rawFigmaUrl = linkOverrides?.figmaLink !== undefined
+      ? linkOverrides.figmaLink
+      : ((isLinkOn && urlEl) ? urlEl.value.trim() : '');
+    const figmaUrl = rawFigmaUrl ? (
+      /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}`
+    ) : '';
 
     const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
     const finalColor = styleOverrides?.colorHex ?? selectedColor;
@@ -453,6 +475,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             width: w, height: h, cornerRadius: radius,
             theme: 'light',
             figmaLink: figmaUrl,
+            clearLinkCache: linkOverrides?.clearLinkCache,
             nodeType: selectedNodeType,
             colorHex: finalColor,
             strokeWeight: finalStrokeWeight,
@@ -582,15 +605,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, '*');
   }, [setLastNodeConfig, setUIState]);
 
-  const applyStepBadges = useCallback((startNumber: number = 1, corner?: string, shape?: string) => {
+  const applyStepBadges = useCallback((startNumber: number = 1, corner?: string, shape?: string, colorMode?: 'White' | 'Black' | 'Style') => {
     const nodes = selectedNodesRef.current;
     if (!nodes || nodes.length === 0) return;
     parent.postMessage({
       pluginMessage: {
         type: 'ADD_STEP_BADGES',
         startNumber,
-        corner: corner || 'TOP_LEFT',
-        shape: shape || 'Square',
+        corner: corner || uiStateRef.current.selectedBadgeCorner || 'TOP_LEFT',
+        shape: shape || uiStateRef.current.selectedBadgeShape || 'Square',
+        colorMode: colorMode || uiStateRef.current.selectedBadgeColorMode || 'Style',
       }
     }, '*');
   }, []);
@@ -714,7 +738,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (rEl) rEl.value = '20';
       showToast('최대값은 20입니다.', 'warning');
     }
-    const figmaUrl = urlEl?.value.trim() || '';
+    const rawFigmaUrl = (singleLinkToggleEl?.checked && urlEl) ? urlEl.value.trim() : '';
+    const figmaUrl = rawFigmaUrl ? (
+      /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}`
+    ) : '';
     const { selectedColor, selectedElevation, selectedNodeType, selectedStatus, selectedBadgeCorner, selectedBadgeShape } = uiStateRef.current;
 
     const newConfig: Partial<LastNodeConfig> = {
@@ -805,6 +832,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const eOn = Boolean(first.elevationOn);
         const eLevel = typeof first.elevation === 'number' ? first.elevation : 0;
         const colorUpdates: Partial<UIState> = { selectedElevation: eLevel };
+        const nodeRadius = typeof first.cornerRadius === 'number' ? first.cornerRadius : 0;
+        const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+        if (rEl) rEl.value = String(nodeRadius);
+
         if (first.fillColorHex) {
           colorUpdates.selectedColor = first.fillColorHex;
           colorUpdates.selectedStrokeWeight = first.strokeWeight;
@@ -815,9 +846,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             color: first.fillColorHex,
             strokeWeight: first.strokeWeight,
             strokeColor: first.strokeColorHex,
+            cornerRadius: nodeRadius,
           });
         } else {
-          setLastNodeConfig({ elevationOn: eOn, elevation: eLevel });
+          setLastNodeConfig({ elevationOn: eOn, elevation: eLevel, cornerRadius: nodeRadius });
         }
         setUIState(colorUpdates);
       }

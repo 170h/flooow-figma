@@ -519,6 +519,127 @@ function notify(message: string, level: 'info' | 'success' | 'warning' | 'error'
   figma.notify(message, { error: level === 'error' });
 }
 
+/**
+ * 프로토콜(http, https, figma 등)이 누락된 URL에 자동으로 https://를 붙여 유효한 링크로 정규화합니다.
+ */
+function normalizeUrl(url: string): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
+/**
+ * URL이 피그마 링크(figma.com 또는 figma://)인지 확인합니다.
+ */
+function isFigmaUrl(url: string): boolean {
+  if (!url) return false;
+  const clean = url.trim().toLowerCase();
+  return clean.includes('figma.com/') || clean.startsWith('figma://');
+}
+
+/**
+ * 노드 하단 왼쪽에 링크 아이콘(피그마 링크: icon.16.pen / 일반 링크: icon.16.linkedobject)을 생성/갱신합니다.
+ * 피그마 API 제약(TextNode만 hyperlink 지원)을 고려하여 아이콘 위에 16x16 투명 TextNode 오버레이를 배치합니다.
+ */
+async function updateFigmaLinkBadge(
+  card: FrameNode,
+  figmaLink?: string,
+  isBgDark = false,
+  clearCache = false
+) {
+  const existingBadge = card.children.find(
+    (c) => c.getPluginData('is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+  ) as FrameNode | undefined;
+
+  const rawLink = (figmaLink || '').trim();
+  const trimmedLink = normalizeUrl(rawLink);
+
+  // 링크가 없는 경우: 기존 뱃지 제거 및 메타데이터 삭제 (토글 시에는 캐시 유지)
+  if (!trimmedLink) {
+    if (existingBadge) {
+      existingBadge.remove();
+    }
+    card.setPluginData('figma_link', '');
+    if (clearCache) {
+      card.setPluginData('cached_figma_link', '');
+    }
+    return;
+  }
+
+  // 링크 메타데이터 및 캐시 저장
+  card.setPluginData('figma_link', trimmedLink);
+  card.setPluginData('cached_figma_link', trimmedLink);
+
+  const iconColor = isBgDark ? '#FFFFFF' : '#000000';
+  const isFigma = isFigmaUrl(trimmedLink);
+
+  // 1. icon.16.pen SVG (피그마 링크용 - 피그마 UI3 원본 사양)
+  const penSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <path d="M3.72849 3.02145C4.83925 3.13055 9.67484 3.67513 11 4.99997C11.8888 5.88903 12.2722 7.28337 12.1123 8.59665L13.2988 9.79294C13.6863 10.1839 13.6851 10.8148 13.2959 11.2041L11.1748 13.3252C10.7832 13.7168 10.1478 13.7154 9.75779 13.3222L8.56052 12.1162C7.25778 12.2648 5.8809 11.8808 4.99998 11C3.6753 9.67487 3.13064 4.83971 3.02146 3.72849C3.00717 3.58223 3.06014 3.43984 3.16404 3.33591L3.33591 3.16403C3.43991 3.06006 3.58214 3.00708 3.72849 3.02145ZM7.74119 7.03415C7.82376 7.01208 7.91045 6.99997 7.99998 6.99997C8.55226 6.99997 8.99998 7.44769 8.99998 7.99997C8.99997 8.55225 8.55226 8.99997 7.99998 8.99997C7.44771 8.99995 6.99998 8.55224 6.99998 7.99997C6.99998 7.91045 7.01209 7.82375 7.03416 7.74118L4.16306 4.87009C4.24914 5.50937 4.36996 6.29249 4.53416 7.08005C4.68675 7.81193 4.87047 8.52441 5.08689 9.11911C5.3135 9.74173 5.53564 10.1215 5.70701 10.2929C6.33123 10.917 7.38392 11.243 8.44627 11.122L8.92966 11.0674L9.27049 11.4121L10.4668 12.6181L12.5888 10.497L11.4023 9.30075L11.0615 8.957L11.1201 8.47556C11.2505 7.40454 10.9231 6.33743 10.2929 5.707C10.1215 5.53565 9.74187 5.31345 9.11912 5.08688C8.52433 4.87051 7.81203 4.68665 7.08006 4.53415C6.29249 4.37008 5.50946 4.24895 4.87009 4.16306L7.74119 7.03415Z" fill="${iconColor}" fill-opacity="0.9"/>
+</svg>`;
+
+  // 2. icon.16.linkedobject SVG (일반 웹/외부 링크용 - 피그마 UI3 원본 사양)
+  const linkedObjectSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <path d="M8.73242 10.7324C8.92757 10.5374 9.24419 10.5376 9.43945 10.7324C9.63415 10.9277 9.63446 11.2444 9.43945 11.4395C8.85388 12.0251 8.85413 12.9747 9.43945 13.5605C10.0253 14.1459 10.9749 14.1461 11.5605 13.5605C11.7556 13.3656 12.0723 13.3659 12.2676 13.5605C12.4624 13.7558 12.4626 14.0725 12.2676 14.2676C11.2914 15.2437 9.70875 15.2434 8.73242 14.2676C7.75658 13.2913 7.75632 11.7086 8.73242 10.7324ZM11.5 3C12.3284 3 13 3.67157 13 4.5V6.5C13 6.77614 12.7761 7 12.5 7C12.2239 7 12 6.77614 12 6.5V4.5C12 4.22386 11.7761 4 11.5 4H4.5C4.22386 4 4 4.22386 4 4.5V11.5C4 11.7761 4.22386 12 4.5 12H6.5C6.77614 12 7 12.2239 7 12.5C7 12.7761 6.77614 13 6.5 13H4.5L4.34668 12.9922C3.64069 12.9205 3.07949 12.3593 3.00781 11.6533L3 11.5V4.5C3 3.67157 3.67157 3 4.5 3H11.5ZM12.1465 10.1465C12.3416 9.95137 12.6582 9.95165 12.8535 10.1465C13.0483 10.3418 13.0486 10.6584 12.8535 10.8535L10.8535 12.8535C10.6584 13.0486 10.3418 13.0483 10.1465 12.8535C9.95165 12.6582 9.95137 12.3416 10.1465 12.1465L12.1465 10.1465ZM10.7324 8.73242C11.7086 7.75632 13.2913 7.75658 14.2676 8.73242C15.2434 9.70875 15.2437 11.2914 14.2676 12.2676C14.0725 12.4626 13.7558 12.4624 13.5605 12.2676C13.3659 12.0723 13.3656 11.7556 13.5605 11.5605C14.1461 10.9749 14.1459 10.0253 13.5605 9.43945C12.9747 8.85413 12.0251 8.85388 11.4395 9.43945C11.2444 9.63446 10.9277 9.63415 10.7324 9.43945C10.5376 9.24419 10.5374 8.92757 10.7324 8.73242Z" fill="${iconColor}" fill-opacity="0.9"/>
+</svg>`;
+
+  let badge = existingBadge;
+  if (!badge) {
+    badge = figma.createFrame();
+    badge.name = 'FigmaLinkBadge';
+    badge.fills = [];
+    badge.clipsContent = true;
+    badge.resize(16, 16);
+    badge.cornerRadius = 2;
+    badge.setPluginData('is_figma_link_badge', 'true');
+    card.appendChild(badge);
+  } else {
+    badge.clipsContent = true;
+    badge.cornerRadius = 2;
+    // 기존 자식 노드 제거
+    while (badge.children.length > 0) {
+      badge.children[0].remove();
+    }
+  }
+
+  // 1. 피그마 링크 여부에 따라 pen 또는 linkedobject SVG 노드 생성 (16×16)
+  const targetSvg = isFigma ? penSvg : linkedObjectSvg;
+  const svgNode = figma.createNodeFromSvg(targetSvg);
+  svgNode.name = isFigma ? 'icon.16.pen' : 'icon.16.linkedobject';
+  svgNode.resize(16, 16);
+  badge.appendChild(svgNode);
+  svgNode.x = 0;
+  svgNode.y = 0;
+  svgNode.locked = true;
+
+  // 2. 아이콘 크기(16×16)와 완벽히 1:1로 겹치는 투명 텍스트 링크 오버레이
+  await loadRequiredFonts();
+  const linkText = figma.createText();
+  linkText.name = 'LinkOverlay';
+  linkText.characters = '█'; // 16x16 블록 문자로 정사각형 영역 확보
+  linkText.fontSize = 16;
+  linkText.lineHeight = { value: 16, unit: 'PIXELS' };
+  linkText.textAlignHorizontal = 'CENTER';
+  linkText.textAlignVertical = 'CENTER';
+  linkText.textAutoResize = 'NONE';
+  linkText.resize(16, 16);
+  linkText.x = 0;
+  linkText.y = 0;
+  linkText.opacity = 0; // 완전 투명
+  linkText.hyperlink = { type: 'URL', value: trimmedLink };
+  badge.appendChild(linkText);
+
+  // 3. 카드 내 하단 왼쪽 절대 배치
+  badge.layoutPositioning = 'ABSOLUTE';
+  badge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
+  badge.x = 16;
+  badge.y = card.height - badge.height - 10;
+}
+
 // 선택된 요소 또는 조상 중 커넥터(Figma 네이티브 CONNECTOR 또는 커스텀 벡터 직각 커넥터) 탐색
 function findConnectorNode(node: BaseNode | null): SceneNode | null {
   if (!node) return null;
@@ -792,6 +913,8 @@ function handleSelectionChange() {
         if (frame.paddingBottom !== 36) {
           frame.paddingBottom = 36;
         }
+        statusBadge.paddingLeft = 9;
+        statusBadge.paddingRight = 9;
         const nodeCornerRadius = typeof frame.cornerRadius === 'number' ? frame.cornerRadius : 0;
         statusBadge.cornerRadius = getStatusBadgeCornerRadius(nodeCornerRadius);
         statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
@@ -977,6 +1100,10 @@ function handleSelectionChange() {
     if ('strokeWeight' in node && typeof (node as any).strokeWeight === 'number') {
       nodeStrokeWeight = (node as any).strokeWeight;
     }
+    let cornerRadius = 0;
+    if ('cornerRadius' in node && typeof (node as any).cornerRadius === 'number') {
+      cornerRadius = Math.round((node as any).cornerRadius);
+    }
 
     return {
       id: node.id,
@@ -991,6 +1118,7 @@ function handleSelectionChange() {
       tag,
       theme: (node.getPluginData('node_theme') as 'light' | 'dark') || 'light',
       figmaLink: node.getPluginData('figma_link'),
+      cachedFigmaLink: node.getPluginData('cached_figma_link') || node.getPluginData('figma_link') || undefined,
       connectorLabel,
       connectorLineType,
       connectorColorHex,
@@ -1005,11 +1133,13 @@ function handleSelectionChange() {
       connectorTargetMagnet,
       width: Math.round(node.width),
       height: Math.round(node.height),
+      cornerRadius,
       hugHeight,
       sizeMode,
       stepNumber: node.getPluginData('step_number') ? parseInt(node.getPluginData('step_number'), 10) : undefined,
       badgeCorner: node.getPluginData('badge_corner') || undefined,
       badgeShape: node.getPluginData('badge_shape') || undefined,
+      badgeColorMode: (node.getPluginData('badge_color_mode') as 'White' | 'Black' | 'Style') || undefined,
       elevationOn: node.getPluginData('node_elevation') !== '',
       elevation: node.getPluginData('node_elevation') !== '' ? parseInt(node.getPluginData('node_elevation'), 10) : undefined,
       fillColorHex: nodeFillColor,
@@ -1310,8 +1440,8 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
     statusBadge.counterAxisSizingMode = 'AUTO';
     statusBadge.primaryAxisAlignItems = 'CENTER';
     statusBadge.counterAxisAlignItems = 'CENTER';
-    statusBadge.paddingLeft = 7;
-    statusBadge.paddingRight = 7;
+    statusBadge.paddingLeft = 9;
+    statusBadge.paddingRight = 9;
     statusBadge.paddingTop = 3;
     statusBadge.paddingBottom = 3;
     statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
@@ -1495,8 +1625,9 @@ async function createFlowNode(payload: FlowNodePayload) {
     card.primaryAxisSizingMode = 'FIXED';
     card.counterAxisSizingMode = 'FIXED';
     const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
+    const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
     card.paddingTop = 14;
-    card.paddingBottom = hasStatus ? 36 : 16;
+    card.paddingBottom = (hasStatus || hasLink) ? 36 : 16;
     card.paddingLeft = 16;
     card.paddingRight = 16;
     card.itemSpacing = 8;
@@ -1569,8 +1700,8 @@ async function createFlowNode(payload: FlowNodePayload) {
         statusBadge.counterAxisSizingMode = 'AUTO';
         statusBadge.primaryAxisAlignItems = 'CENTER';
         statusBadge.counterAxisAlignItems = 'CENTER';
-        statusBadge.paddingLeft = 7;
-        statusBadge.paddingRight = 7;
+        statusBadge.paddingLeft = 9;
+        statusBadge.paddingRight = 9;
         statusBadge.paddingTop = 3;
         statusBadge.paddingBottom = 3;
         statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
@@ -1595,6 +1726,9 @@ async function createFlowNode(payload: FlowNodePayload) {
         statusBadge.y = card.height - statusBadge.height - 10;
       }
     }
+
+    // Figma Screen Link 펜 아이콘 뱃지(하단 왼쪽) 생성
+    await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark);
 
     // 엘리베이션(그림자) 효과 적용
     if (typeof payload.elevation === 'number') {
@@ -1738,6 +1872,16 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         statusBadge.x = w - statusBadge.width - 10;
         statusBadge.y = h - statusBadge.height - 10;
       }
+
+      // 리사이즈 시 하단 왼쪽 링크 뱃지 위치 동기화
+      const linkBadge = card.children.find(
+        (c) => c.getPluginData('is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+      ) as FrameNode | undefined;
+      if (linkBadge) {
+        linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
+        linkBadge.x = 16;
+        linkBadge.y = h - linkBadge.height - 10;
+      }
     }
 
     // 헤더 행 및 타이틀 텍스트 갱신
@@ -1793,17 +1937,20 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.appendChild(descText);
     }
 
-    // 상태 여부에 따른 하단 패딩 및 설명 텍스트 줄수 동기화
+    // 상태 여부 및 링크 여부에 따른 하단 패딩 및 설명 텍스트 줄수 동기화
     let statusBadge = card.children.find(
       (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
     ) as FrameNode | undefined;
     const hasStatus = Boolean(statusBadge || (payload.status && STATUS_CONFIG[payload.status]));
-    card.paddingBottom = hasStatus ? 36 : 16;
+    const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
+    card.paddingBottom = (hasStatus || hasLink) ? 36 : 16;
 
     const currentH = payload.height || card.height;
     updateDescTextTruncation(card, descText, currentH, description);
 
     if (statusBadge) {
+      statusBadge.paddingLeft = 9;
+      statusBadge.paddingRight = 9;
       statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
       statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
       statusBadge.x = card.width - statusBadge.width - 10;
@@ -1820,6 +1967,21 @@ async function updateFlowNode(payload: UpdateNodePayload) {
           bText.fills = [{ type: 'SOLID', color: badgeTextColor }];
           bText.locked = true;
         }
+      }
+    }
+
+    // Figma Screen Link 펜 아이콘 뱃지(하단 왼쪽) 갱신
+    await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark, payload.clearLinkCache);
+
+    // 기존 스텝 뱃지가 존재하는 경우 노드 색상/보더 변화에 맞춰 컬러 동기화
+    const existingStepBadge = card.children.find(
+      (c) => c.name.startsWith('[Step]') || c.getPluginData('is_step_badge') === 'true'
+    ) as FrameNode | undefined;
+    if (existingStepBadge) {
+      const stepText = existingStepBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+      if (stepText) {
+        const currentMode = (card.getPluginData('badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
+        applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
       }
     }
 
@@ -2561,8 +2723,8 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
         statusBadge.counterAxisSizingMode = 'AUTO';
         statusBadge.primaryAxisAlignItems = 'CENTER';
         statusBadge.counterAxisAlignItems = 'CENTER';
-        statusBadge.paddingLeft = 7;
-        statusBadge.paddingRight = 7;
+        statusBadge.paddingLeft = 9;
+        statusBadge.paddingRight = 9;
         statusBadge.paddingTop = 3;
         statusBadge.paddingBottom = 3;
         statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
@@ -2588,6 +2750,8 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
         const isDarkTheme = card.getPluginData('node_theme') === 'dark';
         const { badgeBg, badgeTextColor } = getStatusBadgeColors(status as WorkflowStatus, nodeBgColor, isDarkTheme);
 
+        statusBadge.paddingLeft = 9;
+        statusBadge.paddingRight = 9;
         statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
         statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
         const textNode = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode;
@@ -2671,8 +2835,96 @@ async function applyElevationToSelected(level: number | null) {
   }
 }
 
+/**
+ * RGB 색상의 채도(Saturation)가 높은지 판별
+ * - 흰색, 검정, 회색 계열(무채색)은 false
+ * - 빨강, 주황, 노랑, 초록, 파랑, 보라 등 유채색 계열은 true
+ */
+function isColorHighSaturation(rgb: RGB): boolean {
+  const max = Math.max(rgb.r, rgb.g, rgb.b);
+  const min = Math.min(rgb.r, rgb.g, rgb.b);
+  const delta = max - min;
+  if (delta < 0.15) return false;
+  const l = (max + min) / 2;
+  const s = l > 0 && l < 1 ? delta / (1 - Math.abs(2 * l - 1)) : 0;
+  return s >= 0.25;
+}
+
+/**
+ * 스텝 배지 컬러 적용
+ * - White: 배경은 흰색, 보더는 노드의 보더 컬러 (노드 보더가 0이고 채도가 높은 경우 노드 배경색, 그 외 흰색)
+ * - Black: 지금 구성 (배경 검정, 보더 흰색, 텍스트 흰색)
+ * - Style: 배경은 노드의 배경색, 보더는 노드의 보더 컬러 (노드 보더가 0인 경우 노드의 배경색)
+ */
+function applyStepBadgeColors(
+  stepBadge: FrameNode,
+  numText: TextNode,
+  colorMode: 'White' | 'Black' | 'Style' = 'Style',
+  card: FrameNode
+) {
+  // 노드 배경색
+  let nodeBgColor: RGB = { r: 1, g: 1, b: 1 };
+  const cardFills = card.fills;
+  if (Array.isArray(cardFills) && cardFills.length > 0 && cardFills[0].type === 'SOLID') {
+    nodeBgColor = cardFills[0].color;
+  }
+
+  // 노드 보더 컬러 및 stroke 여부
+  let nodeStrokeColor: RGB | null = null;
+  const cardStrokes = card.strokes;
+  if (Array.isArray(cardStrokes) && cardStrokes.length > 0 && cardStrokes[0].type === 'SOLID') {
+    nodeStrokeColor = cardStrokes[0].color;
+  }
+  const hasWeight = typeof card.strokeWeight === 'number' ? card.strokeWeight > 0 : true;
+  const hasNodeStroke = hasWeight && nodeStrokeColor !== null;
+
+  // 텍스트 대비 및 명도 판별
+  const lum = 0.299 * nodeBgColor.r + 0.587 * nodeBgColor.g + 0.114 * nodeBgColor.b;
+  const isDarkBg = lum < 0.6;
+
+  if (colorMode === 'White') {
+    // White: 배경은 흰색
+    // 1) 노드 보더가 있는 경우: 노드의 보더 컬러
+    // 2) 노드 보더가 0이고 노드 배경이 유채색(채도 높음): 노드의 배경색
+    // 3) 노드 보더가 0이고 노드 배경이 무채색인 경우: 어두우면 흰색, 밝으면 연그레이(#D1D5DB)로 분리
+    stepBadge.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+    let borderCol: RGB = isDarkBg ? { r: 1, g: 1, b: 1 } : { r: 0.82, g: 0.84, b: 0.86 };
+    if (hasNodeStroke && nodeStrokeColor) {
+      borderCol = nodeStrokeColor;
+    } else if (isColorHighSaturation(nodeBgColor)) {
+      borderCol = nodeBgColor;
+    }
+    stepBadge.strokes = [{ type: 'SOLID', color: borderCol }];
+    stepBadge.strokeWeight = 1.5;
+    numText.fills = [{ type: 'SOLID', color: { r: 0.1, g: 0.1, b: 0.14 } }];
+  } else if (colorMode === 'Style') {
+    // Style: 배경은 노드의 배경색
+    // 1) 노드 보더가 있는 경우: 노드의 보더 컬러
+    // 2) 노드 보더가 0인 경우: 노드 배경과 형태가 분리되도록 대비 보더 적용 (어두운/유채색 노드: 흰색 #FFFFFF, 밝은 노드: 연그레이 #D1D5DB)
+    stepBadge.fills = [{ type: 'SOLID', color: nodeBgColor }];
+    let borderCol: RGB = isDarkBg ? { r: 1, g: 1, b: 1 } : { r: 0.82, g: 0.84, b: 0.86 };
+    if (hasNodeStroke && nodeStrokeColor) {
+      borderCol = nodeStrokeColor;
+    }
+    stepBadge.strokes = [{ type: 'SOLID', color: borderCol }];
+    stepBadge.strokeWeight = 1.5;
+    numText.fills = [{ type: 'SOLID', color: isDarkBg ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.14 } }];
+  } else {
+    // Black: 지금 구성 (배경 검정, 보더 흰색, 텍스트 흰색)
+    stepBadge.fills = [{ type: 'SOLID', color: { r: 0.1, g: 0.1, b: 0.14 } }];
+    stepBadge.strokes = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+    stepBadge.strokeWeight = 1.5;
+    numText.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+  }
+}
+
 // 스텝 번호 부여 (노드 카드 코너에 일체형 스텝 뱃지로 부착)
-async function addStepBadges(startNumber: number = 1, corner: string = 'TOP_LEFT', shape: string = 'Square') {
+async function addStepBadges(
+  startNumber: number = 1,
+  corner: string = 'TOP_LEFT',
+  shape: string = 'Square',
+  colorMode: 'White' | 'Black' | 'Style' = 'Style'
+) {
   const rawSelection = [...figma.currentPage.selection];
   if (rawSelection.length === 0) {
     notify('스텝 번호를 매길 요소를 캔버스에서 선택해 주세요.', 'warning');
@@ -2701,29 +2953,39 @@ async function addStepBadges(startNumber: number = 1, corner: string = 'TOP_LEFT
     card.setPluginData('step_number', `${currentNum}`);
     card.setPluginData('badge_corner', corner);
     card.setPluginData('badge_shape', shape);
+    card.setPluginData('badge_color_mode', colorMode);
 
     let stepBadge = card.children.find(
       (c) => c.getPluginData('is_step_badge') === 'true' || c.name.startsWith('[Step]')
     ) as FrameNode | undefined;
 
+    let numText: TextNode;
     if (!stepBadge) {
       stepBadge = figma.createFrame();
       card.appendChild(stepBadge);
-      stepBadge.fills = [{ type: 'SOLID', color: { r: 0.1, g: 0.1, b: 0.14 } }];
-      stepBadge.strokes = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
-      stepBadge.strokeWeight = 1.5;
       stepBadge.setPluginData('is_step_badge', 'true');
 
-      const numText = figma.createText();
+      numText = figma.createText();
       numText.name = 'NumText';
       numText.fontName = { family: 'Inter', style: 'Bold' };
       numText.fontSize = 11;
       numText.textAutoResize = 'WIDTH_AND_HEIGHT';
-      numText.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
       stepBadge.appendChild(numText);
     } else {
       card.appendChild(stepBadge);
+      let foundText = stepBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+      if (!foundText) {
+        foundText = figma.createText();
+        foundText.name = 'NumText';
+        foundText.fontName = { family: 'Inter', style: 'Bold' };
+        foundText.fontSize = 11;
+        foundText.textAutoResize = 'WIDTH_AND_HEIGHT';
+        stepBadge.appendChild(foundText);
+      }
+      numText = foundText;
     }
+
+    applyStepBadgeColors(stepBadge, numText, colorMode, card);
 
     if (card.layoutMode !== 'NONE') {
       stepBadge.layoutPositioning = 'ABSOLUTE';
@@ -2761,7 +3023,6 @@ async function addStepBadges(startNumber: number = 1, corner: string = 'TOP_LEFT
     stepBadge.visible = true;
 
     // 텍스트 반영
-    const numText = stepBadge.children.find((c) => c.type === 'TEXT') as TextNode;
     if (numText) {
       await safeSetCharacters(numText, `${currentNum}`);
     }
@@ -3076,7 +3337,7 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       await applyElevationToSelected(msg.level);
       break;
     case 'ADD_STEP_BADGES':
-      await addStepBadges(msg.startNumber || 1, msg.corner || 'TOP_LEFT', msg.shape || 'Square');
+      await addStepBadges(msg.startNumber || 1, msg.corner || 'TOP_LEFT', msg.shape || 'Square', msg.colorMode || 'Style');
       break;
     case 'REMOVE_STEP_BADGES':
       await removeStepBadges();

@@ -121,6 +121,7 @@ export interface FlowNodePayload {
   badgeNumber?: number;
   badgePosition?: BadgePosition;
   badgeShape?: BadgeShape;
+  badgeColorMode?: 'White' | 'Black' | 'Style';
   colorHex?: string;
   strokeWeight?: number;
   strokeColor?: string;
@@ -168,6 +169,7 @@ export interface UpdateNodePayload {
   tag?: string;
   theme: 'light' | 'dark';
   figmaLink?: string;
+  clearLinkCache?: boolean;
   figmaFrameId?: string;
   width?: number;
   height?: number;
@@ -179,6 +181,7 @@ export interface UpdateNodePayload {
   badgeNumber?: number;
   badgePosition?: BadgePosition;
   badgeShape?: BadgeShape;
+  badgeColorMode?: 'White' | 'Black' | 'Style';
   colorHex?: string;
   strokeWeight?: number;
   strokeColor?: string;
@@ -203,7 +206,7 @@ export type PluginAction =
   | { type: 'UPDATE_CONNECTOR_LABEL'; connectorId: string; label: string }
   | { type: 'TOGGLE_NODE_THEME'; nodeId: string }
   | { type: 'CREATE_CONNECTORS'; label?: string; lineStyle?: 'solid' | 'dashed' }
-  | { type: 'ADD_STEP_BADGES'; startNumber?: number; corner?: string; shape?: string }
+  | { type: 'ADD_STEP_BADGES'; startNumber?: number; corner?: string; shape?: string; colorMode?: 'White' | 'Black' | 'Style' }
   | { type: 'REMOVE_STEP_BADGES' }
   | { type: 'SET_STATUS'; status: WorkflowStatus }
   | { type: 'SET_ELEVATION'; level: number | null }
@@ -252,6 +255,7 @@ export interface SelectedNodeInfo {
   tag?: string;
   theme?: 'light' | 'dark';
   figmaLink?: string;
+  cachedFigmaLink?: string;
   connectorLabel?: string;
   connectorLineType?: 'ELBOWED' | 'STRAIGHT' | 'CURVED';
   connectorColorHex?: string;
@@ -272,6 +276,7 @@ export interface SelectedNodeInfo {
   stepNumber?: number;
   badgeCorner?: string;
   badgeShape?: string;
+  badgeColorMode?: 'White' | 'Black' | 'Style';
   elevationOn?: boolean;
   elevation?: number;
   fillColorHex?: string;

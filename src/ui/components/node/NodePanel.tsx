@@ -2,9 +2,10 @@ import React from 'react';
 import { PhaseSection } from './PhaseSection';
 import { TypeSection } from './TypeSection';
 import { DescriptionSection } from './DescriptionSection';
+import { FigmaLinkSection } from './FigmaLinkSection';
 
 /**
- * Node 탭 내용 - Phase + Type + Description 섹션
+ * Node 탭 내용 - Phase + Type + Description + Figma Screen Link 섹션
  * (section 래퍼는 App.tsx에서 관리)
  */
 export function NodePanel(_props?: any) {
@@ -15,6 +16,9 @@ export function NodePanel(_props?: any) {
       <TypeSection />
       <hr className="section-divider" />
       <DescriptionSection />
+      <hr className="section-divider" />
+      <FigmaLinkSection />
     </>
   );
 }
+

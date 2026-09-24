@@ -157,6 +157,25 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
     applyCurrentNodeState(mode);
   }
 
+  // 선택된 노드 변경 시 W, H, Radius 인풋 필드 값 동기화
+  React.useEffect(() => {
+    if (selectedNodes && selectedNodes.length > 0) {
+      const first = selectedNodes[0];
+      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
+      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+      const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+      if (wEl && typeof first.width === 'number') {
+        wEl.value = String(first.width);
+      }
+      if (hEl && typeof first.height === 'number') {
+        hEl.value = String(first.height);
+      }
+      if (rEl && typeof first.cornerRadius === 'number') {
+        rEl.value = String(first.cornerRadius);
+      }
+    }
+  }, [selectedNodes]);
+
   const cfg = lastNodeConfig;
 
   // 현재 노드의 W, H와 일치하는 프리셋 확인
@@ -220,7 +239,9 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
           </div>
           <div className="input-scrubber-box">
             <svg data-tooltip="Corner radius" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z" fill="currentColor"/></svg>
-            <input type="number" id="input-size-radius" defaultValue={0} min={0} max={20}
+            <input type="number" id="input-size-radius"
+              defaultValue={typeof selectedNodes[0]?.cornerRadius === 'number' ? selectedNodes[0].cornerRadius : (cfg.cornerRadius || 0)}
+              min={0} max={20}
               onChange={handleRChange}
               onBlur={triggerApply}
               onKeyDown={e => e.key === 'Enter' && triggerApply()} />

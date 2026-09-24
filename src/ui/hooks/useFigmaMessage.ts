@@ -36,10 +36,12 @@ export function useFigmaMessage() {
             const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
             const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
             const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+            const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
             if (titleEl) titleEl.value = node.title || node.name || 'Untitled';
             if (descEl && node.description) descEl.value = node.description;
             if (wEl && node.width) wEl.value = String(node.width);
             if (hEl && node.height) hEl.value = String(node.height);
+            if (rEl && typeof node.cornerRadius === 'number') rEl.value = String(node.cornerRadius);
 
             if (node.flowNodeType) {
               setUIState({ selectedNodeType: node.flowNodeType });
@@ -51,7 +53,14 @@ export function useFigmaMessage() {
             if (hugValEl && node.hugHeight) hugValEl.textContent = String(node.hugHeight);
 
             if (node.sizeMode) {
-              setLastNodeConfig({ sizeMode: node.sizeMode, width: node.width, height: node.height });
+              setLastNodeConfig({
+                sizeMode: node.sizeMode,
+                width: node.width,
+                height: node.height,
+                cornerRadius: node.cornerRadius ?? 0,
+              });
+            } else if (typeof node.cornerRadius === 'number') {
+              setLastNodeConfig({ cornerRadius: node.cornerRadius });
             }
 
             // 상태(status) 복원
@@ -69,6 +78,22 @@ export function useFigmaMessage() {
               if (toggleEl) toggleEl.checked = false;
               const statusOptionsEl = document.getElementById('status-options');
               if (statusOptionsEl) statusOptionsEl.classList.remove('active');
+            }
+
+            // Figma Screen Link 복원
+            const figmaLink = node.figmaLink || '';
+            if (figmaLink) {
+              setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
+              const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
+              if (linkToggleEl) linkToggleEl.checked = true;
+              const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
+              if (linkUrlEl) linkUrlEl.value = figmaLink;
+            } else {
+              setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: '' });
+              const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
+              if (linkToggleEl) linkToggleEl.checked = false;
+              const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
+              if (linkUrlEl) linkUrlEl.value = '';
             }
           }
           break;

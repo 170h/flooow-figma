@@ -16,11 +16,11 @@ export function AppearancePanel(_props?: any) {
       <hr className="section-divider" />
       <StyleSection />
       <hr className="section-divider" />
-      <ElevationSection />
-      <hr className="section-divider" />
       <StatusSection />
       <hr className="section-divider" />
       <StepBadgesSection />
+      <hr className="section-divider" />
+      <ElevationSection />
     </>
   );
 }
