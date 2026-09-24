@@ -193,6 +193,7 @@ export type PluginAction =
   | { type: 'ADD_STEP_BADGES'; startNumber?: number; corner?: string; shape?: string }
   | { type: 'REMOVE_STEP_BADGES' }
   | { type: 'SET_STATUS'; status: WorkflowStatus }
+  | { type: 'SET_ELEVATION'; level: number | null }
   | { type: 'GET_STATUS_LIST' }
   | { type: 'FOCUS_FRAME'; nodeId: string }
   | { type: 'CREATE_TEMPLATE'; templateType: 'user_flow' | 'screen_spec' | 'feature_roadmap' }
@@ -257,6 +258,8 @@ export interface SelectedNodeInfo {
   stepNumber?: number;
   badgeCorner?: string;
   badgeShape?: string;
+  elevationOn?: boolean;
+  elevation?: number;
 }
 
 export type CoreToUIMessage =

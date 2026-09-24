@@ -500,6 +500,108 @@
     themeColors: true,
     title: "UI Flow Diagram"
   });
+  var ELEVATION_EFFECTS = {
+    0: [
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.15 },
+        offset: { x: 0, y: 1 },
+        radius: 3,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.2 },
+        offset: { x: 0, y: 0 },
+        radius: 1,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ],
+    1: [
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.1 },
+        offset: { x: 0, y: 1 },
+        radius: 3,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.1 },
+        offset: { x: 0, y: 3 },
+        radius: 8,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ],
+    2: [
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.08 },
+        offset: { x: 0, y: 2 },
+        radius: 4,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.14 },
+        offset: { x: 0, y: 5 },
+        radius: 12,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ],
+    3: [
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.12 },
+        offset: { x: 0, y: 3 },
+        radius: 6,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.15 },
+        offset: { x: 0, y: 10 },
+        radius: 18,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ],
+    4: [
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.14 },
+        offset: { x: 0, y: 4 },
+        radius: 8,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.2 },
+        offset: { x: 0, y: 14 },
+        radius: 26,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ]
+  };
   async function loadRequiredFonts() {
     await Promise.all([
       figma.loadFontAsync({ family: "Inter", style: "Regular" }),
@@ -881,7 +983,9 @@
         sizeMode,
         stepNumber: node.getPluginData("step_number") ? parseInt(node.getPluginData("step_number"), 10) : void 0,
         badgeCorner: node.getPluginData("badge_corner") || void 0,
-        badgeShape: node.getPluginData("badge_shape") || void 0
+        badgeShape: node.getPluginData("badge_shape") || void 0,
+        elevationOn: node.getPluginData("node_elevation") !== "",
+        elevation: node.getPluginData("node_elevation") !== "" ? parseInt(node.getPluginData("node_elevation"), 10) : void 0
       };
     });
     let currentStatus;
@@ -1200,15 +1304,30 @@
       stepBadge.name = `[Step] ${stepNumber}`;
       card.appendChild(stepBadge);
       stepBadge.layoutPositioning = "ABSOLUTE";
-      stepBadge.x = -8;
-      stepBadge.y = -8;
-      stepBadge.resize(24, 24);
-      stepBadge.primaryAxisSizingMode = "FIXED";
-      stepBadge.counterAxisSizingMode = "FIXED";
-      stepBadge.cornerRadius = 0;
       stepBadge.layoutMode = "HORIZONTAL";
       stepBadge.primaryAxisAlignItems = "CENTER";
       stepBadge.counterAxisAlignItems = "CENTER";
+      stepBadge.paddingLeft = 7;
+      stepBadge.paddingRight = 7;
+      stepBadge.paddingTop = 0;
+      stepBadge.paddingBottom = 0;
+      try {
+        stepBadge.minWidth = 24;
+        stepBadge.minHeight = 24;
+        stepBadge.maxHeight = 24;
+      } catch (e) {
+      }
+      stepBadge.counterAxisSizingMode = "FIXED";
+      stepBadge.primaryAxisSizingMode = "AUTO";
+      stepBadge.resize(24, 24);
+      const bShape = card.getPluginData("badge_shape");
+      if (bShape === "Circle") {
+        stepBadge.cornerRadius = 999;
+      } else if (bShape === "RoundBox") {
+        stepBadge.cornerRadius = 5;
+      } else {
+        stepBadge.cornerRadius = 0;
+      }
       stepBadge.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.14 } }];
       stepBadge.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
       stepBadge.strokeWeight = 1.5;
@@ -1221,6 +1340,33 @@
       numText.textAutoResize = "WIDTH_AND_HEIGHT";
       numText.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
       stepBadge.appendChild(numText);
+      const bCorner = card.getPluginData("badge_corner");
+      const bw = Math.max(24, Math.round(stepBadge.width));
+      const bh = 24;
+      if (bCorner === "TOP_RIGHT") {
+        stepBadge.x = card.width - bw + 8;
+        stepBadge.y = -8;
+        stepBadge.constraints = { horizontal: "MAX", vertical: "MIN" };
+      } else if (bCorner === "BOTTOM_LEFT") {
+        stepBadge.x = -8;
+        stepBadge.y = card.height - bh + 8;
+        stepBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
+      } else if (bCorner === "BOTTOM_RIGHT") {
+        stepBadge.x = card.width - bw + 8;
+        stepBadge.y = card.height - bh + 8;
+        stepBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+      } else {
+        stepBadge.x = -8;
+        stepBadge.y = -8;
+        stepBadge.constraints = { horizontal: "MIN", vertical: "MIN" };
+      }
+    }
+    const elevData = shape.getPluginData("node_elevation");
+    if (elevData !== "") {
+      const elev = parseInt(elevData, 10);
+      card.setPluginData("node_elevation", elevData);
+      card.effects = ELEVATION_EFFECTS[elev] || [];
+      card.clipsContent = false;
     }
     card.setPluginData("is_flow_node", "true");
     card.setPluginData("schema_version", "2");
@@ -1352,6 +1498,11 @@
           statusBadge.x = card.width - statusBadge.width - 10;
           statusBadge.y = card.height - statusBadge.height - 10;
         }
+      }
+      if (typeof payload.elevation === "number") {
+        card.setPluginData("node_elevation", `${payload.elevation}`);
+        card.effects = ELEVATION_EFFECTS[payload.elevation] || [];
+        card.clipsContent = false;
       }
       const selection = figma.currentPage.selection;
       if (selection.length > 0) {
@@ -1516,6 +1667,14 @@
       card.setPluginData("node_height", "");
       if (payload.theme) card.setPluginData("node_theme", payload.theme);
       if (payload.nodeType) card.setPluginData("node_type", payload.nodeType);
+      if (typeof payload.elevation === "number") {
+        card.setPluginData("node_elevation", `${payload.elevation}`);
+        card.effects = ELEVATION_EFFECTS[payload.elevation] || [];
+        card.clipsContent = false;
+      } else if (payload.elevation === null) {
+        card.setPluginData("node_elevation", "");
+        card.effects = [];
+      }
       figma.currentPage.selection = [card];
       handleSelectionChange();
       notify(`[${title}] \uB178\uB4DC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, "success");
@@ -2121,6 +2280,36 @@
       notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 [${cfg.label}] \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uBD80\uCC29\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
     }
   }
+  async function applyElevationToSelected(level) {
+    const selection = figma.currentPage.selection;
+    if (selection.length === 0) {
+      notify("\uC5D8\uB9AC\uBCA0\uC774\uC158\uC744 \uC801\uC6A9\uD560 \uC694\uC18C\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+      return;
+    }
+    for (const rawNode of selection) {
+      let flowNode = findFlowNode(rawNode) || rawNode;
+      if (flowNode.type === "SHAPE_WITH_TEXT") {
+        flowNode = await convertShapeToFrameNode(flowNode);
+      }
+      if (flowNode.type === "FRAME") {
+        const card = flowNode;
+        if (level === null || level === void 0) {
+          card.setPluginData("node_elevation", "");
+          card.effects = [];
+        } else {
+          card.setPluginData("node_elevation", `${level}`);
+          card.effects = ELEVATION_EFFECTS[level] || [];
+          card.clipsContent = false;
+        }
+      }
+    }
+    handleSelectionChange();
+    if (level === null || level === void 0) {
+      notify(`${selection.length}\uAC1C \uB178\uB4DC\uC758 \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
+    } else {
+      notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 Level ${level} \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
+    }
+  }
   async function addStepBadges(startNumber = 1, corner = "TOP_LEFT", shape = "Square") {
     const rawSelection = [...figma.currentPage.selection];
     if (rawSelection.length === 0) {
@@ -2152,12 +2341,6 @@
       if (!stepBadge) {
         stepBadge = figma.createFrame();
         card.appendChild(stepBadge);
-        stepBadge.resize(24, 24);
-        stepBadge.primaryAxisSizingMode = "FIXED";
-        stepBadge.counterAxisSizingMode = "FIXED";
-        stepBadge.layoutMode = "HORIZONTAL";
-        stepBadge.primaryAxisAlignItems = "CENTER";
-        stepBadge.counterAxisAlignItems = "CENTER";
         stepBadge.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.14 } }];
         stepBadge.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
         stepBadge.strokeWeight = 1.5;
@@ -2175,15 +2358,37 @@
       if (card.layoutMode !== "NONE") {
         stepBadge.layoutPositioning = "ABSOLUTE";
       }
+      stepBadge.layoutMode = "HORIZONTAL";
+      stepBadge.primaryAxisAlignItems = "CENTER";
+      stepBadge.counterAxisAlignItems = "CENTER";
+      stepBadge.paddingLeft = 7;
+      stepBadge.paddingRight = 7;
+      stepBadge.paddingTop = 0;
+      stepBadge.paddingBottom = 0;
+      try {
+        stepBadge.minWidth = 24;
+        stepBadge.minHeight = 24;
+        stepBadge.maxHeight = 24;
+      } catch (e) {
+      }
+      stepBadge.counterAxisSizingMode = "FIXED";
+      stepBadge.primaryAxisSizingMode = "AUTO";
+      stepBadge.resize(Math.max(24, stepBadge.width || 24), 24);
       if (shape === "Circle") {
-        stepBadge.cornerRadius = 12;
+        stepBadge.cornerRadius = 999;
       } else if (shape === "RoundBox") {
         stepBadge.cornerRadius = 5;
       } else {
         stepBadge.cornerRadius = 0;
       }
-      const bw = stepBadge.width || 24;
-      const bh = stepBadge.height || 24;
+      stepBadge.name = `[Step] ${currentNum}`;
+      stepBadge.visible = true;
+      const numText = stepBadge.children.find((c) => c.type === "TEXT");
+      if (numText) {
+        await safeSetCharacters(numText, `${currentNum}`);
+      }
+      const bw = Math.max(24, Math.round(stepBadge.width));
+      const bh = 24;
       if (corner === "TOP_RIGHT") {
         stepBadge.x = card.width - bw + 8;
         stepBadge.y = -8;
@@ -2200,12 +2405,6 @@
         stepBadge.x = -8;
         stepBadge.y = -8;
         stepBadge.constraints = { horizontal: "MIN", vertical: "MIN" };
-      }
-      stepBadge.name = `[Step] ${currentNum}`;
-      stepBadge.visible = true;
-      const numText = stepBadge.children.find((c) => c.type === "TEXT");
-      if (numText) {
-        await safeSetCharacters(numText, `${currentNum}`);
       }
       currentNum++;
     }
@@ -2412,6 +2611,9 @@
         break;
       case "SET_STATUS":
         await applyStatusToSelected(msg.status);
+        break;
+      case "SET_ELEVATION":
+        await applyElevationToSelected(msg.level);
         break;
       case "ADD_STEP_BADGES":
         await addStepBadges(msg.startNumber || 1, msg.corner || "TOP_LEFT", msg.shape || "Square");

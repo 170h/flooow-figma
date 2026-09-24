@@ -33,6 +33,11 @@ export interface NodeInfo {
   connectorTargetNodeName?: string;
   connectorSourceMagnet?: string;
   connectorTargetMagnet?: string;
+  stepNumber?: number;
+  badgeCorner?: string;
+  badgeShape?: string;
+  elevationOn?: boolean;
+  elevation?: number;
 }
 
 export interface LastNodeConfig {
@@ -122,6 +127,7 @@ export interface AppContextValue {
   // 핵심 함수들
   applyCurrentNodeState: (overrideSizeMode?: string) => void;
   applyStatusToNode: (status?: string) => void;
+  applyElevationToNodes: (level: number | null) => void;
   applyStepBadges: (startNumber?: number, corner?: string, shape?: string) => void;
   removeStepBadgesFromNodes: () => void;
   applyCurrentConnectorState: () => void;
@@ -333,6 +339,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     parent.postMessage({ pluginMessage: { type: 'SET_STATUS', status: status || '' } }, '*');
   }, []);
 
+  const applyElevationToNodes = useCallback((level: number | null) => {
+    setLastNodeConfig({
+      elevationOn: level !== null,
+      elevation: level ?? 0,
+    });
+    setUIState({
+      selectedElevation: level ?? 0,
+    });
+    parent.postMessage({
+      pluginMessage: {
+        type: 'SET_ELEVATION',
+        level,
+      }
+    }, '*');
+  }, [setLastNodeConfig, setUIState]);
+
   const applyStepBadges = useCallback((startNumber: number = 1, corner?: string, shape?: string) => {
     const nodes = selectedNodesRef.current;
     if (!nodes || nodes.length === 0) return;
@@ -543,8 +565,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // 일반 노드 선택: 이전 노드에서 마지막으로 선택했던 탭으로 복원
       const targetTab = lastNodeTabRef.current || 'node';
       setCurrentTab(targetTab);
+
+      // 선택된 노드의 엘리베이션 상태 동기화
+      const flowNodes = nodes.filter(n => n && (n.isFlowNode || (!n.isConnector && n.flowNodeType)));
+      if (flowNodes.length > 0) {
+        const first = flowNodes[0];
+        const eOn = Boolean(first.elevationOn);
+        const eLevel = typeof first.elevation === 'number' ? first.elevation : 0;
+        setLastNodeConfig({ elevationOn: eOn, elevation: eLevel });
+        setUIState({ selectedElevation: eLevel });
+      }
     }
-  }, [closeAllPopovers, setCurrentTab]);
+  }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState]);
 
   const value: AppContextValue = {
     selectedNodes,
@@ -574,6 +606,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPhaseModalEditingId,
     applyCurrentNodeState,
     applyStatusToNode,
+    applyElevationToNodes,
     applyStepBadges,
     removeStepBadgesFromNodes,
     applyCurrentConnectorState,

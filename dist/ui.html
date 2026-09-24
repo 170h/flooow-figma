@@ -3840,7 +3840,7 @@
             }
             return dispatcher.useContext(Context);
           }
-          function useState13(initialState) {
+          function useState12(initialState) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useState(initialState);
           }
@@ -4643,7 +4643,7 @@
           exports.useMemo = useMemo;
           exports.useReducer = useReducer;
           exports.useRef = useRef7;
-          exports.useState = useState13;
+          exports.useState = useState12;
           exports.useSyncExternalStore = useSyncExternalStore;
           exports.useTransition = useTransition;
           exports.version = ReactVersion;
@@ -5139,9 +5139,9 @@
           if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function") {
             __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
           }
-          var React16 = require_react();
+          var React15 = require_react();
           var Scheduler = require_scheduler();
-          var ReactSharedInternals = React16.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           var suppressWarning = false;
           function setSuppressWarning(newSuppressWarning) {
             {
@@ -6748,7 +6748,7 @@
             {
               if (props.value == null) {
                 if (typeof props.children === "object" && props.children !== null) {
-                  React16.Children.forEach(props.children, function(child) {
+                  React15.Children.forEach(props.children, function(child) {
                     if (child == null) {
                       return;
                     }
@@ -26344,7 +26344,7 @@
       if (true) {
         (function() {
           "use strict";
-          var React16 = require_react();
+          var React15 = require_react();
           var REACT_ELEMENT_TYPE = Symbol.for("react.element");
           var REACT_PORTAL_TYPE = Symbol.for("react.portal");
           var REACT_FRAGMENT_TYPE = Symbol.for("react.fragment");
@@ -26370,7 +26370,7 @@
             }
             return null;
           }
-          var ReactSharedInternals = React16.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           function error(format) {
             {
               {
@@ -27419,6 +27419,21 @@
       if (!nodes || nodes.length === 0) return;
       parent.postMessage({ pluginMessage: { type: "SET_STATUS", status: status || "" } }, "*");
     }, []);
+    const applyElevationToNodes = (0, import_react.useCallback)((level) => {
+      setLastNodeConfig({
+        elevationOn: level !== null,
+        elevation: level ?? 0
+      });
+      setUIState({
+        selectedElevation: level ?? 0
+      });
+      parent.postMessage({
+        pluginMessage: {
+          type: "SET_ELEVATION",
+          level
+        }
+      }, "*");
+    }, [setLastNodeConfig, setUIState]);
     const applyStepBadges = (0, import_react.useCallback)((startNumber = 1, corner, shape) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
@@ -27614,8 +27629,16 @@
       } else {
         const targetTab = lastNodeTabRef.current || "node";
         setCurrentTab(targetTab);
+        const flowNodes = nodes.filter((n) => n && (n.isFlowNode || !n.isConnector && n.flowNodeType));
+        if (flowNodes.length > 0) {
+          const first = flowNodes[0];
+          const eOn = Boolean(first.elevationOn);
+          const eLevel = typeof first.elevation === "number" ? first.elevation : 0;
+          setLastNodeConfig({ elevationOn: eOn, elevation: eLevel });
+          setUIState({ selectedElevation: eLevel });
+        }
       }
-    }, [closeAllPopovers, setCurrentTab]);
+    }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState]);
     const value = {
       selectedNodes,
       setSelectedNodes,
@@ -27644,6 +27667,7 @@
       setPhaseModalEditingId,
       applyCurrentNodeState,
       applyStatusToNode,
+      applyElevationToNodes,
       applyStepBadges,
       removeStepBadgesFromNodes,
       applyCurrentConnectorState,
@@ -27657,7 +27681,7 @@
   }
 
   // src/ui/App.tsx
-  var import_react17 = __toESM(require_react());
+  var import_react16 = __toESM(require_react());
 
   // src/ui/hooks/useFigmaMessage.ts
   var import_react2 = __toESM(require_react());
@@ -28296,32 +28320,31 @@
   }
 
   // src/ui/components/appearance/ElevationSection.tsx
-  var import_react6 = __toESM(require_react());
   var import_jsx_runtime9 = __toESM(require_jsx_runtime());
   function ElevationSection() {
-    const { uiState, setUIState, setLastNodeConfig, applyCurrentNodeState, autoResizeWindow } = useApp();
-    const [isOn, setIsOn] = (0, import_react6.useState)(false);
-    const { selectedElevation } = uiState;
+    const { uiState, lastNodeConfig, applyElevationToNodes, autoResizeWindow } = useApp();
+    const isOn = Boolean(lastNodeConfig.elevationOn);
+    const selectedElevation = typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
     function handleToggle(checked) {
-      setIsOn(checked);
-      setLastNodeConfig({ elevationOn: checked });
-      const el = document.getElementById("elevation-options");
-      if (el) el.classList.toggle("active", checked);
-      applyCurrentNodeState();
+      applyElevationToNodes(checked ? selectedElevation : null);
       autoResizeWindow();
     }
     function selectElevation(level) {
-      setUIState({ selectedElevation: level });
-      setLastNodeConfig({ elevation: level });
-      document.querySelectorAll(".elevation-card").forEach((c) => c.classList.remove("selected"));
-      document.querySelector(`.elev-${level}`)?.classList.add("selected");
-      applyCurrentNodeState();
+      applyElevationToNodes(level);
     }
     return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "section-header toggle-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "section-title", children: "Elevation" }),
         /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "switch", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("input", { type: "checkbox", id: "toggle-elevation", checked: isOn, onChange: (e) => handleToggle(e.target.checked) }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+            "input",
+            {
+              type: "checkbox",
+              id: "toggle-elevation",
+              checked: isOn,
+              onChange: (e) => handleToggle(e.target.checked)
+            }
+          ),
           /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "slider" })
         ] })
       ] }),
@@ -28339,7 +28362,7 @@
   }
 
   // src/ui/components/appearance/StatusSection.tsx
-  var import_react7 = __toESM(require_react());
+  var import_react6 = __toESM(require_react());
   var import_jsx_runtime10 = __toESM(require_jsx_runtime());
   var STATUSES = [
     { id: "draft", label: "Draft", color: "#9CA3AF" },
@@ -28360,9 +28383,9 @@
       selectedNodes,
       autoResizeWindow
     } = useApp();
-    const [isOn, setIsOn] = (0, import_react7.useState)(false);
+    const [isOn, setIsOn] = (0, import_react6.useState)(false);
     const { selectedStatus } = uiState;
-    import_react7.default.useEffect(() => {
+    import_react6.default.useEffect(() => {
       if (selectedNodes && selectedNodes.length === 1) {
         const node = selectedNodes[0];
         if (node.status) {
@@ -28422,7 +28445,7 @@
   }
 
   // src/ui/components/appearance/StepBadgesSection.tsx
-  var import_react8 = __toESM(require_react());
+  var import_react7 = __toESM(require_react());
   var import_jsx_runtime11 = __toESM(require_jsx_runtime());
   var BADGE_CORNERS = [
     { pos: "TOP_LEFT", title: "Top-Left", svg: '<path d="M15.98 7.5H9.93C9.71 6.64 8.93 6 8 6C6.9 6 6 6.9 6 8C6 8.92 6.63 9.69 7.48 9.92V16C7.48 16.28 7.7 16.5 7.98 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM7 8C7 7.45 7.45 7 8 7C8.55 7 9 7.45 9 8C9 8.55 8.55 9 8 9C7.45 9 7 8.55 7 8ZM15.48 15.5H8.48V9.94C9.19 9.76 9.75 9.21 9.93 8.5H15.48V15.5Z" fill="currentColor"/>' },
@@ -28441,10 +28464,10 @@
       selectedNodes,
       autoResizeWindow
     } = useApp();
-    const [isOn, setIsOn] = (0, import_react8.useState)(false);
+    const [isOn, setIsOn] = (0, import_react7.useState)(false);
     const { selectedBadgeCorner = "TOP_LEFT", selectedBadgeShape = "Square" } = uiState;
     const isMultiMode = selectedNodes.length > 1;
-    (0, import_react8.useEffect)(() => {
+    (0, import_react7.useEffect)(() => {
       if (selectedNodes && selectedNodes.length > 0) {
         const hasStep = selectedNodes.some((n) => n.stepNumber !== void 0);
         setIsOn(hasStep);
@@ -28577,14 +28600,14 @@
   }
 
   // src/ui/components/connection/ConnectionPanel.tsx
-  var import_react13 = __toESM(require_react());
+  var import_react12 = __toESM(require_react());
 
   // src/ui/components/connection/FigmaLinkSection.tsx
-  var import_react9 = __toESM(require_react());
+  var import_react8 = __toESM(require_react());
   var import_jsx_runtime13 = __toESM(require_jsx_runtime());
   function FigmaLinkSection() {
     const { autoResizeWindow, setLastNodeConfig } = useApp();
-    const [isOn, setIsOn] = (0, import_react9.useState)(false);
+    const [isOn, setIsOn] = (0, import_react8.useState)(false);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastNodeConfig({ singleLinkOn: checked });
@@ -28620,7 +28643,7 @@
   }
 
   // src/ui/components/connection/ConnectSection.tsx
-  var import_react10 = __toESM(require_react());
+  var import_react9 = __toESM(require_react());
   var import_jsx_runtime14 = __toESM(require_jsx_runtime());
   var TERMINAL_ICONS_BTN = {
     start: {
@@ -28646,10 +28669,10 @@
   function ConnectSection() {
     const { uiState, setUIState, applyCurrentConnectorState } = useApp();
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiState;
-    const [startTermPopupOpen, setStartTermPopupOpen] = import_react10.default.useState(false);
-    const [endTermPopupOpen, setEndTermPopupOpen] = import_react10.default.useState(false);
-    const [startTermVal, setStartTermVal] = import_react10.default.useState("NONE");
-    const [endTermVal, setEndTermVal] = import_react10.default.useState("ARROW");
+    const [startTermPopupOpen, setStartTermPopupOpen] = import_react9.default.useState(false);
+    const [endTermPopupOpen, setEndTermPopupOpen] = import_react9.default.useState(false);
+    const [startTermVal, setStartTermVal] = import_react9.default.useState("NONE");
+    const [endTermVal, setEndTermVal] = import_react9.default.useState("ARROW");
     function selectLinePattern(pattern, el = null) {
       setUIState({ selectedLinePattern: pattern });
       document.querySelectorAll(".line-style-btn").forEach((b) => b.classList.remove("active"));
@@ -28690,7 +28713,7 @@
       }
       if (value !== "MIXED") setTimeout(() => applyCurrentConnectorState(), 0);
     }
-    (0, import_react10.useEffect)(() => {
+    (0, import_react9.useEffect)(() => {
       const startIconEl = document.getElementById("icon-start-terminal");
       const endIconEl = document.getElementById("icon-end-terminal");
       if (startIconEl) startIconEl.innerHTML = TERMINAL_ICONS_BTN.start.NONE;
@@ -28907,12 +28930,12 @@
   }
 
   // src/ui/components/connection/LabelSection.tsx
-  var import_react11 = __toESM(require_react());
+  var import_react10 = __toESM(require_react());
   var import_jsx_runtime15 = __toESM(require_jsx_runtime());
   var LABEL_PRESETS = ["Text", "Yes", "No", "Success", "Error", "Next", "Back"];
   function LabelSection() {
     const { setLastConnectorConfig, applyCurrentConnectorState, autoResizeWindow } = useApp();
-    const [isOn, setIsOn] = (0, import_react11.useState)(false);
+    const [isOn, setIsOn] = (0, import_react10.useState)(false);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastConnectorConfig({ labelOn: checked });
@@ -28971,11 +28994,11 @@
   }
 
   // src/ui/components/connection/LinkSection.tsx
-  var import_react12 = __toESM(require_react());
+  var import_react11 = __toESM(require_react());
   var import_jsx_runtime16 = __toESM(require_jsx_runtime());
   function LinkSection() {
     const { setLastConnectorConfig, autoResizeWindow } = useApp();
-    const [isOn, setIsOn] = (0, import_react12.useState)(false);
+    const [isOn, setIsOn] = (0, import_react11.useState)(false);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastConnectorConfig({ linkOn: checked });
@@ -29021,7 +29044,7 @@
     const isSingleConn = count === 1 && allConnectors;
     const isMultiConn = count >= 2 && allConnectors;
     const isMultiMode = isSingleConn || isMultiConn || count >= 2;
-    (0, import_react13.useEffect)(() => {
+    (0, import_react12.useEffect)(() => {
       const anchorBox = document.getElementById("conn-anchor-preview-box");
       const linkDivider = document.getElementById("conn-link-divider");
       const linkSection = document.getElementById("conn-link-section-block");
@@ -29063,13 +29086,13 @@
   }
 
   // src/ui/components/shared/Tooltip.tsx
-  var import_react14 = __toESM(require_react());
+  var import_react13 = __toESM(require_react());
   var import_jsx_runtime18 = __toESM(require_jsx_runtime());
   function FigmaTooltip() {
-    const tooltipRef = (0, import_react14.useRef)(null);
-    const stateRef = (0, import_react14.useRef)({ visible: false, text: "", x: 0, y: 0 });
-    const showTimerRef = (0, import_react14.useRef)(null);
-    const show = (0, import_react14.useCallback)((target, text) => {
+    const tooltipRef = (0, import_react13.useRef)(null);
+    const stateRef = (0, import_react13.useRef)({ visible: false, text: "", x: 0, y: 0 });
+    const showTimerRef = (0, import_react13.useRef)(null);
+    const show = (0, import_react13.useCallback)((target, text) => {
       if (showTimerRef.current) clearTimeout(showTimerRef.current);
       showTimerRef.current = setTimeout(() => {
         const rect = target.getBoundingClientRect();
@@ -29090,12 +29113,12 @@
         tooltip.style.visibility = "visible";
       }, 600);
     }, []);
-    const hide = (0, import_react14.useCallback)(() => {
+    const hide = (0, import_react13.useCallback)(() => {
       if (showTimerRef.current) clearTimeout(showTimerRef.current);
       const tooltip = tooltipRef.current;
       if (tooltip) tooltip.style.display = "none";
     }, []);
-    (0, import_react14.useEffect)(() => {
+    (0, import_react13.useEffect)(() => {
       const handleMouseOver = (e) => {
         const target = e.target.closest("[data-tooltip]");
         if (target) show(target, target.getAttribute("data-tooltip") || "");
@@ -29201,16 +29224,16 @@
   }
 
   // src/ui/components/modals/PhaseModal.tsx
-  var import_react15 = __toESM(require_react());
+  var import_react14 = __toESM(require_react());
   var import_jsx_runtime21 = __toESM(require_jsx_runtime());
   var CLOSE_SVG = `<path d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z" fill="currentColor"/>`;
   function PhaseModal({ editingPhase, onSave, onClose }) {
     const { activeModal } = useApp();
     const isOpen = activeModal === "phase";
-    const [name, setName] = (0, import_react15.useState)(editingPhase?.name || "");
-    const [color, setColor] = (0, import_react15.useState)(editingPhase?.color || "#EA2039");
-    const [hexInput, setHexInput] = (0, import_react15.useState)((editingPhase?.color || "#EA2039").replace("#", ""));
-    const [colorPanelOpen, setColorPanelOpen] = (0, import_react15.useState)(false);
+    const [name, setName] = (0, import_react14.useState)(editingPhase?.name || "");
+    const [color, setColor] = (0, import_react14.useState)(editingPhase?.color || "#EA2039");
+    const [hexInput, setHexInput] = (0, import_react14.useState)((editingPhase?.color || "#EA2039").replace("#", ""));
+    const [colorPanelOpen, setColorPanelOpen] = (0, import_react14.useState)(false);
     const HUE_COLORS = [
       "#EA2039",
       "#EB4C46",
@@ -29334,17 +29357,17 @@
   }
 
   // src/ui/components/modals/SizeModal.tsx
-  var import_react16 = __toESM(require_react());
+  var import_react15 = __toESM(require_react());
   var import_jsx_runtime22 = __toESM(require_jsx_runtime());
   var CLOSE_SVG2 = `<path d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z" fill="currentColor"/>`;
   function SizeModal({ mode, editingPreset, onSave, onClose }) {
     const { activeModal } = useApp();
     const isOpen = mode === "add" ? activeModal === "add-size" : activeModal === "edit-size";
-    const [name, setName] = (0, import_react16.useState)(editingPreset?.name || "");
-    const [w, setW] = (0, import_react16.useState)(editingPreset?.w ?? 375);
-    const [h, setH] = (0, import_react16.useState)(editingPreset?.h ?? 812);
-    const [radius, setRadius] = (0, import_react16.useState)(editingPreset?.radius ?? 0);
-    const [sizeMode, setSizeMode] = (0, import_react16.useState)(editingPreset?.sizeMode || "fixed");
+    const [name, setName] = (0, import_react15.useState)(editingPreset?.name || "");
+    const [w, setW] = (0, import_react15.useState)(editingPreset?.w ?? 375);
+    const [h, setH] = (0, import_react15.useState)(editingPreset?.h ?? 812);
+    const [radius, setRadius] = (0, import_react15.useState)(editingPreset?.radius ?? 0);
+    const [sizeMode, setSizeMode] = (0, import_react15.useState)(editingPreset?.sizeMode || "fixed");
     if (!isOpen) return null;
     function handleSave() {
       onSave({ name: name.trim() || "Custom", w, h, radius, sizeMode });
@@ -29475,18 +29498,18 @@
       showToast,
       autoResizeWindow
     } = useApp();
-    const [phases, setPhases] = (0, import_react17.useState)([
+    const [phases, setPhases] = (0, import_react16.useState)([
       { id: "phase-1", name: "Phase 1", color: "#EA2039" },
       { id: "phase-2", name: "Phase 2", color: "#8638E5" }
     ]);
-    const [editingPhase, setEditingPhase] = (0, import_react17.useState)(null);
+    const [editingPhase, setEditingPhase] = (0, import_react16.useState)(null);
     const nodeCount = selectedNodes.length;
     const allConnectors = nodeCount > 0 && selectedNodes.every((n) => n && n.isConnector);
     const isSingleConn = nodeCount === 1 && allConnectors;
     const isMultiConn = nodeCount >= 2 && allConnectors;
     const isConnSel = isSingleConn || isMultiConn;
     const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
-    (0, import_react17.useEffect)(() => {
+    (0, import_react16.useEffect)(() => {
       const tabNode = document.getElementById("tab-btn-node");
       const tabAppearance = document.getElementById("tab-btn-appearance");
       const tabConnection = document.getElementById("tab-btn-connection");
@@ -29506,7 +29529,7 @@
         tabConnection?.classList.remove("disabled");
       }
     }, [isConnSel, nodeCount, currentTab, setCurrentTab]);
-    (0, import_react17.useEffect)(() => {
+    (0, import_react16.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
     function switchTab(tabId) {
