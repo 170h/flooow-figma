@@ -2841,11 +2841,13 @@
     const isDarkBg = lum < 0.6;
     if (colorMode === "White") {
       stepBadge.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-      let borderCol = isDarkBg ? { r: 1, g: 1, b: 1 } : { r: 0.82, g: 0.84, b: 0.86 };
+      let borderCol = isDarkBg ? { r: 0.1, g: 0.1, b: 0.14 } : { r: 0.82, g: 0.84, b: 0.86 };
       if (hasNodeStroke && nodeStrokeColor) {
         borderCol = nodeStrokeColor;
       } else if (isColorHighSaturation(nodeBgColor)) {
         borderCol = nodeBgColor;
+      } else if (isDarkBg) {
+        borderCol = nodeBgColor.r === 0 && nodeBgColor.g === 0 && nodeBgColor.b === 0 ? { r: 0, g: 0, b: 0 } : { r: 0.1, g: 0.1, b: 0.14 };
       }
       stepBadge.strokes = [{ type: "SOLID", color: borderCol }];
       stepBadge.strokeWeight = 1.5;
@@ -2854,7 +2856,12 @@
       stepBadge.fills = [{ type: "SOLID", color: nodeBgColor }];
       let borderCol = isDarkBg ? { r: 1, g: 1, b: 1 } : { r: 0.82, g: 0.84, b: 0.86 };
       if (hasNodeStroke && nodeStrokeColor) {
-        borderCol = nodeStrokeColor;
+        const isStrokeBlack = nodeStrokeColor.r < 0.15 && nodeStrokeColor.g < 0.15 && nodeStrokeColor.b < 0.15;
+        if (isDarkBg && isStrokeBlack) {
+          borderCol = { r: 1, g: 1, b: 1 };
+        } else {
+          borderCol = nodeStrokeColor;
+        }
       }
       stepBadge.strokes = [{ type: "SOLID", color: borderCol }];
       stepBadge.strokeWeight = 1.5;

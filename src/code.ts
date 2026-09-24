@@ -2886,25 +2886,35 @@ function applyStepBadgeColors(
     // White: 배경은 흰색
     // 1) 노드 보더가 있는 경우: 노드의 보더 컬러
     // 2) 노드 보더가 0이고 노드 배경이 유채색(채도 높음): 노드의 배경색
-    // 3) 노드 보더가 0이고 노드 배경이 무채색인 경우: 어두우면 흰색, 밝으면 연그레이(#D1D5DB)로 분리
+    // 3) 노드 보더가 0이고 노드 배경이 검정/어두운 무채색인 경우: 검정색 보더
+    // 4) 노드 보더가 0이고 노드 배경이 밝은 무채색(흰색/연회색)인 경우: 연그레이(#D1D5DB)로 분리
     stepBadge.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
-    let borderCol: RGB = isDarkBg ? { r: 1, g: 1, b: 1 } : { r: 0.82, g: 0.84, b: 0.86 };
+    let borderCol: RGB = isDarkBg ? { r: 0.1, g: 0.1, b: 0.14 } : { r: 0.82, g: 0.84, b: 0.86 };
     if (hasNodeStroke && nodeStrokeColor) {
       borderCol = nodeStrokeColor;
     } else if (isColorHighSaturation(nodeBgColor)) {
       borderCol = nodeBgColor;
+    } else if (isDarkBg) {
+      borderCol = nodeBgColor.r === 0 && nodeBgColor.g === 0 && nodeBgColor.b === 0 ? { r: 0, g: 0, b: 0 } : { r: 0.1, g: 0.1, b: 0.14 };
     }
     stepBadge.strokes = [{ type: 'SOLID', color: borderCol }];
     stepBadge.strokeWeight = 1.5;
     numText.fills = [{ type: 'SOLID', color: { r: 0.1, g: 0.1, b: 0.14 } }];
   } else if (colorMode === 'Style') {
     // Style: 배경은 노드의 배경색
-    // 1) 노드 보더가 있는 경우: 노드의 보더 컬러
-    // 2) 노드 보더가 0인 경우: 노드 배경과 형태가 분리되도록 대비 보더 적용 (어두운/유채색 노드: 흰색 #FFFFFF, 밝은 노드: 연그레이 #D1D5DB)
+    // 1) 노드 보더가 있는 경우: 노드의 보더 컬러 (단, 노드 배경이 검정인데 보더도 검정이면 흰색으로 분리)
+    // 2) 노드 보더가 0인 경우:
+    //    - 노드 배경이 검정/어두운 톤인 경우: 흰색 (#FFFFFF) 보더 정의
+    //    - 노드 배경이 밝은 톤인 경우: 연그레이 (#D1D5DB) 보더 정의
     stepBadge.fills = [{ type: 'SOLID', color: nodeBgColor }];
     let borderCol: RGB = isDarkBg ? { r: 1, g: 1, b: 1 } : { r: 0.82, g: 0.84, b: 0.86 };
     if (hasNodeStroke && nodeStrokeColor) {
-      borderCol = nodeStrokeColor;
+      const isStrokeBlack = nodeStrokeColor.r < 0.15 && nodeStrokeColor.g < 0.15 && nodeStrokeColor.b < 0.15;
+      if (isDarkBg && isStrokeBlack) {
+        borderCol = { r: 1, g: 1, b: 1 };
+      } else {
+        borderCol = nodeStrokeColor;
+      }
     }
     stepBadge.strokes = [{ type: 'SOLID', color: borderCol }];
     stepBadge.strokeWeight = 1.5;

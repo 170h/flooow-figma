@@ -83,6 +83,8 @@ export function StepBadgesSection() {
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const isMultiMode = selectedNodes.length > 1;
+  // start number가 정의되어 있는지 여부 (빈 값이 아니고, Mixed가 아니며 유효한 숫자)
+  const isStartNumberDefined = !isMixed && stepNumText.trim() !== '' && !isNaN(parseInt(stepNumText, 10));
   const selectedBadgeCorner = uiState.selectedBadgeCorner || 'TOP_LEFT';
   const selectedBadgeShape = uiState.selectedBadgeShape || 'Square';
   const selectedBadgeColorMode: BadgeColorMode = uiState.selectedBadgeColorMode || 'Style';
@@ -121,20 +123,22 @@ function isHexDark(hex: string): boolean {
   const isDarkNode = isHexDark(nodeBgColorHex);
   const isHighSat = isHexHighSaturation(nodeBgColorHex);
 
-  // Style 모드 보더: 노드 보더가 있으면 노드 보더색, 보더 0이면 어두운/유채색 노드는 흰색(#FFFFFF), 밝은 노드는 #D1D5DB
-  const styleSwatchBorderColor = hasNodeStroke
+  const isStrokeBlack = firstNode?.strokeColorHex ? isHexDark(firstNode.strokeColorHex) : true;
+
+  // Style 모드 보더: 노드 보더가 있고 검정이 아니면 노드 보더색, 그 외(보더 0 또는 검정 보더) 어두운/검정 노드는 흰색(#FFFFFF), 밝은 노드는 #D1D5DB
+  const styleSwatchBorderColor = (hasNodeStroke && !(isDarkNode && isStrokeBlack))
     ? firstNode?.strokeColorHex!
     : isDarkNode
     ? '#FFFFFF'
     : '#D1D5DB';
 
-  // White 모드 보더: 노드 보더가 있으면 노드 보더색, 보더 0이고 채도가 높으면 노드 배경색, 어두운 무채색은 흰색, 밝은 무채색은 #D1D5DB
+  // White 모드 보더: 노드 보더가 있으면 노드 보더색, 보더 0이고 채도가 높으면 노드 배경색, 검정/어두운 무채색은 검정색(#18181B), 밝은 무채색은 #D1D5DB
   const whiteSwatchBorderColor = hasNodeStroke
     ? firstNode?.strokeColorHex!
     : isHighSat
     ? nodeBgColorHex
     : isDarkNode
-    ? '#FFFFFF'
+    ? '#18181B'
     : '#D1D5DB';
 
   // 선택된 노드의 상태 동기화
@@ -435,86 +439,86 @@ function isHexDark(hex: string): boolean {
 
           {/* Row 2: 컬러 드롭다운 (w: 100) + 셰이프 선택 (Square, Circle, Round Box) */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
-            {/* 좌측 Color Dropdown */}
-            <div ref={dropdownRef} style={{ position: 'relative', width: '100px', flexShrink: 0 }}>
+            {/* 좌측 Color Dropdown (피그마 기본 표준 드롭다운 컴포넌트) */}
+            <div
+              ref={dropdownRef}
+              className="figma-dropdown-wrapper"
+              style={{ width: '100px', flexShrink: 0 }}
+            >
               <button
                 type="button"
+                className={`figma-dropdown-btn${colorDropdownOpen ? ' active' : ''}`}
                 onClick={() => setColorDropdownOpen(!colorDropdownOpen)}
-                style={{
-                  width: '100%',
-                  height: '24px',
-                  backgroundColor: '#F3F4F6',
-                  borderRadius: '6px',
-                  padding: '0 8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  border: 'none',
-                  cursor: 'pointer',
-                  outline: 'none',
-                }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {renderColorSwatch(selectedBadgeColorMode)}
-                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#111827' }}>
+                <div className="figma-dropdown-btn-content">
+                  <span className="figma-dropdown-current-icon">
+                    {renderColorSwatch(selectedBadgeColorMode, 14)}
+                  </span>
+                  <span className="figma-dropdown-current-text">
                     {selectedBadgeColorMode}
                   </span>
                 </div>
-                {/* Chevron Down 아이콘 */}
-                <svg width="8" height="5" viewBox="0 0 8 5" fill="none" style={{ color: '#6B7280' }}>
-                  <path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  className="figma-dropdown-chevron-icon"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  style={{
+                    transform: colorDropdownOpen ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.15s ease',
+                  }}
+                >
+                  <path
+                    d="M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z"
+                    fill="currentColor"
+                  />
                 </svg>
               </button>
 
-              {/* 드롭다운 메뉴 */}
+              {/* 피그마 기본 스타일의 드롭다운 메뉴 */}
               {colorDropdownOpen && (
                 <div
+                  className="figma-dropdown-menu active"
                   style={{
                     position: 'absolute',
-                    top: '28px',
+                    top: 'calc(100% + 4px)',
                     left: 0,
-                    width: '110px',
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: '6px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
-                    padding: '4px',
-                    zIndex: 100,
+                    right: 'auto',
+                    width: '130px',
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
+                    zIndex: 1050,
                   }}
                 >
                   {COLOR_OPTIONS.map(opt => {
                     const active = selectedBadgeColorMode === opt.id;
                     return (
-                      <button
+                      <div
                         key={opt.id}
-                        type="button"
+                        className={`figma-dropdown-item${active ? ' selected' : ''}`}
+                        style={{ width: '100%', cursor: 'pointer' }}
                         onClick={() => handleColorSelect(opt.id)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '5px 8px',
-                          borderRadius: '4px',
-                          border: 'none',
-                          backgroundColor: active ? '#F3F4F6' : 'transparent',
-                          cursor: 'pointer',
-                          width: '100%',
-                          textAlign: 'left',
-                        }}
-                        onMouseEnter={e => {
-                          if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = '#F9FAFB';
-                        }}
-                        onMouseLeave={e => {
-                          if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-                        }}
                       >
-                        {renderColorSwatch(opt.id, 12)}
-                        <span style={{ fontSize: '11px', fontWeight: active ? 600 : 500, color: '#111827' }}>
+                        {/* 선두 체크 슬롯 (선택된 항목일 때 체크 아이콘) */}
+                        <span className="figma-dropdown-check-slot" style={{ width: '18px' }}>
+                          {active && (
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                              <path
+                                d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          )}
+                        </span>
+                        {/* 스와치 */}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '6px' }}>
+                          {renderColorSwatch(opt.id, 12)}
+                        </span>
+                        {/* 라벨 */}
+                        <span className="figma-dropdown-label" style={{ fontSize: '11px', fontWeight: active ? 600 : 500 }}>
                           {opt.label}
                         </span>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -525,12 +529,13 @@ function isHexDark(hex: string): boolean {
             <div
               style={{
                 flex: 1,
-                height: '24px',
+                height: '28px',
                 backgroundColor: '#F3F4F6',
                 borderRadius: '6px',
                 padding: '2px',
                 display: 'flex',
                 alignItems: 'center',
+                boxSizing: 'border-box',
               }}
             >
               {BADGE_SHAPES.map(s => {
@@ -542,7 +547,7 @@ function isHexDark(hex: string): boolean {
                     onClick={() => handleShapeSelect(s.id)}
                     style={{
                       flex: 1,
-                      height: '20px',
+                      height: '24px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -566,34 +571,37 @@ function isHexDark(hex: string): boolean {
             </div>
           </div>
 
-          {/* Row 3 (복수 노드 선택 시에만 표시): 우측 정렬 보라색 [✨ Add Step Badges] 버튼 */}
+          {/* Row 3 (복수 노드 선택 시 표시): 좌측 설명 문구 + 우측 24px 디폴트 버튼 사이즈 [✨ Add Step Badges] */}
           {isMultiMode && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginTop: '4px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                marginTop: '4px',
+                gap: '8px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '9px',
+                  lineHeight: '1.3',
+                  color: 'var(--color-text-secondary, #6B7280)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title="Starts numbering from the start number."
+              >
+                Starts numbering from the start number.
+              </span>
               <button
                 type="button"
+                className="btn-add-step-badges"
+                disabled={!isStartNumberDefined}
                 onClick={handleAddStepBadgesMulti}
-                style={{
-                  height: '28px',
-                  backgroundColor: '#8638E5',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0 12px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 2px rgba(134, 56, 229, 0.25)',
-                  transition: 'background-color 0.15s ease',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = '#7320D6';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = '#8638E5';
-                }}
+                title={!isStartNumberDefined ? 'Please define a start number' : 'Add Step Badges'}
               >
                 {/* 반짝이/별 아이콘 */}
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

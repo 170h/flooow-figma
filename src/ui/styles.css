@@ -1736,6 +1736,47 @@
       background: var(--color-brand-cta-hover);
     }
 
+    /* 피그마 UI3 24px 디폴트 버튼 사이즈 (Figma 1027377:4208) */
+    .figma-btn-24,
+    .btn-add-step-badges {
+      height: 24px;
+      padding: 0 10px;
+      background-color: var(--color-brand, #8638e5);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm, 5px);
+      font-size: 11px;
+      font-weight: 400;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+      box-sizing: border-box;
+      white-space: nowrap;
+      user-select: none;
+      flex-shrink: 0;
+      transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+      letter-spacing: 0 !important;
+    }
+
+    .figma-btn-24:hover:not(:disabled),
+    .btn-add-step-badges:hover:not(:disabled) {
+      background-color: #7320d6;
+    }
+
+    .figma-btn-24:active:not(:disabled),
+    .btn-add-step-badges:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .figma-btn-24:disabled,
+    .btn-add-step-badges:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
     /* 커넥션 탭 2노드 선택 시 표시되는 서브 푸터 */
     .footer-undo-bar {
       display: none;
