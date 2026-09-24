@@ -27353,9 +27353,13 @@
       setContextMenuOpen(false);
       setSizeModeDropdownOpen(false);
     }, []);
+    const lastNodeTabRef = (0, import_react.useRef)("node");
     const setCurrentTab = (0, import_react.useCallback)((tab) => {
       setCurrentTabState(tab);
       currentTabRef.current = tab;
+      if (selectedNodesRef.current.length > 0 && !isConnectorSelectedRef.current) {
+        lastNodeTabRef.current = tab;
+      }
     }, []);
     const applyCurrentNodeState = (0, import_react.useCallback)(() => {
       const nodes = selectedNodesRef.current;
@@ -27574,6 +27578,9 @@
         setCurrentTab("connection");
       } else if (count === 0) {
         setCurrentTab("node");
+      } else {
+        const targetTab = lastNodeTabRef.current || "node";
+        setCurrentTab(targetTab);
       }
     }, [setCurrentTab]);
     const value = {

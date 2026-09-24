@@ -262,9 +262,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSizeModeDropdownOpen(false);
   }, []);
 
+  const lastNodeTabRef = useRef<string>('node');
+
   const setCurrentTab = useCallback((tab: string) => {
     setCurrentTabState(tab);
     currentTabRef.current = tab;
+    // 일반 노드가 선택된 상태에서 탭을 변경한 경우 마지막 탭으로 기억
+    if (selectedNodesRef.current.length > 0 && !isConnectorSelectedRef.current) {
+      lastNodeTabRef.current = tab;
+    }
   }, []);
 
   // ---- 핵심 피그마 통신 함수들 ----
@@ -500,7 +506,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (newIsConnSel) {
       setCurrentTab('connection');
     } else if (count === 0) {
+      // 바탕화면 클릭 (신규 생성 모드): 항상 node 탭이 기본
       setCurrentTab('node');
+    } else {
+      // 일반 노드 선택: 이전 노드에서 마지막으로 선택했던 탭으로 복원
+      const targetTab = lastNodeTabRef.current || 'node';
+      setCurrentTab(targetTab);
     }
   }, [setCurrentTab]);
 
