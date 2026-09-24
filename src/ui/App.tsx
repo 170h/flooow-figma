@@ -83,28 +83,32 @@ export function App() {
   // CTA 레이블
   const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
 
-  // 커넥터 선택 시 → Connection 탭 강제 전환 + Node/Appearance 탭 비활성화
+  // 탭 활성/비활성 제어
   useEffect(() => {
     const tabNode = document.getElementById('tab-btn-node');
     const tabAppearance = document.getElementById('tab-btn-appearance');
+    const tabConnection = document.getElementById('tab-btn-connection');
+
     if (isConnSel) {
+      // 커넥터 선택: Node/Appearance 비활성 → Connection 강제 이동
       tabNode?.classList.add('disabled');
       tabAppearance?.classList.add('disabled');
-      if (currentTab !== 'connection') {
-        setCurrentTab('connection');
-      }
+      tabConnection?.classList.remove('disabled');
+      if (currentTab !== 'connection') setCurrentTab('connection');
+    } else if (nodeCount === 0) {
+      // 선택 없음(생성 모드): Appearance/Connection 비활성
+      tabNode?.classList.remove('disabled');
+      tabAppearance?.classList.add('disabled');
+      tabConnection?.classList.add('disabled');
+      if (currentTab !== 'node') setCurrentTab('node');
     } else {
+      // 일반 노드 선택: 전체 활성
       tabNode?.classList.remove('disabled');
       tabAppearance?.classList.remove('disabled');
+      tabConnection?.classList.remove('disabled');
     }
-  }, [isConnSel, currentTab, setCurrentTab]);
+  }, [isConnSel, nodeCount, currentTab, setCurrentTab]);
 
-  // 선택 해제(count=0) 시 → Node 탭으로 이동
-  useEffect(() => {
-    if (nodeCount === 0 && !isConnSel && currentTab !== 'node') {
-      setCurrentTab('node');
-    }
-  }, [nodeCount, isConnSel, currentTab, setCurrentTab]);
 
   // 탭 전환 후 autoResize
   useEffect(() => {

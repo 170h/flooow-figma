@@ -29329,22 +29329,23 @@
     (0, import_react17.useEffect)(() => {
       const tabNode = document.getElementById("tab-btn-node");
       const tabAppearance = document.getElementById("tab-btn-appearance");
+      const tabConnection = document.getElementById("tab-btn-connection");
       if (isConnSel) {
         tabNode?.classList.add("disabled");
         tabAppearance?.classList.add("disabled");
-        if (currentTab !== "connection") {
-          setCurrentTab("connection");
-        }
+        tabConnection?.classList.remove("disabled");
+        if (currentTab !== "connection") setCurrentTab("connection");
+      } else if (nodeCount === 0) {
+        tabNode?.classList.remove("disabled");
+        tabAppearance?.classList.add("disabled");
+        tabConnection?.classList.add("disabled");
+        if (currentTab !== "node") setCurrentTab("node");
       } else {
         tabNode?.classList.remove("disabled");
         tabAppearance?.classList.remove("disabled");
+        tabConnection?.classList.remove("disabled");
       }
-    }, [isConnSel, currentTab, setCurrentTab]);
-    (0, import_react17.useEffect)(() => {
-      if (nodeCount === 0 && !isConnSel && currentTab !== "node") {
-        setCurrentTab("node");
-      }
-    }, [nodeCount, isConnSel, currentTab, setCurrentTab]);
+    }, [isConnSel, nodeCount, currentTab, setCurrentTab]);
     (0, import_react17.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
