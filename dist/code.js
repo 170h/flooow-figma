@@ -1184,6 +1184,9 @@
       card.paddingBottom = 16;
       card.paddingLeft = 16;
       card.paddingRight = 16;
+      card.itemSpacing = 8;
+      card.primaryAxisAlignItems = "MIN";
+      card.counterAxisAlignItems = "MIN";
       card.resize(width, height);
       card.minWidth = width;
       card.maxWidth = width;

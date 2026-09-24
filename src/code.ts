@@ -824,6 +824,9 @@ async function createFlowNode(payload: FlowNodePayload) {
     card.paddingBottom = 16;
     card.paddingLeft = 16;
     card.paddingRight = 16;
+    card.itemSpacing = 8;
+    card.primaryAxisAlignItems = 'MIN';
+    card.counterAxisAlignItems = 'MIN';
     card.resize(width, height);
 
     // 캔버스 기즈모 리사이즈 원천 차단 (현재 크기로 min/max 완전 고정)
