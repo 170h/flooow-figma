@@ -26,6 +26,7 @@ export function PhasePopover({ phases, onSelectPhase }: PhasePopoverProps) {
       id="popover-phase"
       className="popover-phase-select active"
       style={{ position: 'fixed', top: phasePopoverPos.top, left: phasePopoverPos.left, zIndex: 999 }}
+      onMouseLeave={() => setPhasePopoverOpen(false)}
     >
       {/* None 옵션 */}
       <div
