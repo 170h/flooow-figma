@@ -1053,7 +1053,7 @@
     headerRow.layoutMode = "HORIZONTAL";
     headerRow.layoutAlign = "STRETCH";
     headerRow.primaryAxisAlignItems = "CENTER";
-    headerRow.counterAxisAlignItems = "CENTER";
+    headerRow.counterAxisAlignItems = "MIN";
     headerRow.itemSpacing = 8;
     headerRow.fills = [];
     const titleText = figma.createText();
@@ -1194,7 +1194,7 @@
       headerRow.layoutMode = "HORIZONTAL";
       headerRow.layoutAlign = "STRETCH";
       headerRow.primaryAxisAlignItems = "CENTER";
-      headerRow.counterAxisAlignItems = "CENTER";
+      headerRow.counterAxisAlignItems = "MIN";
       headerRow.itemSpacing = 8;
       headerRow.fills = [];
       const titleText = figma.createText();
@@ -1338,7 +1338,7 @@
         headerRow.layoutMode = "HORIZONTAL";
         headerRow.layoutAlign = "STRETCH";
         headerRow.primaryAxisAlignItems = "CENTER";
-        headerRow.counterAxisAlignItems = "CENTER";
+        headerRow.counterAxisAlignItems = "MIN";
         headerRow.itemSpacing = 8;
         headerRow.fills = [];
         card.insertChild(0, headerRow);
