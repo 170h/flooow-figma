@@ -668,7 +668,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   headerRow.layoutMode = 'HORIZONTAL';
   headerRow.layoutAlign = 'STRETCH';
   headerRow.primaryAxisAlignItems = 'CENTER';
-  headerRow.counterAxisAlignItems = 'MIN';
+  headerRow.counterAxisAlignItems = 'CENTER';
   headerRow.itemSpacing = 8;
   headerRow.fills = [];
 
@@ -838,7 +838,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     headerRow.layoutMode = 'HORIZONTAL';
     headerRow.layoutAlign = 'STRETCH';
     headerRow.primaryAxisAlignItems = 'CENTER';
-    headerRow.counterAxisAlignItems = 'MIN';
+    headerRow.counterAxisAlignItems = 'CENTER';
     headerRow.itemSpacing = 8;
     headerRow.fills = [];
 
@@ -1015,7 +1015,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       headerRow.layoutMode = 'HORIZONTAL';
       headerRow.layoutAlign = 'STRETCH';
       headerRow.primaryAxisAlignItems = 'CENTER';
-      headerRow.counterAxisAlignItems = 'MIN';
+      headerRow.counterAxisAlignItems = 'CENTER';
       headerRow.itemSpacing = 8;
       headerRow.fills = [];
       card.insertChild(0, headerRow);
