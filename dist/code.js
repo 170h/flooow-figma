@@ -1335,13 +1335,18 @@
         card.minHeight = null;
         card.maxHeight = null;
         if (isHug) {
-          card.counterAxisSizingMode = "FIXED";
-          card.primaryAxisSizingMode = "AUTO";
+          const existingDesc = card.children.find(
+            (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+          );
+          if (existingDesc) {
+            existingDesc.maxLines = null;
+          }
           if (card.width !== w) {
             card.counterAxisSizingMode = "FIXED";
             card.resize(w, card.height);
-            card.primaryAxisSizingMode = "AUTO";
           }
+          card.counterAxisSizingMode = "FIXED";
+          card.primaryAxisSizingMode = "AUTO";
           card.minWidth = w;
           card.maxWidth = w;
           card.minHeight = null;

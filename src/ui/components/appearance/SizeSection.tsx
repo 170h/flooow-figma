@@ -110,7 +110,7 @@ export function SizeSection() {
     });
 
     closeAllPopovers();
-    applyCurrentNodeState();
+    applyCurrentNodeState(mode);
   }
 
   const { lastNodeConfig: cfg } = useApp();

@@ -120,7 +120,7 @@ export interface AppContextValue {
   setPhaseModalEditingId: (id: string | null) => void;
 
   // 핵심 함수들
-  applyCurrentNodeState: () => void;
+  applyCurrentNodeState: (overrideSizeMode?: string) => void;
   applyCurrentConnectorState: () => void;
   handleMainAction: () => void;
   handleSelectionChange: (count: number, nodes: NodeInfo[], meta: {
@@ -231,10 +231,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setLastNodeConfig = useCallback((partial: Partial<LastNodeConfig>) => {
+    lastNodeConfigRef.current = { ...lastNodeConfigRef.current, ...partial };
     setLastNodeConfigRaw(prev => ({ ...prev, ...partial }));
   }, []);
 
   const setLastConnectorConfig = useCallback((partial: Partial<LastConnectorConfig>) => {
+    lastConnectorConfigRef.current = { ...lastConnectorConfigRef.current, ...partial };
     setLastConnectorConfigRaw(prev => ({ ...prev, ...partial }));
   }, []);
 
@@ -275,7 +277,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ---- 핵심 피그마 통신 함수들 ----
 
-  const applyCurrentNodeState = useCallback(() => {
+  const applyCurrentNodeState = useCallback((overrideSizeMode?: string) => {
     const nodes = selectedNodesRef.current;
     if (!nodes || nodes.length === 0) return;
 
@@ -285,6 +287,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
     const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
     const urlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
+    const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
 
     const title = titleEl?.value.trim() || 'Untitled';
     const desc = descEl?.value.trim() || '';
@@ -295,10 +298,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
 
-    setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: selectedColor, elevation: selectedElevation, singleLinkUrl: figmaUrl });
+    const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || 'fixed';
 
-    const cfg = lastNodeConfigRef.current;
-    const sizeMode = cfg.sizeMode || 'fixed';
+    setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: selectedColor, elevation: selectedElevation, singleLinkUrl: figmaUrl, sizeMode });
 
     nodes.forEach(node => {
       parent.postMessage({

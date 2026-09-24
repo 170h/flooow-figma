@@ -1010,16 +1010,21 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
       if (isHug) {
         // Hug contents: 높이 자동, 너비만 고정
-        // resize()는 FIXED 크기를 강제하므로 사용 불가
-        // 너비는 counterAxisSizingMode=FIXED 후 직접 지정
-        card.counterAxisSizingMode = 'FIXED';
-        card.primaryAxisSizingMode = 'AUTO'; // 높이 자동 확장
+        // 먼저 설명 텍스트의 줄수 제한(maxLines)을 풀어 전체 높이가 확장되도록 함
+        const existingDesc = card.children.find(
+          (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+        ) as TextNode | undefined;
+        if (existingDesc) {
+          existingDesc.maxLines = null;
+        }
+
         // 너비 변경 시에만 resize (height 인자는 현재값 유지 후 AUTO가 덮어씀)
         if (card.width !== w) {
           card.counterAxisSizingMode = 'FIXED';
           card.resize(w, card.height);
-          card.primaryAxisSizingMode = 'AUTO';
         }
+        card.counterAxisSizingMode = 'FIXED';
+        card.primaryAxisSizingMode = 'AUTO'; // 높이 자동 확장
         card.minWidth = w;
         card.maxWidth = w;
         card.minHeight = null;

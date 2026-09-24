@@ -27327,9 +27327,11 @@
       setUIStateRaw((prev) => ({ ...prev, ...partial }));
     }, []);
     const setLastNodeConfig = (0, import_react.useCallback)((partial) => {
+      lastNodeConfigRef.current = { ...lastNodeConfigRef.current, ...partial };
       setLastNodeConfigRaw((prev) => ({ ...prev, ...partial }));
     }, []);
     const setLastConnectorConfig = (0, import_react.useCallback)((partial) => {
+      lastConnectorConfigRef.current = { ...lastConnectorConfigRef.current, ...partial };
       setLastConnectorConfigRaw((prev) => ({ ...prev, ...partial }));
     }, []);
     const showToast = (0, import_react.useCallback)((msg, level = "info") => {
@@ -27361,7 +27363,7 @@
         lastNodeTabRef.current = tab;
       }
     }, []);
-    const applyCurrentNodeState = (0, import_react.useCallback)(() => {
+    const applyCurrentNodeState = (0, import_react.useCallback)((overrideSizeMode) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
       const titleEl = document.getElementById("node-title-input");
@@ -27370,6 +27372,7 @@
       const hEl = document.getElementById("input-size-h");
       const rEl = document.getElementById("input-size-radius");
       const urlEl = document.getElementById("single-screen-url");
+      const sizeModeEl = document.getElementById("select-size-mode");
       const title = titleEl?.value.trim() || "Untitled";
       const desc = descEl?.value.trim() || "";
       const w = parseInt(wEl?.value || "250", 10) || 250;
@@ -27377,9 +27380,8 @@
       const radius = parseInt(rEl?.value || "0", 10) || 0;
       const figmaUrl = urlEl?.value.trim() || "";
       const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
-      setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: selectedColor, elevation: selectedElevation, singleLinkUrl: figmaUrl });
-      const cfg = lastNodeConfigRef.current;
-      const sizeMode = cfg.sizeMode || "fixed";
+      const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || "fixed";
+      setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: selectedColor, elevation: selectedElevation, singleLinkUrl: figmaUrl, sizeMode });
       nodes.forEach((node) => {
         parent.postMessage({
           pluginMessage: {
@@ -28063,7 +28065,7 @@
         el.classList.toggle("selected", el.dataset.value === mode);
       });
       closeAllPopovers();
-      applyCurrentNodeState();
+      applyCurrentNodeState(mode);
     }
     const { lastNodeConfig: cfg } = useApp();
     return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-block", children: [
