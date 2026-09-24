@@ -82,6 +82,9 @@ export interface NodeInfo {
   fillColorHex?: string;
   strokeColorHex?: string;
   strokeWeight?: number;
+  sizeMode?: 'fixed' | 'hug' | string;
+  hugHeight?: number;
+  cachedFigmaLink?: string;
 }
 
 export interface LastNodeConfig {

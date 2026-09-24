@@ -13,6 +13,15 @@ const HUG_SVG = (
   </svg>
 );
 
+const CHEVRON_SVG = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path
+      d="M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
 /**
  * Size 섹션 - W/H/Radius 입력 + 사이즈 모드 드롭다운 + 프리셋 칩
  */
@@ -249,10 +258,13 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
 
           {/* 사이즈 모드 드롭다운 */}
           <div className="size-mode-dropdown-wrapper figma-dropdown-wrapper" id="size-mode-dropdown-wrapper">
-            <button type="button" id="btn-size-mode-dropdown"
+            <button
+              type="button"
+              id="btn-size-mode-dropdown"
               className={`size-mode-dropdown-btn figma-dropdown-btn${sizeModeDropdownOpen ? ' active' : ''}`}
               title="Select height mode"
-              onClick={toggleSizeModeDropdown}>
+              onClick={toggleSizeModeDropdown}
+            >
               <div className="size-mode-btn-content figma-dropdown-btn-content">
                 <span className="size-mode-current-icon figma-dropdown-current-icon" id="size-mode-current-icon">
                   {currentSizeMode === 'hug' ? HUG_SVG : currentSizeMode === 'mixed' ? <span className="phase-dash-icon" style={{ display: 'inline-block', verticalAlign: 'middle' }}></span> : FIXED_SVG}
@@ -261,7 +273,18 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
                   {currentSizeMode === 'hug' ? 'Hug contents' : currentSizeMode === 'mixed' ? 'Mixed' : 'Fixed height'}
                 </span>
               </div>
-              <svg className="size-mode-chevron-icon figma-dropdown-chevron-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z" fill="currentColor"/></svg>
+              <span
+                className="size-mode-chevron-icon figma-dropdown-chevron-icon"
+                style={{
+                  transform: sizeModeDropdownOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {CHEVRON_SVG}
+              </span>
             </button>
 
             <div className={`size-mode-menu-popover figma-dropdown-menu${sizeModeDropdownOpen ? ' active' : ''}`} id="popover-size-mode">

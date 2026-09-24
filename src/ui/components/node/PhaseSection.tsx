@@ -1,6 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 
+const CHEVRON_SVG = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path
+      d="M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
 /**
  * Phase 섹션 - 피그마 UI3 Node 탭 Phase 드롭다운 + Add/More 액션
  */
@@ -113,7 +122,7 @@ export function PhaseSection() {
         <button
           id="btn-phase-select"
           ref={btnPhaseRef}
-          className="phase-dropdown-btn"
+          className={`phase-dropdown-btn${phasePopoverOpen ? ' active' : ''}`}
           onClick={togglePhasePopover}
         >
           <div className="phase-btn-left">
@@ -124,8 +133,17 @@ export function PhaseSection() {
               {getCurrentPhaseName()}
             </span>
           </div>
-          <div className="phase-btn-arrow">
-            <svg width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <div
+            className="phase-btn-arrow"
+            style={{
+              transform: phasePopoverOpen ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.15s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {CHEVRON_SVG}
           </div>
         </button>
       </div>

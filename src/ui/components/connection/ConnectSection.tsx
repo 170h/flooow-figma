@@ -1,44 +1,171 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { ConnectorTerminalType } from '../../types';
 
 // ============================================================
-// Terminal 아이콘 SVG 데이터
+// Figma UI3 공식 킷 기반 커넥터 터미널 옵션 및 SVG
+// - 드롭다운 버튼: -short가 빠진 기본(52x16) 아이콘
+// - 드롭다운 메뉴: -short(36x16) 아이콘 (Figma 1027261:5984, 6029, 6009, 6054)
 // ============================================================
 
-const TERMINAL_ICONS_BTN: Record<string, Record<string, string>> = {
+export type TerminalOption = 'NONE' | 'BAR' | 'ARROW' | 'CIRCLE' | 'DIAMOND' | 'SQUARE';
+
+const TERMINAL_OPTIONS: TerminalOption[] = [
+  'NONE',
+  'BAR',
+  'ARROW',
+  'CIRCLE',
+  'DIAMOND',
+  'SQUARE',
+];
+
+// 1. 드롭다운 버튼용 아이콘 (52x16 - "-short"가 빠진 기본 아이콘)
+const TERMINAL_SVGS_BTN: Record<'start' | 'end', Record<TerminalOption, string>> = {
   start: {
-    MIXED: `<span class="phase-dash-icon" style="background:currentColor;display:inline-block;margin:auto;"></span>`,
-    NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H51.5C51.78 7.5 52 7.72 52 8C52 8.28 51.78 8.5 51.5 8.5Z" fill="currentColor"/></svg>`,
-    ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 7.49999H1.71L4.6 4.59999C4.8 4.39999 4.8 4.08999 4.6 3.88999C4.4 3.68999 4.09 3.68999 3.89 3.88999L0.15 7.64999C-0.05 7.84999 -0.05 8.15999 0.15 8.35999L3.9 12.11C4 12.21 4.13 12.26 4.25 12.26C4.37 12.26 4.51 12.21 4.6 12.11C4.8 11.91 4.8 11.6 4.6 11.4L1.7 8.49999H51.5C51.78 8.49999 52 8.26999 52 7.99999C52 7.72999 51.78 7.49999 51.5 7.49999Z" fill="currentColor"/></svg>`,
-    TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#sb_ta)"><path d="M5.46814 5.10914C5.92528 4.84248 6.49939 5.17269 6.49939 5.70192V8.00758H51.5004C51.7763 8.00782 52.0004 8.23158 52.0004 8.50758C52.0001 8.78337 51.7762 9.00734 51.5004 9.00758H6.49939V11.3132C6.49913 11.8092 5.9947 12.1306 5.55506 11.949L5.46814 11.906L0.657595 9.10035C0.204355 8.83578 0.20458 8.17957 0.657595 7.91481L5.46814 5.10914ZM1.62732 8.50758L5.49939 10.7664V6.24781L1.62732 8.50758Z" fill="currentColor"/></g><defs><clipPath id="sb_ta"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
-    REVERSED_TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 5.68769C0 5.15847 0.574114 4.82826 1.03125 5.09492L5.8418 7.90059C5.88887 7.92807 5.93047 7.96026 5.96777 7.99531C5.97846 7.99463 5.98914 7.99238 6 7.99238H51.5C51.7761 7.99238 51.9999 8.21634 52 8.49238C52 8.76852 51.7761 8.99238 51.5 8.99238H6C5.98911 8.99238 5.97849 8.98916 5.96777 8.98848C5.93018 9.02394 5.88937 9.05838 5.8418 9.08613L1.03125 11.8918L0.944336 11.9348C0.504762 12.1162 0.000329443 11.7949 0 11.299V5.68769ZM1 10.7521L4.87207 8.49336L1 6.23359V10.7521Z" fill="currentColor"/></svg>`,
-    CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 4.5C5.2642 4.5 6.72245 5.80543 6.96387 7.50293C6.97584 7.50207 6.98781 7.5 7 7.5H51.5C51.7761 7.5 52 7.72386 52 8C52 8.27611 51.7761 8.5 51.5 8.5H7C6.98779 8.5 6.97586 8.49695 6.96387 8.49609C6.72286 10.1941 5.26453 11.5 3.5 11.5C1.567 11.5 0 9.933 0 8C0 6.067 1.567 4.5 3.5 4.5ZM3.5 5.5C2.11929 5.5 1 6.61929 1 8C1 9.38071 2.11929 10.5 3.5 10.5C4.88071 10.5 6 9.38071 6 8C6 6.61929 4.88071 5.5 3.5 5.5Z" fill="currentColor"/></svg>`,
-    DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.29294 4.70706C3.68345 4.31664 4.3165 4.31664 4.707 4.70706L7.49997 7.50003H51.5C51.776 7.50011 52 7.72394 52 8.00003C51.9999 8.27605 51.776 8.49995 51.5 8.50003H7.49997L4.707 11.293C4.34096 11.659 3.76185 11.6815 3.36911 11.3614L3.29294 11.293L0.707002 8.70706C0.316578 8.31656 0.316579 7.68351 0.707002 7.293L3.29294 4.70706ZM1.41403 8.00003L3.99997 10.586L6.58591 8.00003L3.99997 5.4141L1.41403 8.00003Z" fill="currentColor"/></svg>`,
+    NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    BAR: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M2 3.5V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M7 3.5L2 8L7 12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1.2"/><circle cx="5.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
+    DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9.5 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 3.5L1.5 8L5.5 12.5L9.5 8Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
+    SQUARE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="4.5" width="7" height="7" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
   },
   end: {
-    MIXED: `<span class="phase-dash-icon" style="background:currentColor;display:inline-block;margin:auto;"></span>`,
-    NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M51.5 9H0.5C0.22 9 0 8.78 0 8.5C0 8.22 0.22 8 0.5 8H51.5C51.78 8 52 8.22 52 8.5C52 8.78 51.78 9 51.5 9Z" fill="currentColor"/></svg>`,
-    ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#eb_a)"><path d="M0.5 8.50001L50.29 8.50001L47.4 11.4C47.2 11.6 47.2 11.91 47.4 12.11C47.6 12.31 47.91 12.31 48.11 12.11L51.85 8.35001C52.05 8.15001 52.05 7.84001 51.85 7.64001L48.1 3.89001C48 3.79001 47.87 3.74001 47.75 3.74001C47.63 3.74001 47.49 3.79001 47.4 3.89001C47.2 4.09001 47.2 4.40001 47.4 4.60001L50.3 7.50001L0.5 7.50001C0.22 7.50001 0 7.73 0 8C0 8.27001 0.22 8.50001 0.5 8.50001Z" fill="currentColor"/></g><defs><clipPath id="eb_a"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
-    TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#eb_ta)"><path d="M46.5319 11.8909C46.0747 12.1575 45.5006 11.8273 45.5006 11.2981V8.99242L0.499632 8.99242C0.223691 8.99218 -0.000368451 8.76842 -0.000368451 8.49242C-0.000126574 8.21663 0.22384 7.99266 0.499632 7.99242L45.5006 7.99242V5.68676C45.5009 5.1908 46.0053 4.86943 46.4449 5.05101L46.5319 5.09398L51.3424 7.89965C51.7956 8.16422 51.7954 8.82043 51.3424 9.08519L46.5319 11.8909ZM50.3727 8.49242L46.5006 6.23363V10.7522L50.3727 8.49242Z" fill="currentColor"/></g><defs><clipPath id="eb_ta"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
-    REVERSED_TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M52 11.2981C52 11.8273 51.4259 12.1575 50.9688 11.8909L46.1582 9.08519C46.1111 9.05771 46.0695 9.02552 46.0322 8.99047C46.0215 8.99115 46.0109 8.9934 46 8.9934L0.5 8.9934C0.223931 8.9934 0.000117217 8.76944 0 8.4934C0 8.21725 0.223859 7.9934 0.5 7.9934L46 7.9934C46.0109 7.9934 46.0215 7.99662 46.0322 7.9973C46.0698 7.96184 46.1106 7.9274 46.1582 7.89965L50.9688 5.09398L51.0557 5.05101C51.4952 4.8696 51.9997 5.19092 52 5.68676V11.2981ZM51 6.23363L47.1279 8.49242L51 10.7522V6.23363Z" fill="currentColor"/></svg>`,
-    CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#eb_c)"><path d="M48.5 11.5C46.7358 11.5 45.2776 10.1946 45.0361 8.49707C45.0242 8.49793 45.0122 8.5 45 8.5L0.500001 8.49999C0.223859 8.49999 0 8.27613 0 7.99999C3.3643e-05 7.72388 0.22388 7.49999 0.500001 7.49999L45 7.5C45.0122 7.5 45.0241 7.50304 45.0361 7.50391C45.2771 5.80594 46.7355 4.5 48.5 4.5C50.433 4.5 52 6.067 52 8C52 9.933 50.433 11.5 48.5 11.5ZM48.5 10.5C49.8807 10.5 51 9.38071 51 8C51 6.61929 49.8807 5.5 48.5 5.5C47.1193 5.5 46 6.61929 46 8C46 9.38071 47.1193 10.5 48.5 10.5Z" fill="currentColor"/></g><defs><clipPath id="eb_c"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
-    DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M47.293 4.69229C47.659 4.32662 48.2382 4.30408 48.6309 4.62393L48.707 4.69229L51.293 7.27823C51.6833 7.66865 51.6832 8.30177 51.293 8.69229L48.707 11.2782C48.3165 11.6687 47.6835 11.6687 47.293 11.2782L44.5 8.48526H0.5C0.223928 8.48518 0 8.26135 0 7.98526C0.000344652 7.70946 0.224141 7.48534 0.5 7.48526H44.5L47.293 4.69229ZM45.4141 7.98526L48 10.5712L50.5859 7.98526L48 5.39932L45.4141 7.98526Z" fill="currentColor"/></svg>`,
+    NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    BAR: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M50 3.5V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M45 3.5L50 8L45 12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1.2"/><circle cx="46.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
+    DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H42.5" stroke="currentColor" stroke-width="1.2"/><path d="M46.5 3.5L42.5 8L46.5 12.5L50.5 8Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
+    SQUARE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1.2"/><rect x="43" y="4.5" width="7" height="7" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
   },
 };
 
-const TERMINAL_OPTIONS = ['NONE', 'ARROW', 'TRIANGLE_ARROW', 'REVERSED_TRIANGLE_ARROW', 'CIRCLE', 'DIAMOND'] as const;
-type TerminalValue = typeof TERMINAL_OPTIONS[number] | 'MIXED';
+// 2. 드롭다운 메뉴용 아이콘 (36x16 - "-short" 아이콘)
+const TERMINAL_SVGS_SHORT: Record<'start' | 'end', Record<TerminalOption, string>> = {
+  start: {
+    NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    BAR: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1.2"/><path d="M4 3.5V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1.2"/><path d="M8 4L4 8L8 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8 8H32" stroke="currentColor" stroke-width="1.2"/><circle cx="5" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
+    DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8.5 8H32" stroke="currentColor" stroke-width="1.2"/><path d="M5 4.5L1.5 8L5 11.5L8.5 8Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
+    SQUARE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8 8H32" stroke="currentColor" stroke-width="1.2"/><rect x="2.5" y="5.5" width="5" height="5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
+  },
+  end: {
+    NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    BAR: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1.2"/><path d="M32 3.5V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1.2"/><path d="M28 4L32 8L28 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1.2"/><circle cx="31" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
+    DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H27.5" stroke="currentColor" stroke-width="1.2"/><path d="M31 4.5L27.5 8L31 11.5L34.5 8Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
+    SQUARE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1.2"/><rect x="28.5" y="5.5" width="5" height="5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
+  },
+};
+
+const LINE_COLOR_OPTIONS = [
+  { value: '#000000', label: '#000000' },
+  { value: '#EA2039', label: '#EA2039' },
+  { value: '#8638E5', label: '#8638E5' },
+  { value: '#5F92F3', label: '#5F92F3' },
+];
+
+// 피그마 UI3 표준 체크마크 SVG
+const CHECK_SVG = (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+    <path
+      d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+// 피그마 표준 16x16 셰브론 SVG
+const CHEVRON_SVG = (
+  <svg className="figma-dropdown-chevron-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path
+      d="M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z"
+      fill="currentColor"
+    />
+  </svg>
+);
 
 /**
- * Connect 섹션 - 색상/선패턴, 앵커 캔버스, 두께/라우팅, 터미널 드롭다운
+ * Connect 섹션 - 피그마 UI3 키트 공식 디자인 완벽 반영
+ * (Figma 1027261:5984, 6029, 6009, 6054)
+ * - 드롭다운 메뉴: -short 아이콘 사용
+ * - 드롭다운 버튼: -short가 빠진 기본(52x16) 아이콘 사용
  */
 export function ConnectSection() {
-  const { uiState, setUIState, applyCurrentConnectorState } = useApp();
+  const { uiState, setUIState, applyCurrentConnectorState, selectedNodes } = useApp();
   const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiState;
-  const [startTermPopupOpen, setStartTermPopupOpen] = React.useState(false);
-  const [endTermPopupOpen, setEndTermPopupOpen] = React.useState(false);
-  const [startTermVal, setStartTermVal] = React.useState<TerminalValue>('NONE');
-  const [endTermVal, setEndTermVal] = React.useState<TerminalValue>('ARROW');
+
+  // 드롭다운 열림 상태
+  const [startTermPopupOpen, setStartTermPopupOpen] = useState(false);
+  const [endTermPopupOpen, setEndTermPopupOpen] = useState(false);
+  const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
+
+  // 드롭다운 선택 값 상태
+  const [startTermVal, setStartTermVal] = useState<ConnectorTerminalType>('NONE');
+  const [endTermVal, setEndTermVal] = useState<ConnectorTerminalType>('ARROW');
+  const [selectedColor, setSelectedColor] = useState<string>('#000000');
+
+  // 외부 클릭 시 모든 커넥션 드롭다운 닫기
+  useEffect(() => {
+    function handleDocClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('#wrap-start-terminal')) {
+        setStartTermPopupOpen(false);
+      }
+      if (!target.closest('#wrap-end-terminal')) {
+        setEndTermPopupOpen(false);
+      }
+      if (!target.closest('#wrap-conn-color')) {
+        setColorDropdownOpen(false);
+      }
+    }
+    document.addEventListener('click', handleDocClick);
+    return () => document.removeEventListener('click', handleDocClick);
+  }, []);
+
+  // 선택된 노드 변경 시 터미널 및 컬러 상태 동기화
+  useEffect(() => {
+    const count = selectedNodes.length;
+    const allConnectors = count > 0 && selectedNodes.every(n => n && n.isConnector);
+    if (!allConnectors) return;
+
+    if (count > 1) {
+      const startTerms = selectedNodes.map(n => n.connectorStartTerminal).filter(Boolean);
+      const endTerms = selectedNodes.map(n => n.connectorEndTerminal).filter(Boolean);
+      if (startTerms.length > 0) {
+        const allSame = startTerms.every(t => t === startTerms[0]);
+        const val = (allSame ? startTerms[0] : 'MIXED') as ConnectorTerminalType;
+        setStartTermVal(val);
+        const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+        if (sel) sel.value = val;
+      }
+      if (endTerms.length > 0) {
+        const allSame = endTerms.every(t => t === endTerms[0]);
+        const val = (allSame ? endTerms[0] : 'MIXED') as ConnectorTerminalType;
+        setEndTermVal(val);
+        const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+        if (sel) sel.value = val;
+      }
+    } else if (count === 1) {
+      const node = selectedNodes[0];
+      if (node.connectorStartTerminal) {
+        setStartTermVal(node.connectorStartTerminal as ConnectorTerminalType);
+        const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+        if (sel) sel.value = node.connectorStartTerminal;
+      }
+      if (node.connectorEndTerminal) {
+        setEndTermVal(node.connectorEndTerminal as ConnectorTerminalType);
+        const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+        if (sel) sel.value = node.connectorEndTerminal;
+      }
+      if (node.connectorColorHex) {
+        setSelectedColor(node.connectorColorHex);
+        const colSel = document.getElementById('conn-line-color') as HTMLSelectElement | null;
+        if (colSel) colSel.value = node.connectorColorHex;
+      }
+    }
+  }, [selectedNodes]);
 
   function selectLinePattern(pattern: string, el: HTMLElement | null = null) {
     setUIState({ selectedLinePattern: pattern });
@@ -67,13 +194,10 @@ export function ConnectSection() {
     setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
-  function selectTerminal(side: 'start' | 'end', value: TerminalValue) {
+  function selectTerminal(side: 'start' | 'end', value: ConnectorTerminalType) {
     const selectEl = document.getElementById(`select-${side}-terminal`) as HTMLSelectElement | null;
     if (selectEl) selectEl.value = value;
-    const iconEl = document.getElementById(`icon-${side}-terminal`);
-    if (iconEl && TERMINAL_ICONS_BTN[side]?.[value]) {
-      iconEl.innerHTML = TERMINAL_ICONS_BTN[side][value];
-    }
+
     if (side === 'start') {
       setStartTermVal(value);
       setStartTermPopupOpen(false);
@@ -84,13 +208,41 @@ export function ConnectSection() {
     if (value !== 'MIXED') setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
-  useEffect(() => {
-    // 초기 터미널 아이콘 렌더링
-    const startIconEl = document.getElementById('icon-start-terminal');
-    const endIconEl = document.getElementById('icon-end-terminal');
-    if (startIconEl) startIconEl.innerHTML = TERMINAL_ICONS_BTN.start.NONE;
-    if (endIconEl) endIconEl.innerHTML = TERMINAL_ICONS_BTN.end.ARROW;
-  }, []);
+  function selectColor(colorHex: string) {
+    setSelectedColor(colorHex);
+    setColorDropdownOpen(false);
+    const selectEl = document.getElementById('conn-line-color') as HTMLSelectElement | null;
+    if (selectEl) selectEl.value = colorHex;
+    setTimeout(() => applyCurrentConnectorState(), 0);
+  }
+
+  // 드롭다운 버튼 전용 그래픽: "-short"가 빠진 기본(52x16) 아이콘 사용
+  function renderTerminalButtonGraphic(side: 'start' | 'end', val: ConnectorTerminalType) {
+    if (val === 'MIXED') {
+      return (
+        <span
+          className="phase-dash-icon"
+          style={{ background: 'currentColor', display: 'inline-block', margin: 'auto' }}
+        />
+      );
+    }
+    const opt: TerminalOption = (val as TerminalOption) in TERMINAL_SVGS_BTN[side]
+      ? (val as TerminalOption)
+      : (side === 'start' ? 'NONE' : 'ARROW');
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          maxWidth: '52px',
+          height: '16px',
+        }}
+        dangerouslySetInnerHTML={{ __html: TERMINAL_SVGS_BTN[side][opt] }}
+      />
+    );
+  }
 
   const ROUTING_TYPES = [
     { type: 'ORTHOGONAL', title: '직각 (Orthogonal)', svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
@@ -107,13 +259,111 @@ export function ConnectSection() {
       <div className="section-body">
         {/* 색상 + 선 패턴 */}
         <div style={{ display: 'flex', gap: '6px' }}>
-          <select id="conn-line-color" className="select-dropdown-box" style={{ width: '110px' }}
-            onChange={() => setTimeout(() => applyCurrentConnectorState(), 0)}>
-            <option value="#EA2039">■ EA2039</option>
-            <option value="#8638E5">■ 8638E5</option>
-            <option value="#000000">■ 000000</option>
-            <option value="#5F92F3">■ 5F92F3</option>
-          </select>
+          {/* 표준 피그마 컬러 드롭다운 */}
+          <div className="figma-dropdown-wrapper" id="wrap-conn-color" style={{ width: '110px', flexShrink: 0 }}>
+            <button
+              type="button"
+              id="btn-conn-line-color"
+              className={`figma-dropdown-btn${colorDropdownOpen ? ' active' : ''}`}
+              title="Line color"
+              onClick={(e) => {
+                e.stopPropagation();
+                setColorDropdownOpen(!colorDropdownOpen);
+                setStartTermPopupOpen(false);
+                setEndTermPopupOpen(false);
+              }}
+            >
+              <div className="figma-dropdown-btn-content">
+                <span
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '3px',
+                    backgroundColor: selectedColor,
+                    border: '1px solid rgba(0, 0, 0, 0.15)',
+                    display: 'inline-block',
+                    flexShrink: 0,
+                    marginLeft: '4px',
+                    marginRight: '2px',
+                  }}
+                />
+                <span className="figma-dropdown-current-text" style={{ fontSize: '11px', fontWeight: 500 }}>
+                  {selectedColor}
+                </span>
+              </div>
+              <span
+                style={{
+                  transform: colorDropdownOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {CHEVRON_SVG}
+              </span>
+            </button>
+
+            {/* 외부 스크립트 호환용 숨겨진 select */}
+            <select
+              id="conn-line-color"
+              style={{ display: 'none' }}
+              value={selectedColor}
+              onChange={(e) => selectColor(e.target.value)}
+            >
+              {LINE_COLOR_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.value}
+                </option>
+              ))}
+            </select>
+
+            {/* 표준 피그마 드롭다운 메뉴 */}
+            {colorDropdownOpen && (
+              <div
+                className="figma-dropdown-menu active"
+                id="popup-conn-line-color"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  left: 0,
+                  right: 'auto',
+                  width: '130px',
+                  padding: '6px',
+                  zIndex: 1050,
+                }}
+              >
+                {LINE_COLOR_OPTIONS.map((c) => {
+                  const isSelected = selectedColor.toUpperCase() === c.value.toUpperCase();
+                  return (
+                    <div
+                      key={c.value}
+                      className={`figma-dropdown-item${isSelected ? ' selected' : ''}`}
+                      style={{ width: '100%' }}
+                      onClick={() => selectColor(c.value)}
+                    >
+                      <span className="figma-dropdown-check-slot" style={{ width: '18px' }}>
+                        {isSelected && CHECK_SVG}
+                      </span>
+                      <span
+                        style={{
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '3px',
+                          backgroundColor: c.value,
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          display: 'inline-block',
+                          marginRight: '6px',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span className="figma-dropdown-label">{c.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="line-style-segment" style={{ flex: 1 }}>
             {[
               { pattern: 'SOLID', title: 'Solid', path: 'M18.5 11C18.7761 11 19 11.2239 19 11.5C19 11.7761 18.7761 12 18.5 12H5.5C5.22386 12 5 11.7761 5 11.5C5 11.2239 5.22386 11 5.5 11H18.5Z' },
@@ -189,60 +439,272 @@ export function ConnectSection() {
             <input type="number" id="input-start-offset" placeholder="Offset" defaultValue={0} />
           </div>
 
-          {/* 시작 단자 */}
-          <div className="terminal-dropdown-wrap" id="wrap-start-terminal">
-            <button className="terminal-dropdown-btn" id="btn-start-terminal"
+          {/* 시작 단자 (Start Terminal) */}
+          <div className="figma-dropdown-wrapper" id="wrap-start-terminal" style={{ width: '100%' }}>
+            {/* 드롭다운 버튼: -short가 빠진 기본(52x16) 아이콘 사용 */}
+            <button
+              type="button"
+              id="btn-start-terminal"
+              className={`figma-dropdown-btn${startTermPopupOpen ? ' active' : ''}`}
               title="Start terminal"
-              onClick={e => { e.stopPropagation(); setStartTermPopupOpen(!startTermPopupOpen); setEndTermPopupOpen(false); }}>
-              <span id="icon-start-terminal" className="td-btn-icon" />
-              <svg className="td-chevron" width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M2 3L4 5L6 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              style={{ padding: '0 4px 0 6px' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setStartTermPopupOpen(!startTermPopupOpen);
+                setEndTermPopupOpen(false);
+                setColorDropdownOpen(false);
+              }}
+            >
+              <div className="figma-dropdown-btn-content" style={{ justifyContent: 'center' }}>
+                <span id="icon-start-terminal" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                  {renderTerminalButtonGraphic('start', startTermVal)}
+                </span>
+              </div>
+              <span
+                style={{
+                  transform: startTermPopupOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {CHEVRON_SVG}
+              </span>
             </button>
-            <select id="select-start-terminal" style={{ display: 'none' }}>
-              {['MIXED', 'NONE', 'ARROW', 'TRIANGLE_ARROW', 'REVERSED_TRIANGLE_ARROW', 'CIRCLE', 'DIAMOND'].map(v => (
-                <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+
+            {/* 외부 스크립트 호환용 숨겨진 select */}
+            <select id="select-start-terminal" style={{ display: 'none' }} value={startTermVal} onChange={() => {}}>
+              {['MIXED', 'NONE', 'BAR', 'ARROW', 'CIRCLE', 'DIAMOND', 'SQUARE'].map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
               ))}
             </select>
+
+            {/* 드롭다운 메뉴: -short(36x16) 아이콘 사용 (Figma 1027261:5984 / 6009) */}
             {startTermPopupOpen && (
-              <div className="terminal-dropdown-popup open" id="popup-start-terminal"
-                style={{ position: 'fixed', bottom: '60px', left: '20px', zIndex: 1000 }}>
-                {TERMINAL_OPTIONS.map(val => (
-                  <div key={val}
-                    className={`terminal-popup-item${startTermVal === val ? ' selected' : ''}`}
-                    data-value={val}
-                    onClick={() => selectTerminal('start', val)}>
-                    <span className="td-item-icon" id={`td-item-icon-start-${val}`}
-                      dangerouslySetInnerHTML={{ __html: TERMINAL_ICONS_BTN.start[val] || '' }} />
-                  </div>
-                ))}
+              <div
+                className="terminal-ui3-menu"
+                id="popup-start-terminal"
+                style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 4px)',
+                  top: 'auto',
+                  left: 0,
+                  right: 'auto',
+                  width: '76px',
+                  background: '#1e1e1e',
+                  borderRadius: '13px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
+                  padding: '5px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                  zIndex: 1050,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {/* 1027261:5984 Mixed 상태 헤더 */}
+                {startTermVal === 'MIXED' && (
+                  <>
+                    <div
+                      className="terminal-ui3-item selected"
+                      style={{
+                        width: '100%',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: '0 4px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 500,
+                        userSelect: 'none',
+                      }}
+                      onClick={() => selectTerminal('start', 'MIXED')}
+                    >
+                      <span style={{ width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {CHECK_SVG}
+                      </span>
+                      <span style={{ fontSize: '11px', fontWeight: 500, color: '#ffffff' }}>Mixed</span>
+                    </div>
+                    <hr style={{ margin: '3px 0', border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }} />
+                  </>
+                )}
+
+                {/* 6개 단자 옵션: -short 아이콘 사용 */}
+                {TERMINAL_OPTIONS.map((opt) => {
+                  const isSelected = startTermVal === opt;
+                  return (
+                    <div
+                      key={opt}
+                      className={`terminal-ui3-item${isSelected ? ' selected' : ''}`}
+                      style={{
+                        width: '100%',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0 4px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#ffffff',
+                        userSelect: 'none',
+                        boxSizing: 'border-box',
+                        transition: 'background 0.12s',
+                      }}
+                      onClick={() => selectTerminal('start', opt)}
+                    >
+                      {/* 선택 체크마크 슬롯 */}
+                      <span style={{ width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
+                        {CHECK_SVG}
+                      </span>
+                      {/* 중앙 단자 그래픽: -short(36x16) 아이콘 */}
+                      <span
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, height: '16px' }}
+                        dangerouslySetInnerHTML={{ __html: TERMINAL_SVGS_SHORT.start[opt] }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* 끝 단자 */}
-          <div className="terminal-dropdown-wrap" id="wrap-end-terminal">
-            <button className="terminal-dropdown-btn" id="btn-end-terminal"
+          {/* 끝 단자 (End Terminal) */}
+          <div className="figma-dropdown-wrapper" id="wrap-end-terminal" style={{ width: '100%' }}>
+            {/* 드롭다운 버튼: -short가 빠진 기본(52x16) 아이콘 사용 */}
+            <button
+              type="button"
+              id="btn-end-terminal"
+              className={`figma-dropdown-btn${endTermPopupOpen ? ' active' : ''}`}
               title="End terminal"
-              onClick={e => { e.stopPropagation(); setEndTermPopupOpen(!endTermPopupOpen); setStartTermPopupOpen(false); }}>
-              <span id="icon-end-terminal" className="td-btn-icon" />
-              <svg className="td-chevron" width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M2 3L4 5L6 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              style={{ padding: '0 4px 0 6px' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setEndTermPopupOpen(!endTermPopupOpen);
+                setStartTermPopupOpen(false);
+                setColorDropdownOpen(false);
+              }}
+            >
+              <div className="figma-dropdown-btn-content" style={{ justifyContent: 'center' }}>
+                <span id="icon-end-terminal" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                  {renderTerminalButtonGraphic('end', endTermVal)}
+                </span>
+              </div>
+              <span
+                style={{
+                  transform: endTermPopupOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {CHEVRON_SVG}
+              </span>
             </button>
-            <select id="select-end-terminal" style={{ display: 'none' }}>
-              {['MIXED', 'NONE', 'ARROW', 'TRIANGLE_ARROW', 'REVERSED_TRIANGLE_ARROW', 'CIRCLE', 'DIAMOND'].map(v => (
-                <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+
+            {/* 외부 스크립트 호환용 숨겨진 select */}
+            <select id="select-end-terminal" style={{ display: 'none' }} value={endTermVal} onChange={() => {}}>
+              {['MIXED', 'NONE', 'BAR', 'ARROW', 'CIRCLE', 'DIAMOND', 'SQUARE'].map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
               ))}
             </select>
+
+            {/* 드롭다운 메뉴: -short(36x16) 아이콘 사용 (Figma 1027261:6029 / 6054) */}
             {endTermPopupOpen && (
-              <div className="terminal-dropdown-popup open" id="popup-end-terminal"
-                style={{ position: 'fixed', bottom: '60px', right: '20px', zIndex: 1000 }}>
-                {TERMINAL_OPTIONS.map(val => (
-                  <div key={val}
-                    className={`terminal-popup-item${endTermVal === val ? ' selected' : ''}`}
-                    data-value={val}
-                    onClick={() => selectTerminal('end', val)}>
-                    <span className="td-item-icon" id={`td-item-icon-end-${val}`}
-                      dangerouslySetInnerHTML={{ __html: TERMINAL_ICONS_BTN.end[val] || '' }} />
-                  </div>
-                ))}
+              <div
+                className="terminal-ui3-menu"
+                id="popup-end-terminal"
+                style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 4px)',
+                  top: 'auto',
+                  left: 'auto',
+                  right: 0,
+                  width: '76px',
+                  background: '#1e1e1e',
+                  borderRadius: '13px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
+                  padding: '5px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                  zIndex: 1050,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {/* 1027261:6029 Mixed 상태 헤더 */}
+                {endTermVal === 'MIXED' && (
+                  <>
+                    <div
+                      className="terminal-ui3-item selected"
+                      style={{
+                        width: '100%',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: '0 4px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 500,
+                        userSelect: 'none',
+                      }}
+                      onClick={() => selectTerminal('end', 'MIXED')}
+                    >
+                      <span style={{ width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {CHECK_SVG}
+                      </span>
+                      <span style={{ fontSize: '11px', fontWeight: 500, color: '#ffffff' }}>Mixed</span>
+                    </div>
+                    <hr style={{ margin: '3px 0', border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }} />
+                  </>
+                )}
+
+                {/* 6개 단자 옵션: -short 아이콘 사용 */}
+                {TERMINAL_OPTIONS.map((opt) => {
+                  const isSelected = endTermVal === opt;
+                  return (
+                    <div
+                      key={opt}
+                      className={`terminal-ui3-item${isSelected ? ' selected' : ''}`}
+                      style={{
+                        width: '100%',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0 4px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#ffffff',
+                        userSelect: 'none',
+                        boxSizing: 'border-box',
+                        transition: 'background 0.12s',
+                      }}
+                      onClick={() => selectTerminal('end', opt)}
+                    >
+                      {/* 선택 체크마크 슬롯 */}
+                      <span style={{ width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
+                        {CHECK_SVG}
+                      </span>
+                      {/* 중앙 단자 그래픽: -short(36x16) 아이콘 */}
+                      <span
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, height: '16px' }}
+                        dangerouslySetInnerHTML={{ __html: TERMINAL_SVGS_SHORT.end[opt] }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

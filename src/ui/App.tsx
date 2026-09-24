@@ -137,6 +137,9 @@ export function App() {
       target.closest('#popover-phase') ||
       target.closest('#popover-context') ||
       target.closest('#popover-size-mode') ||
+      target.closest('.figma-dropdown-wrapper') ||
+      target.closest('.figma-dropdown-menu') ||
+      target.closest('.terminal-ui3-menu') ||
       target.closest('.terminal-dropdown-wrap');
 
     if (!isPopoverTrigger) {

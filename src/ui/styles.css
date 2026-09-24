@@ -671,6 +671,13 @@
       background: #fafafa;
     }
 
+    .phase-dropdown-btn:focus,
+    .phase-dropdown-btn.active {
+      border-color: var(--color-brand);
+      background: #ffffff;
+      outline: none;
+    }
+
     .phase-btn-left {
       display: flex;
       align-items: center;
@@ -739,6 +746,11 @@
       align-items: center;
       justify-content: center;
       color: rgba(0, 0, 0, 0.9);
+      transition: transform 0.15s ease;
+    }
+
+    .phase-dropdown-btn.active .phase-btn-arrow {
+      transform: rotate(180deg);
     }
 
     .desc-textarea {
@@ -999,6 +1011,15 @@
       color: var(--color-text-secondary);
       flex-shrink: 0;
       margin-left: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease;
+    }
+
+    .figma-dropdown-btn.active .figma-dropdown-chevron-icon,
+    .size-mode-dropdown-btn.active .size-mode-chevron-icon {
+      transform: rotate(180deg);
     }
 
     /* 피그마 표준 드롭다운 팝오버 메뉴 (Select Size Option, 18:3076) */
@@ -1600,10 +1621,49 @@
       color: #ffffff;
     }
 
-    .terminal-popup-item:hover svg,
-    .terminal-popup-item:hover .phase-dash-icon {
+    /* 피그마 UI3 공식 킷 터미널 드롭다운 메뉴 (Figma 1027261:5984, 6029, 6009, 6054) */
+    .terminal-ui3-menu {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      width: 76px;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 13px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      padding: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 1050;
+      box-sizing: border-box;
+    }
+
+    .terminal-ui3-item {
+      width: 100%;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #ffffff;
+      user-select: none;
+      box-sizing: border-box;
+      transition: background 0.12s;
+    }
+
+    .terminal-ui3-item:hover {
+      background: #8C4CF6 !important;
       color: #ffffff !important;
-      fill: #ffffff;
+    }
+
+    .terminal-ui3-item:hover svg,
+    .terminal-ui3-item:hover path,
+    .terminal-ui3-item:hover circle,
+    .terminal-ui3-item:hover rect {
+      color: #ffffff !important;
+      stroke: #ffffff;
     }
 
     .terminal-popup-item.selected {

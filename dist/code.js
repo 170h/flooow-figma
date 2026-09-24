@@ -1252,8 +1252,10 @@
             connectorStrokePattern = "SOLID";
           }
           const mapCapToTerm = (cap) => {
+            if (cap.includes("BAR") || cap.includes("EXACTLY_ONE")) return "BAR";
+            if (cap.includes("SQUARE")) return "SQUARE";
             if (cap.includes("REVERSED_TRIANGLE")) return "REVERSED_TRIANGLE_ARROW";
-            if (cap.includes("TRIANGLE_ARROW") || cap.includes("ARROW_EQUILATERAL")) return "TRIANGLE_ARROW";
+            if (cap.includes("TRIANGLE_ARROW") || cap.includes("ARROW_EQUILATERAL")) return "ARROW";
             if (cap.includes("ARROW_LINES") || cap === "ARROW") return "ARROW";
             if (cap.includes("DIAMOND_FILLED") || cap === "DIAMOND") return "DIAMOND";
             if (cap.includes("CIRCLE_FILLED") || cap === "CIRCLE") return "CIRCLE";
@@ -2454,15 +2456,16 @@
         const mapCap = (term) => {
           switch (term) {
             case "ARROW":
-              return "ARROW_LINES";
             case "TRIANGLE_ARROW":
-              return "ARROW_EQUILATERAL";
-            case "REVERSED_TRIANGLE_ARROW":
-              return "ARROW_EQUILATERAL";
+              return "ARROW_LINES";
+            case "BAR":
+              return "ERD_EXACTLY_ONE";
             case "DIAMOND":
               return "DIAMOND_FILLED";
             case "CIRCLE":
               return "CIRCLE_FILLED";
+            case "SQUARE":
+              return "TRIANGLE_FILLED";
             default:
               return "NONE";
           }

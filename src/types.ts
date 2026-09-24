@@ -97,11 +97,13 @@ export type ConnectorStrokePattern = 'SOLID' | 'DASHED' | 'DOTTED';
 export type ConnectorRoutingType = 'ORTHOGONAL' | 'S_CURVE' | 'CURVED' | 'STRAIGHT';
 export type ConnectorTerminalType =
   | 'NONE'
+  | 'BAR'
   | 'ARROW'
-  | 'TRIANGLE_ARROW'
-  | 'REVERSED_TRIANGLE_ARROW'
   | 'CIRCLE'
   | 'DIAMOND'
+  | 'SQUARE'
+  | 'TRIANGLE_ARROW'
+  | 'REVERSED_TRIANGLE_ARROW'
   | 'MIXED';
 
 export interface FlowNodePayload {
