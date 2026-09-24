@@ -170,6 +170,92 @@ function extractNodeText(node: SceneNode): { title: string; description: string 
   return { title, description };
 }
 
+// 카드의 전체 내용(헤더 + 패딩 + 설명 텍스트 전체 + 상태 뱃지 여백)을 모두 수용하기 위한 최소 Hug 높이 정밀 산출
+// 피그마 네이티브 오토레이아웃 렌더링 엔진을 Source of Truth로 사용하여 1픽셀의 오차도 없이 일원화
+function calculateCardHugHeight(card: FrameNode, textCharacters?: string): number {
+  const isAuto = card.primaryAxisSizingMode === 'AUTO';
+  if (isAuto && textCharacters === undefined) {
+    return Math.round(card.height);
+  }
+
+  const prevSizingMode = card.primaryAxisSizingMode;
+  const prevHeight = card.height;
+  const prevMinHeight = card.minHeight;
+  const prevMaxHeight = card.maxHeight;
+
+  const descText = card.children.find(
+    (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+  ) as TextNode | undefined;
+  const prevMaxLines = descText ? descText.maxLines : null;
+  const prevDescChars = descText ? descText.characters : '';
+
+  try {
+    card.minHeight = null;
+    card.maxHeight = null;
+    if (descText) {
+      descText.maxLines = null;
+      if (textCharacters !== undefined && textCharacters !== prevDescChars) {
+        descText.characters = textCharacters;
+      }
+    }
+    card.primaryAxisSizingMode = 'AUTO';
+
+    const hugH = Math.round(card.height);
+
+    // 즉시 원래 상태로 완벽 복원
+    card.primaryAxisSizingMode = prevSizingMode;
+    card.resize(card.width, prevHeight);
+    card.minHeight = prevMinHeight;
+    card.maxHeight = prevMaxHeight;
+    if (descText) {
+      if (prevMaxLines !== null) descText.maxLines = prevMaxLines;
+      if (textCharacters !== undefined && textCharacters !== prevDescChars) {
+        descText.characters = prevDescChars;
+      }
+    }
+
+    return hugH;
+  } catch (_) {
+    return Math.round(card.height);
+  }
+}
+
+// 설명 텍스트 말줄임(...) 처리 함수
+// 디스크립션 박스는 기본적으로 auto(maxLines = null, textAutoResize = 'HEIGHT')로 동작합니다.
+// 1. Hug contents 모드이거나,
+// 2. Fixed height 모드이더라도 카드 높이가 텍스트 전체를 담을 수 있을 만큼 충분한 경우 (currentHeight >= hugH - 4)
+//    -> maxLines = null로 유지하여 어떠한 말줄임(...)도 생기지 않습니다.
+// 3. 오직 카드가 작아서 텍스트가 카드 바깥으로 실제로 넘칠 때에만 가용 높이에 맞추어 maxLines(...)를 적용합니다.
+function updateDescTextTruncation(card: FrameNode, descText: TextNode, currentHeight: number, textCharacters?: string) {
+  descText.textTruncation = 'ENDING';
+  const isHug = card.primaryAxisSizingMode === 'AUTO';
+  if (isHug) {
+    descText.maxLines = null;
+    return;
+  }
+
+  const hugH = calculateCardHugHeight(card, textCharacters);
+  // 카드 높이가 텍스트 전체를 담을 수 있는 크기(Hug 높이) 이상이거나 여유가 있으면 말줄임 불필요 (기본 Auto 유지)
+  if (currentHeight >= hugH - 4) {
+    descText.maxLines = null;
+    return;
+  }
+
+  // 박스 높이를 실제로 벗어나는 경우에만 가용 줄수 계산하여 말줄임
+  const statusBadge = card.children.find(
+    (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+  );
+  const pb = statusBadge ? 36 : 16;
+  const headerRow = card.children.find(
+    (c) => c.name === 'Header' || (c.type === 'FRAME' && (c as FrameNode).layoutMode === 'HORIZONTAL')
+  ) as FrameNode | undefined;
+  const headerH = headerRow ? headerRow.height : 20;
+
+  const availableH = Math.max(14, currentHeight - 14 - pb - 8 - Math.round(headerH));
+  // Inter 11px의 1줄 실질 높이는 약 13.5px
+  descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
+}
+
 // 선택 영역 변경 감지 시 UI 갱신 (바탕화면 클릭 ➔ 빈 폼 / 노드 클릭 ➔ 상세 수정 폼)
 function handleSelectionChange() {
   const rawSelection = figma.currentPage.selection;
@@ -239,11 +325,12 @@ function handleSelectionChange() {
         (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
       ) as FrameNode | undefined;
       if (statusBadge) {
-        if (statusBadge.y <= 0) {
-          statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-          statusBadge.x = w - statusBadge.width - 10;
-          statusBadge.y = h - statusBadge.height - 10;
+        if (frame.paddingBottom !== 36) {
+          frame.paddingBottom = 36;
         }
+        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+        statusBadge.x = frame.width - statusBadge.width - 10;
+        statusBadge.y = frame.height - statusBadge.height - 10;
         statusBadge.locked = true;
         const textChild = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
         if (textChild) textChild.locked = true;
@@ -401,37 +488,8 @@ function handleSelectionChange() {
       const isAuto = frame.primaryAxisSizingMode === 'AUTO';
       sizeMode = isAuto ? 'hug' : 'fixed';
 
-      if (isAuto) {
-        hugHeight = Math.round(frame.height);
-      } else {
-        // Fixed 상태인 경우에도, 만약 Hug contents로 전환했을 때 늘어날 전체 높이를 미리 정밀 산출
-        const headerRow = frame.children.find(
-          c => c.name === 'Header' || (c.type === 'FRAME' && (c as FrameNode).layoutMode === 'HORIZONTAL')
-        ) as FrameNode | undefined;
-        const headerH = headerRow ? headerRow.height : 20;
-
-        const descText = frame.children.find(
-          c => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
-        ) as TextNode | undefined;
-
-        if (descText && descText.characters.trim()) {
-          try {
-            const temp = figma.createText();
-            temp.fontName = { family: 'Inter', style: 'Regular' };
-            temp.fontSize = 11;
-            temp.resize(Math.max(50, frame.width - 32), 10);
-            temp.textAutoResize = 'HEIGHT';
-            temp.characters = descText.characters;
-            const fullDescH = Math.round(temp.height);
-            temp.remove();
-            hugHeight = Math.max(50, 14 + 16 + Math.round(headerH) + 8 + fullDescH);
-          } catch (_) {
-            hugHeight = Math.round(frame.height);
-          }
-        } else {
-          hugHeight = Math.max(50, 14 + 16 + Math.round(headerH) + 8);
-        }
-      }
+      // Hug contents 높이: status 유무(패딩 36px vs 16px)를 항상 정확하게 반영하여 실시간 산출
+      hugHeight = calculateCardHugHeight(frame);
     }
 
     return {
@@ -463,6 +521,9 @@ function handleSelectionChange() {
       height: Math.round(node.height),
       hugHeight,
       sizeMode,
+      stepNumber: node.getPluginData('step_number') ? parseInt(node.getPluginData('step_number'), 10) : undefined,
+      badgeCorner: node.getPluginData('badge_corner') || undefined,
+      badgeShape: node.getPluginData('badge_shape') || undefined,
     };
   });
 
@@ -696,8 +757,9 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.layoutMode = 'VERTICAL';
   card.primaryAxisSizingMode = 'FIXED';
   card.counterAxisSizingMode = 'FIXED';
+  const hasShapeStatus = Boolean(status && STATUS_CONFIG[status]);
   card.paddingTop = 14;
-  card.paddingBottom = 16;
+  card.paddingBottom = hasShapeStatus ? 36 : 16;
   card.paddingLeft = 16;
   card.paddingRight = 16;
   card.itemSpacing = 8;
@@ -782,9 +844,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   descText.fills = [{ type: 'SOLID', color: descColor }];
   descText.layoutAlign = 'STRETCH';
   descText.textAutoResize = 'HEIGHT';
-  descText.textTruncation = 'ENDING';
-  const shapeAvailableH = Math.max(16, height - 14 - 16 - 8 - 20);
-  descText.maxLines = Math.max(1, Math.floor(shapeAvailableH / 15));
+  updateDescTextTruncation(card, descText, height, desc);
   descText.setPluginData('node_role', 'desc');
   card.appendChild(descText);
 
@@ -875,8 +935,9 @@ async function createFlowNode(payload: FlowNodePayload) {
     card.layoutMode = 'VERTICAL';
     card.primaryAxisSizingMode = 'FIXED';
     card.counterAxisSizingMode = 'FIXED';
+    const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
     card.paddingTop = 14;
-    card.paddingBottom = 16;
+    card.paddingBottom = hasStatus ? 36 : 16;
     card.paddingLeft = 16;
     card.paddingRight = 16;
     card.itemSpacing = 8;
@@ -927,9 +988,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     descText.fills = [{ type: 'SOLID', color: descColor }];
     descText.layoutAlign = 'STRETCH';
     descText.textAutoResize = 'HEIGHT';
-    descText.textTruncation = 'ENDING';
-    const initialAvailableH = Math.max(16, height - 14 - 16 - 8 - 20);
-    descText.maxLines = Math.max(1, Math.floor(initialAvailableH / 15));
+    updateDescTextTruncation(card, descText, height, description);
     descText.setPluginData('node_role', 'desc');
     card.appendChild(descText);
 
@@ -1149,14 +1208,20 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.appendChild(descText);
     }
 
-    descText.textTruncation = 'ENDING';
-    const isHugMode = payload.sizeMode === 'hug' || card.primaryAxisSizingMode === 'AUTO';
-    if (isHugMode) {
-      descText.maxLines = null;
-    } else {
-      const currentH = payload.height || card.height;
-      const availableH = Math.max(16, currentH - 14 - 16 - 8 - 20);
-      descText.maxLines = Math.max(1, Math.floor(availableH / 15));
+    // 상태 여부에 따른 하단 패딩 및 설명 텍스트 줄수 동기화
+    let statusBadge = card.children.find(
+      (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+    ) as FrameNode | undefined;
+    const hasStatus = Boolean(statusBadge || (payload.status && STATUS_CONFIG[payload.status]));
+    card.paddingBottom = hasStatus ? 36 : 16;
+
+    const currentH = payload.height || card.height;
+    updateDescTextTruncation(card, descText, currentH, description);
+
+    if (statusBadge) {
+      statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+      statusBadge.x = card.width - statusBadge.width - 10;
+      statusBadge.y = card.height - statusBadge.height - 10;
     }
 
     await safeSetCharacters(descText, description);
@@ -1238,20 +1303,22 @@ async function resizeNode(nodeId: string, width: number, height: number) {
       }
     }
 
+    // 상태 뱃지 탐색 및 패딩 동기화
+    const statusBadge = frame.children.find(
+      (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+    ) as FrameNode | undefined;
+    const hasStatus = Boolean(statusBadge);
+    frame.paddingBottom = hasStatus ? 36 : 16;
+
     // 설명 텍스트 말줄임 및 최대 줄수 동기화
     const desc = frame.children.find(
       (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
     ) as TextNode | undefined;
     if (desc) {
-      desc.textTruncation = 'ENDING';
-      const availableH = Math.max(16, h - 14 - 16 - 8 - 20);
-      desc.maxLines = Math.max(1, Math.floor(availableH / 15));
+      updateDescTextTruncation(frame, desc, h);
     }
 
     // 리사이즈 시 하단 오른쪽 박스 안쪽 상태 뱃지 위치 동기화
-    const statusBadge = frame.children.find(
-      (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
-    ) as FrameNode | undefined;
     if (statusBadge) {
       statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
       statusBadge.x = w - statusBadge.width - 10;
@@ -1816,8 +1883,8 @@ function syncStatusList() {
   postToUI({ type: 'STATUS_LIST_UPDATED', items });
 }
 
-// 상태 뱃지 적용 (노드 카드 내부 헤더에 일체형 직각 알약으로 부착)
-async function applyStatusToSelected(status: WorkflowStatus) {
+// 상태 뱃지 적용 또는 제거 (노드 카드 우하단에 독립된 절대 위치로 부착)
+async function applyStatusToSelected(status?: WorkflowStatus | '') {
   const selection = figma.currentPage.selection;
   if (selection.length === 0) {
     notify('상태를 지정할 요소를 1개 이상 선택해 주세요.', 'warning');
@@ -1825,7 +1892,8 @@ async function applyStatusToSelected(status: WorkflowStatus) {
   }
 
   await loadRequiredFonts();
-  const cfg = STATUS_CONFIG[status];
+  const isRemove = !status || !STATUS_CONFIG[status as WorkflowStatus];
+  const cfg = !isRemove ? STATUS_CONFIG[status as WorkflowStatus] : null;
 
   for (const rawNode of selection) {
     let flowNode = findFlowNode(rawNode) || (rawNode as FrameNode | ShapeWithTextNode);
@@ -1838,9 +1906,8 @@ async function applyStatusToSelected(status: WorkflowStatus) {
     if (flowNode.type === 'FRAME') {
       const card = flowNode as FrameNode;
       card.clipsContent = false;
-      card.setPluginData('workflow_status', status);
 
-      // 1. 기존 Header 행 안에 남아있던 구형 상태 뱃지가 있다면 탐색하여 card로 분리
+      // 1. 기존 Header 행 안에 남아있던 구형 상태 뱃지 탐색
       const headerRow = card.children.find(
         (c) => c.name === 'Header' || (c.type === 'FRAME' && (c as FrameNode).layoutMode === 'HORIZONTAL')
       ) as FrameNode | undefined;
@@ -1852,10 +1919,29 @@ async function applyStatusToSelected(status: WorkflowStatus) {
         ) as FrameNode | undefined;
       }
 
-      // 2. card 직속 상태 뱃지 탐색 또는 신규 생성
+      // 2. card 직속 상태 뱃지 탐색
       let statusBadge = card.children.find(
         (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
       ) as FrameNode | undefined;
+
+      if (isRemove) {
+        // 상태 제거
+        card.setPluginData('workflow_status', '');
+        card.paddingBottom = 16;
+        if (oldBadgeInHeader) oldBadgeInHeader.remove();
+        if (statusBadge) statusBadge.remove();
+
+        const descText = card.children.find(
+          (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+        ) as TextNode | undefined;
+        if (descText) {
+          updateDescTextTruncation(card, descText, card.height);
+        }
+        continue;
+      }
+
+      card.setPluginData('workflow_status', status as string);
+      card.paddingBottom = 36; // 상태 뱃지 높이 및 여백 확보
 
       if (!statusBadge && oldBadgeInHeader) {
         statusBadge = oldBadgeInHeader;
@@ -1887,34 +1973,48 @@ async function applyStatusToSelected(status: WorkflowStatus) {
         card.appendChild(statusBadge);
       }
 
-      statusBadge.fills = [{ type: 'SOLID', color: cfg.color }];
-      const textNode = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode;
-      if (textNode) {
-        textNode.locked = false;
-        await safeSetCharacters(textNode, cfg.label.toUpperCase());
-        textNode.fills = [{ type: 'SOLID', color: cfg.textColor }];
-        textNode.locked = true; // 캔버스에서 텍스트 직접 수정 차단
-      }
+      if (cfg) {
+        statusBadge.fills = [{ type: 'SOLID', color: cfg.color }];
+        const textNode = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode;
+        if (textNode) {
+          textNode.locked = false;
+          await safeSetCharacters(textNode, cfg.label.toUpperCase());
+          textNode.fills = [{ type: 'SOLID', color: cfg.textColor }];
+          textNode.locked = true; // 캔버스에서 텍스트 직접 수정 차단
+        }
 
-      // 3. 하단 오른쪽 박스 안쪽에 절대 위치 배치
-      if (card.layoutMode !== 'NONE') {
-        statusBadge.layoutPositioning = 'ABSOLUTE';
+        // 3. 하단 오른쪽 박스 안쪽에 절대 위치 배치
+        if (card.layoutMode !== 'NONE') {
+          statusBadge.layoutPositioning = 'ABSOLUTE';
+        }
+        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+        statusBadge.x = card.width - statusBadge.width - 10;
+        statusBadge.y = card.height - statusBadge.height - 10;
+        statusBadge.visible = true;
+        statusBadge.locked = true; // 상태 배지 잠금
+
+        // 설명 텍스트 줄수 동기화: Hug 모드이면 전체 표시(null), Fixed 모드일 때만 높이에 맞게 줄수 제한
+        const descText = card.children.find(
+          (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+        ) as TextNode | undefined;
+        if (descText) {
+          updateDescTextTruncation(card, descText, card.height);
+        }
       }
-      statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-      statusBadge.x = card.width - statusBadge.width - 10;
-      statusBadge.y = card.height - statusBadge.height - 10;
-      statusBadge.visible = true;
-      statusBadge.locked = true; // 상태 배지 잠금
     }
   }
 
   syncStatusList();
   handleSelectionChange();
-  notify(`${selection.length}개 노드에 [${cfg.label}] 상태 뱃지가 부착되었습니다.`, 'success');
+  if (isRemove) {
+    notify(`${selection.length}개 노드의 상태 뱃지가 제거되었습니다.`, 'info');
+  } else if (cfg) {
+    notify(`${selection.length}개 노드에 [${cfg.label}] 상태 뱃지가 부착되었습니다.`, 'success');
+  }
 }
 
-// 스텝 번호 부여 (노드 카드 좌상단에 일체형 직각 뱃지로 부착)
-async function addStepBadges(startNumber: number = 1) {
+// 스텝 번호 부여 (노드 카드 코너에 일체형 스텝 뱃지로 부착)
+async function addStepBadges(startNumber: number = 1, corner: string = 'TOP_LEFT', shape: string = 'Square') {
   const rawSelection = [...figma.currentPage.selection];
   if (rawSelection.length === 0) {
     notify('스텝 번호를 매길 요소를 캔버스에서 선택해 주세요.', 'warning');
@@ -1941,6 +2041,8 @@ async function addStepBadges(startNumber: number = 1) {
   for (const card of selection) {
     card.clipsContent = false;
     card.setPluginData('step_number', `${currentNum}`);
+    card.setPluginData('badge_corner', corner);
+    card.setPluginData('badge_shape', shape);
 
     let stepBadge = card.children.find(
       (c) => c.getPluginData('is_step_badge') === 'true' || c.name.startsWith('[Step]')
@@ -1948,18 +2050,10 @@ async function addStepBadges(startNumber: number = 1) {
 
     if (!stepBadge) {
       stepBadge = figma.createFrame();
-      stepBadge.name = `[Step] ${currentNum}`;
       card.appendChild(stepBadge);
-
-      if (card.layoutMode !== 'NONE') {
-        stepBadge.layoutPositioning = 'ABSOLUTE';
-      }
-      stepBadge.x = -8;
-      stepBadge.y = -8;
       stepBadge.resize(24, 24);
       stepBadge.primaryAxisSizingMode = 'FIXED';
       stepBadge.counterAxisSizingMode = 'FIXED';
-      stepBadge.cornerRadius = 0; // 완전 직각
       stepBadge.layoutMode = 'HORIZONTAL';
       stepBadge.primaryAxisAlignItems = 'CENTER';
       stepBadge.counterAxisAlignItems = 'CENTER';
@@ -1967,7 +2061,6 @@ async function addStepBadges(startNumber: number = 1) {
       stepBadge.strokes = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
       stepBadge.strokeWeight = 1.5;
       stepBadge.setPluginData('is_step_badge', 'true');
-      stepBadge.visible = true;
 
       const numText = figma.createText();
       numText.name = 'NumText';
@@ -1978,15 +2071,46 @@ async function addStepBadges(startNumber: number = 1) {
       stepBadge.appendChild(numText);
     } else {
       card.appendChild(stepBadge);
-      if (card.layoutMode !== 'NONE') {
-        stepBadge.layoutPositioning = 'ABSOLUTE';
-      }
+    }
+
+    if (card.layoutMode !== 'NONE') {
+      stepBadge.layoutPositioning = 'ABSOLUTE';
+    }
+
+    // 코너 모양 적용
+    if (shape === 'Circle') {
+      stepBadge.cornerRadius = 12;
+    } else if (shape === 'RoundBox') {
+      stepBadge.cornerRadius = 5;
+    } else {
+      stepBadge.cornerRadius = 0; // Square
+    }
+
+    // 코너 위치 좌표 및 constraints 계산
+    const bw = stepBadge.width || 24;
+    const bh = stepBadge.height || 24;
+    if (corner === 'TOP_RIGHT') {
+      stepBadge.x = card.width - bw + 8;
+      stepBadge.y = -8;
+      stepBadge.constraints = { horizontal: 'MAX', vertical: 'MIN' };
+    } else if (corner === 'BOTTOM_LEFT') {
+      stepBadge.x = -8;
+      stepBadge.y = card.height - bh + 8;
+      stepBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
+    } else if (corner === 'BOTTOM_RIGHT') {
+      stepBadge.x = card.width - bw + 8;
+      stepBadge.y = card.height - bh + 8;
+      stepBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+    } else {
+      // TOP_LEFT 기본값
       stepBadge.x = -8;
       stepBadge.y = -8;
-      stepBadge.visible = true;
+      stepBadge.constraints = { horizontal: 'MIN', vertical: 'MIN' };
     }
 
     stepBadge.name = `[Step] ${currentNum}`;
+    stepBadge.visible = true;
+
     const numText = stepBadge.children.find((c) => c.type === 'TEXT') as TextNode;
     if (numText) {
       await safeSetCharacters(numText, `${currentNum}`);
@@ -1995,7 +2119,8 @@ async function addStepBadges(startNumber: number = 1) {
     currentNum++;
   }
 
-  notify(`${selection.length}개 노드에 일체형 스텝 번호가 부여되었습니다.`, 'success');
+  handleSelectionChange();
+  notify(`${selection.length}개 노드에 스텝 번호가 적용되었습니다.`, 'success');
 }
 
 // 스텝 번호 제거 기능
@@ -2015,7 +2140,11 @@ async function removeStepBadges() {
     if (flow.type === 'FRAME') {
       const card = flow as FrameNode;
       card.setPluginData('step_number', '');
-      const stepBadges = card.children.filter((c) => c.getPluginData('is_step_badge') === 'true');
+      card.setPluginData('badge_corner', '');
+      card.setPluginData('badge_shape', '');
+      const stepBadges = card.children.filter(
+        (c) => c.getPluginData('is_step_badge') === 'true' || c.name.startsWith('[Step]')
+      );
       for (const badge of stepBadges) {
         badge.remove();
         removedCount++;
@@ -2023,6 +2152,7 @@ async function removeStepBadges() {
     }
   }
 
+  handleSelectionChange();
   if (removedCount > 0) {
     notify(`${removedCount}개 노드의 스텝 번호가 제거되었습니다.`, 'info');
   } else {
@@ -2222,7 +2352,7 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       await applyStatusToSelected(msg.status);
       break;
     case 'ADD_STEP_BADGES':
-      await addStepBadges(msg.startNumber || 1);
+      await addStepBadges(msg.startNumber || 1, msg.corner || 'TOP_LEFT', msg.shape || 'Square');
       break;
     case 'REMOVE_STEP_BADGES':
       await removeStepBadges();

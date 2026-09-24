@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 
 const BADGE_CORNERS = [
@@ -14,30 +14,83 @@ const BADGE_SHAPES = ['Square', 'Circle', 'RoundBox'] as const;
  * Step Badges 섹션 - 토글 + 숫자 입력 + 코너 위치 + 뱃지 모양
  */
 export function StepBadgesSection() {
-  const { uiState, setUIState, setLastNodeConfig, applyCurrentNodeState, autoResizeWindow } = useApp();
+  const {
+    uiState,
+    setUIState,
+    setLastNodeConfig,
+    applyStepBadges,
+    removeStepBadgesFromNodes,
+    selectedNodes,
+    autoResizeWindow,
+  } = useApp();
   const [isOn, setIsOn] = useState(false);
-  const { selectedBadgeCorner, selectedBadgeShape } = uiState;
-  const [isMultiMode, setIsMultiMode] = useState(false);
+  const { selectedBadgeCorner = 'TOP_LEFT', selectedBadgeShape = 'Square' } = uiState;
+  const isMultiMode = selectedNodes.length > 1;
+
+  // 선택된 노드의 스텝 뱃지 상태 동기화
+  useEffect(() => {
+    if (selectedNodes && selectedNodes.length > 0) {
+      const hasStep = selectedNodes.some(n => n.stepNumber !== undefined);
+      setIsOn(hasStep);
+
+      const firstWithStep = selectedNodes.find(n => n.stepNumber !== undefined);
+      if (firstWithStep) {
+        const numInput = document.getElementById('input-step-number') as HTMLInputElement | null;
+        if (numInput && firstWithStep.stepNumber !== undefined) {
+          numInput.value = String(firstWithStep.stepNumber);
+        }
+        if (firstWithStep.badgeCorner) {
+          setUIState({ selectedBadgeCorner: firstWithStep.badgeCorner });
+        }
+        if (firstWithStep.badgeShape) {
+          setUIState({ selectedBadgeShape: firstWithStep.badgeShape });
+        }
+      }
+    } else {
+      setIsOn(false);
+    }
+  }, [selectedNodes, setUIState]);
+
+  function getStepNumberValue(): number {
+    const numInput = document.getElementById('input-step-number') as HTMLInputElement | null;
+    return parseInt(numInput?.value || '1', 10) || 1;
+  }
 
   function handleToggle(checked: boolean) {
     setIsOn(checked);
     setLastNodeConfig({ stepBadgesOn: checked });
     const el = document.getElementById('step-badges-options');
     if (el) el.classList.toggle('active', checked);
-    applyCurrentNodeState();
+
+    if (checked) {
+      applyStepBadges(getStepNumberValue(), selectedBadgeCorner, selectedBadgeShape);
+    } else {
+      removeStepBadgesFromNodes();
+    }
     autoResizeWindow();
   }
 
   function selectBadgeCorner(pos: string) {
     setUIState({ selectedBadgeCorner: pos });
     setLastNodeConfig({ badgeCorner: pos });
-    applyCurrentNodeState();
+    if (isOn) {
+      applyStepBadges(getStepNumberValue(), pos, selectedBadgeShape);
+    }
   }
 
   function selectBadgeShape(shape: string) {
     setUIState({ selectedBadgeShape: shape });
     setLastNodeConfig({ badgeShape: shape });
-    applyCurrentNodeState();
+    if (isOn) {
+      applyStepBadges(getStepNumberValue(), selectedBadgeCorner, shape);
+    }
+  }
+
+  function handleNumberChange(val: number) {
+    setLastNodeConfig({ stepNumber: val });
+    if (isOn) {
+      applyStepBadges(val, selectedBadgeCorner, selectedBadgeShape);
+    }
   }
 
   return (
@@ -60,8 +113,9 @@ export function StepBadgesSection() {
               >
                 <path d="M16 18C17.1046 18 18 17.1046 18 16V8C18 6.89543 17.1046 6 16 6H8C6.89543 6 6 6.89543 6 8V16C6 17.1046 6.89543 18 8 18H16ZM8 17C7.44772 17 7 16.5523 7 16V8C7 7.44772 7.44772 7 8 7H16C16.5523 7 17 7.44772 17 8V16C17 16.5523 16.5523 17 16 17H8ZM10.4502 14.9971C10.7249 15.0245 10.9695 14.8245 10.9971 14.5498L11.0518 14H12.5479L12.5029 14.4502C12.4755 14.7249 12.6755 14.9695 12.9502 14.9971C13.2249 15.0245 13.4695 14.8245 13.4971 14.5498L13.5518 14H14.5C14.7761 14 15 13.7761 15 13.5C15 13.2239 14.7761 13 14.5 13H13.6523L13.8525 11H14.5C14.7761 11 15 10.7761 15 10.5C15 10.2239 14.7761 10 14.5 10H13.9521L13.9971 9.5498C14.0245 9.27507 13.8245 9.03045 13.5498 9.00293C13.2751 8.97546 13.0305 9.17547 13.0029 9.4502L12.9482 10H11.4521L11.4971 9.5498C11.5245 9.27507 11.3245 9.03045 11.0498 9.00293C10.7751 8.97546 10.5305 9.17547 10.5029 9.4502L10.4482 10H9.5C9.22386 10 9 10.2239 9 10.5C9 10.7761 9.22386 11 9.5 11H10.3477L10.1475 13H9.5C9.22386 13 9 13.2239 9 13.5C9 13.7761 9.22386 14 9.5 14H10.0479L10.0029 14.4502C9.97546 14.7249 10.1755 14.9695 10.4502 14.9971ZM11.1523 13L11.3525 11H12.8477L12.6475 13H11.1523Z" fill="currentColor"/>
               </svg>
-              <input type="number" id="input-step-number" defaultValue={24} min={1}
-                onChange={e => setLastNodeConfig({ stepNumber: parseInt(e.target.value, 10) || 1 })} />
+              <input type="number" id="input-step-number" defaultValue={1} min={1}
+                onChange={e => handleNumberChange(parseInt(e.target.value, 10) || 1)}
+                onBlur={e => handleNumberChange(parseInt(e.target.value, 10) || 1)} />
             </div>
             <div className="corner-position-group">
               {BADGE_CORNERS.map(c => (

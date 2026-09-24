@@ -51,12 +51,23 @@ export function useFigmaMessage() {
 
             if (node.sizeMode) {
               setLastNodeConfig({ sizeMode: node.sizeMode, width: node.width, height: node.height });
-              const textEl = document.getElementById('size-mode-current-text');
-              const iconEl = document.getElementById('size-mode-current-icon');
-              const FIXED_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z" fill="currentColor"/></svg>`;
-              const HUG_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z" fill="currentColor"/></svg>`;
-              if (textEl) textEl.textContent = node.sizeMode === 'hug' ? 'Hug contents' : 'Fixed height';
-              if (iconEl) iconEl.innerHTML = node.sizeMode === 'hug' ? HUG_SVG : FIXED_SVG;
+            }
+
+            // 상태(status) 복원
+            const currentStatus = node.status || msg.currentStatus;
+            if (currentStatus) {
+              setUIState({ selectedStatus: currentStatus });
+              setLastNodeConfig({ status: currentStatus, statusOn: true });
+              const toggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
+              if (toggleEl) toggleEl.checked = true;
+              const statusOptionsEl = document.getElementById('status-options');
+              if (statusOptionsEl) statusOptionsEl.classList.add('active');
+            } else {
+              setLastNodeConfig({ statusOn: false });
+              const toggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
+              if (toggleEl) toggleEl.checked = false;
+              const statusOptionsEl = document.getElementById('status-options');
+              if (statusOptionsEl) statusOptionsEl.classList.remove('active');
             }
           }
           break;

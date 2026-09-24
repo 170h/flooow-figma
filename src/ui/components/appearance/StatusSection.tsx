@@ -16,30 +16,52 @@ const STATUSES = [
  * Status 섹션 - 토글 스위치 + 8종 상태 칩 (토글형)
  */
 export function StatusSection() {
-  const { uiState, setUIState, setLastNodeConfig, applyCurrentNodeState, autoResizeWindow } = useApp();
+  const {
+    uiState,
+    setUIState,
+    setLastNodeConfig,
+    applyStatusToNode,
+    selectedNodes,
+    autoResizeWindow
+  } = useApp();
   const [isOn, setIsOn] = useState(false);
   const { selectedStatus } = uiState;
+
+  // 선택된 노드의 상태와 UI 동기화
+  React.useEffect(() => {
+    if (selectedNodes && selectedNodes.length === 1) {
+      const node = selectedNodes[0];
+      if (node.status) {
+        setIsOn(true);
+        setUIState({ selectedStatus: node.status });
+      } else {
+        setIsOn(false);
+      }
+    }
+  }, [selectedNodes, setUIState]);
 
   function handleToggle(checked: boolean) {
     setIsOn(checked);
     setLastNodeConfig({ statusOn: checked });
     const el = document.getElementById('status-options');
     if (el) el.classList.toggle('active', checked);
-    applyCurrentNodeState();
+    if (checked) {
+      const targetStatus = selectedStatus || 'in_progress';
+      applyStatusToNode(targetStatus);
+    } else {
+      applyStatusToNode('');
+    }
     autoResizeWindow();
   }
 
   function selectStatus(status: string) {
+    setIsOn(true);
     setUIState({ selectedStatus: status });
-    setLastNodeConfig({ status });
-    if (!isOn) {
-      setIsOn(true);
-      setLastNodeConfig({ statusOn: true });
-      const el = document.getElementById('status-options');
-      if (el) el.classList.add('active');
-      autoResizeWindow();
-    }
-    applyCurrentNodeState();
+    setLastNodeConfig({ status, statusOn: true });
+    const el = document.getElementById('status-options');
+    if (el) el.classList.add('active');
+    applyStatusToNode(status);
+    autoResizeWindow();
   }
 
   return (

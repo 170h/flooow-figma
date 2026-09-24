@@ -800,9 +800,11 @@
     /* ============================================================ */
     .numeric-inputs-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1.45fr;
+      grid-template-columns: 58px 58px 58px minmax(0, 1fr);
       gap: 6px;
       align-items: center;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .input-scrubber-box {
@@ -812,9 +814,13 @@
       border: 1px solid transparent;
       border-radius: var(--radius-sm);
       height: 28px;
-      padding: 0 6px 0 8px;
-      gap: 5px;
+      padding: 0 4px 0 6px;
+      gap: 3px;
       box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      flex-shrink: 0;
       transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
 
@@ -825,7 +831,7 @@
     .input-scrubber-box:focus-within {
       background: #ffffff;
       border-color: var(--color-brand);
-      box-shadow: 0 0 0 1px var(--color-brand);
+      box-shadow: none;
     }
 
     .input-scrubber-box span,
@@ -848,8 +854,8 @@
     }
 
     .input-scrubber-box:has(svg) {
-      padding: 0 6px 0 2px;
-      gap: 2px;
+      padding: 0 4px 0 0;
+      gap: 0;
     }
 
     .input-scrubber-box input {
@@ -857,6 +863,7 @@
       background: transparent;
       width: 100%;
       min-width: 0;
+      flex: 1 1 0;
       padding: 0;
       margin: 0;
       font-size: 11px;
@@ -894,7 +901,7 @@
     .select-dropdown-box:focus {
       background-color: #ffffff;
       border-color: var(--color-brand);
-      box-shadow: 0 0 0 1px var(--color-brand);
+      box-shadow: none;
     }
 
     /* ============================================================ */
@@ -904,6 +911,7 @@
     .size-mode-dropdown-wrapper {
       position: relative;
       width: 100%;
+      min-width: 0;
     }
 
     .figma-dropdown-btn,
@@ -912,6 +920,7 @@
       align-items: center;
       justify-content: space-between;
       width: 100%;
+      min-width: 0;
       height: 28px;
       background-color: var(--color-bg-secondary);
       border: 1px solid transparent;
@@ -935,7 +944,7 @@
     .size-mode-dropdown-btn.active {
       background-color: #ffffff;
       border-color: var(--color-brand);
-      box-shadow: 0 0 0 1px var(--color-brand);
+      box-shadow: none;
       outline: none;
     }
 

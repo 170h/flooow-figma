@@ -806,9 +806,11 @@
     /* ============================================================ */
     .numeric-inputs-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1.45fr;
+      grid-template-columns: 58px 58px 58px minmax(0, 1fr);
       gap: 6px;
       align-items: center;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .input-scrubber-box {
@@ -818,9 +820,13 @@
       border: 1px solid transparent;
       border-radius: var(--radius-sm);
       height: 28px;
-      padding: 0 6px 0 8px;
-      gap: 5px;
+      padding: 0 4px 0 6px;
+      gap: 3px;
       box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      flex-shrink: 0;
       transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
 
@@ -831,7 +837,7 @@
     .input-scrubber-box:focus-within {
       background: #ffffff;
       border-color: var(--color-brand);
-      box-shadow: 0 0 0 1px var(--color-brand);
+      box-shadow: none;
     }
 
     .input-scrubber-box span,
@@ -854,8 +860,8 @@
     }
 
     .input-scrubber-box:has(svg) {
-      padding: 0 6px 0 2px;
-      gap: 2px;
+      padding: 0 4px 0 0;
+      gap: 0;
     }
 
     .input-scrubber-box input {
@@ -863,6 +869,7 @@
       background: transparent;
       width: 100%;
       min-width: 0;
+      flex: 1 1 0;
       padding: 0;
       margin: 0;
       font-size: 11px;
@@ -900,7 +907,7 @@
     .select-dropdown-box:focus {
       background-color: #ffffff;
       border-color: var(--color-brand);
-      box-shadow: 0 0 0 1px var(--color-brand);
+      box-shadow: none;
     }
 
     /* ============================================================ */
@@ -910,6 +917,7 @@
     .size-mode-dropdown-wrapper {
       position: relative;
       width: 100%;
+      min-width: 0;
     }
 
     .figma-dropdown-btn,
@@ -918,6 +926,7 @@
       align-items: center;
       justify-content: space-between;
       width: 100%;
+      min-width: 0;
       height: 28px;
       background-color: var(--color-bg-secondary);
       border: 1px solid transparent;
@@ -941,7 +950,7 @@
     .size-mode-dropdown-btn.active {
       background-color: #ffffff;
       border-color: var(--color-brand);
-      box-shadow: 0 0 0 1px var(--color-brand);
+      box-shadow: none;
       outline: none;
     }
 
@@ -3843,7 +3852,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useRef(initialValue);
           }
-          function useEffect8(create, deps) {
+          function useEffect9(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useEffect(create, deps);
           }
@@ -4626,7 +4635,7 @@
           exports.useContext = useContext2;
           exports.useDebugValue = useDebugValue;
           exports.useDeferredValue = useDeferredValue;
-          exports.useEffect = useEffect8;
+          exports.useEffect = useEffect9;
           exports.useId = useId;
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
@@ -27404,13 +27413,33 @@
           }
         }, "*");
       });
-      const statusToggleEl = document.getElementById("toggle-status");
-      const isStatusOn = statusToggleEl?.checked || false;
-      const { selectedStatus } = uiStateRef.current;
-      if (isStatusOn && selectedStatus && nodes.length > 0) {
-        parent.postMessage({ pluginMessage: { type: "SET_STATUS", status: selectedStatus } }, "*");
-      }
     }, [setLastNodeConfig]);
+    const applyStatusToNode = (0, import_react.useCallback)((status) => {
+      const nodes = selectedNodesRef.current;
+      if (!nodes || nodes.length === 0) return;
+      parent.postMessage({ pluginMessage: { type: "SET_STATUS", status: status || "" } }, "*");
+    }, []);
+    const applyStepBadges = (0, import_react.useCallback)((startNumber = 1, corner, shape) => {
+      const nodes = selectedNodesRef.current;
+      if (!nodes || nodes.length === 0) return;
+      parent.postMessage({
+        pluginMessage: {
+          type: "ADD_STEP_BADGES",
+          startNumber,
+          corner: corner || "TOP_LEFT",
+          shape: shape || "Square"
+        }
+      }, "*");
+    }, []);
+    const removeStepBadgesFromNodes = (0, import_react.useCallback)(() => {
+      const nodes = selectedNodesRef.current;
+      if (!nodes || nodes.length === 0) return;
+      parent.postMessage({
+        pluginMessage: {
+          type: "REMOVE_STEP_BADGES"
+        }
+      }, "*");
+    }, []);
     const applyCurrentConnectorState = (0, import_react.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       if (!isConnectorSelectedRef.current || !nodes || nodes.length !== 1) return;
@@ -27614,6 +27643,9 @@
       phaseModalEditingId,
       setPhaseModalEditingId,
       applyCurrentNodeState,
+      applyStatusToNode,
+      applyStepBadges,
+      removeStepBadgesFromNodes,
       applyCurrentConnectorState,
       handleMainAction,
       handleSelectionChange,
@@ -27665,12 +27697,21 @@
               if (hugValEl && node.hugHeight) hugValEl.textContent = String(node.hugHeight);
               if (node.sizeMode) {
                 setLastNodeConfig({ sizeMode: node.sizeMode, width: node.width, height: node.height });
-                const textEl = document.getElementById("size-mode-current-text");
-                const iconEl = document.getElementById("size-mode-current-icon");
-                const FIXED_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z" fill="currentColor"/></svg>`;
-                const HUG_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z" fill="currentColor"/></svg>`;
-                if (textEl) textEl.textContent = node.sizeMode === "hug" ? "Hug contents" : "Fixed height";
-                if (iconEl) iconEl.innerHTML = node.sizeMode === "hug" ? HUG_SVG : FIXED_SVG;
+              }
+              const currentStatus = node.status || msg.currentStatus;
+              if (currentStatus) {
+                setUIState({ selectedStatus: currentStatus });
+                setLastNodeConfig({ status: currentStatus, statusOn: true });
+                const toggleEl = document.getElementById("toggle-status");
+                if (toggleEl) toggleEl.checked = true;
+                const statusOptionsEl = document.getElementById("status-options");
+                if (statusOptionsEl) statusOptionsEl.classList.add("active");
+              } else {
+                setLastNodeConfig({ statusOn: false });
+                const toggleEl = document.getElementById("toggle-status");
+                if (toggleEl) toggleEl.checked = false;
+                const statusOptionsEl = document.getElementById("status-options");
+                if (statusOptionsEl) statusOptionsEl.classList.remove("active");
               }
             }
             break;
@@ -27990,11 +28031,14 @@
     { label: "Web", w: 320, h: 180 },
     { label: "Mobile", w: 160, h: 280 }
   ];
+  var FIXED_SVG = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) });
+  var HUG_SVG = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z", fill: "currentColor" }) });
   function SizeSection() {
     const {
       lastNodeConfig,
       setLastNodeConfig,
       selectedNodes,
+      uiState,
       setActiveModal,
       sizeModeDropdownOpen,
       setSizeModeDropdownOpen,
@@ -28065,40 +28109,39 @@
         const fixedValEl = document.getElementById("size-mode-val-fixed");
         const hugValEl = document.getElementById("size-mode-val-hug");
         if (fixedValEl && currentH) fixedValEl.textContent = currentH;
-        const hugH = selectedNodes[0]?.hugHeight || currentH;
+        const hasStatus = Boolean(selectedNodes[0]?.status || cfg.statusOn || uiState.selectedStatus);
+        const defaultHugH = hasStatus ? 110 : 90;
+        const isCurrentlyHug = currentSizeMode === "hug" || selectedNodes[0]?.sizeMode === "hug";
+        const hugH = isCurrentlyHug ? Number(currentH) : selectedNodes[0]?.hugHeight ?? defaultHugH;
         if (hugValEl) hugValEl.textContent = String(hugH);
       }
       setSizeModeDropdownOpen(!sizeModeDropdownOpen);
     }
     function selectSizeMode(mode) {
-      if (mode !== "mixed") setLastNodeConfig({ sizeMode: mode });
+      if (mode !== "mixed") {
+        setLastNodeConfig({ sizeMode: mode });
+      }
       const hiddenInput = document.getElementById("select-size-mode");
       if (hiddenInput) {
         hiddenInput.value = mode;
         hiddenInput.dispatchEvent(new Event("change"));
       }
-      const textEl = document.getElementById("size-mode-current-text");
-      const iconEl = document.getElementById("size-mode-current-icon");
-      const FIXED_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z" fill="currentColor"/></svg>`;
-      const HUG_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z" fill="currentColor"/></svg>`;
-      if (mode === "fixed") {
-        if (textEl) textEl.textContent = "Fixed height";
-        if (iconEl) iconEl.innerHTML = FIXED_SVG;
-      } else if (mode === "hug") {
-        if (textEl) textEl.textContent = "Hug contents";
-        if (iconEl) iconEl.innerHTML = HUG_SVG;
-      } else if (mode === "mixed") {
-        if (textEl) textEl.textContent = "Mixed";
-        if (iconEl) iconEl.innerHTML = `<span class="phase-dash-icon" style="display:inline-block; vertical-align:middle;"></span>`;
-      }
-      document.querySelectorAll("#popover-size-mode .size-mode-menu-item").forEach((item) => {
-        const el = item;
-        el.classList.toggle("selected", el.dataset.value === mode);
-      });
       closeAllPopovers();
       applyCurrentNodeState(mode);
     }
-    const { lastNodeConfig: cfg } = useApp();
+    const cfg = lastNodeConfig;
+    const currentSizeMode = (() => {
+      if (selectedNodes && selectedNodes.length > 1) {
+        const first = selectedNodes[0]?.sizeMode;
+        const allSame = selectedNodes.every((n) => n.sizeMode === first);
+        if (!allSame) return "mixed";
+        return first || cfg.sizeMode || "fixed";
+      }
+      if (selectedNodes && selectedNodes.length === 1) {
+        return selectedNodes[0]?.sizeMode || cfg.sizeMode || "fixed";
+      }
+      return cfg.sizeMode || "fixed";
+    })();
     return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-header", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "section-title", children: "Size" }),
@@ -28170,31 +28213,31 @@
                 onClick: toggleSizeModeDropdown,
                 children: [
                   /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "size-mode-btn-content figma-dropdown-btn-content", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-current-icon figma-dropdown-current-icon", id: "size-mode-current-icon", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) }) }),
-                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-current-text figma-dropdown-current-text", id: "size-mode-current-text", children: "Fixed height" })
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-current-icon figma-dropdown-current-icon", id: "size-mode-current-icon", children: currentSizeMode === "hug" ? HUG_SVG : currentSizeMode === "mixed" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "phase-dash-icon", style: { display: "inline-block", verticalAlign: "middle" } }) : FIXED_SVG }),
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-current-text figma-dropdown-current-text", id: "size-mode-current-text", children: currentSizeMode === "hug" ? "Hug contents" : currentSizeMode === "mixed" ? "Mixed" : "Fixed height" })
                   ] }),
                   /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { className: "size-mode-chevron-icon figma-dropdown-chevron-icon", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z", fill: "currentColor" }) })
                 ]
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `size-mode-menu-popover figma-dropdown-menu${sizeModeDropdownOpen ? " active" : ""}`, id: "popover-size-mode", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "size-mode-menu-item figma-dropdown-item", "data-value": "mixed", onClick: () => selectSizeMode("mixed"), children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "mixed" ? " selected" : ""}`, "data-value": "mixed", onClick: () => selectSizeMode("mixed"), children: [
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "phase-dash-icon" }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Mixed" })
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("hr", { className: "phase-popover-divider", style: { margin: "4px 0" } }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "size-mode-menu-item figma-dropdown-item selected", "data-value": "fixed", onClick: () => selectSizeMode("fixed"), children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "fixed" ? " selected" : ""}`, "data-value": "fixed", onClick: () => selectSizeMode("fixed"), children: [
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Fixed height" }),
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-fixed", children: cfg.height || 90 })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "size-mode-menu-item figma-dropdown-item", "data-value": "hug", onClick: () => selectSizeMode("hug"), children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "hug" ? " selected" : ""}`, "data-value": "hug", onClick: () => selectSizeMode("hug"), children: [
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z", fill: "currentColor" }) }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Hug contents" }),
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-hug", children: selectedNodes[0]?.hugHeight || cfg.height || 90 })
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-hug", children: currentSizeMode === "hug" || selectedNodes[0]?.sizeMode === "hug" ? selectedNodes[0]?.height || cfg.height || 90 : selectedNodes[0]?.hugHeight || (cfg.statusOn || Boolean(uiState.selectedStatus) ? 110 : 90) })
               ] })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("input", { type: "hidden", id: "select-size-mode", defaultValue: "fixed" })
@@ -28309,28 +28352,48 @@
     { id: "done", label: "Done", color: "#374151" }
   ];
   function StatusSection() {
-    const { uiState, setUIState, setLastNodeConfig, applyCurrentNodeState, autoResizeWindow } = useApp();
+    const {
+      uiState,
+      setUIState,
+      setLastNodeConfig,
+      applyStatusToNode,
+      selectedNodes,
+      autoResizeWindow
+    } = useApp();
     const [isOn, setIsOn] = (0, import_react7.useState)(false);
     const { selectedStatus } = uiState;
+    import_react7.default.useEffect(() => {
+      if (selectedNodes && selectedNodes.length === 1) {
+        const node = selectedNodes[0];
+        if (node.status) {
+          setIsOn(true);
+          setUIState({ selectedStatus: node.status });
+        } else {
+          setIsOn(false);
+        }
+      }
+    }, [selectedNodes, setUIState]);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastNodeConfig({ statusOn: checked });
       const el = document.getElementById("status-options");
       if (el) el.classList.toggle("active", checked);
-      applyCurrentNodeState();
+      if (checked) {
+        const targetStatus = selectedStatus || "in_progress";
+        applyStatusToNode(targetStatus);
+      } else {
+        applyStatusToNode("");
+      }
       autoResizeWindow();
     }
     function selectStatus(status) {
+      setIsOn(true);
       setUIState({ selectedStatus: status });
-      setLastNodeConfig({ status });
-      if (!isOn) {
-        setIsOn(true);
-        setLastNodeConfig({ statusOn: true });
-        const el = document.getElementById("status-options");
-        if (el) el.classList.add("active");
-        autoResizeWindow();
-      }
-      applyCurrentNodeState();
+      setLastNodeConfig({ status, statusOn: true });
+      const el = document.getElementById("status-options");
+      if (el) el.classList.add("active");
+      applyStatusToNode(status);
+      autoResizeWindow();
     }
     return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "section-header toggle-row", children: [
@@ -28369,27 +28432,74 @@
   ];
   var BADGE_SHAPES = ["Square", "Circle", "RoundBox"];
   function StepBadgesSection() {
-    const { uiState, setUIState, setLastNodeConfig, applyCurrentNodeState, autoResizeWindow } = useApp();
+    const {
+      uiState,
+      setUIState,
+      setLastNodeConfig,
+      applyStepBadges,
+      removeStepBadgesFromNodes,
+      selectedNodes,
+      autoResizeWindow
+    } = useApp();
     const [isOn, setIsOn] = (0, import_react8.useState)(false);
-    const { selectedBadgeCorner, selectedBadgeShape } = uiState;
-    const [isMultiMode, setIsMultiMode] = (0, import_react8.useState)(false);
+    const { selectedBadgeCorner = "TOP_LEFT", selectedBadgeShape = "Square" } = uiState;
+    const isMultiMode = selectedNodes.length > 1;
+    (0, import_react8.useEffect)(() => {
+      if (selectedNodes && selectedNodes.length > 0) {
+        const hasStep = selectedNodes.some((n) => n.stepNumber !== void 0);
+        setIsOn(hasStep);
+        const firstWithStep = selectedNodes.find((n) => n.stepNumber !== void 0);
+        if (firstWithStep) {
+          const numInput = document.getElementById("input-step-number");
+          if (numInput && firstWithStep.stepNumber !== void 0) {
+            numInput.value = String(firstWithStep.stepNumber);
+          }
+          if (firstWithStep.badgeCorner) {
+            setUIState({ selectedBadgeCorner: firstWithStep.badgeCorner });
+          }
+          if (firstWithStep.badgeShape) {
+            setUIState({ selectedBadgeShape: firstWithStep.badgeShape });
+          }
+        }
+      } else {
+        setIsOn(false);
+      }
+    }, [selectedNodes, setUIState]);
+    function getStepNumberValue() {
+      const numInput = document.getElementById("input-step-number");
+      return parseInt(numInput?.value || "1", 10) || 1;
+    }
     function handleToggle(checked) {
       setIsOn(checked);
       setLastNodeConfig({ stepBadgesOn: checked });
       const el = document.getElementById("step-badges-options");
       if (el) el.classList.toggle("active", checked);
-      applyCurrentNodeState();
+      if (checked) {
+        applyStepBadges(getStepNumberValue(), selectedBadgeCorner, selectedBadgeShape);
+      } else {
+        removeStepBadgesFromNodes();
+      }
       autoResizeWindow();
     }
     function selectBadgeCorner(pos) {
       setUIState({ selectedBadgeCorner: pos });
       setLastNodeConfig({ badgeCorner: pos });
-      applyCurrentNodeState();
+      if (isOn) {
+        applyStepBadges(getStepNumberValue(), pos, selectedBadgeShape);
+      }
     }
     function selectBadgeShape(shape) {
       setUIState({ selectedBadgeShape: shape });
       setLastNodeConfig({ badgeShape: shape });
-      applyCurrentNodeState();
+      if (isOn) {
+        applyStepBadges(getStepNumberValue(), selectedBadgeCorner, shape);
+      }
+    }
+    function handleNumberChange(val) {
+      setLastNodeConfig({ stepNumber: val });
+      if (isOn) {
+        applyStepBadges(val, selectedBadgeCorner, selectedBadgeShape);
+      }
     }
     return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "section-header toggle-row", children: [
@@ -28419,9 +28529,10 @@
               {
                 type: "number",
                 id: "input-step-number",
-                defaultValue: 24,
+                defaultValue: 1,
                 min: 1,
-                onChange: (e) => setLastNodeConfig({ stepNumber: parseInt(e.target.value, 10) || 1 })
+                onChange: (e) => handleNumberChange(parseInt(e.target.value, 10) || 1),
+                onBlur: (e) => handleNumberChange(parseInt(e.target.value, 10) || 1)
               }
             )
           ] }),

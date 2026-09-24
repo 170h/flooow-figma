@@ -599,6 +599,69 @@
     }
     return { title, description };
   }
+  function calculateCardHugHeight(card, textCharacters) {
+    const isAuto = card.primaryAxisSizingMode === "AUTO";
+    if (isAuto && textCharacters === void 0) {
+      return Math.round(card.height);
+    }
+    const prevSizingMode = card.primaryAxisSizingMode;
+    const prevHeight = card.height;
+    const prevMinHeight = card.minHeight;
+    const prevMaxHeight = card.maxHeight;
+    const descText = card.children.find(
+      (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+    );
+    const prevMaxLines = descText ? descText.maxLines : null;
+    const prevDescChars = descText ? descText.characters : "";
+    try {
+      card.minHeight = null;
+      card.maxHeight = null;
+      if (descText) {
+        descText.maxLines = null;
+        if (textCharacters !== void 0 && textCharacters !== prevDescChars) {
+          descText.characters = textCharacters;
+        }
+      }
+      card.primaryAxisSizingMode = "AUTO";
+      const hugH = Math.round(card.height);
+      card.primaryAxisSizingMode = prevSizingMode;
+      card.resize(card.width, prevHeight);
+      card.minHeight = prevMinHeight;
+      card.maxHeight = prevMaxHeight;
+      if (descText) {
+        if (prevMaxLines !== null) descText.maxLines = prevMaxLines;
+        if (textCharacters !== void 0 && textCharacters !== prevDescChars) {
+          descText.characters = prevDescChars;
+        }
+      }
+      return hugH;
+    } catch (_) {
+      return Math.round(card.height);
+    }
+  }
+  function updateDescTextTruncation(card, descText, currentHeight, textCharacters) {
+    descText.textTruncation = "ENDING";
+    const isHug = card.primaryAxisSizingMode === "AUTO";
+    if (isHug) {
+      descText.maxLines = null;
+      return;
+    }
+    const hugH = calculateCardHugHeight(card, textCharacters);
+    if (currentHeight >= hugH - 4) {
+      descText.maxLines = null;
+      return;
+    }
+    const statusBadge = card.children.find(
+      (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+    );
+    const pb = statusBadge ? 36 : 16;
+    const headerRow = card.children.find(
+      (c) => c.name === "Header" || c.type === "FRAME" && c.layoutMode === "HORIZONTAL"
+    );
+    const headerH = headerRow ? headerRow.height : 20;
+    const availableH = Math.max(14, currentHeight - 14 - pb - 8 - Math.round(headerH));
+    descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
+  }
   function handleSelectionChange() {
     const rawSelection = figma.currentPage.selection;
     const resolvedNodesMap = /* @__PURE__ */ new Map();
@@ -647,11 +710,12 @@
           (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
         );
         if (statusBadge) {
-          if (statusBadge.y <= 0) {
-            statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-            statusBadge.x = w - statusBadge.width - 10;
-            statusBadge.y = h - statusBadge.height - 10;
+          if (frame.paddingBottom !== 36) {
+            frame.paddingBottom = 36;
           }
+          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+          statusBadge.x = frame.width - statusBadge.width - 10;
+          statusBadge.y = frame.height - statusBadge.height - 10;
           statusBadge.locked = true;
           const textChild = statusBadge.children.find((c) => c.type === "TEXT");
           if (textChild) textChild.locked = true;
@@ -784,34 +848,7 @@
         const frame = node;
         const isAuto = frame.primaryAxisSizingMode === "AUTO";
         sizeMode = isAuto ? "hug" : "fixed";
-        if (isAuto) {
-          hugHeight = Math.round(frame.height);
-        } else {
-          const headerRow = frame.children.find(
-            (c) => c.name === "Header" || c.type === "FRAME" && c.layoutMode === "HORIZONTAL"
-          );
-          const headerH = headerRow ? headerRow.height : 20;
-          const descText = frame.children.find(
-            (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
-          );
-          if (descText && descText.characters.trim()) {
-            try {
-              const temp = figma.createText();
-              temp.fontName = { family: "Inter", style: "Regular" };
-              temp.fontSize = 11;
-              temp.resize(Math.max(50, frame.width - 32), 10);
-              temp.textAutoResize = "HEIGHT";
-              temp.characters = descText.characters;
-              const fullDescH = Math.round(temp.height);
-              temp.remove();
-              hugHeight = Math.max(50, 14 + 16 + Math.round(headerH) + 8 + fullDescH);
-            } catch (_) {
-              hugHeight = Math.round(frame.height);
-            }
-          } else {
-            hugHeight = Math.max(50, 14 + 16 + Math.round(headerH) + 8);
-          }
-        }
+        hugHeight = calculateCardHugHeight(frame);
       }
       return {
         id: node.id,
@@ -841,7 +878,10 @@
         width: Math.round(node.width),
         height: Math.round(node.height),
         hugHeight,
-        sizeMode
+        sizeMode,
+        stepNumber: node.getPluginData("step_number") ? parseInt(node.getPluginData("step_number"), 10) : void 0,
+        badgeCorner: node.getPluginData("badge_corner") || void 0,
+        badgeShape: node.getPluginData("badge_shape") || void 0
       };
     });
     let currentStatus;
@@ -1077,8 +1117,9 @@
     card.layoutMode = "VERTICAL";
     card.primaryAxisSizingMode = "FIXED";
     card.counterAxisSizingMode = "FIXED";
+    const hasShapeStatus = Boolean(status && STATUS_CONFIG[status]);
     card.paddingTop = 14;
-    card.paddingBottom = 16;
+    card.paddingBottom = hasShapeStatus ? 36 : 16;
     card.paddingLeft = 16;
     card.paddingRight = 16;
     card.itemSpacing = 8;
@@ -1151,9 +1192,7 @@
     descText.fills = [{ type: "SOLID", color: descColor }];
     descText.layoutAlign = "STRETCH";
     descText.textAutoResize = "HEIGHT";
-    descText.textTruncation = "ENDING";
-    const shapeAvailableH = Math.max(16, height - 14 - 16 - 8 - 20);
-    descText.maxLines = Math.max(1, Math.floor(shapeAvailableH / 15));
+    updateDescTextTruncation(card, descText, height, desc);
     descText.setPluginData("node_role", "desc");
     card.appendChild(descText);
     if (stepNumber) {
@@ -1227,8 +1266,9 @@
       card.layoutMode = "VERTICAL";
       card.primaryAxisSizingMode = "FIXED";
       card.counterAxisSizingMode = "FIXED";
+      const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
       card.paddingTop = 14;
-      card.paddingBottom = 16;
+      card.paddingBottom = hasStatus ? 36 : 16;
       card.paddingLeft = 16;
       card.paddingRight = 16;
       card.itemSpacing = 8;
@@ -1270,9 +1310,7 @@
       descText.fills = [{ type: "SOLID", color: descColor }];
       descText.layoutAlign = "STRETCH";
       descText.textAutoResize = "HEIGHT";
-      descText.textTruncation = "ENDING";
-      const initialAvailableH = Math.max(16, height - 14 - 16 - 8 - 20);
-      descText.maxLines = Math.max(1, Math.floor(initialAvailableH / 15));
+      updateDescTextTruncation(card, descText, height, description);
       descText.setPluginData("node_role", "desc");
       card.appendChild(descText);
       card.name = title;
@@ -1397,13 +1435,13 @@
           card.minHeight = h;
           card.maxHeight = h;
         }
-        const statusBadge = card.children.find(
+        const statusBadge2 = card.children.find(
           (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
         );
-        if (statusBadge) {
-          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-          statusBadge.x = w - statusBadge.width - 10;
-          statusBadge.y = h - statusBadge.height - 10;
+        if (statusBadge2) {
+          statusBadge2.constraints = { horizontal: "MAX", vertical: "MAX" };
+          statusBadge2.x = w - statusBadge2.width - 10;
+          statusBadge2.y = h - statusBadge2.height - 10;
         }
       }
       let headerRow = card.children.find(
@@ -1452,14 +1490,17 @@
         descText.setPluginData("node_role", "desc");
         card.appendChild(descText);
       }
-      descText.textTruncation = "ENDING";
-      const isHugMode = payload.sizeMode === "hug" || card.primaryAxisSizingMode === "AUTO";
-      if (isHugMode) {
-        descText.maxLines = null;
-      } else {
-        const currentH = payload.height || card.height;
-        const availableH = Math.max(16, currentH - 14 - 16 - 8 - 20);
-        descText.maxLines = Math.max(1, Math.floor(availableH / 15));
+      let statusBadge = card.children.find(
+        (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+      );
+      const hasStatus = Boolean(statusBadge || payload.status && STATUS_CONFIG[payload.status]);
+      card.paddingBottom = hasStatus ? 36 : 16;
+      const currentH = payload.height || card.height;
+      updateDescTextTruncation(card, descText, currentH, description);
+      if (statusBadge) {
+        statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+        statusBadge.x = card.width - statusBadge.width - 10;
+        statusBadge.y = card.height - statusBadge.height - 10;
       }
       await safeSetCharacters(descText, description);
       if (!Array.isArray(descText.fills) || descText.fills.length === 0) {
@@ -1521,17 +1562,17 @@
           title.maxLines = 1;
         }
       }
+      const statusBadge = frame.children.find(
+        (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+      );
+      const hasStatus = Boolean(statusBadge);
+      frame.paddingBottom = hasStatus ? 36 : 16;
       const desc = frame.children.find(
         (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
       );
       if (desc) {
-        desc.textTruncation = "ENDING";
-        const availableH = Math.max(16, h - 14 - 16 - 8 - 20);
-        desc.maxLines = Math.max(1, Math.floor(availableH / 15));
+        updateDescTextTruncation(frame, desc, h);
       }
-      const statusBadge = frame.children.find(
-        (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
-      );
       if (statusBadge) {
         statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
         statusBadge.x = w - statusBadge.width - 10;
@@ -1983,7 +2024,8 @@
       return;
     }
     await loadRequiredFonts();
-    const cfg = STATUS_CONFIG[status];
+    const isRemove = !status || !STATUS_CONFIG[status];
+    const cfg = !isRemove ? STATUS_CONFIG[status] : null;
     for (const rawNode of selection) {
       let flowNode = findFlowNode(rawNode) || rawNode;
       if (flowNode.type === "SHAPE_WITH_TEXT") {
@@ -1992,7 +2034,6 @@
       if (flowNode.type === "FRAME") {
         const card = flowNode;
         card.clipsContent = false;
-        card.setPluginData("workflow_status", status);
         const headerRow = card.children.find(
           (c) => c.name === "Header" || c.type === "FRAME" && c.layoutMode === "HORIZONTAL"
         );
@@ -2005,6 +2046,21 @@
         let statusBadge = card.children.find(
           (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
         );
+        if (isRemove) {
+          card.setPluginData("workflow_status", "");
+          card.paddingBottom = 16;
+          if (oldBadgeInHeader) oldBadgeInHeader.remove();
+          if (statusBadge) statusBadge.remove();
+          const descText = card.children.find(
+            (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+          );
+          if (descText) {
+            updateDescTextTruncation(card, descText, card.height);
+          }
+          continue;
+        }
+        card.setPluginData("workflow_status", status);
+        card.paddingBottom = 36;
         if (!statusBadge && oldBadgeInHeader) {
           statusBadge = oldBadgeInHeader;
           card.appendChild(statusBadge);
@@ -2031,29 +2087,41 @@
           statusBadge.appendChild(badgeText);
           card.appendChild(statusBadge);
         }
-        statusBadge.fills = [{ type: "SOLID", color: cfg.color }];
-        const textNode = statusBadge.children.find((c) => c.type === "TEXT");
-        if (textNode) {
-          textNode.locked = false;
-          await safeSetCharacters(textNode, cfg.label.toUpperCase());
-          textNode.fills = [{ type: "SOLID", color: cfg.textColor }];
-          textNode.locked = true;
+        if (cfg) {
+          statusBadge.fills = [{ type: "SOLID", color: cfg.color }];
+          const textNode = statusBadge.children.find((c) => c.type === "TEXT");
+          if (textNode) {
+            textNode.locked = false;
+            await safeSetCharacters(textNode, cfg.label.toUpperCase());
+            textNode.fills = [{ type: "SOLID", color: cfg.textColor }];
+            textNode.locked = true;
+          }
+          if (card.layoutMode !== "NONE") {
+            statusBadge.layoutPositioning = "ABSOLUTE";
+          }
+          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+          statusBadge.x = card.width - statusBadge.width - 10;
+          statusBadge.y = card.height - statusBadge.height - 10;
+          statusBadge.visible = true;
+          statusBadge.locked = true;
+          const descText = card.children.find(
+            (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+          );
+          if (descText) {
+            updateDescTextTruncation(card, descText, card.height);
+          }
         }
-        if (card.layoutMode !== "NONE") {
-          statusBadge.layoutPositioning = "ABSOLUTE";
-        }
-        statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-        statusBadge.x = card.width - statusBadge.width - 10;
-        statusBadge.y = card.height - statusBadge.height - 10;
-        statusBadge.visible = true;
-        statusBadge.locked = true;
       }
     }
     syncStatusList();
     handleSelectionChange();
-    notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 [${cfg.label}] \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uBD80\uCC29\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
+    if (isRemove) {
+      notify(`${selection.length}\uAC1C \uB178\uB4DC\uC758 \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
+    } else if (cfg) {
+      notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 [${cfg.label}] \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uBD80\uCC29\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
+    }
   }
-  async function addStepBadges(startNumber = 1) {
+  async function addStepBadges(startNumber = 1, corner = "TOP_LEFT", shape = "Square") {
     const rawSelection = [...figma.currentPage.selection];
     if (rawSelection.length === 0) {
       notify("\uC2A4\uD15D \uBC88\uD638\uB97C \uB9E4\uAE38 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
@@ -2076,22 +2144,17 @@
     for (const card of selection) {
       card.clipsContent = false;
       card.setPluginData("step_number", `${currentNum}`);
+      card.setPluginData("badge_corner", corner);
+      card.setPluginData("badge_shape", shape);
       let stepBadge = card.children.find(
         (c) => c.getPluginData("is_step_badge") === "true" || c.name.startsWith("[Step]")
       );
       if (!stepBadge) {
         stepBadge = figma.createFrame();
-        stepBadge.name = `[Step] ${currentNum}`;
         card.appendChild(stepBadge);
-        if (card.layoutMode !== "NONE") {
-          stepBadge.layoutPositioning = "ABSOLUTE";
-        }
-        stepBadge.x = -8;
-        stepBadge.y = -8;
         stepBadge.resize(24, 24);
         stepBadge.primaryAxisSizingMode = "FIXED";
         stepBadge.counterAxisSizingMode = "FIXED";
-        stepBadge.cornerRadius = 0;
         stepBadge.layoutMode = "HORIZONTAL";
         stepBadge.primaryAxisAlignItems = "CENTER";
         stepBadge.counterAxisAlignItems = "CENTER";
@@ -2099,7 +2162,6 @@
         stepBadge.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
         stepBadge.strokeWeight = 1.5;
         stepBadge.setPluginData("is_step_badge", "true");
-        stepBadge.visible = true;
         const numText2 = figma.createText();
         numText2.name = "NumText";
         numText2.fontName = { family: "Inter", style: "Bold" };
@@ -2109,21 +2171,46 @@
         stepBadge.appendChild(numText2);
       } else {
         card.appendChild(stepBadge);
-        if (card.layoutMode !== "NONE") {
-          stepBadge.layoutPositioning = "ABSOLUTE";
-        }
+      }
+      if (card.layoutMode !== "NONE") {
+        stepBadge.layoutPositioning = "ABSOLUTE";
+      }
+      if (shape === "Circle") {
+        stepBadge.cornerRadius = 12;
+      } else if (shape === "RoundBox") {
+        stepBadge.cornerRadius = 5;
+      } else {
+        stepBadge.cornerRadius = 0;
+      }
+      const bw = stepBadge.width || 24;
+      const bh = stepBadge.height || 24;
+      if (corner === "TOP_RIGHT") {
+        stepBadge.x = card.width - bw + 8;
+        stepBadge.y = -8;
+        stepBadge.constraints = { horizontal: "MAX", vertical: "MIN" };
+      } else if (corner === "BOTTOM_LEFT") {
+        stepBadge.x = -8;
+        stepBadge.y = card.height - bh + 8;
+        stepBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
+      } else if (corner === "BOTTOM_RIGHT") {
+        stepBadge.x = card.width - bw + 8;
+        stepBadge.y = card.height - bh + 8;
+        stepBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+      } else {
         stepBadge.x = -8;
         stepBadge.y = -8;
-        stepBadge.visible = true;
+        stepBadge.constraints = { horizontal: "MIN", vertical: "MIN" };
       }
       stepBadge.name = `[Step] ${currentNum}`;
+      stepBadge.visible = true;
       const numText = stepBadge.children.find((c) => c.type === "TEXT");
       if (numText) {
         await safeSetCharacters(numText, `${currentNum}`);
       }
       currentNum++;
     }
-    notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 \uC77C\uCCB4\uD615 \uC2A4\uD15D \uBC88\uD638\uAC00 \uBD80\uC5EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
+    handleSelectionChange();
+    notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
   }
   async function removeStepBadges() {
     const rawSelection = [...figma.currentPage.selection];
@@ -2140,13 +2227,18 @@
       if (flow.type === "FRAME") {
         const card = flow;
         card.setPluginData("step_number", "");
-        const stepBadges = card.children.filter((c) => c.getPluginData("is_step_badge") === "true");
+        card.setPluginData("badge_corner", "");
+        card.setPluginData("badge_shape", "");
+        const stepBadges = card.children.filter(
+          (c) => c.getPluginData("is_step_badge") === "true" || c.name.startsWith("[Step]")
+        );
         for (const badge of stepBadges) {
           badge.remove();
           removedCount++;
         }
       }
     }
+    handleSelectionChange();
     if (removedCount > 0) {
       notify(`${removedCount}\uAC1C \uB178\uB4DC\uC758 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
     } else {
@@ -2322,7 +2414,7 @@
         await applyStatusToSelected(msg.status);
         break;
       case "ADD_STEP_BADGES":
-        await addStepBadges(msg.startNumber || 1);
+        await addStepBadges(msg.startNumber || 1, msg.corner || "TOP_LEFT", msg.shape || "Square");
         break;
       case "REMOVE_STEP_BADGES":
         await removeStepBadges();

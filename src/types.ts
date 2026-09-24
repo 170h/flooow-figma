@@ -190,7 +190,7 @@ export type PluginAction =
   | { type: 'UPDATE_CONNECTOR_LABEL'; connectorId: string; label: string }
   | { type: 'TOGGLE_NODE_THEME'; nodeId: string }
   | { type: 'CREATE_CONNECTORS'; label?: string; lineStyle?: 'solid' | 'dashed' }
-  | { type: 'ADD_STEP_BADGES'; startNumber?: number }
+  | { type: 'ADD_STEP_BADGES'; startNumber?: number; corner?: string; shape?: string }
   | { type: 'REMOVE_STEP_BADGES' }
   | { type: 'SET_STATUS'; status: WorkflowStatus }
   | { type: 'GET_STATUS_LIST' }
@@ -254,6 +254,9 @@ export interface SelectedNodeInfo {
   hugHeight?: number;
   sizeMode?: 'fixed' | 'hug';
   status?: WorkflowStatus;
+  stepNumber?: number;
+  badgeCorner?: string;
+  badgeShape?: string;
 }
 
 export type CoreToUIMessage =

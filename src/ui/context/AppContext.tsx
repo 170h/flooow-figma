@@ -121,6 +121,9 @@ export interface AppContextValue {
 
   // 핵심 함수들
   applyCurrentNodeState: (overrideSizeMode?: string) => void;
+  applyStatusToNode: (status?: string) => void;
+  applyStepBadges: (startNumber?: number, corner?: string, shape?: string) => void;
+  removeStepBadgesFromNodes: () => void;
   applyCurrentConnectorState: () => void;
   handleMainAction: () => void;
   handleSelectionChange: (count: number, nodes: NodeInfo[], meta: {
@@ -322,14 +325,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     });
-
-    const statusToggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
-    const isStatusOn = statusToggleEl?.checked || false;
-    const { selectedStatus } = uiStateRef.current;
-    if (isStatusOn && selectedStatus && nodes.length > 0) {
-      parent.postMessage({ pluginMessage: { type: 'SET_STATUS', status: selectedStatus } }, '*');
-    }
   }, [setLastNodeConfig]);
+
+  const applyStatusToNode = useCallback((status?: string) => {
+    const nodes = selectedNodesRef.current;
+    if (!nodes || nodes.length === 0) return;
+    parent.postMessage({ pluginMessage: { type: 'SET_STATUS', status: status || '' } }, '*');
+  }, []);
+
+  const applyStepBadges = useCallback((startNumber: number = 1, corner?: string, shape?: string) => {
+    const nodes = selectedNodesRef.current;
+    if (!nodes || nodes.length === 0) return;
+    parent.postMessage({
+      pluginMessage: {
+        type: 'ADD_STEP_BADGES',
+        startNumber,
+        corner: corner || 'TOP_LEFT',
+        shape: shape || 'Square',
+      }
+    }, '*');
+  }, []);
+
+  const removeStepBadgesFromNodes = useCallback(() => {
+    const nodes = selectedNodesRef.current;
+    if (!nodes || nodes.length === 0) return;
+    parent.postMessage({
+      pluginMessage: {
+        type: 'REMOVE_STEP_BADGES',
+      }
+    }, '*');
+  }, []);
 
   const applyCurrentConnectorState = useCallback(() => {
     const nodes = selectedNodesRef.current;
@@ -548,6 +573,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     phaseModalEditingId,
     setPhaseModalEditingId,
     applyCurrentNodeState,
+    applyStatusToNode,
+    applyStepBadges,
+    removeStepBadgesFromNodes,
     applyCurrentConnectorState,
     handleMainAction,
     handleSelectionChange,
