@@ -1731,8 +1731,8 @@
       stepBadge.layoutMode = "HORIZONTAL";
       stepBadge.primaryAxisAlignItems = "CENTER";
       stepBadge.counterAxisAlignItems = "CENTER";
-      stepBadge.paddingLeft = 7;
-      stepBadge.paddingRight = 7;
+      stepBadge.paddingLeft = 4;
+      stepBadge.paddingRight = 4;
       stepBadge.paddingTop = 0;
       stepBadge.paddingBottom = 0;
       try {
@@ -1768,20 +1768,20 @@
       const bw = Math.max(24, Math.round(stepBadge.width));
       const bh = 24;
       if (bCorner === "TOP_RIGHT") {
-        stepBadge.x = card.width - bw + 8;
-        stepBadge.y = -8;
+        stepBadge.x = card.width - bw + 9;
+        stepBadge.y = -9;
         stepBadge.constraints = { horizontal: "MAX", vertical: "MIN" };
       } else if (bCorner === "BOTTOM_LEFT") {
-        stepBadge.x = -8;
-        stepBadge.y = card.height - bh + 8;
+        stepBadge.x = -9;
+        stepBadge.y = card.height - bh + 9;
         stepBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
       } else if (bCorner === "BOTTOM_RIGHT") {
-        stepBadge.x = card.width - bw + 8;
-        stepBadge.y = card.height - bh + 8;
+        stepBadge.x = card.width - bw + 9;
+        stepBadge.y = card.height - bh + 9;
         stepBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
       } else {
-        stepBadge.x = -8;
-        stepBadge.y = -8;
+        stepBadge.x = -9;
+        stepBadge.y = -9;
         stepBadge.constraints = { horizontal: "MIN", vertical: "MIN" };
       }
     }
@@ -2936,8 +2936,8 @@
       stepBadge.layoutMode = "HORIZONTAL";
       stepBadge.primaryAxisAlignItems = "CENTER";
       stepBadge.counterAxisAlignItems = "CENTER";
-      stepBadge.paddingLeft = 7;
-      stepBadge.paddingRight = 7;
+      stepBadge.paddingLeft = 4;
+      stepBadge.paddingRight = 4;
       stepBadge.paddingTop = 0;
       stepBadge.paddingBottom = 0;
       try {
@@ -2964,20 +2964,20 @@
       const bw = Math.max(24, Math.round(stepBadge.width));
       const bh = 24;
       if (corner === "TOP_RIGHT") {
-        stepBadge.x = card.width - bw + 8;
-        stepBadge.y = -8;
+        stepBadge.x = card.width - bw + 9;
+        stepBadge.y = -9;
         stepBadge.constraints = { horizontal: "MAX", vertical: "MIN" };
       } else if (corner === "BOTTOM_LEFT") {
-        stepBadge.x = -8;
-        stepBadge.y = card.height - bh + 8;
+        stepBadge.x = -9;
+        stepBadge.y = card.height - bh + 9;
         stepBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
       } else if (corner === "BOTTOM_RIGHT") {
-        stepBadge.x = card.width - bw + 8;
-        stepBadge.y = card.height - bh + 8;
+        stepBadge.x = card.width - bw + 9;
+        stepBadge.y = card.height - bh + 9;
         stepBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
       } else {
-        stepBadge.x = -8;
-        stepBadge.y = -8;
+        stepBadge.x = -9;
+        stepBadge.y = -9;
         stepBadge.constraints = { horizontal: "MIN", vertical: "MIN" };
       }
       currentNum++;
