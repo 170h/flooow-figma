@@ -857,6 +857,7 @@
       if (textNode.layoutAlign !== "STRETCH") {
         textNode.layoutAlign = "STRETCH";
       }
+      textNode.textTruncation = "ENDING";
     } catch (err) {
       console.warn("\uD3F0\uD2B8 \uC0AC\uC774\uC988 \uBC0F \uB9AC\uC0AC\uC774\uC988 \uBAA8\uB4DC \uACE0\uC815 \uC2E4\uD328:", err);
     }
@@ -996,6 +997,8 @@
       if (textNode.layoutGrow !== 1) {
         textNode.layoutGrow = 1;
       }
+      textNode.textTruncation = "ENDING";
+      textNode.maxLines = 1;
       if (flowNode && "name" in flowNode && textNode.characters.trim()) {
         if (flowNode.name !== textNode.characters.trim()) {
           flowNode.name = textNode.characters.trim();
@@ -1033,7 +1036,7 @@
     card.strokeWeight = 1.5;
     card.strokes = [{ type: "SOLID", color: borderColor }];
     card.fills = [{ type: "SOLID", color: bgColor }];
-    card.clipsContent = false;
+    card.clipsContent = true;
     card.layoutMode = "VERTICAL";
     card.primaryAxisSizingMode = "FIXED";
     card.counterAxisSizingMode = "FIXED";
@@ -1066,6 +1069,8 @@
     titleText.fills = [{ type: "SOLID", color: titleColor }];
     titleText.layoutGrow = 1;
     titleText.textAutoResize = "HEIGHT";
+    titleText.textTruncation = "ENDING";
+    titleText.maxLines = 1;
     titleText.setPluginData("node_role", "title");
     headerRow.appendChild(titleText);
     card.appendChild(headerRow);
@@ -1109,6 +1114,9 @@
     descText.fills = [{ type: "SOLID", color: descColor }];
     descText.layoutAlign = "STRETCH";
     descText.textAutoResize = "HEIGHT";
+    descText.textTruncation = "ENDING";
+    const shapeAvailableH = Math.max(16, height - 14 - 16 - 8 - 20);
+    descText.maxLines = Math.max(1, Math.floor(shapeAvailableH / 15));
     descText.setPluginData("node_role", "desc");
     card.appendChild(descText);
     if (stepNumber) {
@@ -1178,7 +1186,7 @@
       card.strokeWeight = 1.5;
       card.strokes = [{ type: "SOLID", color: borderColor }];
       card.fills = [{ type: "SOLID", color: bgColor }];
-      card.clipsContent = false;
+      card.clipsContent = true;
       card.layoutMode = "VERTICAL";
       card.primaryAxisSizingMode = "FIXED";
       card.counterAxisSizingMode = "FIXED";
@@ -1212,6 +1220,8 @@
       titleText.fills = [{ type: "SOLID", color: titleColor }];
       titleText.layoutGrow = 1;
       titleText.textAutoResize = "HEIGHT";
+      titleText.textTruncation = "ENDING";
+      titleText.maxLines = 1;
       titleText.setPluginData("node_role", "title");
       headerRow.appendChild(titleText);
       card.appendChild(headerRow);
@@ -1223,6 +1233,9 @@
       descText.fills = [{ type: "SOLID", color: descColor }];
       descText.layoutAlign = "STRETCH";
       descText.textAutoResize = "HEIGHT";
+      descText.textTruncation = "ENDING";
+      const initialAvailableH = Math.max(16, height - 14 - 16 - 8 - 20);
+      descText.maxLines = Math.max(1, Math.floor(initialAvailableH / 15));
       descText.setPluginData("node_role", "desc");
       card.appendChild(descText);
       card.name = title;
@@ -1310,7 +1323,7 @@
       const card = flowNode;
       card.name = title;
       card.cornerRadius = 0;
-      card.clipsContent = false;
+      card.clipsContent = true;
       card.fills = [{ type: "SOLID", color: bgColor }];
       card.strokes = [{ type: "SOLID", color: borderColor }];
       if (payload.width && payload.height) {
@@ -1378,6 +1391,8 @@
         titleText.setPluginData("node_role", "title");
         headerRow.insertChild(0, titleText);
       }
+      titleText.textTruncation = "ENDING";
+      titleText.maxLines = 1;
       await safeSetCharacters(titleText, title);
       if (!Array.isArray(titleText.fills) || titleText.fills.length === 0) {
         titleText.fills = [{ type: "SOLID", color: titleColor }];
@@ -1394,6 +1409,15 @@
         descText.textAutoResize = "HEIGHT";
         descText.setPluginData("node_role", "desc");
         card.appendChild(descText);
+      }
+      descText.textTruncation = "ENDING";
+      const isHugMode = payload.sizeMode === "hug" || card.primaryAxisSizingMode === "AUTO";
+      if (isHugMode) {
+        descText.maxLines = null;
+      } else {
+        const currentH = payload.height || card.height;
+        const availableH = Math.max(16, currentH - 14 - 16 - 8 - 20);
+        descText.maxLines = Math.max(1, Math.floor(availableH / 15));
       }
       await safeSetCharacters(descText, description);
       if (!Array.isArray(descText.fills) || descText.fills.length === 0) {
@@ -1438,10 +1462,31 @@
       frame.resize(w, h);
       frame.primaryAxisSizingMode = "FIXED";
       frame.counterAxisSizingMode = "FIXED";
+      frame.clipsContent = true;
       frame.minWidth = w;
       frame.maxWidth = w;
       frame.minHeight = h;
       frame.maxHeight = h;
+      const headerRow = frame.children.find(
+        (c) => c.name === "Header" || c.type === "FRAME" && c.layoutMode === "HORIZONTAL"
+      );
+      if (headerRow) {
+        const title = headerRow.children.find(
+          (c) => c.name === "TitleText" || c.getPluginData("node_role") === "title"
+        );
+        if (title) {
+          title.textTruncation = "ENDING";
+          title.maxLines = 1;
+        }
+      }
+      const desc = frame.children.find(
+        (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+      );
+      if (desc) {
+        desc.textTruncation = "ENDING";
+        const availableH = Math.max(16, h - 14 - 16 - 8 - 20);
+        desc.maxLines = Math.max(1, Math.floor(availableH / 15));
+      }
       const statusBadge = frame.children.find(
         (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
       );

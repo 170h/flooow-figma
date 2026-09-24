@@ -486,6 +486,9 @@ function lockTextFontSizeAndAutoResize(textNode: TextNode, targetSize: number) {
     if (textNode.layoutAlign !== 'STRETCH') {
       textNode.layoutAlign = 'STRETCH';
     }
+
+    // 영역 초과 시 말줄임(...) 처리
+    textNode.textTruncation = 'ENDING';
   } catch (err) {
     console.warn('폰트 사이즈 및 리사이즈 모드 고정 실패:', err);
   }
@@ -586,13 +589,15 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
       try { textNode.hyperlink = null; } catch (_) {}
     }
 
-    // 4. 텍스트 박스 리사이즈 모드 고정
+    // 4. 텍스트 박스 리사이즈 모드 및 말줄임 고정
     if (textNode.textAutoResize !== 'HEIGHT') {
       textNode.textAutoResize = 'HEIGHT';
     }
     if (textNode.layoutGrow !== 1) {
       textNode.layoutGrow = 1;
     }
+    textNode.textTruncation = 'ENDING';
+    textNode.maxLines = 1;
 
     // 5. 카드 레이어 이름 동기화
     if (flowNode && 'name' in flowNode && textNode.characters.trim()) {
@@ -643,7 +648,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.strokeWeight = 1.5;
   card.strokes = [{ type: 'SOLID', color: borderColor }];
   card.fills = [{ type: 'SOLID', color: bgColor }];
-  card.clipsContent = false;
+  card.clipsContent = true;
 
   card.layoutMode = 'VERTICAL';
   card.primaryAxisSizingMode = 'FIXED';
@@ -682,6 +687,8 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   titleText.fills = [{ type: 'SOLID', color: titleColor }];
   titleText.layoutGrow = 1;
   titleText.textAutoResize = 'HEIGHT';
+  titleText.textTruncation = 'ENDING';
+  titleText.maxLines = 1;
   titleText.setPluginData('node_role', 'title');
   headerRow.appendChild(titleText);
 
@@ -732,6 +739,9 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   descText.fills = [{ type: 'SOLID', color: descColor }];
   descText.layoutAlign = 'STRETCH';
   descText.textAutoResize = 'HEIGHT';
+  descText.textTruncation = 'ENDING';
+  const shapeAvailableH = Math.max(16, height - 14 - 16 - 8 - 20);
+  descText.maxLines = Math.max(1, Math.floor(shapeAvailableH / 15));
   descText.setPluginData('node_role', 'desc');
   card.appendChild(descText);
 
@@ -817,7 +827,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     card.strokeWeight = 1.5;
     card.strokes = [{ type: 'SOLID', color: borderColor }];
     card.fills = [{ type: 'SOLID', color: bgColor }];
-    card.clipsContent = false;
+    card.clipsContent = true;
 
     card.layoutMode = 'VERTICAL';
     card.primaryAxisSizingMode = 'FIXED';
@@ -849,7 +859,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     headerRow.itemSpacing = 8;
     headerRow.fills = [];
 
-    // 3. 타이틀 텍스트 (13px Bold 고정)
+    // 3. 타이틀 텍스트 (13px Bold 고정, 영역 초과 시 .. 말줄임)
     const titleText = figma.createText();
     titleText.name = 'TitleText';
     titleText.fontName = { family: 'Inter', style: 'Bold' };
@@ -858,12 +868,14 @@ async function createFlowNode(payload: FlowNodePayload) {
     titleText.fills = [{ type: 'SOLID', color: titleColor }];
     titleText.layoutGrow = 1;
     titleText.textAutoResize = 'HEIGHT';
+    titleText.textTruncation = 'ENDING';
+    titleText.maxLines = 1;
     titleText.setPluginData('node_role', 'title');
     headerRow.appendChild(titleText);
 
     card.appendChild(headerRow);
 
-    // 4. 설명 텍스트 (11px Regular 고정)
+    // 4. 설명 텍스트 (11px Regular 고정, 박스 높이 초과 시 .. 말줄임)
     const descText = figma.createText();
     descText.name = 'DescText';
     descText.fontName = { family: 'Inter', style: 'Regular' };
@@ -872,6 +884,9 @@ async function createFlowNode(payload: FlowNodePayload) {
     descText.fills = [{ type: 'SOLID', color: descColor }];
     descText.layoutAlign = 'STRETCH';
     descText.textAutoResize = 'HEIGHT';
+    descText.textTruncation = 'ENDING';
+    const initialAvailableH = Math.max(16, height - 14 - 16 - 8 - 20);
+    descText.maxLines = Math.max(1, Math.floor(initialAvailableH / 15));
     descText.setPluginData('node_role', 'desc');
     card.appendChild(descText);
 
@@ -978,7 +993,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const card = flowNode as FrameNode;
     card.name = title;
     card.cornerRadius = 0;
-    card.clipsContent = false;
+    card.clipsContent = true;
     card.fills = [{ type: 'SOLID', color: bgColor }];
     card.strokes = [{ type: 'SOLID', color: borderColor }];
 
@@ -1063,6 +1078,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       headerRow.insertChild(0, titleText);
     }
 
+    titleText.textTruncation = 'ENDING';
+    titleText.maxLines = 1;
     await safeSetCharacters(titleText, title);
     if (!Array.isArray(titleText.fills) || titleText.fills.length === 0) {
       titleText.fills = [{ type: 'SOLID', color: titleColor }];
@@ -1082,6 +1099,16 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       descText.textAutoResize = 'HEIGHT';
       descText.setPluginData('node_role', 'desc');
       card.appendChild(descText);
+    }
+
+    descText.textTruncation = 'ENDING';
+    const isHugMode = payload.sizeMode === 'hug' || card.primaryAxisSizingMode === 'AUTO';
+    if (isHugMode) {
+      descText.maxLines = null;
+    } else {
+      const currentH = payload.height || card.height;
+      const availableH = Math.max(16, currentH - 14 - 16 - 8 - 20);
+      descText.maxLines = Math.max(1, Math.floor(availableH / 15));
     }
 
     await safeSetCharacters(descText, description);
@@ -1142,11 +1169,36 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     frame.resize(w, h);
     frame.primaryAxisSizingMode = 'FIXED';
     frame.counterAxisSizingMode = 'FIXED';
+    frame.clipsContent = true;
 
     frame.minWidth = w;
     frame.maxWidth = w;
     frame.minHeight = h;
     frame.maxHeight = h;
+
+    // 헤더 타이틀 말줄임 동기화
+    const headerRow = frame.children.find(
+      (c) => c.name === 'Header' || (c.type === 'FRAME' && (c as FrameNode).layoutMode === 'HORIZONTAL')
+    ) as FrameNode | undefined;
+    if (headerRow) {
+      const title = headerRow.children.find(
+        (c) => c.name === 'TitleText' || c.getPluginData('node_role') === 'title'
+      ) as TextNode | undefined;
+      if (title) {
+        title.textTruncation = 'ENDING';
+        title.maxLines = 1;
+      }
+    }
+
+    // 설명 텍스트 말줄임 및 최대 줄수 동기화
+    const desc = frame.children.find(
+      (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+    ) as TextNode | undefined;
+    if (desc) {
+      desc.textTruncation = 'ENDING';
+      const availableH = Math.max(16, h - 14 - 16 - 8 - 20);
+      desc.maxLines = Math.max(1, Math.floor(availableH / 15));
+    }
 
     // 리사이즈 시 하단 오른쪽 박스 안쪽 상태 뱃지 위치 동기화
     const statusBadge = frame.children.find(

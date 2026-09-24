@@ -93,6 +93,7 @@ export type BadgePosition = 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_R
 export type BadgeShape = 'Square' | 'Circle' | 'RoundBox';
 
 // 연결선 라우팅 및 단자 타입
+export type ConnectorStrokePattern = 'SOLID' | 'DASHED' | 'DOTTED';
 export type ConnectorRoutingType = 'ORTHOGONAL' | 'S_CURVE' | 'CURVED' | 'STRAIGHT';
 export type ConnectorTerminalType =
   | 'NONE'
