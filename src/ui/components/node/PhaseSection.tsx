@@ -13,6 +13,8 @@ export function PhaseSection() {
     setPhasePopoverPos,
     setContextMenuOpen,
     setContextMenuPos,
+    contextMenuTarget,
+    setContextMenuTarget,
     phasePopoverOpen,
     contextMenuOpen,
     applyCurrentNodeState,
@@ -48,7 +50,7 @@ export function PhaseSection() {
 
   function toggleContextMenu(e: React.MouseEvent) {
     e.stopPropagation();
-    if (contextMenuOpen) {
+    if (contextMenuOpen && contextMenuTarget === 'phase') {
       setContextMenuOpen(false);
       return;
     }
@@ -59,6 +61,7 @@ export function PhaseSection() {
     let left = Math.max(8, rect.right - 82);
 
     setContextMenuPos({ top, left });
+    setContextMenuTarget('phase');
     setContextMenuOpen(true);
     setPhasePopoverOpen(false);
   }

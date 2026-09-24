@@ -122,6 +122,8 @@ export interface FlowNodePayload {
   badgePosition?: BadgePosition;
   badgeShape?: BadgeShape;
   colorHex?: string;
+  strokeWeight?: number;
+  strokeColor?: string;
   sizeMode?: 'fixed' | 'hug';
 }
 
@@ -178,7 +180,18 @@ export interface UpdateNodePayload {
   badgePosition?: BadgePosition;
   badgeShape?: BadgeShape;
   colorHex?: string;
+  strokeWeight?: number;
+  strokeColor?: string;
   sizeMode?: 'fixed' | 'hug';
+}
+
+// 피그마 디자인 프레임 정보
+export interface DesignFrameItem {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  cornerRadius: number;
 }
 
 // 메시지 액션 타입
@@ -196,6 +209,7 @@ export type PluginAction =
   | { type: 'SET_ELEVATION'; level: number | null }
   | { type: 'GET_STATUS_LIST' }
   | { type: 'FOCUS_FRAME'; nodeId: string }
+  | { type: 'GET_DESIGN_FRAMES' }
   | { type: 'CREATE_TEMPLATE'; templateType: 'user_flow' | 'screen_spec' | 'feature_roadmap' }
   | { type: 'RESIZE_NODE'; nodeId: string; width: number; height: number }
   | {
@@ -260,6 +274,9 @@ export interface SelectedNodeInfo {
   badgeShape?: string;
   elevationOn?: boolean;
   elevation?: number;
+  fillColorHex?: string;
+  strokeColorHex?: string;
+  strokeWeight?: number;
 }
 
 export type CoreToUIMessage =
@@ -276,6 +293,10 @@ export type CoreToUIMessage =
   | {
       type: 'STATUS_LIST_UPDATED';
       items: FrameStatusItem[];
+    }
+  | {
+      type: 'DESIGN_FRAMES_LOADED';
+      frames: DesignFrameItem[];
     }
   | {
       type: 'UI3_VARIABLES_EXTRACTED';

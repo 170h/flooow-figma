@@ -353,6 +353,13 @@
       color: var(--color-text-primary);
     }
 
+    .btn-action-icon:disabled,
+    .btn-action-icon.disabled {
+      opacity: 0.3;
+      cursor: default;
+      pointer-events: none;
+    }
+
     /* 섹션 헤더 아이콘 SVG — 기본 24×24px 규격 */
     .btn-action-icon svg {
       width: 24px;
@@ -1263,27 +1270,27 @@
 
     .elev-0 .elevation-inner-box {
       border: none;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0.5px rgba(0, 0, 0, 0.30);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.15);
     }
 
     .elev-1 .elevation-inner-box {
       border: none;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 3px 8px rgba(0, 0, 0, 0.10), 0 0 0.5px rgba(0, 0, 0, 0.18);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.1), 0 3px 8px rgba(0, 0, 0, 0.1);
     }
 
     .elev-2 .elevation-inner-box {
       border: none;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 5px 12px rgba(0, 0, 0, 0.13), 0 0 0.5px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1), 0 5px 12px rgba(0, 0, 0, 0.13);
     }
 
     .elev-3 .elevation-inner-box {
       border: none;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12), 0 0 0.5px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.12), 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12);
     }
 
     .elev-4 .elevation-inner-box {
       border: none;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 24px rgba(0, 0, 0, 0.18), 0 0 0.5px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.08), 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 24px rgba(0, 0, 0, 0.18);
     }
 
     /* 상태 뱃지 옵션 (Status Tabs) */
@@ -1934,19 +1941,19 @@
       border: none;
     }
 
-    /* 2. more 컨텍스트 메뉴 (피그마 18:2568 규격: 82x80, R13, padding 8px 0, 아이템 66x24 R5, 구분선 16px) */
+    /* 2. more 컨텍스트 메뉴 (피그마 1027248-4796 규격: 너비 72px, R12, padding 4px, 구분선 없음, 아이템 R6, 호버 시 #8C4CF6) */
     .popover-context-menu {
       position: absolute;
-      width: 82px;
+      width: 72px;
       background: #1e1e1e;
       color: #ffffff;
-      border-radius: 13px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12), 0 0 0.5px rgba(0, 0, 0, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 8px 0;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 4px;
       display: none;
       flex-direction: column;
-      gap: 0;
+      gap: 2px;
       z-index: 1050;
       box-sizing: border-box;
     }
@@ -1956,19 +1963,19 @@
     }
 
     .context-row {
-      width: 82px;
+      width: 100%;
       height: 24px;
-      padding: 0 8px;
+      padding: 0;
       display: flex;
       align-items: center;
       box-sizing: border-box;
     }
 
     .context-item {
-      width: 66px;
+      width: 100%;
       height: 24px;
       padding: 0 8px;
-      border-radius: 5px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       font-size: 11px;
@@ -1980,27 +1987,21 @@
       transition: background 0.12s, color 0.12s;
       box-sizing: border-box;
       user-select: none;
+      letter-spacing: 0;
     }
 
-    .context-item:hover {
+    .context-item:hover,
+    .context-item.active {
       background: #8C4CF6;
       color: #ffffff;
     }
 
     .context-divider-row {
-      width: 82px;
-      height: 16px;
-      display: flex;
-      align-items: center;
-      box-sizing: border-box;
+      display: none;
     }
 
     .context-divider-line {
-      width: 100%;
-      height: 1px;
-      background: #383838;
-      border: none;
-      margin: 0;
+      display: none;
     }
 
     /* 3. 심플 다이얼로그 모달 공통 (18:2522 Confirmation, 18:2498 Delete Item) */
@@ -2219,7 +2220,7 @@
       width: 100%;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       padding: 0 8px;
       font-size: 11px;
@@ -2227,6 +2228,11 @@
       box-sizing: border-box;
       outline: none;
       font-family: inherit;
+      transition: border-color 0.15s ease;
+    }
+
+    .phase-text-input:hover {
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .phase-text-input:focus {
@@ -2241,7 +2247,7 @@
       width: 100%;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       padding: 0;
       display: flex;
@@ -2250,6 +2256,17 @@
       cursor: pointer;
       position: relative;
       overflow: hidden;
+      transition: border-color 0.15s ease;
+    }
+
+    .phase-color-picker-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .phase-color-picker-box:focus,
+    .phase-color-picker-box.active {
+      border-color: #8C4CF6;
+      outline: none;
     }
 
     .phase-color-picker-box:hover {
@@ -2443,10 +2460,35 @@
       background: #7A39E3;
     }
 
+    .btn-phase-modal-delete {
+      height: 24px;
+      padding: 0 8px;
+      background: transparent;
+      border: 1px solid rgba(234, 32, 57, 0.4);
+      border-radius: 5px;
+      color: #EA2039;
+      font-size: 11px;
+      cursor: pointer;
+      margin-right: auto;
+      transition: all 0.15s ease;
+    }
+
+    .btn-phase-modal-delete:hover {
+      background: rgba(234, 32, 57, 0.15);
+      border-color: #EA2039;
+    }
+
+    .btn-phase-modal-delete:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.4);
+    }
+
     /* 피그마 공식 UI3 규격 모달 3종 (Add Size, Edit Size, Add Style) */
     .size-modal-card,
     .style-modal-card {
-      width: 200px;
+      width: 224px;
       background: #1E1E1E;
       color: #FFFFFF;
       border-radius: 12px;
@@ -2513,12 +2555,17 @@
       min-width: 0;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
       padding: 0 6px;
       box-sizing: border-box;
+      transition: border-color 0.15s ease;
+    }
+
+    .prefix-input-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .prefix-input-box:focus-within {
@@ -2550,12 +2597,17 @@
       width: 100%;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
       padding: 0 6px;
       box-sizing: border-box;
+      transition: border-color 0.15s ease;
+    }
+
+    .icon-input-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .icon-input-box:focus-within {
@@ -2576,7 +2628,7 @@
       width: 100%;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
@@ -2587,10 +2639,18 @@
       color: #FFFFFF;
       font-size: 11px;
       user-select: none;
+      transition: border-color 0.15s ease;
     }
 
     .size-dropdown-box:hover {
       border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .size-dropdown-box:focus,
+    .size-dropdown-box.active,
+    .size-dropdown-box:focus-within {
+      border-color: #8C4CF6;
+      outline: none;
     }
 
     .size-dropdown-left {
@@ -2615,41 +2675,59 @@
     }
 
     .style-color-box {
-      flex: 1;
-      min-width: 0;
-      height: 24px;
+      width: 100%;
+      height: 28px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
-      padding: 0 6px 0 4px;
+      gap: 8px;
+      padding: 0 8px;
       box-sizing: border-box;
       cursor: pointer;
       position: relative;
+      transition: border-color 0.15s ease;
     }
 
     .style-color-box:hover {
       border-color: rgba(255, 255, 255, 0.2);
     }
 
+    .style-color-box:focus,
+    .style-color-box.active,
+    .style-color-box:focus-within {
+      border-color: #8C4CF6;
+      outline: none;
+    }
+
     .style-color-chip {
-      width: 14px;
-      height: 14px;
-      border-radius: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
       background: #EA2039;
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       flex-shrink: 0;
-      margin-right: 6px;
       box-sizing: border-box;
     }
 
     .style-color-hex-text {
       flex: 1;
+      width: 100%;
       min-width: 0;
+      height: 100%;
       font-size: 11px;
+      font-weight: 500;
       color: #FFFFFF;
       font-family: inherit;
+      line-height: 28px;
+      text-transform: uppercase;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 0;
+      margin: 0;
+      letter-spacing: 0 !important;
     }
 
     .style-chevron-icon {
@@ -2660,16 +2738,22 @@
     }
 
     .stroke-width-box {
-      width: 58px;
-      height: 24px;
+      width: 60px;
+      height: 28px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
-      padding: 0 6px;
+      gap: 4px;
+      padding: 0 8px;
       box-sizing: border-box;
       flex-shrink: 0;
+      transition: border-color 0.15s ease;
+    }
+
+    .stroke-width-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .stroke-width-box:focus-within {
@@ -2682,6 +2766,57 @@
       background: #383838;
       border: none;
       margin: 8px 0;
+    }
+
+    /* Style 모달 인라인 컬러 피커 시스템 (Figma 1027376:1405) */
+    .style-hue-slider {
+      position: relative;
+      width: 100%;
+      height: 10px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
+      margin: 10px 0 12px 0;
+      cursor: pointer;
+      user-select: none;
+      box-sizing: border-box;
+    }
+
+    .style-hue-thumb {
+      position: absolute;
+      top: 50%;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+      transition: background 0.05s linear;
+    }
+
+    .style-sat-val-picker {
+      position: relative;
+      width: 100%;
+      height: 140px;
+      border-radius: 5px;
+      cursor: crosshair;
+      user-select: none;
+      overflow: hidden;
+      box-sizing: border-box;
+      background-image: linear-gradient(to right, #ffffff, transparent), linear-gradient(to top, #000000, transparent);
+    }
+
+    .style-sat-val-thumb {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
     }
 
     .size-modal-footer,
@@ -2741,4 +2876,27 @@
       bottom: 100%;
       border-width: 0 5px 5px 5px;
       border-color: transparent transparent #222222 transparent;
+    }
+
+    /* 피그마 디자인 선택 모달 검색창 */
+    .picker-search-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 0 8px;
+      height: 28px;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease;
+    }
+
+    .picker-search-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .picker-search-box:focus-within {
+      border-color: #8C4CF6;
     }

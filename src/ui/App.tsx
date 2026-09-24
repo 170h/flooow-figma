@@ -11,6 +11,8 @@ import { PhasePopover } from './components/popovers/PhasePopover';
 import { ContextMenu } from './components/popovers/ContextMenu';
 import { PhaseModal, PhaseData } from './components/modals/PhaseModal';
 import { SizeModal } from './components/modals/SizeModal';
+import { FigmaDesignPickerModal } from './components/modals/FigmaDesignPickerModal';
+import { StyleModal } from './components/modals/StyleModal';
 
 // ============================================================
 // 탭 버튼 목록
@@ -129,6 +131,8 @@ export function App() {
     const isPopoverTrigger =
       target.closest('#btn-phase-select') ||
       target.closest('#btn-phase-more') ||
+      target.closest('#btn-size-more') ||
+      target.closest('#btn-style-more') ||
       target.closest('#btn-size-mode-dropdown') ||
       target.closest('#popover-phase') ||
       target.closest('#popover-context') ||
@@ -321,23 +325,23 @@ export function App() {
       {activeModal === 'add-size' && (
         <SizeModal
           mode="add"
-          onSave={preset => {
-            showToast(`"${preset.name}" 사이즈가 추가되었습니다.`);
-            const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-            const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-            if (wEl) wEl.value = String(preset.w);
-            if (hEl) hEl.value = String(preset.h);
-            applyCurrentNodeState();
-          }}
           onClose={() => setActiveModal('none')}
         />
       )}
       {activeModal === 'edit-size' && (
         <SizeModal
           mode="edit"
-          onSave={preset => {
-            showToast(`"${preset.name}" 사이즈가 업데이트되었습니다.`);
-          }}
+          onClose={() => setActiveModal('none')}
+        />
+      )}
+      {activeModal === 'figma-design-picker' && (
+        <FigmaDesignPickerModal
+          onClose={() => setActiveModal('none')}
+        />
+      )}
+      {activeModal === 'add-style' && (
+        <StyleModal
+          initialColor={uiState.selectedColor}
           onClose={() => setActiveModal('none')}
         />
       )}

@@ -1,12 +1,5 @@
 import React, { useCallback } from 'react';
-import { useApp } from '../../context/AppContext';
-
-const SIZE_PRESETS = [
-  { label: 'Default', w: 250, h: 90 },
-  { label: 'Square', w: 180, h: 180 },
-  { label: 'Web', w: 320, h: 180 },
-  { label: 'Mobile', w: 160, h: 280 },
-] as const;
+import { useApp, SizePreset } from '../../context/AppContext';
 
 const FIXED_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -29,44 +22,46 @@ export function SizeSection() {
     setLastNodeConfig,
     selectedNodes,
     uiState,
+    sizePresets,
     setActiveModal,
+    contextMenuOpen,
+    setContextMenuOpen,
+    setContextMenuPos,
+    contextMenuTarget,
+    setContextMenuTarget,
+    setSelectedSizePresetId,
     sizeModeDropdownOpen,
     setSizeModeDropdownOpen,
     closeAllPopovers,
     applyCurrentNodeState,
     autoResizeWindow,
+    showToast,
   } = useApp();
-
-  function updateSizePresetChips(w: number, h: number) {
-    document.querySelectorAll('#panel-appearance .chip-group .chip-btn').forEach(btn => {
-      const el = btn as HTMLButtonElement;
-      const isDefault = w === 250 && h === 90 && el.textContent?.trim() === 'Default';
-      const isSquare = w === 180 && h === 180 && el.textContent?.trim() === 'Square';
-      const isWeb = w === 320 && h === 180 && el.textContent?.trim() === 'Web';
-      const isMobile = w === 160 && h === 280 && el.textContent?.trim() === 'Mobile';
-      el.classList.toggle('active', isDefault || isSquare || isWeb || isMobile);
-    });
-  }
 
   function handleWChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
       setLastNodeConfig({ width: val });
-      updateSizePresetChips(val, cfg.height);
     }
   }
   function handleHChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
       setLastNodeConfig({ height: val });
-      updateSizePresetChips(cfg.width, val);
       const fixedValEl = document.getElementById('size-mode-val-fixed');
       if (fixedValEl) fixedValEl.textContent = String(val);
     }
   }
   function handleRChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = parseInt(e.target.value, 10);
-    if (!isNaN(val)) setLastNodeConfig({ cornerRadius: val });
+    let val = parseInt(e.target.value, 10);
+    if (!isNaN(val)) {
+      if (val > 20) {
+        val = 20;
+        e.target.value = '20';
+        showToast('최대값은 20입니다.', 'warning');
+      }
+      setLastNodeConfig({ cornerRadius: val });
+    }
   }
 
   function triggerApply() {
@@ -75,26 +70,61 @@ export function SizeSection() {
     const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
     const w = parseInt(wEl?.value || '250', 10) || 250;
     const h = parseInt(hEl?.value || '90', 10) || 90;
-    const r = parseInt(rEl?.value || '0', 10) || 0;
+    let r = parseInt(rEl?.value || '0', 10) || 0;
+    if (r > 20) {
+      r = 20;
+      if (rEl) rEl.value = '20';
+      showToast('최대값은 20입니다.', 'warning');
+    }
     if (!isNaN(w)) setLastNodeConfig({ width: w });
     if (!isNaN(h)) setLastNodeConfig({ height: h });
     if (!isNaN(r)) setLastNodeConfig({ cornerRadius: r });
-    updateSizePresetChips(w, h);
     const fixedValEl = document.getElementById('size-mode-val-fixed');
     if (fixedValEl) fixedValEl.textContent = String(h);
     applyCurrentNodeState();
   }
 
-  function applySizePreset(w: number, h: number) {
+  function applySizePreset(p: SizePreset) {
     const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
     const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    if (wEl) wEl.value = String(w);
-    if (hEl) hEl.value = String(h);
-    setLastNodeConfig({ width: w, height: h });
-    updateSizePresetChips(w, h);
+    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+    if (wEl) wEl.value = String(p.w);
+    if (hEl) hEl.value = String(p.h);
+    if (rEl) rEl.value = String(p.radius ?? 0);
+    setSelectedSizePresetId(p.id);
+    setLastNodeConfig({
+      width: p.w,
+      height: p.h,
+      cornerRadius: p.radius ?? 0,
+      sizeMode: p.sizeMode || 'fixed',
+    });
     const fixedValEl = document.getElementById('size-mode-val-fixed');
-    if (fixedValEl) fixedValEl.textContent = String(h);
-    applyCurrentNodeState();
+    if (fixedValEl) fixedValEl.textContent = String(p.h);
+    applyCurrentNodeState(p.sizeMode);
+  }
+
+const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
+
+  function toggleSizeMoreMenu(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (isMoreDisabled) return;
+    if (contextMenuOpen && contextMenuTarget === 'size') {
+      setContextMenuOpen(false);
+      return;
+    }
+    closeAllPopovers();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const popoverHeight = 58;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top = spaceBelow >= popoverHeight + 8 ? rect.bottom + 4 : Math.max(8, rect.top - popoverHeight - 4);
+    const left = Math.max(8, rect.right - 72);
+
+    setContextMenuPos({ top, left });
+    setContextMenuTarget('size');
+    if (activePreset) {
+      setSelectedSizePresetId(activePreset.id);
+    }
+    setContextMenuOpen(true);
   }
 
   function toggleSizeModeDropdown(e: React.MouseEvent) {
@@ -129,6 +159,12 @@ export function SizeSection() {
 
   const cfg = lastNodeConfig;
 
+  // 현재 노드의 W, H와 일치하는 프리셋 확인
+  const activePreset = sizePresets.find((p) => p.w === cfg.width && p.h === cfg.height);
+
+  // 디폴트, 스퀘어, 웹, 모바일이거나 일치하는 프리셋이 없으면 수정/삭제 불가 (모어 버튼 비활성화)
+  const isMoreDisabled = !activePreset || Boolean(activePreset.isDefault) || DEFAULT_PRESET_IDS.has(activePreset.id);
+
   const currentSizeMode = (() => {
     if (selectedNodes && selectedNodes.length > 1) {
       const first = selectedNodes[0]?.sizeMode;
@@ -147,10 +183,20 @@ export function SizeSection() {
       <div className="section-header">
         <span className="section-title">Size</span>
         <div className="section-actions">
-          <button className="btn-action-icon" title="Add size" onClick={() => setActiveModal('add-size')}>
+          <button
+            className="btn-action-icon"
+            title="Add size"
+            onClick={() => setActiveModal('add-size')}
+          >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z" fill="currentColor"/></svg>
           </button>
-          <button className="btn-action-icon btn-more-icon" title="Edit size" onClick={() => setActiveModal('edit-size')}>
+          <button
+            id="btn-size-more"
+            className={`btn-action-icon btn-more-icon${isMoreDisabled ? ' disabled' : ''}`}
+            title={isMoreDisabled ? '기본 프리셋은 수정 또는 삭제할 수 없습니다' : 'More options'}
+            disabled={isMoreDisabled}
+            onClick={toggleSizeMoreMenu}
+          >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12" cy="8" r="1" fill="currentColor"/></svg>
           </button>
         </div>
@@ -174,7 +220,7 @@ export function SizeSection() {
           </div>
           <div className="input-scrubber-box">
             <svg data-tooltip="Corner radius" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z" fill="currentColor"/></svg>
-            <input type="number" id="input-size-radius" defaultValue={0} min={0} max={40}
+            <input type="number" id="input-size-radius" defaultValue={0} min={0} max={20}
               onChange={handleRChange}
               onBlur={triggerApply}
               onKeyDown={e => e.key === 'Enter' && triggerApply()} />
@@ -226,14 +272,16 @@ export function SizeSection() {
         </div>
 
         {/* 프리셋 칩 */}
-        <div className="chip-group" style={{ marginTop: '6px' }}>
-          {SIZE_PRESETS.map(p => (
+        <div className="chip-group" style={{ marginTop: '6px', flexWrap: 'wrap', gap: '4px' }}>
+          {sizePresets.map((p) => (
             <button
-              key={p.label}
+              key={p.id}
+              type="button"
               className={`chip-btn${cfg.width === p.w && cfg.height === p.h ? ' active' : ''}`}
-              onClick={() => applySizePreset(p.w, p.h)}
+              onClick={() => applySizePreset(p)}
+              title={`${p.name} (${p.w}×${p.h})`}
             >
-              {p.label}
+              {p.name}
             </button>
           ))}
         </div>

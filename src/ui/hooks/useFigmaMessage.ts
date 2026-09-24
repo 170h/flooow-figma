@@ -11,6 +11,7 @@ export function useFigmaMessage() {
     setCurrentTab,
     setUIState,
     setLastNodeConfig,
+    setDesignFrames,
     showToast,
   } = useApp();
 
@@ -76,6 +77,11 @@ export function useFigmaMessage() {
         case 'INIT_DONE':
         case 'READY': {
           // 초기화 완료 후 처리 (필요 시 확장)
+          break;
+        }
+
+        case 'DESIGN_FRAMES_LOADED': {
+          setDesignFrames(msg.frames || []);
           break;
         }
 

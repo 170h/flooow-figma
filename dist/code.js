@@ -500,8 +500,18 @@
     themeColors: true,
     title: "UI Flow Diagram"
   });
-  var ELEVATION_EFFECTS = {
+  var ELEVATION_EFFECTS_LIGHT = {
+    // E100 (Shapes): 0 0 0.5px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15)
     0: [
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.3 },
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
       {
         type: "DROP_SHADOW",
         color: { r: 0, g: 0, b: 0, a: 0.15 },
@@ -510,18 +520,19 @@
         spread: 0,
         visible: true,
         blendMode: "NORMAL"
-      },
+      }
+    ],
+    // E200 (Stickies, Comments): 0 0 0.5px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.1), 0 3px 8px rgba(0,0,0,0.1)
+    1: [
       {
         type: "DROP_SHADOW",
-        color: { r: 0, g: 0, b: 0, a: 0.2 },
+        color: { r: 0, g: 0, b: 0, a: 0.18 },
         offset: { x: 0, y: 0 },
-        radius: 1,
+        radius: 0.5,
         spread: 0,
         visible: true,
         blendMode: "NORMAL"
-      }
-    ],
-    1: [
+      },
       {
         type: "DROP_SHADOW",
         color: { r: 0, g: 0, b: 0, a: 0.1 },
@@ -541,19 +552,29 @@
         blendMode: "NORMAL"
       }
     ],
+    // E300 (Tooltips): 0 0 0.5px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1), 0 5px 12px rgba(0,0,0,0.13)
     2: [
       {
         type: "DROP_SHADOW",
-        color: { r: 0, g: 0, b: 0, a: 0.08 },
-        offset: { x: 0, y: 2 },
-        radius: 4,
+        color: { r: 0, g: 0, b: 0, a: 0.15 },
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
         spread: 0,
         visible: true,
         blendMode: "NORMAL"
       },
       {
         type: "DROP_SHADOW",
-        color: { r: 0, g: 0, b: 0, a: 0.14 },
+        color: { r: 0, g: 0, b: 0, a: 0.1 },
+        offset: { x: 0, y: 1 },
+        radius: 3,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.13 },
         offset: { x: 0, y: 5 },
         radius: 12,
         spread: 0,
@@ -561,12 +582,13 @@
         blendMode: "NORMAL"
       }
     ],
+    // E400 (Menus, Panels): 0 0 0.5px rgba(0,0,0,0.12), 0 2px 5px rgba(0,0,0,0.15), 0 10px 16px rgba(0,0,0,0.12)
     3: [
       {
         type: "DROP_SHADOW",
         color: { r: 0, g: 0, b: 0, a: 0.12 },
-        offset: { x: 0, y: 3 },
-        radius: 6,
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
         spread: 0,
         visible: true,
         blendMode: "NORMAL"
@@ -574,34 +596,307 @@
       {
         type: "DROP_SHADOW",
         color: { r: 0, g: 0, b: 0, a: 0.15 },
-        offset: { x: 0, y: 10 },
-        radius: 18,
-        spread: 0,
-        visible: true,
-        blendMode: "NORMAL"
-      }
-    ],
-    4: [
-      {
-        type: "DROP_SHADOW",
-        color: { r: 0, g: 0, b: 0, a: 0.14 },
-        offset: { x: 0, y: 4 },
-        radius: 8,
+        offset: { x: 0, y: 2 },
+        radius: 5,
         spread: 0,
         visible: true,
         blendMode: "NORMAL"
       },
       {
         type: "DROP_SHADOW",
-        color: { r: 0, g: 0, b: 0, a: 0.2 },
-        offset: { x: 0, y: 14 },
-        radius: 26,
+        color: { r: 0, g: 0, b: 0, a: 0.12 },
+        offset: { x: 0, y: 10 },
+        radius: 16,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ],
+    // E500 (Modals, Dialogs): 0 0 0.5px rgba(0,0,0,0.08), 0 2px 5px rgba(0,0,0,0.15), 0 10px 24px rgba(0,0,0,0.18)
+    4: [
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.08 },
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.15 },
+        offset: { x: 0, y: 2 },
+        radius: 5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.18 },
+        offset: { x: 0, y: 10 },
+        radius: 24,
         spread: 0,
         visible: true,
         blendMode: "NORMAL"
       }
     ]
   };
+  var ELEVATION_EFFECTS_DARK = {
+    // E100 (Shapes): inset 0 .5px 0 rgba(255,255,255,0.1), inset 0 0 0.5px rgba(255,255,255,0.35), 0 0 0.5px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4)
+    0: [
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.1 },
+        offset: { x: 0, y: 0.5 },
+        radius: 0,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.35 },
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.5 },
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.4 },
+        offset: { x: 0, y: 1 },
+        radius: 3,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ],
+    // E200 (Stickies, Comments): inset 0 .5px 0 rgba(255,255,255,0.08), inset 0 0 .5px rgba(255,255,255,0.35), 0 1px 3px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.4)
+    1: [
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.08 },
+        offset: { x: 0, y: 0.5 },
+        radius: 0,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.35 },
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.35 },
+        offset: { x: 0, y: 1 },
+        radius: 3,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.4 },
+        offset: { x: 0, y: 3 },
+        radius: 8,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ],
+    // E300 (Tooltips): inset 0 .5px 0 rgba(255,255,255,0.08), inset 0 0 .5px rgba(255,255,255,0.35), 0 1px 3px rgba(0,0,0,0.5), 0 5px 12px rgba(0,0,0,0.35)
+    2: [
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.08 },
+        offset: { x: 0, y: 0.5 },
+        radius: 0,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.35 },
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.5 },
+        offset: { x: 0, y: 1 },
+        radius: 3,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.35 },
+        offset: { x: 0, y: 5 },
+        radius: 12,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ],
+    // E400 (Menus, Panels): inset 0 .5px 0 rgba(255,255,255,0.08), inset 0 0 .5px rgba(255,255,255,0.35), 0 2px 5px rgba(0,0,0,0.35), 0 10px 16px rgba(0,0,0,0.35)
+    3: [
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.08 },
+        offset: { x: 0, y: 0.5 },
+        radius: 0,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.35 },
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.35 },
+        offset: { x: 0, y: 2 },
+        radius: 5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.35 },
+        offset: { x: 0, y: 10 },
+        radius: 16,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ],
+    // E500 (Modals, Dialogs): inset 0 .5px 0 rgba(255,255,255,0.08), inset 0 0 .5px rgba(255,255,255,0.35), 0 3px 5px rgba(0,0,0,0.35), 0 10px 24px rgba(0,0,0,0.45)
+    4: [
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.08 },
+        offset: { x: 0, y: 0.5 },
+        radius: 0,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "INNER_SHADOW",
+        color: { r: 1, g: 1, b: 1, a: 0.35 },
+        offset: { x: 0, y: 0 },
+        radius: 0.5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.35 },
+        offset: { x: 0, y: 3 },
+        radius: 5,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { r: 0, g: 0, b: 0, a: 0.45 },
+        offset: { x: 0, y: 10 },
+        radius: 24,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL"
+      }
+    ]
+  };
+  function getElevationEffects(level, isDark = false) {
+    return isDark ? ELEVATION_EFFECTS_DARK[level] || ELEVATION_EFFECTS_LIGHT[level] || [] : ELEVATION_EFFECTS_LIGHT[level] || [];
+  }
+  function getTextFillsByBackground(bgColor, isDarkTheme = false) {
+    const luminance = 0.299 * bgColor.r + 0.587 * bgColor.g + 0.114 * bgColor.b;
+    const isBgDark = isDarkTheme || luminance < 0.5;
+    const baseColor = isBgDark ? { r: 1, g: 1, b: 1 } : { r: 0, g: 0, b: 0 };
+    const descOpacity = isBgDark ? 0.7 : 0.6;
+    return {
+      titleFill: {
+        type: "SOLID",
+        color: baseColor,
+        opacity: 1
+      },
+      descFill: {
+        type: "SOLID",
+        color: baseColor,
+        opacity: descOpacity
+      },
+      isBgDark
+    };
+  }
+  function getStatusBadgeColors(status, nodeBgColor, isDarkTheme = false) {
+    const cfg = STATUS_CONFIG[status];
+    const defaultBg = cfg ? cfg.color : { r: 0.5, g: 0.5, b: 0.5 };
+    const defaultText = cfg ? cfg.textColor : { r: 1, g: 1, b: 1 };
+    const max = Math.max(nodeBgColor.r, nodeBgColor.g, nodeBgColor.b);
+    const min = Math.min(nodeBgColor.r, nodeBgColor.g, nodeBgColor.b);
+    const delta = max - min;
+    const saturation = max === 0 ? 0 : delta / max;
+    const isChromatic = saturation >= 0.15 && delta >= 0.08;
+    if (isChromatic) {
+      const luminance = 0.299 * nodeBgColor.r + 0.587 * nodeBgColor.g + 0.114 * nodeBgColor.b;
+      const isBgDark = isDarkTheme || luminance < 0.5;
+      if (isBgDark) {
+        return {
+          badgeBg: { r: 1, g: 1, b: 1 },
+          badgeTextColor: nodeBgColor,
+          isMonochrome: true
+        };
+      } else {
+        return {
+          badgeBg: { r: 0, g: 0, b: 0 },
+          badgeTextColor: nodeBgColor,
+          isMonochrome: true
+        };
+      }
+    }
+    return {
+      badgeBg: defaultBg,
+      badgeTextColor: defaultText,
+      isMonochrome: false
+    };
+  }
+  function getStatusBadgeCornerRadius(nodeCornerRadius, offset = 10) {
+    return Math.max(0, Math.round(nodeCornerRadius - offset));
+  }
   async function loadRequiredFonts() {
     await Promise.all([
       figma.loadFontAsync({ family: "Inter", style: "Regular" }),
@@ -815,6 +1110,8 @@
           if (frame.paddingBottom !== 36) {
             frame.paddingBottom = 36;
           }
+          const nodeCornerRadius = typeof frame.cornerRadius === "number" ? frame.cornerRadius : 0;
+          statusBadge.cornerRadius = getStatusBadgeCornerRadius(nodeCornerRadius);
           statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
           statusBadge.x = frame.width - statusBadge.width - 10;
           statusBadge.y = frame.height - statusBadge.height - 10;
@@ -952,6 +1249,24 @@
         sizeMode = isAuto ? "hug" : "fixed";
         hugHeight = calculateCardHugHeight(frame);
       }
+      let nodeFillColor;
+      let nodeStrokeColor;
+      let nodeStrokeWeight;
+      if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
+        const firstFill = node.fills[0];
+        if (firstFill.type === "SOLID") {
+          nodeFillColor = rgbToHexColor(firstFill.color);
+        }
+      }
+      if ("strokes" in node && Array.isArray(node.strokes) && node.strokes.length > 0) {
+        const firstStroke = node.strokes[0];
+        if (firstStroke.type === "SOLID") {
+          nodeStrokeColor = rgbToHexColor(firstStroke.color);
+        }
+      }
+      if ("strokeWeight" in node && typeof node.strokeWeight === "number") {
+        nodeStrokeWeight = node.strokeWeight;
+      }
       return {
         id: node.id,
         name: node.name,
@@ -985,7 +1300,10 @@
         badgeCorner: node.getPluginData("badge_corner") || void 0,
         badgeShape: node.getPluginData("badge_shape") || void 0,
         elevationOn: node.getPluginData("node_elevation") !== "",
-        elevation: node.getPluginData("node_elevation") !== "" ? parseInt(node.getPluginData("node_elevation"), 10) : void 0
+        elevation: node.getPluginData("node_elevation") !== "" ? parseInt(node.getPluginData("node_elevation"), 10) : void 0,
+        fillColorHex: nodeFillColor,
+        strokeColorHex: nodeStrokeColor,
+        strokeWeight: nodeStrokeWeight
       };
     });
     let currentStatus;
@@ -1048,10 +1366,17 @@
       const targetFont = { family: "Inter", style: "Bold" };
       const targetSize = 13;
       let isDark = false;
+      let bgColor = { r: 1, g: 1, b: 1 };
       if (flowNode && "getPluginData" in flowNode) {
         isDark = flowNode.getPluginData("node_theme") === "dark";
       }
-      const expectedColor = isDark ? { r: 1, g: 1, b: 1 } : { r: 0.118, g: 0.118, b: 0.118 };
+      if (flowNode && "fills" in flowNode) {
+        const fNode = flowNode;
+        if (Array.isArray(fNode.fills) && fNode.fills.length > 0 && fNode.fills[0].type === "SOLID") {
+          bgColor = fNode.fills[0].color;
+        }
+      }
+      const { titleFill } = getTextFillsByBackground(bgColor, isDark);
       try {
         await Promise.all([
           figma.loadFontAsync(targetFont),
@@ -1131,7 +1456,7 @@
         } catch (_) {
         }
         try {
-          textNode.setRangeFills(0, len, [{ type: "SOLID", color: expectedColor }]);
+          textNode.setRangeFills(0, len, [titleFill]);
         } catch (_) {
         }
         try {
@@ -1160,7 +1485,7 @@
         } catch (_) {
         }
         try {
-          textNode.fills = [{ type: "SOLID", color: expectedColor }];
+          textNode.fills = [titleFill];
         } catch (_) {
         }
         try {
@@ -1204,10 +1529,12 @@
     const y = shape.y;
     const parent = shape.parent || figma.currentPage;
     const isDark = theme === "dark";
-    const bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-    const borderColor = isDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
-    const titleColor = isDark ? { r: 0.98, g: 0.98, b: 1 } : { r: 0.1, g: 0.1, b: 0.12 };
-    const descColor = isDark ? { r: 0.65, g: 0.68, b: 0.72 } : { r: 0.42, g: 0.45, b: 0.5 };
+    let bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
+    if (Array.isArray(shape.fills) && shape.fills.length > 0 && shape.fills[0].type === "SOLID") {
+      bgColor = shape.fills[0].color;
+    }
+    const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+    const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
     const card = figma.createFrame();
     card.name = title;
     card.x = x;
@@ -1248,7 +1575,7 @@
     titleText.fontName = { family: "Inter", style: "Bold" };
     titleText.fontSize = 13;
     titleText.characters = title;
-    titleText.fills = [{ type: "SOLID", color: titleColor }];
+    titleText.fills = [titleFill];
     titleText.layoutGrow = 1;
     titleText.textAutoResize = "HEIGHT";
     titleText.textTruncation = "ENDING";
@@ -1258,6 +1585,7 @@
     card.appendChild(headerRow);
     if (status && STATUS_CONFIG[status]) {
       const cfg = STATUS_CONFIG[status];
+      const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, bgColor, isDark);
       const statusBadge = figma.createFrame();
       statusBadge.name = "StatusBadge";
       statusBadge.layoutMode = "HORIZONTAL";
@@ -1269,8 +1597,8 @@
       statusBadge.paddingRight = 7;
       statusBadge.paddingTop = 3;
       statusBadge.paddingBottom = 3;
-      statusBadge.cornerRadius = 0;
-      statusBadge.fills = [{ type: "SOLID", color: cfg.color }];
+      statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+      statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
       statusBadge.setPluginData("is_status_badge", "true");
       const badgeText = figma.createText();
       badgeText.name = "StatusText";
@@ -1278,7 +1606,7 @@
       badgeText.fontSize = 9;
       badgeText.characters = cfg.label.toUpperCase();
       badgeText.textAutoResize = "WIDTH_AND_HEIGHT";
-      badgeText.fills = [{ type: "SOLID", color: cfg.textColor }];
+      badgeText.fills = [{ type: "SOLID", color: badgeTextColor }];
       badgeText.locked = true;
       statusBadge.appendChild(badgeText);
       statusBadge.locked = true;
@@ -1293,7 +1621,7 @@
     descText.fontName = { family: "Inter", style: "Regular" };
     descText.fontSize = 11;
     descText.characters = desc;
-    descText.fills = [{ type: "SOLID", color: descColor }];
+    descText.fills = [descFill];
     descText.layoutAlign = "STRETCH";
     descText.textAutoResize = "HEIGHT";
     updateDescTextTruncation(card, descText, height, desc);
@@ -1365,7 +1693,7 @@
     if (elevData !== "") {
       const elev = parseInt(elevData, 10);
       card.setPluginData("node_elevation", elevData);
-      card.effects = ELEVATION_EFFECTS[elev] || [];
+      card.effects = getElevationEffects(elev, isDark);
       card.clipsContent = false;
     }
     card.setPluginData("is_flow_node", "true");
@@ -1398,15 +1726,27 @@
       const width = payload.width ? Math.max(120, payload.width) : 250;
       const height = payload.height ? Math.max(50, payload.height) : 90;
       const isDark = theme === "dark";
-      const bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-      const borderColor = isDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
-      const titleColor = isDark ? { r: 0.98, g: 0.98, b: 1 } : { r: 0.1, g: 0.1, b: 0.12 };
-      const descColor = isDark ? { r: 0.65, g: 0.68, b: 0.72 } : { r: 0.42, g: 0.45, b: 0.5 };
+      let bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
+      if (payload.colorHex) {
+        bgColor = hexToRgbColor(payload.colorHex);
+      }
+      const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+      const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
       const card = figma.createFrame();
       card.name = title;
-      card.cornerRadius = 0;
-      card.strokeWeight = 1.5;
-      card.strokes = [{ type: "SOLID", color: borderColor }];
+      card.cornerRadius = typeof payload.cornerRadius === "number" ? Math.min(20, Math.max(0, payload.cornerRadius)) : 0;
+      if (typeof payload.strokeWeight === "number") {
+        card.strokeWeight = payload.strokeWeight;
+        if (payload.strokeWeight === 0) {
+          card.strokes = [];
+        } else {
+          const sColor = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+          card.strokes = [{ type: "SOLID", color: sColor }];
+        }
+      } else {
+        card.strokeWeight = 1.5;
+        card.strokes = [{ type: "SOLID", color: borderColor }];
+      }
       card.fills = [{ type: "SOLID", color: bgColor }];
       card.clipsContent = true;
       card.layoutMode = "VERTICAL";
@@ -1440,7 +1780,7 @@
       titleText.fontName = { family: "Inter", style: "Bold" };
       titleText.fontSize = 13;
       titleText.characters = title;
-      titleText.fills = [{ type: "SOLID", color: titleColor }];
+      titleText.fills = [titleFill];
       titleText.layoutGrow = 1;
       titleText.textAutoResize = "HEIGHT";
       titleText.textTruncation = "ENDING";
@@ -1453,7 +1793,7 @@
       descText.fontName = { family: "Inter", style: "Regular" };
       descText.fontSize = 11;
       descText.characters = description;
-      descText.fills = [{ type: "SOLID", color: descColor }];
+      descText.fills = [descFill];
       descText.layoutAlign = "STRETCH";
       descText.textAutoResize = "HEIGHT";
       updateDescTextTruncation(card, descText, height, description);
@@ -1468,6 +1808,7 @@
         card.setPluginData("workflow_status", payload.status);
         if (STATUS_CONFIG[payload.status]) {
           const cfg = STATUS_CONFIG[payload.status];
+          const { badgeBg, badgeTextColor } = getStatusBadgeColors(payload.status, bgColor, isDark);
           const statusBadge = figma.createFrame();
           statusBadge.name = "StatusBadge";
           statusBadge.layoutMode = "HORIZONTAL";
@@ -1479,8 +1820,8 @@
           statusBadge.paddingRight = 7;
           statusBadge.paddingTop = 3;
           statusBadge.paddingBottom = 3;
-          statusBadge.cornerRadius = 0;
-          statusBadge.fills = [{ type: "SOLID", color: cfg.color }];
+          statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+          statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
           statusBadge.setPluginData("is_status_badge", "true");
           const badgeText = figma.createText();
           badgeText.name = "StatusText";
@@ -1488,7 +1829,7 @@
           badgeText.fontSize = 9;
           badgeText.characters = cfg.label.toUpperCase();
           badgeText.textAutoResize = "WIDTH_AND_HEIGHT";
-          badgeText.fills = [{ type: "SOLID", color: cfg.textColor }];
+          badgeText.fills = [{ type: "SOLID", color: badgeTextColor }];
           badgeText.locked = true;
           statusBadge.appendChild(badgeText);
           statusBadge.locked = true;
@@ -1501,7 +1842,7 @@
       }
       if (typeof payload.elevation === "number") {
         card.setPluginData("node_elevation", `${payload.elevation}`);
-        card.effects = ELEVATION_EFFECTS[payload.elevation] || [];
+        card.effects = getElevationEffects(payload.elevation, isBgDark);
         card.clipsContent = false;
       }
       const selection = figma.currentPage.selection;
@@ -1542,16 +1883,35 @@
       const title = payload.title.trim() || "Untitled";
       const description = payload.description.trim() || "";
       const isDark = payload.theme === "dark";
-      const bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-      const borderColor = isDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
-      const titleColor = isDark ? { r: 0.98, g: 0.98, b: 1 } : { r: 0.1, g: 0.1, b: 0.12 };
-      const descColor = isDark ? { r: 0.65, g: 0.68, b: 0.72 } : { r: 0.42, g: 0.45, b: 0.5 };
+      let bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
+      if (payload.colorHex) {
+        bgColor = hexToRgbColor(payload.colorHex);
+      } else {
+        const currentFill = flowNode.fills;
+        if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === "SOLID") {
+          bgColor = currentFill[0].color;
+        }
+      }
+      const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+      const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
       const card = flowNode;
       card.name = title;
-      card.cornerRadius = 0;
+      if (typeof payload.cornerRadius === "number") {
+        card.cornerRadius = Math.min(20, Math.max(0, payload.cornerRadius));
+      }
       card.clipsContent = true;
       card.fills = [{ type: "SOLID", color: bgColor }];
-      card.strokes = [{ type: "SOLID", color: borderColor }];
+      if (typeof payload.strokeWeight === "number") {
+        card.strokeWeight = payload.strokeWeight;
+        if (payload.strokeWeight === 0) {
+          card.strokes = [];
+        } else {
+          const sColor = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+          card.strokes = [{ type: "SOLID", color: sColor }];
+        }
+      } else if (payload.strokeColor) {
+        card.strokes = [{ type: "SOLID", color: hexToRgbColor(payload.strokeColor) }];
+      }
       if (payload.width && payload.height) {
         const w = Math.max(120, payload.width);
         const h = Math.max(50, payload.height);
@@ -1625,9 +1985,7 @@
       titleText.textTruncation = "ENDING";
       titleText.maxLines = 1;
       await safeSetCharacters(titleText, title);
-      if (!Array.isArray(titleText.fills) || titleText.fills.length === 0) {
-        titleText.fills = [{ type: "SOLID", color: titleColor }];
-      }
+      titleText.fills = [titleFill];
       let descText = card.children.find(
         (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
       );
@@ -1649,14 +2007,24 @@
       const currentH = payload.height || card.height;
       updateDescTextTruncation(card, descText, currentH, description);
       if (statusBadge) {
+        statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
         statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
         statusBadge.x = card.width - statusBadge.width - 10;
         statusBadge.y = card.height - statusBadge.height - 10;
+        const currentStatus = payload.status || card.getPluginData("workflow_status");
+        if (currentStatus && STATUS_CONFIG[currentStatus]) {
+          const { badgeBg, badgeTextColor } = getStatusBadgeColors(currentStatus, bgColor, isDark);
+          statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
+          const bText = statusBadge.children.find((c) => c.type === "TEXT");
+          if (bText) {
+            bText.locked = false;
+            bText.fills = [{ type: "SOLID", color: badgeTextColor }];
+            bText.locked = true;
+          }
+        }
       }
       await safeSetCharacters(descText, description);
-      if (!Array.isArray(descText.fills) || descText.fills.length === 0) {
-        descText.fills = [{ type: "SOLID", color: descColor }];
-      }
+      descText.fills = [descFill];
       card.name = title;
       card.setPluginData("is_flow_node", "true");
       card.setPluginData("schema_version", "2");
@@ -1669,7 +2037,7 @@
       if (payload.nodeType) card.setPluginData("node_type", payload.nodeType);
       if (typeof payload.elevation === "number") {
         card.setPluginData("node_elevation", `${payload.elevation}`);
-        card.effects = ELEVATION_EFFECTS[payload.elevation] || [];
+        card.effects = getElevationEffects(payload.elevation, isBgDark);
         card.clipsContent = false;
       } else if (payload.elevation === null) {
         card.setPluginData("node_elevation", "");
@@ -2236,7 +2604,7 @@
           statusBadge.paddingRight = 7;
           statusBadge.paddingTop = 3;
           statusBadge.paddingBottom = 3;
-          statusBadge.cornerRadius = 0;
+          statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
           statusBadge.setPluginData("is_status_badge", "true");
           const badgeText = figma.createText();
           badgeText.name = "StatusText";
@@ -2247,12 +2615,20 @@
           card.appendChild(statusBadge);
         }
         if (cfg) {
-          statusBadge.fills = [{ type: "SOLID", color: cfg.color }];
+          let nodeBgColor = { r: 1, g: 1, b: 1 };
+          const cardFills = card.fills;
+          if (Array.isArray(cardFills) && cardFills.length > 0 && cardFills[0].type === "SOLID") {
+            nodeBgColor = cardFills[0].color;
+          }
+          const isDarkTheme = card.getPluginData("node_theme") === "dark";
+          const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, nodeBgColor, isDarkTheme);
+          statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+          statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
           const textNode = statusBadge.children.find((c) => c.type === "TEXT");
           if (textNode) {
             textNode.locked = false;
             await safeSetCharacters(textNode, cfg.label.toUpperCase());
-            textNode.fills = [{ type: "SOLID", color: cfg.textColor }];
+            textNode.fills = [{ type: "SOLID", color: badgeTextColor }];
             textNode.locked = true;
           }
           if (card.layoutMode !== "NONE") {
@@ -2297,8 +2673,17 @@
           card.setPluginData("node_elevation", "");
           card.effects = [];
         } else {
+          const nodeTheme = card.getPluginData("node_theme");
+          let isDark = nodeTheme === "dark";
+          if ("fills" in card && Array.isArray(card.fills) && card.fills.length > 0) {
+            const firstFill = card.fills[0];
+            if (firstFill.type === "SOLID") {
+              const lum = 0.299 * firstFill.color.r + 0.587 * firstFill.color.g + 0.114 * firstFill.color.b;
+              if (lum < 0.5) isDark = true;
+            }
+          }
           card.setPluginData("node_elevation", `${level}`);
-          card.effects = ELEVATION_EFFECTS[level] || [];
+          card.effects = getElevationEffects(level, isDark);
           card.clipsContent = false;
         }
       }
@@ -2453,6 +2838,38 @@
     const sceneNode = node;
     figma.currentPage.selection = [sceneNode];
     figma.viewport.scrollAndZoomIntoView([sceneNode]);
+  }
+  function getDesignFrames() {
+    const items = [];
+    const seenIds = /* @__PURE__ */ new Set();
+    for (const node of figma.currentPage.selection) {
+      if ((node.type === "FRAME" || node.type === "COMPONENT" || node.type === "INSTANCE") && !node.getPluginData("is_flow_node") && !node.getPluginData("flow_node_type") && !node.name.startsWith("[Flow]")) {
+        const cr = "cornerRadius" in node && typeof node.cornerRadius === "number" ? node.cornerRadius : 0;
+        items.push({
+          id: node.id,
+          name: node.name,
+          width: Math.round(node.width),
+          height: Math.round(node.height),
+          cornerRadius: Math.round(cr)
+        });
+        seenIds.add(node.id);
+      }
+    }
+    for (const node of figma.currentPage.children) {
+      if (seenIds.has(node.id)) continue;
+      if ((node.type === "FRAME" || node.type === "COMPONENT" || node.type === "INSTANCE") && !node.getPluginData("is_flow_node") && !node.getPluginData("flow_node_type") && !node.name.startsWith("[Flow]")) {
+        const cr = "cornerRadius" in node && typeof node.cornerRadius === "number" ? node.cornerRadius : 0;
+        items.push({
+          id: node.id,
+          name: node.name,
+          width: Math.round(node.width),
+          height: Math.round(node.height),
+          cornerRadius: Math.round(cr)
+        });
+        seenIds.add(node.id);
+      }
+    }
+    return items;
   }
   async function loadSavedSettings() {
     const token = await figma.clientStorage.getAsync("figma_token") || "";
@@ -2627,6 +3044,14 @@
       case "FOCUS_FRAME":
         focusFrame(msg.nodeId);
         break;
+      case "GET_DESIGN_FRAMES": {
+        const frames = getDesignFrames();
+        postToUI({
+          type: "DESIGN_FRAMES_LOADED",
+          frames
+        });
+        break;
+      }
       case "RESIZE_NODE":
         await resizeNode(msg.nodeId, msg.width, msg.height);
         break;

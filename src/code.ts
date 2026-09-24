@@ -35,9 +35,24 @@ figma.showUI(__html__, {
   title: 'UI Flow Diagram',
 });
 
-// 5단계 엘리베이션(그림자) 효과 정의
-const ELEVATION_EFFECTS: Record<number, DropShadowEffect[]> = {
+// ============================================================
+// 피그마 UI3 공식 규격 엘레베이션 효과 (Figma Node 2012:307470)
+// E100(0: Shapes), E200(1: Stickies), E300(2: Tooltips), E400(3: Menus), E500(4: Modals)
+// ============================================================
+
+// 1) 라이트 모드 엘레베이션 (Light Mode)
+const ELEVATION_EFFECTS_LIGHT: Record<number, Effect[]> = {
+  // E100 (Shapes): 0 0 0.5px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15)
   0: [
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.3 },
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
     {
       type: 'DROP_SHADOW',
       color: { r: 0, g: 0, b: 0, a: 0.15 },
@@ -47,17 +62,19 @@ const ELEVATION_EFFECTS: Record<number, DropShadowEffect[]> = {
       visible: true,
       blendMode: 'NORMAL',
     },
+  ],
+
+  // E200 (Stickies, Comments): 0 0 0.5px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.1), 0 3px 8px rgba(0,0,0,0.1)
+  1: [
     {
       type: 'DROP_SHADOW',
-      color: { r: 0, g: 0, b: 0, a: 0.2 },
+      color: { r: 0, g: 0, b: 0, a: 0.18 },
       offset: { x: 0, y: 0 },
-      radius: 1,
+      radius: 0.5,
       spread: 0,
       visible: true,
       blendMode: 'NORMAL',
     },
-  ],
-  1: [
     {
       type: 'DROP_SHADOW',
       color: { r: 0, g: 0, b: 0, a: 0.1 },
@@ -77,19 +94,30 @@ const ELEVATION_EFFECTS: Record<number, DropShadowEffect[]> = {
       blendMode: 'NORMAL',
     },
   ],
+
+  // E300 (Tooltips): 0 0 0.5px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1), 0 5px 12px rgba(0,0,0,0.13)
   2: [
     {
       type: 'DROP_SHADOW',
-      color: { r: 0, g: 0, b: 0, a: 0.08 },
-      offset: { x: 0, y: 2 },
-      radius: 4,
+      color: { r: 0, g: 0, b: 0, a: 0.15 },
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
       spread: 0,
       visible: true,
       blendMode: 'NORMAL',
     },
     {
       type: 'DROP_SHADOW',
-      color: { r: 0, g: 0, b: 0, a: 0.14 },
+      color: { r: 0, g: 0, b: 0, a: 0.1 },
+      offset: { x: 0, y: 1 },
+      radius: 3,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.13 },
       offset: { x: 0, y: 5 },
       radius: 12,
       spread: 0,
@@ -97,12 +125,14 @@ const ELEVATION_EFFECTS: Record<number, DropShadowEffect[]> = {
       blendMode: 'NORMAL',
     },
   ],
+
+  // E400 (Menus, Panels): 0 0 0.5px rgba(0,0,0,0.12), 0 2px 5px rgba(0,0,0,0.15), 0 10px 16px rgba(0,0,0,0.12)
   3: [
     {
       type: 'DROP_SHADOW',
       color: { r: 0, g: 0, b: 0, a: 0.12 },
-      offset: { x: 0, y: 3 },
-      radius: 6,
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
       spread: 0,
       visible: true,
       blendMode: 'NORMAL',
@@ -110,34 +140,364 @@ const ELEVATION_EFFECTS: Record<number, DropShadowEffect[]> = {
     {
       type: 'DROP_SHADOW',
       color: { r: 0, g: 0, b: 0, a: 0.15 },
+      offset: { x: 0, y: 2 },
+      radius: 5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.12 },
       offset: { x: 0, y: 10 },
-      radius: 18,
+      radius: 16,
       spread: 0,
       visible: true,
       blendMode: 'NORMAL',
     },
   ],
+
+  // E500 (Modals, Dialogs): 0 0 0.5px rgba(0,0,0,0.08), 0 2px 5px rgba(0,0,0,0.15), 0 10px 24px rgba(0,0,0,0.18)
   4: [
     {
       type: 'DROP_SHADOW',
-      color: { r: 0, g: 0, b: 0, a: 0.14 },
-      offset: { x: 0, y: 4 },
-      radius: 8,
+      color: { r: 0, g: 0, b: 0, a: 0.08 },
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
       spread: 0,
       visible: true,
       blendMode: 'NORMAL',
     },
     {
       type: 'DROP_SHADOW',
-      color: { r: 0, g: 0, b: 0, a: 0.2 },
-      offset: { x: 0, y: 14 },
-      radius: 26,
+      color: { r: 0, g: 0, b: 0, a: 0.15 },
+      offset: { x: 0, y: 2 },
+      radius: 5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.18 },
+      offset: { x: 0, y: 10 },
+      radius: 24,
       spread: 0,
       visible: true,
       blendMode: 'NORMAL',
     },
   ],
 };
+
+// 2) 다크 모드 엘레베이션 (Dark Mode)
+const ELEVATION_EFFECTS_DARK: Record<number, Effect[]> = {
+  // E100 (Shapes): inset 0 .5px 0 rgba(255,255,255,0.1), inset 0 0 0.5px rgba(255,255,255,0.35), 0 0 0.5px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4)
+  0: [
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.1 },
+      offset: { x: 0, y: 0.5 },
+      radius: 0,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.35 },
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.5 },
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.4 },
+      offset: { x: 0, y: 1 },
+      radius: 3,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+  ],
+
+  // E200 (Stickies, Comments): inset 0 .5px 0 rgba(255,255,255,0.08), inset 0 0 .5px rgba(255,255,255,0.35), 0 1px 3px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.4)
+  1: [
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.08 },
+      offset: { x: 0, y: 0.5 },
+      radius: 0,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.35 },
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.35 },
+      offset: { x: 0, y: 1 },
+      radius: 3,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.4 },
+      offset: { x: 0, y: 3 },
+      radius: 8,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+  ],
+
+  // E300 (Tooltips): inset 0 .5px 0 rgba(255,255,255,0.08), inset 0 0 .5px rgba(255,255,255,0.35), 0 1px 3px rgba(0,0,0,0.5), 0 5px 12px rgba(0,0,0,0.35)
+  2: [
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.08 },
+      offset: { x: 0, y: 0.5 },
+      radius: 0,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.35 },
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.5 },
+      offset: { x: 0, y: 1 },
+      radius: 3,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.35 },
+      offset: { x: 0, y: 5 },
+      radius: 12,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+  ],
+
+  // E400 (Menus, Panels): inset 0 .5px 0 rgba(255,255,255,0.08), inset 0 0 .5px rgba(255,255,255,0.35), 0 2px 5px rgba(0,0,0,0.35), 0 10px 16px rgba(0,0,0,0.35)
+  3: [
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.08 },
+      offset: { x: 0, y: 0.5 },
+      radius: 0,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.35 },
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.35 },
+      offset: { x: 0, y: 2 },
+      radius: 5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.35 },
+      offset: { x: 0, y: 10 },
+      radius: 16,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+  ],
+
+  // E500 (Modals, Dialogs): inset 0 .5px 0 rgba(255,255,255,0.08), inset 0 0 .5px rgba(255,255,255,0.35), 0 3px 5px rgba(0,0,0,0.35), 0 10px 24px rgba(0,0,0,0.45)
+  4: [
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.08 },
+      offset: { x: 0, y: 0.5 },
+      radius: 0,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'INNER_SHADOW',
+      color: { r: 1, g: 1, b: 1, a: 0.35 },
+      offset: { x: 0, y: 0 },
+      radius: 0.5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.35 },
+      offset: { x: 0, y: 3 },
+      radius: 5,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+    {
+      type: 'DROP_SHADOW',
+      color: { r: 0, g: 0, b: 0, a: 0.45 },
+      offset: { x: 0, y: 10 },
+      radius: 24,
+      spread: 0,
+      visible: true,
+      blendMode: 'NORMAL',
+    },
+  ],
+};
+
+function getElevationEffects(level: number, isDark = false): Effect[] {
+  return isDark
+    ? (ELEVATION_EFFECTS_DARK[level] || ELEVATION_EFFECTS_LIGHT[level] || [])
+    : (ELEVATION_EFFECTS_LIGHT[level] || []);
+}
+
+/**
+ * 배경색 명도에 따른 타이틀 및 디스크립션 텍스트 Paint 생성 헬퍼
+ * - 기본적으로 배경색의 명도에 따라 검정 혹은 화이트
+ * - 타이틀: 완전한 검정({ r: 0, g: 0, b: 0 }) 또는 화이트({ r: 1, g: 1, b: 1 })
+ * - 디스크립션: 동일한 검정/화이트 베이스에 알파값(opacity)으로 명도를 부드럽게 낮춤
+ */
+function getTextFillsByBackground(bgColor: RGB, isDarkTheme = false): {
+  titleFill: SolidPaint;
+  descFill: SolidPaint;
+  isBgDark: boolean;
+} {
+  const luminance = 0.299 * bgColor.r + 0.587 * bgColor.g + 0.114 * bgColor.b;
+  const isBgDark = isDarkTheme || luminance < 0.5;
+
+  const baseColor: RGB = isBgDark ? { r: 1, g: 1, b: 1 } : { r: 0, g: 0, b: 0 };
+  const descOpacity = isBgDark ? 0.7 : 0.6;
+
+  return {
+    titleFill: {
+      type: 'SOLID',
+      color: baseColor,
+      opacity: 1,
+    },
+    descFill: {
+      type: 'SOLID',
+      color: baseColor,
+      opacity: descOpacity,
+    },
+    isBgDark,
+  };
+}
+
+/**
+ * 노드 배경색의 채도와 명도를 분석하여 스테이터스 뱃지의 배경 및 텍스트 색상을 반환
+ * - 노드 배경색이 일정 채도(Saturation) 이상인 유채색인 경우:
+ *   스타일 컬러와의 색상 충돌 방지를 위해 무채색 뱃지로 전환
+ *   - 노드가 어두운 배경(Luminance < 0.5): 흰색 배경에 검정 글자
+ *   - 노드가 밝은 배경(Luminance >= 0.5): 검정 배경에 흰색 글자
+ * - 노드 배경색이 무채색(흰색, 그레이, 블랙 등)인 경우:
+ *   STATUS_CONFIG의 고유 스테이터스 색상(초록, 파랑, 오렌지 등) 유지
+ */
+function getStatusBadgeColors(
+  status: WorkflowStatus,
+  nodeBgColor: RGB,
+  isDarkTheme = false
+): {
+  badgeBg: RGB;
+  badgeTextColor: RGB;
+  isMonochrome: boolean;
+} {
+  const cfg = STATUS_CONFIG[status];
+  const defaultBg = cfg ? cfg.color : { r: 0.5, g: 0.5, b: 0.5 };
+  const defaultText = cfg ? cfg.textColor : { r: 1, g: 1, b: 1 };
+
+  // 1. 채도(Saturation) 계산 (HSV 기반)
+  const max = Math.max(nodeBgColor.r, nodeBgColor.g, nodeBgColor.b);
+  const min = Math.min(nodeBgColor.r, nodeBgColor.g, nodeBgColor.b);
+  const delta = max - min;
+  const saturation = max === 0 ? 0 : delta / max;
+
+  // 채도 임계값: saturation >= 0.15 및 delta >= 0.08이면 유채색으로 판별
+  const isChromatic = saturation >= 0.15 && delta >= 0.08;
+
+  if (isChromatic) {
+    // 2. 명도(Luminance) 계산
+    const luminance = 0.299 * nodeBgColor.r + 0.587 * nodeBgColor.g + 0.114 * nodeBgColor.b;
+    const isBgDark = isDarkTheme || luminance < 0.5;
+
+    if (isBgDark) {
+      // 어두운 유채색 배경: 화이트 배경에 노드의 배경색 글자
+      return {
+        badgeBg: { r: 1, g: 1, b: 1 },
+        badgeTextColor: nodeBgColor,
+        isMonochrome: true,
+      };
+    } else {
+      // 밝은 유채색 배경: 블랙 배경에 노드의 배경색 글자
+      return {
+        badgeBg: { r: 0, g: 0, b: 0 },
+        badgeTextColor: nodeBgColor,
+        isMonochrome: true,
+      };
+    }
+  }
+
+  // 무채색 배경인 경우 원래 스테이터스 컬러 유지
+  return {
+    badgeBg: defaultBg,
+    badgeTextColor: defaultText,
+    isMonochrome: false,
+  };
+}
+
+/**
+ * 노드의 라운드니스(cornerRadius)와 status가 떨어진 간격(10px)을 기반으로
+ * status 뱃지의 최적 코너 라운드니스 계산 (중첩 코너 곡률 공식: R_inner = max(0, R_outer - offset))
+ */
+function getStatusBadgeCornerRadius(nodeCornerRadius: number, offset = 10): number {
+  return Math.max(0, Math.round(nodeCornerRadius - offset));
+}
 
 
 // 필수 폰트 사전 로드
@@ -432,6 +792,8 @@ function handleSelectionChange() {
         if (frame.paddingBottom !== 36) {
           frame.paddingBottom = 36;
         }
+        const nodeCornerRadius = typeof frame.cornerRadius === 'number' ? frame.cornerRadius : 0;
+        statusBadge.cornerRadius = getStatusBadgeCornerRadius(nodeCornerRadius);
         statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
         statusBadge.x = frame.width - statusBadge.width - 10;
         statusBadge.y = frame.height - statusBadge.height - 10;
@@ -596,6 +958,26 @@ function handleSelectionChange() {
       hugHeight = calculateCardHugHeight(frame);
     }
 
+    let nodeFillColor: string | undefined;
+    let nodeStrokeColor: string | undefined;
+    let nodeStrokeWeight: number | undefined;
+
+    if ('fills' in node && Array.isArray(node.fills) && node.fills.length > 0) {
+      const firstFill = node.fills[0];
+      if (firstFill.type === 'SOLID') {
+        nodeFillColor = rgbToHexColor(firstFill.color);
+      }
+    }
+    if ('strokes' in node && Array.isArray(node.strokes) && node.strokes.length > 0) {
+      const firstStroke = node.strokes[0];
+      if (firstStroke.type === 'SOLID') {
+        nodeStrokeColor = rgbToHexColor(firstStroke.color);
+      }
+    }
+    if ('strokeWeight' in node && typeof (node as any).strokeWeight === 'number') {
+      nodeStrokeWeight = (node as any).strokeWeight;
+    }
+
     return {
       id: node.id,
       name: node.name,
@@ -630,6 +1012,9 @@ function handleSelectionChange() {
       badgeShape: node.getPluginData('badge_shape') || undefined,
       elevationOn: node.getPluginData('node_elevation') !== '',
       elevation: node.getPluginData('node_elevation') !== '' ? parseInt(node.getPluginData('node_elevation'), 10) : undefined,
+      fillColorHex: nodeFillColor,
+      strokeColorHex: nodeStrokeColor,
+      strokeWeight: nodeStrokeWeight,
     };
   });
 
@@ -710,12 +1095,19 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
     const targetFont: FontName = { family: 'Inter', style: 'Bold' };
     const targetSize = 13;
 
-    // 테마 기본 글자 색상 결정
+    // 테마 및 배경색에 따른 타이틀 글자 색상 결정
     let isDark = false;
+    let bgColor: RGB = { r: 1, g: 1, b: 1 };
     if (flowNode && 'getPluginData' in flowNode) {
       isDark = flowNode.getPluginData('node_theme') === 'dark';
     }
-    const expectedColor: RGB = isDark ? { r: 1, g: 1, b: 1 } : { r: 0.118, g: 0.118, b: 0.118 };
+    if (flowNode && 'fills' in flowNode) {
+      const fNode = flowNode as FrameNode;
+      if (Array.isArray(fNode.fills) && fNode.fills.length > 0 && fNode.fills[0].type === 'SOLID') {
+        bgColor = fNode.fills[0].color;
+      }
+    }
+    const { titleFill } = getTextFillsByBackground(bgColor, isDark);
 
     // 1. 필요한 폰트 사전 로드
     try {
@@ -786,7 +1178,7 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
       // 전체 범위 일괄 초기화 (이중 안전장치)
       try { textNode.setRangeFontName(0, len, targetFont); } catch (_) {}
       try { textNode.setRangeFontSize(0, len, targetSize); } catch (_) {}
-      try { textNode.setRangeFills(0, len, [{ type: 'SOLID', color: expectedColor }]); } catch (_) {}
+      try { textNode.setRangeFills(0, len, [titleFill]); } catch (_) {}
       try { textNode.setRangeTextDecoration(0, len, 'NONE'); } catch (_) {}
       try { textNode.setRangeHyperlink(0, len, null); } catch (_) {}
       try { textNode.setRangeListOptions(0, len, { type: 'NONE' }); } catch (_) {}
@@ -794,7 +1186,7 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
     } else {
       try { textNode.fontName = targetFont; } catch (_) {}
       try { textNode.fontSize = targetSize; } catch (_) {}
-      try { textNode.fills = [{ type: 'SOLID', color: expectedColor }]; } catch (_) {}
+      try { textNode.fills = [titleFill]; } catch (_) {}
       try { textNode.textDecoration = 'NONE'; } catch (_) {}
       try { textNode.hyperlink = null; } catch (_) {}
     }
@@ -844,10 +1236,12 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   const parent = shape.parent || figma.currentPage;
 
   const isDark = theme === 'dark';
-  const bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-  const borderColor: RGB = isDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
-  const titleColor: RGB = isDark ? { r: 0.98, g: 0.98, b: 1 } : { r: 0.1, g: 0.1, b: 0.12 };
-  const descColor: RGB = isDark ? { r: 0.65, g: 0.68, b: 0.72 } : { r: 0.42, g: 0.45, b: 0.5 };
+  let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
+  if (Array.isArray(shape.fills) && shape.fills.length > 0 && shape.fills[0].type === 'SOLID') {
+    bgColor = shape.fills[0].color;
+  }
+  const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+  const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
   const card = figma.createFrame();
   card.name = title;
@@ -895,7 +1289,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   titleText.fontName = { family: 'Inter', style: 'Bold' };
   titleText.fontSize = 13;
   titleText.characters = title;
-  titleText.fills = [{ type: 'SOLID', color: titleColor }];
+  titleText.fills = [titleFill];
   titleText.layoutGrow = 1;
   titleText.textAutoResize = 'HEIGHT';
   titleText.textTruncation = 'ENDING';
@@ -905,9 +1299,10 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
 
   card.appendChild(headerRow);
 
-  // 상태 뱃지 복원 (타이틀과 독립하여 카드 우상단에 위치)
+  // 상태 뱃지 복원 (타이틀과 독립하여 카드 우하단에 위치)
   if (status && STATUS_CONFIG[status]) {
     const cfg = STATUS_CONFIG[status];
+    const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, bgColor, isDark);
     const statusBadge = figma.createFrame();
     statusBadge.name = 'StatusBadge';
     statusBadge.layoutMode = 'HORIZONTAL';
@@ -919,8 +1314,8 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
     statusBadge.paddingRight = 7;
     statusBadge.paddingTop = 3;
     statusBadge.paddingBottom = 3;
-    statusBadge.cornerRadius = 0; // 완전 직각 알약
-    statusBadge.fills = [{ type: 'SOLID', color: cfg.color }];
+    statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+    statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
     statusBadge.setPluginData('is_status_badge', 'true');
 
     const badgeText = figma.createText();
@@ -929,7 +1324,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
     badgeText.fontSize = 9;
     badgeText.characters = cfg.label.toUpperCase();
     badgeText.textAutoResize = 'WIDTH_AND_HEIGHT';
-    badgeText.fills = [{ type: 'SOLID', color: cfg.textColor }];
+    badgeText.fills = [{ type: 'SOLID', color: badgeTextColor }];
     badgeText.locked = true; // 캔버스에서 텍스트 직접 편집 차단
     statusBadge.appendChild(badgeText);
 
@@ -947,7 +1342,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   descText.fontName = { family: 'Inter', style: 'Regular' };
   descText.fontSize = 11;
   descText.characters = desc;
-  descText.fills = [{ type: 'SOLID', color: descColor }];
+  descText.fills = [descFill];
   descText.layoutAlign = 'STRETCH';
   descText.textAutoResize = 'HEIGHT';
   updateDescTextTruncation(card, descText, height, desc);
@@ -1025,7 +1420,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   if (elevData !== '') {
     const elev = parseInt(elevData, 10);
     card.setPluginData('node_elevation', elevData);
-    card.effects = ELEVATION_EFFECTS[elev] || [];
+    card.effects = getElevationEffects(elev, isDark);
     card.clipsContent = false;
   }
 
@@ -1069,17 +1464,30 @@ async function createFlowNode(payload: FlowNodePayload) {
     const height = payload.height ? Math.max(50, payload.height) : 90;
 
     const isDark = theme === 'dark';
-    const bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-    const borderColor: RGB = isDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
-    const titleColor: RGB = isDark ? { r: 0.98, g: 0.98, b: 1 } : { r: 0.1, g: 0.1, b: 0.12 };
-    const descColor: RGB = isDark ? { r: 0.65, g: 0.68, b: 0.72 } : { r: 0.42, g: 0.45, b: 0.5 };
+    let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
+    if (payload.colorHex) {
+      bgColor = hexToRgbColor(payload.colorHex);
+    }
+    const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+
+    const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
     // 1. 메인 카드 프레임
     const card = figma.createFrame();
     card.name = title;
-    card.cornerRadius = 0; // 완전 직각
-    card.strokeWeight = 1.5;
-    card.strokes = [{ type: 'SOLID', color: borderColor }];
+    card.cornerRadius = typeof payload.cornerRadius === 'number' ? Math.min(20, Math.max(0, payload.cornerRadius)) : 0;
+    if (typeof payload.strokeWeight === 'number') {
+      card.strokeWeight = payload.strokeWeight;
+      if (payload.strokeWeight === 0) {
+        card.strokes = [];
+      } else {
+        const sColor = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+        card.strokes = [{ type: 'SOLID', color: sColor }];
+      }
+    } else {
+      card.strokeWeight = 1.5;
+      card.strokes = [{ type: 'SOLID', color: borderColor }];
+    }
     card.fills = [{ type: 'SOLID', color: bgColor }];
     card.clipsContent = true;
 
@@ -1120,7 +1528,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     titleText.fontName = { family: 'Inter', style: 'Bold' };
     titleText.fontSize = 13;
     titleText.characters = title;
-    titleText.fills = [{ type: 'SOLID', color: titleColor }];
+    titleText.fills = [titleFill];
     titleText.layoutGrow = 1;
     titleText.textAutoResize = 'HEIGHT';
     titleText.textTruncation = 'ENDING';
@@ -1136,7 +1544,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     descText.fontName = { family: 'Inter', style: 'Regular' };
     descText.fontSize = 11;
     descText.characters = description;
-    descText.fills = [{ type: 'SOLID', color: descColor }];
+    descText.fills = [descFill];
     descText.layoutAlign = 'STRETCH';
     descText.textAutoResize = 'HEIGHT';
     updateDescTextTruncation(card, descText, height, description);
@@ -1153,6 +1561,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       card.setPluginData('workflow_status', payload.status);
       if (STATUS_CONFIG[payload.status]) {
         const cfg = STATUS_CONFIG[payload.status];
+        const { badgeBg, badgeTextColor } = getStatusBadgeColors(payload.status, bgColor, isDark);
         const statusBadge = figma.createFrame();
         statusBadge.name = 'StatusBadge';
         statusBadge.layoutMode = 'HORIZONTAL';
@@ -1164,8 +1573,8 @@ async function createFlowNode(payload: FlowNodePayload) {
         statusBadge.paddingRight = 7;
         statusBadge.paddingTop = 3;
         statusBadge.paddingBottom = 3;
-        statusBadge.cornerRadius = 0;
-        statusBadge.fills = [{ type: 'SOLID', color: cfg.color }];
+        statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+        statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
         statusBadge.setPluginData('is_status_badge', 'true');
 
         const badgeText = figma.createText();
@@ -1174,7 +1583,7 @@ async function createFlowNode(payload: FlowNodePayload) {
         badgeText.fontSize = 9;
         badgeText.characters = cfg.label.toUpperCase();
         badgeText.textAutoResize = 'WIDTH_AND_HEIGHT';
-        badgeText.fills = [{ type: 'SOLID', color: cfg.textColor }];
+        badgeText.fills = [{ type: 'SOLID', color: badgeTextColor }];
         badgeText.locked = true; // 캔버스에서 텍스트 직접 수정 차단
         statusBadge.appendChild(badgeText);
 
@@ -1190,7 +1599,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     // 엘리베이션(그림자) 효과 적용
     if (typeof payload.elevation === 'number') {
       card.setPluginData('node_elevation', `${payload.elevation}`);
-      card.effects = ELEVATION_EFFECTS[payload.elevation] || [];
+      card.effects = getElevationEffects(payload.elevation, isBgDark);
       card.clipsContent = false;
     }
 
@@ -1244,18 +1653,38 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const title = payload.title.trim() || 'Untitled';
     const description = payload.description.trim() || '';
     const isDark = payload.theme === 'dark';
+    let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
+    if (payload.colorHex) {
+      bgColor = hexToRgbColor(payload.colorHex);
+    } else {
+      const currentFill = (flowNode as FrameNode).fills;
+      if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === 'SOLID') {
+        bgColor = currentFill[0].color;
+      }
+    }
+    const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
 
-    const bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-    const borderColor: RGB = isDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
-    const titleColor: RGB = isDark ? { r: 0.98, g: 0.98, b: 1 } : { r: 0.1, g: 0.1, b: 0.12 };
-    const descColor: RGB = isDark ? { r: 0.65, g: 0.68, b: 0.72 } : { r: 0.42, g: 0.45, b: 0.5 };
+    const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
     const card = flowNode as FrameNode;
     card.name = title;
-    card.cornerRadius = 0;
+    if (typeof payload.cornerRadius === 'number') {
+      card.cornerRadius = Math.min(20, Math.max(0, payload.cornerRadius));
+    }
     card.clipsContent = true;
     card.fills = [{ type: 'SOLID', color: bgColor }];
-    card.strokes = [{ type: 'SOLID', color: borderColor }];
+
+    if (typeof payload.strokeWeight === 'number') {
+      card.strokeWeight = payload.strokeWeight;
+      if (payload.strokeWeight === 0) {
+        card.strokes = [];
+      } else {
+        const sColor = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+        card.strokes = [{ type: 'SOLID', color: sColor }];
+      }
+    } else if (payload.strokeColor) {
+      card.strokes = [{ type: 'SOLID', color: hexToRgbColor(payload.strokeColor) }];
+    }
 
     // 크기 조정 (min/max 일시 해제 -> resize -> min/max 재잠금)
     if (payload.width && payload.height) {
@@ -1346,9 +1775,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     titleText.textTruncation = 'ENDING';
     titleText.maxLines = 1;
     await safeSetCharacters(titleText, title);
-    if (!Array.isArray(titleText.fills) || titleText.fills.length === 0) {
-      titleText.fills = [{ type: 'SOLID', color: titleColor }];
-    }
+    titleText.fills = [titleFill];
 
     // 설명 텍스트 갱신
     let descText = card.children.find(
@@ -1377,15 +1804,27 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     updateDescTextTruncation(card, descText, currentH, description);
 
     if (statusBadge) {
+      statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
       statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
       statusBadge.x = card.width - statusBadge.width - 10;
       statusBadge.y = card.height - statusBadge.height - 10;
+
+      // 노드 배경색 변화에 따른 상태 뱃지 컬러 동기화
+      const currentStatus = (payload.status || card.getPluginData('workflow_status')) as WorkflowStatus;
+      if (currentStatus && STATUS_CONFIG[currentStatus]) {
+        const { badgeBg, badgeTextColor } = getStatusBadgeColors(currentStatus, bgColor, isDark);
+        statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
+        const bText = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+        if (bText) {
+          bText.locked = false;
+          bText.fills = [{ type: 'SOLID', color: badgeTextColor }];
+          bText.locked = true;
+        }
+      }
     }
 
     await safeSetCharacters(descText, description);
-    if (!Array.isArray(descText.fills) || descText.fills.length === 0) {
-      descText.fills = [{ type: 'SOLID', color: descColor }];
-    }
+    descText.fills = [descFill];
 
     // 실제 FigJam 프레임 노드 이름 동기화
     card.name = title;
@@ -1402,7 +1841,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     if (payload.nodeType) card.setPluginData('node_type', payload.nodeType);
     if (typeof payload.elevation === 'number') {
       card.setPluginData('node_elevation', `${payload.elevation}`);
-      card.effects = ELEVATION_EFFECTS[payload.elevation] || [];
+      card.effects = getElevationEffects(payload.elevation, isBgDark);
       card.clipsContent = false;
     } else if (payload.elevation === null) {
       card.setPluginData('node_elevation', '');
@@ -2126,7 +2565,7 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
         statusBadge.paddingRight = 7;
         statusBadge.paddingTop = 3;
         statusBadge.paddingBottom = 3;
-        statusBadge.cornerRadius = 0; // 완전 직각 알약
+        statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
         statusBadge.setPluginData('is_status_badge', 'true');
 
         const badgeText = figma.createText();
@@ -2140,12 +2579,22 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
       }
 
       if (cfg) {
-        statusBadge.fills = [{ type: 'SOLID', color: cfg.color }];
+        // 노드 배경색 추출 (카드 fills 기준)
+        let nodeBgColor: RGB = { r: 1, g: 1, b: 1 };
+        const cardFills = card.fills;
+        if (Array.isArray(cardFills) && cardFills.length > 0 && cardFills[0].type === 'SOLID') {
+          nodeBgColor = cardFills[0].color;
+        }
+        const isDarkTheme = card.getPluginData('node_theme') === 'dark';
+        const { badgeBg, badgeTextColor } = getStatusBadgeColors(status as WorkflowStatus, nodeBgColor, isDarkTheme);
+
+        statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+        statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
         const textNode = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode;
         if (textNode) {
           textNode.locked = false;
           await safeSetCharacters(textNode, cfg.label.toUpperCase());
-          textNode.fills = [{ type: 'SOLID', color: cfg.textColor }];
+          textNode.fills = [{ type: 'SOLID', color: badgeTextColor }];
           textNode.locked = true; // 캔버스에서 텍스트 직접 수정 차단
         }
 
@@ -2198,8 +2647,17 @@ async function applyElevationToSelected(level: number | null) {
         card.setPluginData('node_elevation', '');
         card.effects = [];
       } else {
+        const nodeTheme = card.getPluginData('node_theme');
+        let isDark = nodeTheme === 'dark';
+        if ('fills' in card && Array.isArray(card.fills) && card.fills.length > 0) {
+          const firstFill = card.fills[0];
+          if (firstFill.type === 'SOLID') {
+            const lum = 0.299 * firstFill.color.r + 0.587 * firstFill.color.g + 0.114 * firstFill.color.b;
+            if (lum < 0.5) isDark = true;
+          }
+        }
         card.setPluginData('node_elevation', `${level}`);
-        card.effects = ELEVATION_EFFECTS[level] || [];
+        card.effects = getElevationEffects(level, isDark);
         card.clipsContent = false;
       }
     }
@@ -2384,6 +2842,55 @@ function focusFrame(nodeId: string) {
   const sceneNode = node as SceneNode;
   figma.currentPage.selection = [sceneNode];
   figma.viewport.scrollAndZoomIntoView([sceneNode]);
+}
+
+// 현재 캔버스(페이지)에서 일반 피그마 디자인 프레임(화면들) 목록 수집
+function getDesignFrames(): DesignFrameItem[] {
+  const items: DesignFrameItem[] = [];
+  const seenIds = new Set<string>();
+
+  // 1. 현재 선택된 노드들 중 디자인 프레임 우선 수집
+  for (const node of figma.currentPage.selection) {
+    if (
+      (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') &&
+      !node.getPluginData('is_flow_node') &&
+      !node.getPluginData('flow_node_type') &&
+      !node.name.startsWith('[Flow]')
+    ) {
+      const cr = 'cornerRadius' in node && typeof node.cornerRadius === 'number' ? node.cornerRadius : 0;
+      items.push({
+        id: node.id,
+        name: node.name,
+        width: Math.round(node.width),
+        height: Math.round(node.height),
+        cornerRadius: Math.round(cr),
+      });
+      seenIds.add(node.id);
+    }
+  }
+
+  // 2. 현재 페이지의 최상위 프레임/컴포넌트들 수집
+  for (const node of figma.currentPage.children) {
+    if (seenIds.has(node.id)) continue;
+    if (
+      (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') &&
+      !node.getPluginData('is_flow_node') &&
+      !node.getPluginData('flow_node_type') &&
+      !node.name.startsWith('[Flow]')
+    ) {
+      const cr = 'cornerRadius' in node && typeof node.cornerRadius === 'number' ? node.cornerRadius : 0;
+      items.push({
+        id: node.id,
+        name: node.name,
+        width: Math.round(node.width),
+        height: Math.round(node.height),
+        cornerRadius: Math.round(cr),
+      });
+      seenIds.add(node.id);
+    }
+  }
+
+  return items;
 }
 
 async function loadSavedSettings() {
@@ -2580,6 +3087,14 @@ figma.ui.onmessage = async (msg: PluginAction) => {
     case 'FOCUS_FRAME':
       focusFrame(msg.nodeId);
       break;
+    case 'GET_DESIGN_FRAMES': {
+      const frames = getDesignFrames();
+      postToUI({
+        type: 'DESIGN_FRAMES_LOADED',
+        frames,
+      });
+      break;
+    }
     case 'RESIZE_NODE':
       await resizeNode(msg.nodeId, msg.width, msg.height);
       break;

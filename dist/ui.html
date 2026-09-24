@@ -359,6 +359,13 @@
       color: var(--color-text-primary);
     }
 
+    .btn-action-icon:disabled,
+    .btn-action-icon.disabled {
+      opacity: 0.3;
+      cursor: default;
+      pointer-events: none;
+    }
+
     /* 섹션 헤더 아이콘 SVG — 기본 24×24px 규격 */
     .btn-action-icon svg {
       width: 24px;
@@ -1269,27 +1276,27 @@
 
     .elev-0 .elevation-inner-box {
       border: none;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0.5px rgba(0, 0, 0, 0.30);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.15);
     }
 
     .elev-1 .elevation-inner-box {
       border: none;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 3px 8px rgba(0, 0, 0, 0.10), 0 0 0.5px rgba(0, 0, 0, 0.18);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.1), 0 3px 8px rgba(0, 0, 0, 0.1);
     }
 
     .elev-2 .elevation-inner-box {
       border: none;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 5px 12px rgba(0, 0, 0, 0.13), 0 0 0.5px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1), 0 5px 12px rgba(0, 0, 0, 0.13);
     }
 
     .elev-3 .elevation-inner-box {
       border: none;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12), 0 0 0.5px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.12), 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12);
     }
 
     .elev-4 .elevation-inner-box {
       border: none;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 24px rgba(0, 0, 0, 0.18), 0 0 0.5px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 0 0.5px rgba(0, 0, 0, 0.08), 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 24px rgba(0, 0, 0, 0.18);
     }
 
     /* 상태 뱃지 옵션 (Status Tabs) */
@@ -1940,19 +1947,19 @@
       border: none;
     }
 
-    /* 2. more 컨텍스트 메뉴 (피그마 18:2568 규격: 82x80, R13, padding 8px 0, 아이템 66x24 R5, 구분선 16px) */
+    /* 2. more 컨텍스트 메뉴 (피그마 1027248-4796 규격: 너비 72px, R12, padding 4px, 구분선 없음, 아이템 R6, 호버 시 #8C4CF6) */
     .popover-context-menu {
       position: absolute;
-      width: 82px;
+      width: 72px;
       background: #1e1e1e;
       color: #ffffff;
-      border-radius: 13px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 0 10px 16px rgba(0, 0, 0, 0.12), 0 0 0.5px rgba(0, 0, 0, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 8px 0;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 4px;
       display: none;
       flex-direction: column;
-      gap: 0;
+      gap: 2px;
       z-index: 1050;
       box-sizing: border-box;
     }
@@ -1962,19 +1969,19 @@
     }
 
     .context-row {
-      width: 82px;
+      width: 100%;
       height: 24px;
-      padding: 0 8px;
+      padding: 0;
       display: flex;
       align-items: center;
       box-sizing: border-box;
     }
 
     .context-item {
-      width: 66px;
+      width: 100%;
       height: 24px;
       padding: 0 8px;
-      border-radius: 5px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       font-size: 11px;
@@ -1986,27 +1993,21 @@
       transition: background 0.12s, color 0.12s;
       box-sizing: border-box;
       user-select: none;
+      letter-spacing: 0;
     }
 
-    .context-item:hover {
+    .context-item:hover,
+    .context-item.active {
       background: #8C4CF6;
       color: #ffffff;
     }
 
     .context-divider-row {
-      width: 82px;
-      height: 16px;
-      display: flex;
-      align-items: center;
-      box-sizing: border-box;
+      display: none;
     }
 
     .context-divider-line {
-      width: 100%;
-      height: 1px;
-      background: #383838;
-      border: none;
-      margin: 0;
+      display: none;
     }
 
     /* 3. 심플 다이얼로그 모달 공통 (18:2522 Confirmation, 18:2498 Delete Item) */
@@ -2225,7 +2226,7 @@
       width: 100%;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       padding: 0 8px;
       font-size: 11px;
@@ -2233,6 +2234,11 @@
       box-sizing: border-box;
       outline: none;
       font-family: inherit;
+      transition: border-color 0.15s ease;
+    }
+
+    .phase-text-input:hover {
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .phase-text-input:focus {
@@ -2247,7 +2253,7 @@
       width: 100%;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       padding: 0;
       display: flex;
@@ -2256,6 +2262,17 @@
       cursor: pointer;
       position: relative;
       overflow: hidden;
+      transition: border-color 0.15s ease;
+    }
+
+    .phase-color-picker-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .phase-color-picker-box:focus,
+    .phase-color-picker-box.active {
+      border-color: #8C4CF6;
+      outline: none;
     }
 
     .phase-color-picker-box:hover {
@@ -2449,10 +2466,35 @@
       background: #7A39E3;
     }
 
+    .btn-phase-modal-delete {
+      height: 24px;
+      padding: 0 8px;
+      background: transparent;
+      border: 1px solid rgba(234, 32, 57, 0.4);
+      border-radius: 5px;
+      color: #EA2039;
+      font-size: 11px;
+      cursor: pointer;
+      margin-right: auto;
+      transition: all 0.15s ease;
+    }
+
+    .btn-phase-modal-delete:hover {
+      background: rgba(234, 32, 57, 0.15);
+      border-color: #EA2039;
+    }
+
+    .btn-phase-modal-delete:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.4);
+    }
+
     /* 피그마 공식 UI3 규격 모달 3종 (Add Size, Edit Size, Add Style) */
     .size-modal-card,
     .style-modal-card {
-      width: 200px;
+      width: 224px;
       background: #1E1E1E;
       color: #FFFFFF;
       border-radius: 12px;
@@ -2519,12 +2561,17 @@
       min-width: 0;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
       padding: 0 6px;
       box-sizing: border-box;
+      transition: border-color 0.15s ease;
+    }
+
+    .prefix-input-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .prefix-input-box:focus-within {
@@ -2556,12 +2603,17 @@
       width: 100%;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
       padding: 0 6px;
       box-sizing: border-box;
+      transition: border-color 0.15s ease;
+    }
+
+    .icon-input-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .icon-input-box:focus-within {
@@ -2582,7 +2634,7 @@
       width: 100%;
       height: 24px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
@@ -2593,10 +2645,18 @@
       color: #FFFFFF;
       font-size: 11px;
       user-select: none;
+      transition: border-color 0.15s ease;
     }
 
     .size-dropdown-box:hover {
       border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .size-dropdown-box:focus,
+    .size-dropdown-box.active,
+    .size-dropdown-box:focus-within {
+      border-color: #8C4CF6;
+      outline: none;
     }
 
     .size-dropdown-left {
@@ -2621,41 +2681,59 @@
     }
 
     .style-color-box {
-      flex: 1;
-      min-width: 0;
-      height: 24px;
+      width: 100%;
+      height: 28px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
-      padding: 0 6px 0 4px;
+      gap: 8px;
+      padding: 0 8px;
       box-sizing: border-box;
       cursor: pointer;
       position: relative;
+      transition: border-color 0.15s ease;
     }
 
     .style-color-box:hover {
       border-color: rgba(255, 255, 255, 0.2);
     }
 
+    .style-color-box:focus,
+    .style-color-box.active,
+    .style-color-box:focus-within {
+      border-color: #8C4CF6;
+      outline: none;
+    }
+
     .style-color-chip {
-      width: 14px;
-      height: 14px;
-      border-radius: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
       background: #EA2039;
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       flex-shrink: 0;
-      margin-right: 6px;
       box-sizing: border-box;
     }
 
     .style-color-hex-text {
       flex: 1;
+      width: 100%;
       min-width: 0;
+      height: 100%;
       font-size: 11px;
+      font-weight: 500;
       color: #FFFFFF;
       font-family: inherit;
+      line-height: 28px;
+      text-transform: uppercase;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 0;
+      margin: 0;
+      letter-spacing: 0 !important;
     }
 
     .style-chevron-icon {
@@ -2666,16 +2744,22 @@
     }
 
     .stroke-width-box {
-      width: 58px;
-      height: 24px;
+      width: 60px;
+      height: 28px;
       background: #383838;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       border-radius: 5px;
       display: flex;
       align-items: center;
-      padding: 0 6px;
+      gap: 4px;
+      padding: 0 8px;
       box-sizing: border-box;
       flex-shrink: 0;
+      transition: border-color 0.15s ease;
+    }
+
+    .stroke-width-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .stroke-width-box:focus-within {
@@ -2688,6 +2772,57 @@
       background: #383838;
       border: none;
       margin: 8px 0;
+    }
+
+    /* Style 모달 인라인 컬러 피커 시스템 (Figma 1027376:1405) */
+    .style-hue-slider {
+      position: relative;
+      width: 100%;
+      height: 10px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
+      margin: 10px 0 12px 0;
+      cursor: pointer;
+      user-select: none;
+      box-sizing: border-box;
+    }
+
+    .style-hue-thumb {
+      position: absolute;
+      top: 50%;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+      transition: background 0.05s linear;
+    }
+
+    .style-sat-val-picker {
+      position: relative;
+      width: 100%;
+      height: 140px;
+      border-radius: 5px;
+      cursor: crosshair;
+      user-select: none;
+      overflow: hidden;
+      box-sizing: border-box;
+      background-image: linear-gradient(to right, #ffffff, transparent), linear-gradient(to top, #000000, transparent);
+    }
+
+    .style-sat-val-thumb {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
     }
 
     .size-modal-footer,
@@ -2747,6 +2882,29 @@
       bottom: 100%;
       border-width: 0 5px 5px 5px;
       border-color: transparent transparent #222222 transparent;
+    }
+
+    /* 피그마 디자인 선택 모달 검색창 */
+    .picker-search-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 0 8px;
+      height: 28px;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease;
+    }
+
+    .picker-search-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .picker-search-box:focus-within {
+      border-color: #8C4CF6;
     }
   </style>
 </head>
@@ -3840,7 +3998,7 @@
             }
             return dispatcher.useContext(Context);
           }
-          function useState12(initialState) {
+          function useState14(initialState) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useState(initialState);
           }
@@ -3848,11 +4006,11 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useReducer(reducer, initialArg, init);
           }
-          function useRef7(initialValue) {
+          function useRef11(initialValue) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useRef(initialValue);
           }
-          function useEffect9(create, deps) {
+          function useEffect12(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useEffect(create, deps);
           }
@@ -3864,11 +4022,11 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useLayoutEffect(create, deps);
           }
-          function useCallback6(callback, deps) {
+          function useCallback7(callback, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useCallback(callback, deps);
           }
-          function useMemo(create, deps) {
+          function useMemo2(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useMemo(create, deps);
           }
@@ -4631,19 +4789,19 @@
           exports.memo = memo;
           exports.startTransition = startTransition;
           exports.unstable_act = act;
-          exports.useCallback = useCallback6;
+          exports.useCallback = useCallback7;
           exports.useContext = useContext2;
           exports.useDebugValue = useDebugValue;
           exports.useDeferredValue = useDeferredValue;
-          exports.useEffect = useEffect9;
+          exports.useEffect = useEffect12;
           exports.useId = useId;
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
           exports.useLayoutEffect = useLayoutEffect;
-          exports.useMemo = useMemo;
+          exports.useMemo = useMemo2;
           exports.useReducer = useReducer;
-          exports.useRef = useRef7;
-          exports.useState = useState12;
+          exports.useRef = useRef11;
+          exports.useState = useState14;
           exports.useSyncExternalStore = useSyncExternalStore;
           exports.useTransition = useTransition;
           exports.version = ReactVersion;
@@ -5139,9 +5297,9 @@
           if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function") {
             __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
           }
-          var React15 = require_react();
+          var React18 = require_react();
           var Scheduler = require_scheduler();
-          var ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React18.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           var suppressWarning = false;
           function setSuppressWarning(newSuppressWarning) {
             {
@@ -6748,7 +6906,7 @@
             {
               if (props.value == null) {
                 if (typeof props.children === "object" && props.children !== null) {
-                  React15.Children.forEach(props.children, function(child) {
+                  React18.Children.forEach(props.children, function(child) {
                     if (child == null) {
                       return;
                     }
@@ -26344,7 +26502,7 @@
       if (true) {
         (function() {
           "use strict";
-          var React15 = require_react();
+          var React18 = require_react();
           var REACT_ELEMENT_TYPE = Symbol.for("react.element");
           var REACT_PORTAL_TYPE = Symbol.for("react.portal");
           var REACT_FRAGMENT_TYPE = Symbol.for("react.fragment");
@@ -26370,7 +26528,7 @@
             }
             return null;
           }
-          var ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React18.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           function error(format) {
             {
               {
@@ -27220,11 +27378,11 @@
               return jsxWithValidation(type, props, key, false);
             }
           }
-          var jsx25 = jsxWithValidationDynamic;
-          var jsxs22 = jsxWithValidationStatic;
+          var jsx27 = jsxWithValidationDynamic;
+          var jsxs24 = jsxWithValidationStatic;
           exports.Fragment = REACT_FRAGMENT_TYPE;
-          exports.jsx = jsx25;
-          exports.jsxs = jsxs22;
+          exports.jsx = jsx27;
+          exports.jsxs = jsxs24;
         })();
       }
     }
@@ -27248,6 +27406,23 @@
   // src/ui/context/AppContext.tsx
   var import_react = __toESM(require_react());
   var import_jsx_runtime = __toESM(require_jsx_runtime());
+  var DEFAULT_SIZE_PRESETS = [
+    { id: "default", name: "Default", w: 250, h: 90, radius: 0, sizeMode: "fixed", isDefault: true },
+    { id: "square", name: "Square", w: 180, h: 180, radius: 0, sizeMode: "fixed", isDefault: true },
+    { id: "web", name: "Web", w: 320, h: 180, radius: 0, sizeMode: "fixed", isDefault: true },
+    { id: "mobile", name: "Mobile", w: 160, h: 280, radius: 0, sizeMode: "fixed", isDefault: true }
+  ];
+  var DEFAULT_STYLE_PRESETS = [
+    { id: "style-white", name: "White", fillColor: "#ffffff", strokeWeight: 1.5, strokeColor: "#000000", isDefault: true },
+    { id: "style-black", name: "Black", fillColor: "#000000", strokeWeight: 0, strokeColor: "#000000", isDefault: true },
+    { id: "style-red-1", name: "Red 1", fillColor: "#EA2039", strokeWeight: 0, strokeColor: "#000000" },
+    { id: "style-red-2", name: "Red 2", fillColor: "#EB4C46", strokeWeight: 0, strokeColor: "#000000" },
+    { id: "style-coral-1", name: "Coral 1", fillColor: "#E03E3E", strokeWeight: 0, strokeColor: "#000000" },
+    { id: "style-coral-2", name: "Coral 2", fillColor: "#E05638", strokeWeight: 0, strokeColor: "#000000" },
+    { id: "style-orange", name: "Orange", fillColor: "#DF6246", strokeWeight: 0, strokeColor: "#000000" },
+    { id: "style-pink", name: "Pink", fillColor: "#EB5757", strokeWeight: 0, strokeColor: "#000000" },
+    { id: "style-purple", name: "Purple", fillColor: "#8638E5", strokeWeight: 0, strokeColor: "#000000" }
+  ];
   var DEFAULT_LAST_NODE_CONFIG = {
     phase: "none",
     phaseName: "None",
@@ -27307,7 +27482,50 @@
     const [sizeModeDropdownOpen, setSizeModeDropdownOpen] = (0, import_react.useState)(false);
     const [phasePopoverPos, setPhasePopoverPos] = (0, import_react.useState)({ top: 0, left: 0 });
     const [contextMenuPos, setContextMenuPos] = (0, import_react.useState)({ top: 0, left: 0 });
+    const [contextMenuTarget, setContextMenuTarget] = (0, import_react.useState)(null);
+    const [selectedSizePresetId, setSelectedSizePresetId] = (0, import_react.useState)("default");
+    const [selectedStylePresetId, setSelectedStylePresetId] = (0, import_react.useState)("style-white");
     const [phaseModalEditingId, setPhaseModalEditingId] = (0, import_react.useState)(null);
+    const [designFrames, setDesignFrames] = (0, import_react.useState)([]);
+    const loadDesignFrames = (0, import_react.useCallback)(() => {
+      parent.postMessage({ pluginMessage: { type: "GET_DESIGN_FRAMES" } }, "*");
+    }, []);
+    const [sizePresets, setSizePresets] = (0, import_react.useState)(() => {
+      try {
+        const saved = localStorage.getItem("ui_flow_size_presets");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (_) {
+      }
+      return DEFAULT_SIZE_PRESETS;
+    });
+    const savePresets = (0, import_react.useCallback)((next) => {
+      setSizePresets(next);
+      try {
+        localStorage.setItem("ui_flow_size_presets", JSON.stringify(next));
+      } catch (_) {
+      }
+    }, []);
+    const [stylePresets, setStylePresets] = (0, import_react.useState)(() => {
+      try {
+        const saved = localStorage.getItem("ui_flow_style_presets");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (_) {
+      }
+      return DEFAULT_STYLE_PRESETS;
+    });
+    const saveStylePresets = (0, import_react.useCallback)((next) => {
+      setStylePresets(next);
+      try {
+        localStorage.setItem("ui_flow_style_presets", JSON.stringify(next));
+      } catch (_) {
+      }
+    }, []);
     const selectedNodesRef = (0, import_react.useRef)(selectedNodes);
     const isConnectorSelectedRef = (0, import_react.useRef)(isConnectorSelected);
     const currentTabRef = (0, import_react.useRef)(currentTab);
@@ -27373,7 +27591,7 @@
         lastNodeTabRef.current = tab;
       }
     }, [closeAllPopovers]);
-    const applyCurrentNodeState = (0, import_react.useCallback)((overrideSizeMode) => {
+    const applyCurrentNodeState = (0, import_react.useCallback)((overrideSizeMode, styleOverrides) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
       const titleEl = document.getElementById("node-title-input");
@@ -27390,8 +27608,11 @@
       const radius = parseInt(rEl?.value || "0", 10) || 0;
       const figmaUrl = urlEl?.value.trim() || "";
       const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
+      const finalColor = styleOverrides?.colorHex ?? selectedColor;
+      const finalStrokeWeight = styleOverrides?.strokeWeight;
+      const finalStrokeColor = styleOverrides?.strokeColor;
       const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || "fixed";
-      setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: selectedColor, elevation: selectedElevation, singleLinkUrl: figmaUrl, sizeMode });
+      setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: finalColor, elevation: selectedElevation, singleLinkUrl: figmaUrl, sizeMode });
       nodes.forEach((node) => {
         parent.postMessage({
           pluginMessage: {
@@ -27406,7 +27627,9 @@
               theme: "light",
               figmaLink: figmaUrl,
               nodeType: selectedNodeType,
-              colorHex: selectedColor,
+              colorHex: finalColor,
+              strokeWeight: finalStrokeWeight,
+              strokeColor: finalStrokeColor,
               elevation: selectedElevation,
               sizeMode
             }
@@ -27414,6 +27637,95 @@
         }, "*");
       });
     }, [setLastNodeConfig]);
+    const addSizePreset = (0, import_react.useCallback)((preset) => {
+      const newId = `size-${Date.now()}`;
+      const newPreset = {
+        ...preset,
+        id: newId
+      };
+      const next = [...sizePresets, newPreset];
+      savePresets(next);
+      setLastNodeConfig({
+        width: preset.w,
+        height: preset.h,
+        cornerRadius: preset.radius ?? 0,
+        sizeMode: preset.sizeMode || "fixed"
+      });
+      const wEl = document.getElementById("input-size-w");
+      const hEl = document.getElementById("input-size-h");
+      const rEl = document.getElementById("input-size-radius");
+      if (wEl) wEl.value = String(preset.w);
+      if (hEl) hEl.value = String(preset.h);
+      if (rEl) rEl.value = String(preset.radius ?? 0);
+      applyCurrentNodeState(preset.sizeMode);
+      showToast(`"${preset.name}" \uC0AC\uC774\uC988\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
+    }, [sizePresets, savePresets, setLastNodeConfig, applyCurrentNodeState, showToast]);
+    const updateSizePreset = (0, import_react.useCallback)((id, partial) => {
+      const next = sizePresets.map((p) => p.id === id ? { ...p, ...partial } : p);
+      savePresets(next);
+      if (partial.w !== void 0 || partial.h !== void 0) {
+        setLastNodeConfig({
+          width: partial.w,
+          height: partial.h,
+          cornerRadius: partial.radius,
+          sizeMode: partial.sizeMode
+        });
+        const wEl = document.getElementById("input-size-w");
+        const hEl = document.getElementById("input-size-h");
+        if (wEl && partial.w !== void 0) wEl.value = String(partial.w);
+        if (hEl && partial.h !== void 0) hEl.value = String(partial.h);
+        applyCurrentNodeState(partial.sizeMode);
+      }
+      showToast("\uC0AC\uC774\uC988\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
+    }, [sizePresets, savePresets, setLastNodeConfig, applyCurrentNodeState, showToast]);
+    const deleteSizePreset = (0, import_react.useCallback)((id) => {
+      const target = sizePresets.find((p) => p.id === id);
+      const next = sizePresets.filter((p) => p.id !== id);
+      savePresets(next);
+      showToast(`"${target?.name || "\uC0AC\uC774\uC988"}" \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
+    }, [sizePresets, savePresets, showToast]);
+    const addStylePreset = (0, import_react.useCallback)((preset) => {
+      const newId = `style-${Date.now()}`;
+      const newPreset = {
+        ...preset,
+        id: newId
+      };
+      const next = [...stylePresets, newPreset];
+      saveStylePresets(next);
+      setSelectedStylePresetId(newId);
+      setUIState({
+        selectedColor: preset.fillColor,
+        selectedStrokeWeight: preset.strokeWeight,
+        selectedStrokeColor: preset.strokeColor,
+        selectedStylePresetId: newId
+      });
+      setLastNodeConfig({
+        color: preset.fillColor,
+        strokeWeight: preset.strokeWeight,
+        strokeColor: preset.strokeColor
+      });
+      applyCurrentNodeState(void 0, {
+        colorHex: preset.fillColor,
+        strokeWeight: preset.strokeWeight,
+        strokeColor: preset.strokeColor
+      });
+      showToast(`\uC2A4\uD0C0\uC77C\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
+    }, [stylePresets, saveStylePresets, setUIState, setLastNodeConfig, applyCurrentNodeState, showToast]);
+    const updateStylePreset = (0, import_react.useCallback)((id, partial) => {
+      const next = stylePresets.map((p) => p.id === id ? { ...p, ...partial } : p);
+      saveStylePresets(next);
+      showToast("\uC2A4\uD0C0\uC77C\uC774 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
+    }, [stylePresets, saveStylePresets, showToast]);
+    const deleteStylePreset = (0, import_react.useCallback)((id) => {
+      const target = stylePresets.find((p) => p.id === id);
+      if (target?.isDefault || target?.id === "style-white" || target?.id === "style-black") {
+        showToast("\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+        return;
+      }
+      const next = stylePresets.filter((p) => p.id !== id);
+      saveStylePresets(next);
+      showToast("\uC2A4\uD0C0\uC77C\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
+    }, [stylePresets, saveStylePresets, showToast]);
     const applyStatusToNode = (0, import_react.useCallback)((status) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
@@ -27559,7 +27871,12 @@
       const desc = descEl?.value.trim() || "";
       const w = parseInt(wEl?.value || "250", 10) || 250;
       const h = parseInt(hEl?.value || "90", 10) || 90;
-      const radius = parseInt(rEl?.value || "0", 10) || 0;
+      let radius = parseInt(rEl?.value || "0", 10) || 0;
+      if (radius > 20) {
+        radius = 20;
+        if (rEl) rEl.value = "20";
+        showToast("\uCD5C\uB300\uAC12\uC740 20\uC785\uB2C8\uB2E4.", "warning");
+      }
       const figmaUrl = urlEl?.value.trim() || "";
       const { selectedColor, selectedElevation, selectedNodeType, selectedStatus, selectedBadgeCorner, selectedBadgeShape } = uiStateRef.current;
       const newConfig = {
@@ -27634,8 +27951,22 @@
           const first = flowNodes[0];
           const eOn = Boolean(first.elevationOn);
           const eLevel = typeof first.elevation === "number" ? first.elevation : 0;
-          setLastNodeConfig({ elevationOn: eOn, elevation: eLevel });
-          setUIState({ selectedElevation: eLevel });
+          const colorUpdates = { selectedElevation: eLevel };
+          if (first.fillColorHex) {
+            colorUpdates.selectedColor = first.fillColorHex;
+            colorUpdates.selectedStrokeWeight = first.strokeWeight;
+            colorUpdates.selectedStrokeColor = first.strokeColorHex;
+            setLastNodeConfig({
+              elevationOn: eOn,
+              elevation: eLevel,
+              color: first.fillColorHex,
+              strokeWeight: first.strokeWeight,
+              strokeColor: first.strokeColorHex
+            });
+          } else {
+            setLastNodeConfig({ elevationOn: eOn, elevation: eLevel });
+          }
+          setUIState(colorUpdates);
         }
       }
     }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState]);
@@ -27663,8 +27994,25 @@
       setPhasePopoverPos,
       contextMenuPos,
       setContextMenuPos,
+      contextMenuTarget,
+      setContextMenuTarget,
+      selectedSizePresetId,
+      setSelectedSizePresetId,
+      selectedStylePresetId,
+      setSelectedStylePresetId,
       phaseModalEditingId,
       setPhaseModalEditingId,
+      designFrames,
+      setDesignFrames,
+      loadDesignFrames,
+      sizePresets,
+      addSizePreset,
+      updateSizePreset,
+      deleteSizePreset,
+      stylePresets,
+      addStylePreset,
+      updateStylePreset,
+      deleteStylePreset,
       applyCurrentNodeState,
       applyStatusToNode,
       applyElevationToNodes,
@@ -27681,7 +28029,7 @@
   }
 
   // src/ui/App.tsx
-  var import_react16 = __toESM(require_react());
+  var import_react19 = __toESM(require_react());
 
   // src/ui/hooks/useFigmaMessage.ts
   var import_react2 = __toESM(require_react());
@@ -27691,6 +28039,7 @@
       setCurrentTab,
       setUIState,
       setLastNodeConfig,
+      setDesignFrames,
       showToast
     } = useApp();
     const handlerRef = (0, import_react2.useRef)(null);
@@ -27742,6 +28091,10 @@
           }
           case "INIT_DONE":
           case "READY": {
+            break;
+          }
+          case "DESIGN_FRAMES_LOADED": {
+            setDesignFrames(msg.frames || []);
             break;
           }
           case "SWITCH_TAB": {
@@ -27816,6 +28169,8 @@
       setPhasePopoverPos,
       setContextMenuOpen,
       setContextMenuPos,
+      contextMenuTarget,
+      setContextMenuTarget,
       phasePopoverOpen,
       contextMenuOpen,
       applyCurrentNodeState,
@@ -27844,7 +28199,7 @@
     }
     function toggleContextMenu(e) {
       e.stopPropagation();
-      if (contextMenuOpen) {
+      if (contextMenuOpen && contextMenuTarget === "phase") {
         setContextMenuOpen(false);
         return;
       }
@@ -27854,6 +28209,7 @@
       let top = spaceBelow >= popoverHeight + 8 ? rect.bottom + 4 : Math.max(8, rect.top - popoverHeight - 4);
       let left = Math.max(8, rect.right - 82);
       setContextMenuPos({ top, left });
+      setContextMenuTarget("phase");
       setContextMenuOpen(true);
       setPhasePopoverOpen(false);
     }
@@ -28049,12 +28405,6 @@
 
   // src/ui/components/appearance/SizeSection.tsx
   var import_jsx_runtime7 = __toESM(require_jsx_runtime());
-  var SIZE_PRESETS = [
-    { label: "Default", w: 250, h: 90 },
-    { label: "Square", w: 180, h: 180 },
-    { label: "Web", w: 320, h: 180 },
-    { label: "Mobile", w: 160, h: 280 }
-  ];
   var FIXED_SVG = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) });
   var HUG_SVG = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z", fill: "currentColor" }) });
   function SizeSection() {
@@ -28063,42 +28413,45 @@
       setLastNodeConfig,
       selectedNodes,
       uiState,
+      sizePresets,
       setActiveModal,
+      contextMenuOpen,
+      setContextMenuOpen,
+      setContextMenuPos,
+      contextMenuTarget,
+      setContextMenuTarget,
+      setSelectedSizePresetId,
       sizeModeDropdownOpen,
       setSizeModeDropdownOpen,
       closeAllPopovers,
       applyCurrentNodeState,
-      autoResizeWindow
+      autoResizeWindow,
+      showToast
     } = useApp();
-    function updateSizePresetChips(w, h) {
-      document.querySelectorAll("#panel-appearance .chip-group .chip-btn").forEach((btn) => {
-        const el = btn;
-        const isDefault = w === 250 && h === 90 && el.textContent?.trim() === "Default";
-        const isSquare = w === 180 && h === 180 && el.textContent?.trim() === "Square";
-        const isWeb = w === 320 && h === 180 && el.textContent?.trim() === "Web";
-        const isMobile = w === 160 && h === 280 && el.textContent?.trim() === "Mobile";
-        el.classList.toggle("active", isDefault || isSquare || isWeb || isMobile);
-      });
-    }
     function handleWChange(e) {
       const val = parseInt(e.target.value, 10);
       if (!isNaN(val)) {
         setLastNodeConfig({ width: val });
-        updateSizePresetChips(val, cfg.height);
       }
     }
     function handleHChange(e) {
       const val = parseInt(e.target.value, 10);
       if (!isNaN(val)) {
         setLastNodeConfig({ height: val });
-        updateSizePresetChips(cfg.width, val);
         const fixedValEl = document.getElementById("size-mode-val-fixed");
         if (fixedValEl) fixedValEl.textContent = String(val);
       }
     }
     function handleRChange(e) {
-      const val = parseInt(e.target.value, 10);
-      if (!isNaN(val)) setLastNodeConfig({ cornerRadius: val });
+      let val = parseInt(e.target.value, 10);
+      if (!isNaN(val)) {
+        if (val > 20) {
+          val = 20;
+          e.target.value = "20";
+          showToast("\uCD5C\uB300\uAC12\uC740 20\uC785\uB2C8\uB2E4.", "warning");
+        }
+        setLastNodeConfig({ cornerRadius: val });
+      }
     }
     function triggerApply() {
       const wEl = document.getElementById("input-size-w");
@@ -28106,25 +28459,57 @@
       const rEl = document.getElementById("input-size-radius");
       const w = parseInt(wEl?.value || "250", 10) || 250;
       const h = parseInt(hEl?.value || "90", 10) || 90;
-      const r = parseInt(rEl?.value || "0", 10) || 0;
+      let r = parseInt(rEl?.value || "0", 10) || 0;
+      if (r > 20) {
+        r = 20;
+        if (rEl) rEl.value = "20";
+        showToast("\uCD5C\uB300\uAC12\uC740 20\uC785\uB2C8\uB2E4.", "warning");
+      }
       if (!isNaN(w)) setLastNodeConfig({ width: w });
       if (!isNaN(h)) setLastNodeConfig({ height: h });
       if (!isNaN(r)) setLastNodeConfig({ cornerRadius: r });
-      updateSizePresetChips(w, h);
       const fixedValEl = document.getElementById("size-mode-val-fixed");
       if (fixedValEl) fixedValEl.textContent = String(h);
       applyCurrentNodeState();
     }
-    function applySizePreset(w, h) {
+    function applySizePreset(p) {
       const wEl = document.getElementById("input-size-w");
       const hEl = document.getElementById("input-size-h");
-      if (wEl) wEl.value = String(w);
-      if (hEl) hEl.value = String(h);
-      setLastNodeConfig({ width: w, height: h });
-      updateSizePresetChips(w, h);
+      const rEl = document.getElementById("input-size-radius");
+      if (wEl) wEl.value = String(p.w);
+      if (hEl) hEl.value = String(p.h);
+      if (rEl) rEl.value = String(p.radius ?? 0);
+      setSelectedSizePresetId(p.id);
+      setLastNodeConfig({
+        width: p.w,
+        height: p.h,
+        cornerRadius: p.radius ?? 0,
+        sizeMode: p.sizeMode || "fixed"
+      });
       const fixedValEl = document.getElementById("size-mode-val-fixed");
-      if (fixedValEl) fixedValEl.textContent = String(h);
-      applyCurrentNodeState();
+      if (fixedValEl) fixedValEl.textContent = String(p.h);
+      applyCurrentNodeState(p.sizeMode);
+    }
+    const DEFAULT_PRESET_IDS = /* @__PURE__ */ new Set(["default", "square", "web", "mobile"]);
+    function toggleSizeMoreMenu(e) {
+      e.stopPropagation();
+      if (isMoreDisabled) return;
+      if (contextMenuOpen && contextMenuTarget === "size") {
+        setContextMenuOpen(false);
+        return;
+      }
+      closeAllPopovers();
+      const rect = e.currentTarget.getBoundingClientRect();
+      const popoverHeight = 58;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow >= popoverHeight + 8 ? rect.bottom + 4 : Math.max(8, rect.top - popoverHeight - 4);
+      const left = Math.max(8, rect.right - 72);
+      setContextMenuPos({ top, left });
+      setContextMenuTarget("size");
+      if (activePreset) {
+        setSelectedSizePresetId(activePreset.id);
+      }
+      setContextMenuOpen(true);
     }
     function toggleSizeModeDropdown(e) {
       e.stopPropagation();
@@ -28154,6 +28539,8 @@
       applyCurrentNodeState(mode);
     }
     const cfg = lastNodeConfig;
+    const activePreset = sizePresets.find((p) => p.w === cfg.width && p.h === cfg.height);
+    const isMoreDisabled = !activePreset || Boolean(activePreset.isDefault) || DEFAULT_PRESET_IDS.has(activePreset.id);
     const currentSizeMode = (() => {
       if (selectedNodes && selectedNodes.length > 1) {
         const first = selectedNodes[0]?.sizeMode;
@@ -28170,12 +28557,30 @@
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-header", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "section-title", children: "Size" }),
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-actions", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "btn-action-icon", title: "Add size", onClick: () => setActiveModal("add-size"), children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z", fill: "currentColor" }) }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "btn-action-icon btn-more-icon", title: "Edit size", onClick: () => setActiveModal("edit-size"), children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("circle", { cx: "4", cy: "8", r: "1", fill: "currentColor" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("circle", { cx: "8", cy: "8", r: "1", fill: "currentColor" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("circle", { cx: "12", cy: "8", r: "1", fill: "currentColor" })
-          ] }) })
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              className: "btn-action-icon",
+              title: "Add size",
+              onClick: () => setActiveModal("add-size"),
+              children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z", fill: "currentColor" }) })
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              id: "btn-size-more",
+              className: `btn-action-icon btn-more-icon${isMoreDisabled ? " disabled" : ""}`,
+              title: isMoreDisabled ? "\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC218\uC815 \uB610\uB294 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4" : "More options",
+              disabled: isMoreDisabled,
+              onClick: toggleSizeMoreMenu,
+              children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("circle", { cx: "4", cy: "8", r: "1", fill: "currentColor" }),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("circle", { cx: "8", cy: "8", r: "1", fill: "currentColor" }),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("circle", { cx: "12", cy: "8", r: "1", fill: "currentColor" })
+              ] })
+            }
+          )
         ] })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-body", children: [
@@ -28219,7 +28624,7 @@
                 id: "input-size-radius",
                 defaultValue: 0,
                 min: 0,
-                max: 40,
+                max: 20,
                 onChange: handleRChange,
                 onBlur: triggerApply,
                 onKeyDown: (e) => e.key === "Enter" && triggerApply()
@@ -28267,60 +28672,149 @@
             /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("input", { type: "hidden", id: "select-size-mode", defaultValue: "fixed" })
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "chip-group", style: { marginTop: "6px" }, children: SIZE_PRESETS.map((p) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "chip-group", style: { marginTop: "6px", flexWrap: "wrap", gap: "4px" }, children: sizePresets.map((p) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "button",
           {
+            type: "button",
             className: `chip-btn${cfg.width === p.w && cfg.height === p.h ? " active" : ""}`,
-            onClick: () => applySizePreset(p.w, p.h),
-            children: p.label
+            onClick: () => applySizePreset(p),
+            title: `${p.name} (${p.w}\xD7${p.h})`,
+            children: p.name
           },
-          p.label
+          p.id
         )) })
       ] })
     ] });
   }
 
   // src/ui/components/appearance/StyleSection.tsx
+  var import_react6 = __toESM(require_react());
   var import_jsx_runtime8 = __toESM(require_jsx_runtime());
-  var SWATCHES = [
-    "#ffffff",
-    "#000000",
-    "#EA2039",
-    "#EB4C46",
-    "#E03E3E",
-    "#E05638",
-    "#DF6246",
-    "#EB5757",
-    "#8638E5"
-  ];
+  var DEFAULT_STYLE_PRESET_IDS = /* @__PURE__ */ new Set(["style-white", "style-black"]);
   function StyleSection() {
-    const { uiState, setUIState, setLastNodeConfig, applyCurrentNodeState, setActiveModal } = useApp();
+    const {
+      uiState,
+      setUIState,
+      setLastNodeConfig,
+      applyCurrentNodeState,
+      stylePresets,
+      selectedStylePresetId,
+      setSelectedStylePresetId,
+      setActiveModal,
+      contextMenuOpen,
+      setContextMenuOpen,
+      contextMenuTarget,
+      setContextMenuTarget,
+      setContextMenuPos,
+      closeAllPopovers
+    } = useApp();
     const { selectedColor } = uiState;
-    function selectSwatch(color) {
-      setUIState({ selectedColor: color });
-      setLastNodeConfig({ color });
-      setTimeout(() => applyCurrentNodeState(), 0);
+    const btnMoreRef = (0, import_react6.useRef)(null);
+    const activeStylePreset = stylePresets.find((p) => {
+      if (selectedStylePresetId && p.id === selectedStylePresetId) return true;
+      const matchFill = p.fillColor.toLowerCase() === selectedColor.toLowerCase();
+      const matchStroke = uiState.selectedStrokeWeight !== void 0 ? p.strokeWeight === uiState.selectedStrokeWeight : true;
+      return matchFill && matchStroke;
+    }) || stylePresets.find((p) => p.fillColor.toLowerCase() === selectedColor.toLowerCase());
+    const isMoreDisabled = !activeStylePreset || Boolean(activeStylePreset.isDefault) || DEFAULT_STYLE_PRESET_IDS.has(activeStylePreset.id);
+    function selectStylePreset(preset) {
+      setSelectedStylePresetId(preset.id);
+      setUIState({
+        selectedColor: preset.fillColor,
+        selectedStrokeWeight: preset.strokeWeight,
+        selectedStrokeColor: preset.strokeColor,
+        selectedStylePresetId: preset.id
+      });
+      setLastNodeConfig({
+        color: preset.fillColor,
+        strokeWeight: preset.strokeWeight,
+        strokeColor: preset.strokeColor
+      });
+      applyCurrentNodeState(void 0, {
+        colorHex: preset.fillColor,
+        strokeWeight: preset.strokeWeight,
+        strokeColor: preset.strokeColor
+      });
+    }
+    function toggleStyleMoreMenu(e) {
+      e.stopPropagation();
+      if (isMoreDisabled) return;
+      if (contextMenuOpen && contextMenuTarget === "style") {
+        setContextMenuOpen(false);
+        return;
+      }
+      closeAllPopovers();
+      const rect = btnMoreRef.current?.getBoundingClientRect();
+      if (rect) {
+        const popoverHeight = 58;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const top = spaceBelow >= popoverHeight + 8 ? rect.bottom + 4 : Math.max(8, rect.top - popoverHeight - 4);
+        const left = Math.max(8, rect.right - 72);
+        setContextMenuPos({ top, left });
+      }
+      setContextMenuTarget("style");
+      if (activeStylePreset) {
+        setSelectedStylePresetId(activeStylePreset.id);
+      }
+      setContextMenuOpen(true);
     }
     return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "section-header", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "section-title", children: "Style" }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "section-actions", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "btn-action-icon", title: "Add style", onClick: () => setActiveModal("add-style"), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z", fill: "currentColor" }) }) }) })
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "section-actions", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "btn-action-icon", title: "Add style", onClick: () => setActiveModal("add-style"), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z", fill: "currentColor" }) }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            "button",
+            {
+              id: "btn-style-more",
+              ref: btnMoreRef,
+              className: `btn-action-icon btn-more-icon${isMoreDisabled ? " disabled" : ""}${contextMenuOpen && contextMenuTarget === "style" ? " active" : ""}`,
+              title: isMoreDisabled ? "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815 \uB610\uB294 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4" : "More options",
+              disabled: isMoreDisabled,
+              onClick: toggleStyleMoreMenu,
+              children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("circle", { cx: "4", cy: "8", r: "1", fill: "currentColor" }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("circle", { cx: "8", cy: "8", r: "1", fill: "currentColor" }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("circle", { cx: "12", cy: "8", r: "1", fill: "currentColor" })
+              ] })
+            }
+          )
+        ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "swatches-grid", id: "style-swatches", children: SWATCHES.map((color) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-        "div",
-        {
-          className: `swatch-item${selectedColor === color ? " selected" : ""}`,
-          style: { background: color },
-          "data-color": color,
-          onClick: () => selectSwatch(color)
-        },
-        color
-      )) }) })
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "swatches-grid", id: "style-swatches", children: stylePresets.map((preset) => {
+        const isSelected = activeStylePreset?.id === preset.id || selectedColor.toLowerCase() === preset.fillColor.toLowerCase() && (uiState.selectedStrokeWeight === void 0 || uiState.selectedStrokeWeight === preset.strokeWeight);
+        const hasBorder = preset.strokeWeight > 0;
+        return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          "div",
+          {
+            className: `swatch-item${isSelected ? " selected" : ""}`,
+            style: {
+              backgroundColor: preset.fillColor,
+              border: hasBorder ? `${preset.strokeWeight}px solid ${preset.strokeColor}` : "none",
+              boxSizing: "border-box",
+              // 보더가 있는 카드는 기본 inset shadow가 겹치지 않도록 방지
+              boxShadow: hasBorder && !isSelected ? "none" : void 0
+            },
+            "data-color": preset.fillColor,
+            "data-style-id": preset.id,
+            title: `\uBC30\uACBD: ${preset.fillColor}${hasBorder ? `, \uBCF4\uB354: ${preset.strokeWeight}px ${preset.strokeColor}` : ", \uBCF4\uB354: \uC5C6\uC74C"}`,
+            onClick: () => selectStylePreset(preset)
+          },
+          preset.id
+        );
+      }) }) })
     ] });
   }
 
   // src/ui/components/appearance/ElevationSection.tsx
   var import_jsx_runtime9 = __toESM(require_jsx_runtime());
+  var ELEVATION_LEVELS = [
+    { level: 0, label: "E100", desc: "Shapes" },
+    { level: 1, label: "E200", desc: "Stickies, Comments" },
+    { level: 2, label: "E300", desc: "Tooltips" },
+    { level: 3, label: "E400", desc: "Menus, Panels" },
+    { level: 4, label: "E500", desc: "Modals, Dialogs" }
+  ];
   function ElevationSection() {
     const { uiState, lastNodeConfig, applyElevationToNodes, autoResizeWindow } = useApp();
     const isOn = Boolean(lastNodeConfig.elevationOn);
@@ -28348,11 +28842,12 @@
           /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "slider" })
         ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: `elevation-cards-container${isOn ? " active" : ""}`, id: "elevation-options", children: [0, 1, 2, 3, 4].map((level) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: `elevation-cards-container${isOn ? " active" : ""}`, id: "elevation-options", children: ELEVATION_LEVELS.map(({ level, label, desc }) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
         "div",
         {
           className: `elevation-card elev-${level}${selectedElevation === level ? " selected" : ""}`,
-          title: level === 0 ? "None (Level 0)" : `Level ${level}`,
+          title: `${label} (${desc})`,
+          "aria-label": `${label} (${desc})`,
           onClick: () => selectElevation(level),
           children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "elevation-inner-box" })
         },
@@ -28362,7 +28857,7 @@
   }
 
   // src/ui/components/appearance/StatusSection.tsx
-  var import_react6 = __toESM(require_react());
+  var import_react7 = __toESM(require_react());
   var import_jsx_runtime10 = __toESM(require_jsx_runtime());
   var STATUSES = [
     { id: "draft", label: "Draft", color: "#9CA3AF" },
@@ -28383,9 +28878,9 @@
       selectedNodes,
       autoResizeWindow
     } = useApp();
-    const [isOn, setIsOn] = (0, import_react6.useState)(false);
+    const [isOn, setIsOn] = (0, import_react7.useState)(false);
     const { selectedStatus } = uiState;
-    import_react6.default.useEffect(() => {
+    import_react7.default.useEffect(() => {
       if (selectedNodes && selectedNodes.length === 1) {
         const node = selectedNodes[0];
         if (node.status) {
@@ -28445,7 +28940,7 @@
   }
 
   // src/ui/components/appearance/StepBadgesSection.tsx
-  var import_react7 = __toESM(require_react());
+  var import_react8 = __toESM(require_react());
   var import_jsx_runtime11 = __toESM(require_jsx_runtime());
   var BADGE_CORNERS = [
     { pos: "TOP_LEFT", title: "Top-Left", svg: '<path d="M15.98 7.5H9.93C9.71 6.64 8.93 6 8 6C6.9 6 6 6.9 6 8C6 8.92 6.63 9.69 7.48 9.92V16C7.48 16.28 7.7 16.5 7.98 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM7 8C7 7.45 7.45 7 8 7C8.55 7 9 7.45 9 8C9 8.55 8.55 9 8 9C7.45 9 7 8.55 7 8ZM15.48 15.5H8.48V9.94C9.19 9.76 9.75 9.21 9.93 8.5H15.48V15.5Z" fill="currentColor"/>' },
@@ -28464,10 +28959,10 @@
       selectedNodes,
       autoResizeWindow
     } = useApp();
-    const [isOn, setIsOn] = (0, import_react7.useState)(false);
+    const [isOn, setIsOn] = (0, import_react8.useState)(false);
     const { selectedBadgeCorner = "TOP_LEFT", selectedBadgeShape = "Square" } = uiState;
     const isMultiMode = selectedNodes.length > 1;
-    (0, import_react7.useEffect)(() => {
+    (0, import_react8.useEffect)(() => {
       if (selectedNodes && selectedNodes.length > 0) {
         const hasStep = selectedNodes.some((n) => n.stepNumber !== void 0);
         setIsOn(hasStep);
@@ -28600,14 +29095,14 @@
   }
 
   // src/ui/components/connection/ConnectionPanel.tsx
-  var import_react12 = __toESM(require_react());
+  var import_react13 = __toESM(require_react());
 
   // src/ui/components/connection/FigmaLinkSection.tsx
-  var import_react8 = __toESM(require_react());
+  var import_react9 = __toESM(require_react());
   var import_jsx_runtime13 = __toESM(require_jsx_runtime());
   function FigmaLinkSection() {
     const { autoResizeWindow, setLastNodeConfig } = useApp();
-    const [isOn, setIsOn] = (0, import_react8.useState)(false);
+    const [isOn, setIsOn] = (0, import_react9.useState)(false);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastNodeConfig({ singleLinkOn: checked });
@@ -28643,7 +29138,7 @@
   }
 
   // src/ui/components/connection/ConnectSection.tsx
-  var import_react9 = __toESM(require_react());
+  var import_react10 = __toESM(require_react());
   var import_jsx_runtime14 = __toESM(require_jsx_runtime());
   var TERMINAL_ICONS_BTN = {
     start: {
@@ -28669,10 +29164,10 @@
   function ConnectSection() {
     const { uiState, setUIState, applyCurrentConnectorState } = useApp();
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiState;
-    const [startTermPopupOpen, setStartTermPopupOpen] = import_react9.default.useState(false);
-    const [endTermPopupOpen, setEndTermPopupOpen] = import_react9.default.useState(false);
-    const [startTermVal, setStartTermVal] = import_react9.default.useState("NONE");
-    const [endTermVal, setEndTermVal] = import_react9.default.useState("ARROW");
+    const [startTermPopupOpen, setStartTermPopupOpen] = import_react10.default.useState(false);
+    const [endTermPopupOpen, setEndTermPopupOpen] = import_react10.default.useState(false);
+    const [startTermVal, setStartTermVal] = import_react10.default.useState("NONE");
+    const [endTermVal, setEndTermVal] = import_react10.default.useState("ARROW");
     function selectLinePattern(pattern, el = null) {
       setUIState({ selectedLinePattern: pattern });
       document.querySelectorAll(".line-style-btn").forEach((b) => b.classList.remove("active"));
@@ -28713,7 +29208,7 @@
       }
       if (value !== "MIXED") setTimeout(() => applyCurrentConnectorState(), 0);
     }
-    (0, import_react9.useEffect)(() => {
+    (0, import_react10.useEffect)(() => {
       const startIconEl = document.getElementById("icon-start-terminal");
       const endIconEl = document.getElementById("icon-end-terminal");
       if (startIconEl) startIconEl.innerHTML = TERMINAL_ICONS_BTN.start.NONE;
@@ -28930,12 +29425,12 @@
   }
 
   // src/ui/components/connection/LabelSection.tsx
-  var import_react10 = __toESM(require_react());
+  var import_react11 = __toESM(require_react());
   var import_jsx_runtime15 = __toESM(require_jsx_runtime());
   var LABEL_PRESETS = ["Text", "Yes", "No", "Success", "Error", "Next", "Back"];
   function LabelSection() {
     const { setLastConnectorConfig, applyCurrentConnectorState, autoResizeWindow } = useApp();
-    const [isOn, setIsOn] = (0, import_react10.useState)(false);
+    const [isOn, setIsOn] = (0, import_react11.useState)(false);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastConnectorConfig({ labelOn: checked });
@@ -28994,11 +29489,11 @@
   }
 
   // src/ui/components/connection/LinkSection.tsx
-  var import_react11 = __toESM(require_react());
+  var import_react12 = __toESM(require_react());
   var import_jsx_runtime16 = __toESM(require_jsx_runtime());
   function LinkSection() {
     const { setLastConnectorConfig, autoResizeWindow } = useApp();
-    const [isOn, setIsOn] = (0, import_react11.useState)(false);
+    const [isOn, setIsOn] = (0, import_react12.useState)(false);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastConnectorConfig({ linkOn: checked });
@@ -29044,7 +29539,7 @@
     const isSingleConn = count === 1 && allConnectors;
     const isMultiConn = count >= 2 && allConnectors;
     const isMultiMode = isSingleConn || isMultiConn || count >= 2;
-    (0, import_react12.useEffect)(() => {
+    (0, import_react13.useEffect)(() => {
       const anchorBox = document.getElementById("conn-anchor-preview-box");
       const linkDivider = document.getElementById("conn-link-divider");
       const linkSection = document.getElementById("conn-link-section-block");
@@ -29086,13 +29581,13 @@
   }
 
   // src/ui/components/shared/Tooltip.tsx
-  var import_react13 = __toESM(require_react());
+  var import_react14 = __toESM(require_react());
   var import_jsx_runtime18 = __toESM(require_jsx_runtime());
   function FigmaTooltip() {
-    const tooltipRef = (0, import_react13.useRef)(null);
-    const stateRef = (0, import_react13.useRef)({ visible: false, text: "", x: 0, y: 0 });
-    const showTimerRef = (0, import_react13.useRef)(null);
-    const show = (0, import_react13.useCallback)((target, text) => {
+    const tooltipRef = (0, import_react14.useRef)(null);
+    const stateRef = (0, import_react14.useRef)({ visible: false, text: "", x: 0, y: 0 });
+    const showTimerRef = (0, import_react14.useRef)(null);
+    const show = (0, import_react14.useCallback)((target, text) => {
       if (showTimerRef.current) clearTimeout(showTimerRef.current);
       showTimerRef.current = setTimeout(() => {
         const rect = target.getBoundingClientRect();
@@ -29113,12 +29608,12 @@
         tooltip.style.visibility = "visible";
       }, 600);
     }, []);
-    const hide = (0, import_react13.useCallback)(() => {
+    const hide = (0, import_react14.useCallback)(() => {
       if (showTimerRef.current) clearTimeout(showTimerRef.current);
       const tooltip = tooltipRef.current;
       if (tooltip) tooltip.style.display = "none";
     }, []);
-    (0, import_react13.useEffect)(() => {
+    (0, import_react14.useEffect)(() => {
       const handleMouseOver = (e) => {
         const target = e.target.closest("[data-tooltip]");
         if (target) show(target, target.getAttribute("data-tooltip") || "");
@@ -29199,264 +29694,1956 @@
   // src/ui/components/popovers/ContextMenu.tsx
   var import_jsx_runtime20 = __toESM(require_jsx_runtime());
   function ContextMenu({ onEdit, onDelete }) {
-    const { contextMenuOpen, contextMenuPos, setContextMenuOpen } = useApp();
+    const {
+      contextMenuOpen,
+      contextMenuPos,
+      contextMenuTarget,
+      setContextMenuOpen,
+      setActiveModal,
+      selectedSizePresetId,
+      deleteSizePreset,
+      selectedStylePresetId,
+      deleteStylePreset,
+      showToast,
+      uiState
+    } = useApp();
     if (!contextMenuOpen) return null;
-    function handleEdit() {
+    const DEFAULT_STYLE_PRESET_IDS2 = /* @__PURE__ */ new Set(["style-white", "style-black"]);
+    const DEFAULT_STYLE_COLORS = /* @__PURE__ */ new Set(["#ffffff", "#000000"]);
+    function handleEdit(e) {
+      e.stopPropagation();
       setContextMenuOpen(false);
-      onEdit();
+      if (contextMenuTarget === "size") {
+        setActiveModal("edit-size");
+      } else if (contextMenuTarget === "style") {
+        const color = uiState.selectedColor;
+        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS2.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
+          showToast("\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+          return;
+        }
+        setActiveModal("add-style");
+      } else {
+        onEdit?.();
+      }
     }
-    function handleDelete() {
+    function handleDelete(e) {
+      e.stopPropagation();
       setContextMenuOpen(false);
-      onDelete();
+      if (contextMenuTarget === "size") {
+        const DEFAULT_PRESET_IDS = /* @__PURE__ */ new Set(["default", "square", "web", "mobile"]);
+        if (!selectedSizePresetId || DEFAULT_PRESET_IDS.has(selectedSizePresetId)) {
+          showToast("\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+          return;
+        }
+        deleteSizePreset(selectedSizePresetId);
+        showToast("\uC0AC\uC774\uC988 \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+      } else if (contextMenuTarget === "style") {
+        const color = uiState.selectedColor;
+        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS2.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
+          showToast("\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+          return;
+        }
+        if (selectedStylePresetId) {
+          deleteStylePreset(selectedStylePresetId);
+        } else {
+          showToast("\uC2A4\uD0C0\uC77C\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+        }
+      } else {
+        onDelete?.();
+      }
     }
     return /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(
       "div",
       {
         id: "popover-context",
         className: "popover-context-menu active",
-        style: { position: "fixed", top: contextMenuPos.top, left: contextMenuPos.left, zIndex: 999 },
+        style: {
+          position: "fixed",
+          top: contextMenuPos.top,
+          left: contextMenuPos.left,
+          zIndex: 1050
+        },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: "context-menu-item", onClick: handleEdit, children: "Edit Phase" }),
-          /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: "context-menu-item danger", onClick: handleDelete, children: "Delete Phase" })
+          /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: "context-item", onClick: handleEdit, children: "Edit" }),
+          /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: "context-item", onClick: handleDelete, children: "Delete" })
         ]
       }
     );
   }
 
   // src/ui/components/modals/PhaseModal.tsx
-  var import_react14 = __toESM(require_react());
+  var import_react15 = __toESM(require_react());
   var import_jsx_runtime21 = __toESM(require_jsx_runtime());
-  var CLOSE_SVG = `<path d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z" fill="currentColor"/>`;
+  var CLOSE_SVG = /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+    "path",
+    {
+      d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
+      fill: "currentColor"
+    }
+  ) });
+  var PALETTE_SVG = /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+    "path",
+    {
+      d: "M8 1.5C4.41 1.5 1.5 4.41 1.5 8C1.5 11.59 4.41 14.5 8 14.5C8.69 14.5 9.25 13.94 9.25 13.25C9.25 12.93 9.12 12.64 8.91 12.43C8.7 12.22 8.57 11.93 8.57 11.61C8.57 10.92 9.13 10.36 9.82 10.36H11.25C13.04 10.36 14.5 8.9 14.5 7.11C14.5 4.02 11.59 1.5 8 1.5ZM4.25 8C3.7 8 3.25 7.55 3.25 7C3.25 6.45 3.7 6 4.25 6C4.8 6 5.25 6.45 5.25 7C5.25 7.55 4.8 8 4.25 8ZM6.25 5C5.7 5 5.25 4.55 5.25 4C5.25 3.45 5.7 3 6.25 3C6.8 3 7.25 3.45 7.25 4C7.25 4.55 6.8 5 6.25 5ZM9.75 5C9.2 5 8.75 4.55 8.75 4C8.75 3.45 9.2 3 9.75 3C10.3 3 10.75 3.45 10.75 4C10.75 4.55 10.3 5 9.75 5ZM11.75 8C11.2 8 10.75 7.55 10.75 7C10.75 6.45 11.2 6 11.75 6C12.3 6 12.75 6.45 12.75 7C12.75 7.55 12.3 8 11.75 8Z",
+      fill: "currentColor"
+    }
+  ) });
+  function hexToHsv(hex) {
+    let clean = hex.replace("#", "").trim();
+    if (clean.length === 3) {
+      clean = clean.split("").map((c) => c + c).join("");
+    }
+    const r = (parseInt(clean.substring(0, 2), 16) || 0) / 255;
+    const g = (parseInt(clean.substring(2, 4), 16) || 0) / 255;
+    const b = (parseInt(clean.substring(4, 6), 16) || 0) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const d = max - min;
+    let h = 0;
+    const s = max === 0 ? 0 : d / max;
+    const v = max;
+    if (max !== min) {
+      switch (max) {
+        case r:
+          h = (g - b) / d + (g < b ? 6 : 0);
+          break;
+        case g:
+          h = (b - r) / d + 2;
+          break;
+        case b:
+          h = (r - g) / d + 4;
+          break;
+      }
+      h /= 6;
+    }
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      v: Math.round(v * 100)
+    };
+  }
+  function hsvToHex(h, s, v) {
+    const sNorm = Math.max(0, Math.min(100, s)) / 100;
+    const vNorm = Math.max(0, Math.min(100, v)) / 100;
+    const c = vNorm * sNorm;
+    const x = c * (1 - Math.abs(h / 60 % 2 - 1));
+    const m = vNorm - c;
+    let r = 0, g = 0, b = 0;
+    if (h >= 0 && h < 60) {
+      r = c;
+      g = x;
+      b = 0;
+    } else if (h >= 60 && h < 120) {
+      r = x;
+      g = c;
+      b = 0;
+    } else if (h >= 120 && h < 180) {
+      r = 0;
+      g = c;
+      b = x;
+    } else if (h >= 180 && h < 240) {
+      r = 0;
+      g = x;
+      b = c;
+    } else if (h >= 240 && h < 300) {
+      r = x;
+      g = 0;
+      b = c;
+    } else if (h >= 300 && h <= 360) {
+      r = c;
+      g = 0;
+      b = x;
+    }
+    const rHex = Math.round((r + m) * 255).toString(16).padStart(2, "0");
+    const gHex = Math.round((g + m) * 255).toString(16).padStart(2, "0");
+    const bHex = Math.round((b + m) * 255).toString(16).padStart(2, "0");
+    return `${rHex}${gHex}${bHex}`.toUpperCase();
+  }
+  function getHueSliderPercent(h) {
+    if (h >= 350 || h <= 5) return 0;
+    return h / 360 * 100;
+  }
   function PhaseModal({ editingPhase, onSave, onClose }) {
     const { activeModal } = useApp();
     const isOpen = activeModal === "phase";
-    const [name, setName] = (0, import_react14.useState)(editingPhase?.name || "");
-    const [color, setColor] = (0, import_react14.useState)(editingPhase?.color || "#EA2039");
-    const [hexInput, setHexInput] = (0, import_react14.useState)((editingPhase?.color || "#EA2039").replace("#", ""));
-    const [colorPanelOpen, setColorPanelOpen] = (0, import_react14.useState)(false);
-    const HUE_COLORS = [
-      "#EA2039",
-      "#EB4C46",
-      "#E05638",
-      "#DF6246",
-      "#EB5757",
-      "#F5A623",
-      "#F7CA00",
-      "#27AE60",
-      "#16A34A",
-      "#2F80ED",
-      "#5F92F3",
-      "#8638E5",
-      "#000000",
-      "#6B7280",
-      "#ffffff"
-    ];
-    if (!isOpen) return null;
-    function handleHexInput(val) {
-      const cleaned = val.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
-      setHexInput(cleaned);
-      if (cleaned.length === 6) {
-        const newColor = `#${cleaned}`;
-        setColor(newColor);
+    const [name, setName] = (0, import_react15.useState)(editingPhase?.name || "");
+    const initialColor = (editingPhase?.color || "#EA2039").replace("#", "").trim().toUpperCase();
+    const validHex = initialColor.length === 6 ? initialColor : "EA2039";
+    const [colorHex, setColorHex] = (0, import_react15.useState)(validHex);
+    const [colorHsv, setColorHsv] = (0, import_react15.useState)(() => hexToHsv(validHex));
+    const [pickerOpen, setPickerOpen] = (0, import_react15.useState)(false);
+    const hueBarRef = (0, import_react15.useRef)(null);
+    const satValRef = (0, import_react15.useRef)(null);
+    function handleHexChange(value) {
+      const clean = value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6).toUpperCase();
+      setColorHex(clean);
+      if (clean.length === 6) {
+        setColorHsv(hexToHsv(clean));
       }
     }
+    const handleHueDrag = (0, import_react15.useCallback)(
+      (e) => {
+        if (!hueBarRef.current) return;
+        const rect = hueBarRef.current.getBoundingClientRect();
+        const clientX = "clientX" in e ? e.clientX : e.clientX;
+        const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const h = Math.round(percent * 360);
+        const nextHsv = { ...colorHsv, h };
+        setColorHsv(nextHsv);
+        setColorHex(hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v));
+      },
+      [colorHsv]
+    );
+    const startHueDrag = (e) => {
+      e.preventDefault();
+      handleHueDrag(e);
+      const onMove = (ev) => handleHueDrag(ev);
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    };
+    const handleSatValDrag = (0, import_react15.useCallback)(
+      (e) => {
+        if (!satValRef.current) return;
+        const rect = satValRef.current.getBoundingClientRect();
+        const clientX = "clientX" in e ? e.clientX : e.clientX;
+        const clientY = "clientY" in e ? e.clientY : e.clientY;
+        const s = Math.round(Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * 100);
+        const v = Math.round(Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height)) * 100);
+        const nextHsv = { ...colorHsv, s, v };
+        setColorHsv(nextHsv);
+        setColorHex(hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v));
+      },
+      [colorHsv]
+    );
+    const startSatValDrag = (e) => {
+      e.preventDefault();
+      handleSatValDrag(e);
+      const onMove = (ev) => handleSatValDrag(ev);
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    };
     function handleSave() {
       if (!name.trim()) return;
+      const finalColor = `#${colorHex.padStart(6, "0")}`;
       onSave({
         id: editingPhase?.id || `phase-${Date.now()}`,
         name: name.trim(),
-        color
+        color: finalColor
       });
       onClose();
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { id: "modal-backdrop", className: "popover-backdrop", onClick: (e) => {
-      if (e.target === e.currentTarget) onClose();
-    }, children: /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { id: "modal-phase", className: "phase-modal-card", style: { display: "block" }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "phase-modal-header", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { id: "phase-modal-title-text", className: "phase-modal-title", children: editingPhase ? "Edit Phase" : "Add Phase" }),
-        /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("button", { className: "phase-modal-close-btn", onClick: onClose, title: "Close", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", dangerouslySetInnerHTML: { __html: CLOSE_SVG } }) })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "phase-modal-body", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "phase-field-group", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "phase-field-label", children: "Name" }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
-            "input",
-            {
-              type: "text",
-              id: "input-phase-modal-name",
-              className: "phase-text-input",
-              placeholder: "Phase Name",
-              value: name,
-              onChange: (e) => setName(e.target.value)
-            }
-          ) })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "phase-field-group", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "phase-field-label", children: "Background Color" }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
-            "div",
-            {
-              className: "phase-color-picker-box",
-              id: "phase-color-box-trigger",
-              onClick: () => setColorPanelOpen(!colorPanelOpen),
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-color-preview-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { id: "phase-modal-color-chip", className: "phase-color-preview-chip", style: { background: color } }) }),
+    if (!isOpen) return null;
+    return /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+      "div",
+      {
+        id: "modal-backdrop",
+        className: "popover-backdrop",
+        style: { display: "flex" },
+        onClick: (e) => {
+          if (e.target === e.currentTarget) onClose();
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
+          "div",
+          {
+            id: "modal-phase",
+            className: "style-modal-card",
+            style: { display: "flex" },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "style-modal-title", children: editingPhase ? "Edit Phase" : "Add Phase" }),
                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
-                  "input",
+                  "button",
                   {
-                    type: "text",
-                    id: "input-phase-modal-hex",
-                    className: "phase-color-hex-input",
-                    value: hexInput,
-                    maxLength: 7,
-                    onClick: (e) => e.stopPropagation(),
-                    onChange: (e) => handleHexInput(e.target.value)
+                    type: "button",
+                    className: "style-modal-close-btn",
+                    onClick: onClose,
+                    title: "Close",
+                    children: CLOSE_SVG
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                    "div",
+                    {
+                      className: "style-section-header",
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        height: 24,
+                        marginBottom: 6
+                      },
+                      children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Name" })
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                    "input",
+                    {
+                      type: "text",
+                      id: "input-phase-modal-name",
+                      className: "phase-text-input",
+                      placeholder: "Phase Name",
+                      value: name,
+                      onChange: (e) => setName(e.target.value),
+                      onKeyDown: (e) => e.key === "Enter" && handleSave(),
+                      autoFocus: true,
+                      style: {
+                        height: 28,
+                        letterSpacing: 0
+                      }
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "style-divider", style: { margin: "12px 0" } }),
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
+                    "div",
+                    {
+                      className: "style-section-header",
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        height: 24,
+                        marginBottom: 6
+                      },
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Background Color" }),
+                        /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            className: `style-palette-btn${pickerOpen ? " active" : ""}`,
+                            onClick: () => setPickerOpen(!pickerOpen),
+                            title: "Toggle color picker",
+                            style: {
+                              background: "transparent",
+                              border: "none",
+                              color: pickerOpen ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)",
+                              cursor: "pointer",
+                              padding: 2,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: 4,
+                              transition: "color 0.15s ease, background 0.15s ease"
+                            },
+                            children: PALETTE_SVG
+                          }
+                        )
+                      ]
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
+                    "div",
+                    {
+                      className: `style-color-box${pickerOpen ? " active" : ""}`,
+                      onClick: () => setPickerOpen(true),
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                          "div",
+                          {
+                            className: "style-color-chip",
+                            style: { background: `#${colorHex.padStart(6, "0")}` },
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              setPickerOpen(!pickerOpen);
+                            }
+                          }
+                        ),
+                        /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                          "input",
+                          {
+                            type: "text",
+                            className: "style-color-hex-text",
+                            value: colorHex,
+                            maxLength: 6,
+                            onFocus: (e) => {
+                              setPickerOpen(true);
+                              e.currentTarget.select();
+                            },
+                            onChange: (e) => handleHexChange(e.target.value),
+                            autoComplete: "off",
+                            spellCheck: false
+                          }
+                        )
+                      ]
+                    }
+                  ),
+                  pickerOpen && /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { style: { marginTop: 10, animation: "modalFadeIn 0.12s ease-out" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                      "div",
+                      {
+                        ref: satValRef,
+                        className: "style-sat-val-picker",
+                        onMouseDown: startSatValDrag,
+                        style: {
+                          backgroundColor: `hsl(${colorHsv.h}, 100%, 50%)`,
+                          marginBottom: 12
+                        },
+                        children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                          "div",
+                          {
+                            className: "style-sat-val-thumb",
+                            style: {
+                              left: `${colorHsv.s}%`,
+                              top: `${100 - colorHsv.v}%`
+                            }
+                          }
+                        )
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                      "div",
+                      {
+                        ref: hueBarRef,
+                        className: "style-hue-slider",
+                        style: { margin: 0 },
+                        onMouseDown: startHueDrag,
+                        children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                          "div",
+                          {
+                            className: "style-hue-thumb",
+                            style: {
+                              left: `${getHueSliderPercent(colorHsv.h)}%`,
+                              background: `hsl(${colorHsv.h}, 100%, 50%)`
+                            }
+                          }
+                        )
+                      }
+                    )
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-modal-footer", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn-phase-modal-cancel",
+                    onClick: onClose,
+                    children: "Cancel"
                   }
                 ),
-                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-color-chevron-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "8", height: "6", viewBox: "0 0 8 6", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("path", { d: "M1.5 2L4 4.5L6.5 2", stroke: "currentColor", strokeWidth: "1.2", strokeLinecap: "round", strokeLinejoin: "round" }) }) })
-              ]
-            }
-          ) }),
-          colorPanelOpen && /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { id: "phase-color-picker-panel", className: "phase-color-dropdown-panel", style: { display: "block" }, children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-color-palette-grid", style: { display: "flex", flexWrap: "wrap", gap: "6px", padding: "8px" }, children: HUE_COLORS.map((c) => /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
-            "div",
-            {
-              style: {
-                width: "18px",
-                height: "18px",
-                borderRadius: "50%",
-                background: c,
-                border: color === c ? "2px solid #fff" : "2px solid transparent",
-                cursor: "pointer",
-                outline: color === c ? "2px solid var(--figma-color-bg-selected)" : "none"
-              },
-              onClick: (e) => {
-                e.stopPropagation();
-                setColor(c);
-                setHexInput(c.replace("#", ""));
-                setColorPanelOpen(false);
-              }
-            },
-            c
-          )) }) })
-        ] })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "phase-modal-footer", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("button", { className: "btn-phase-modal-cancel", onClick: onClose, children: "Cancel" }),
-        /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
-          "button",
-          {
-            id: "btn-save-phase",
-            className: "btn-phase-modal-save",
-            onClick: handleSave,
-            disabled: !name.trim(),
-            children: "Save"
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    id: "btn-save-phase",
+                    className: "btn-phase-modal-save",
+                    onClick: handleSave,
+                    disabled: !name.trim(),
+                    children: "Save"
+                  }
+                )
+              ] })
+            ]
           }
         )
-      ] })
-    ] }) });
+      }
+    );
   }
 
   // src/ui/components/modals/SizeModal.tsx
-  var import_react15 = __toESM(require_react());
+  var import_react16 = __toESM(require_react());
   var import_jsx_runtime22 = __toESM(require_jsx_runtime());
-  var CLOSE_SVG2 = `<path d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z" fill="currentColor"/>`;
-  function SizeModal({ mode, editingPreset, onSave, onClose }) {
-    const { activeModal } = useApp();
+  var FIXED_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+    "path",
+    {
+      d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z",
+      fill: "currentColor"
+    }
+  ) });
+  var HUG_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+    "path",
+    {
+      d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z",
+      fill: "currentColor"
+    }
+  ) });
+  var RADIUS_SVG = /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+    "path",
+    {
+      d: "M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z",
+      fill: "currentColor"
+    }
+  ) });
+  var CHECK_SVG = /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+    "path",
+    {
+      d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z",
+      fill: "currentColor"
+    }
+  ) });
+  function SizeModal({ mode, editingPreset, onClose }) {
+    const {
+      activeModal,
+      sizePresets,
+      addSizePreset,
+      updateSizePreset,
+      lastNodeConfig,
+      setLastNodeConfig,
+      applyCurrentNodeState,
+      selectedSizePresetId,
+      showToast
+    } = useApp();
     const isOpen = mode === "add" ? activeModal === "add-size" : activeModal === "edit-size";
-    const [name, setName] = (0, import_react15.useState)(editingPreset?.name || "");
-    const [w, setW] = (0, import_react15.useState)(editingPreset?.w ?? 375);
-    const [h, setH] = (0, import_react15.useState)(editingPreset?.h ?? 812);
-    const [radius, setRadius] = (0, import_react15.useState)(editingPreset?.radius ?? 0);
-    const [sizeMode, setSizeMode] = (0, import_react15.useState)(editingPreset?.sizeMode || "fixed");
+    const currentPreset = editingPreset || sizePresets.find((p) => p.id === selectedSizePresetId) || sizePresets[0];
+    const [name, setName] = (0, import_react16.useState)("");
+    const [w, setW] = (0, import_react16.useState)(375);
+    const [h, setH] = (0, import_react16.useState)(812);
+    const [radius, setRadius] = (0, import_react16.useState)(0);
+    const [sizeMode, setSizeMode] = (0, import_react16.useState)("fixed");
+    const [dropdownOpen, setDropdownOpen] = (0, import_react16.useState)(false);
+    const dropdownRef = (0, import_react16.useRef)(null);
+    (0, import_react16.useEffect)(() => {
+      if (!isOpen) return;
+      setDropdownOpen(false);
+      if (mode === "add") {
+        setName("");
+        setW(lastNodeConfig.width || 375);
+        setH(lastNodeConfig.height || 812);
+        setRadius(lastNodeConfig.cornerRadius || 0);
+        setSizeMode(lastNodeConfig.sizeMode || "fixed");
+      } else {
+        if (currentPreset) {
+          setName(currentPreset.name || "Custom");
+          setW(currentPreset.w || 375);
+          setH(currentPreset.h || 812);
+          setRadius(currentPreset.radius ?? 0);
+          setSizeMode(currentPreset.sizeMode || "fixed");
+        }
+      }
+    }, [isOpen, mode, currentPreset, lastNodeConfig]);
+    (0, import_react16.useEffect)(() => {
+      function handleClickOutside(e) {
+        if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+          setDropdownOpen(false);
+        }
+      }
+      if (dropdownOpen) {
+        window.addEventListener("mousedown", handleClickOutside);
+      }
+      return () => {
+        window.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [dropdownOpen]);
     if (!isOpen) return null;
+    function handleRadiusChange(e) {
+      let val = parseInt(e.target.value, 10);
+      if (isNaN(val)) val = 0;
+      if (val > 20) {
+        val = 20;
+        showToast("\uCD5C\uB300\uAC12\uC740 20\uC785\uB2C8\uB2E4.", "warning");
+      }
+      setRadius(val);
+    }
     function handleSave() {
-      onSave({ name: name.trim() || "Custom", w, h, radius, sizeMode });
+      const finalName = name.trim() || "Custom";
+      const finalW = Math.max(20, w || 250);
+      const finalH = Math.max(20, h || 90);
+      let finalRadius = Math.max(0, radius || 0);
+      if (finalRadius > 20) {
+        finalRadius = 20;
+        showToast("\uCD5C\uB300\uAC12\uC740 20\uC785\uB2C8\uB2E4.", "warning");
+      }
+      if (mode === "add") {
+        addSizePreset({
+          name: finalName,
+          w: finalW,
+          h: finalH,
+          radius: finalRadius,
+          sizeMode
+        });
+        showToast(`\uC0AC\uC774\uC988 '${finalName}' (${finalW}\xD7${finalH})\uC774(\uAC00) \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+      } else {
+        if (currentPreset) {
+          updateSizePreset(currentPreset.id, {
+            name: finalName,
+            w: finalW,
+            h: finalH,
+            radius: finalRadius,
+            sizeMode
+          });
+        }
+        showToast(`\uC0AC\uC774\uC988 '${finalName}' (${finalW}\xD7${finalH})\uC774(\uAC00) \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+      }
+      const wInput = document.getElementById("input-size-w");
+      const hInput = document.getElementById("input-size-h");
+      const rInput = document.getElementById("input-size-radius");
+      if (wInput) wInput.value = String(finalW);
+      if (hInput) hInput.value = String(finalH);
+      if (rInput) rInput.value = String(finalRadius);
+      const fixedValEl = document.getElementById("size-mode-val-fixed");
+      if (fixedValEl) fixedValEl.textContent = String(finalH);
+      setLastNodeConfig({
+        width: finalW,
+        height: finalH,
+        cornerRadius: finalRadius,
+        sizeMode
+      });
+      applyCurrentNodeState(sizeMode);
       onClose();
     }
     const title = mode === "add" ? "Add Size" : "Edit Size";
-    return /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { id: "modal-backdrop", className: "popover-backdrop", onClick: (e) => {
-      if (e.target === e.currentTarget) onClose();
-    }, children: /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { id: `modal-${mode}-size`, className: "size-modal-card", style: { display: "block" }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-modal-header", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "size-modal-title", children: title }),
-        /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("button", { className: "size-modal-close-btn", onClick: onClose, title: "Close", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", dangerouslySetInnerHTML: { __html: CLOSE_SVG2 } }) })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-modal-body", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "phase-field-group", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "phase-field-label", children: "Name" }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
-            "input",
+    return /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+      "div",
+      {
+        id: "modal-backdrop",
+        className: "popover-backdrop",
+        style: { display: "flex" },
+        onClick: (e) => {
+          if (e.target === e.currentTarget) onClose();
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+          "div",
+          {
+            id: `modal-${mode}-size`,
+            className: "size-modal-card",
+            style: { display: "flex", overflow: "visible", position: "relative" },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "size-modal-title", children: title }),
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("button", { className: "size-modal-close-btn", onClick: onClose, title: "Close", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                  "path",
+                  {
+                    d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
+                    fill: "currentColor"
+                  }
+                ) }) })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-modal-body", style: { overflow: "visible" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "phase-field-group", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "phase-field-label", children: "Name" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                    "input",
+                    {
+                      type: "text",
+                      id: `input-${mode}-size-name`,
+                      className: "phase-text-input",
+                      placeholder: "Custom",
+                      value: name,
+                      onChange: (e) => setName(e.target.value),
+                      onKeyDown: (e) => e.key === "Enter" && handleSave(),
+                      autoFocus: true
+                    }
+                  ) })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "phase-field-group", style: { paddingBottom: 12, overflow: "visible" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "phase-field-label", children: "Size" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "phase-input-row-wrapper", style: { gap: "6px" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "prefix-input-box", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "prefix-label", children: "W" }),
+                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                        "input",
+                        {
+                          type: "number",
+                          id: `input-${mode}-size-w`,
+                          className: "prefix-input",
+                          value: w,
+                          min: 20,
+                          onChange: (e) => setW(parseInt(e.target.value, 10) || 0),
+                          onKeyDown: (e) => e.key === "Enter" && handleSave()
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "prefix-input-box", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "prefix-label", children: "H" }),
+                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                        "input",
+                        {
+                          type: "number",
+                          id: `input-${mode}-size-h`,
+                          className: "prefix-input",
+                          value: h,
+                          min: 20,
+                          onChange: (e) => setH(parseInt(e.target.value, 10) || 0),
+                          onKeyDown: (e) => e.key === "Enter" && handleSave()
+                        }
+                      )
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "icon-input-box", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "icon-input-slot", style: { width: 24, height: 24 }, children: RADIUS_SVG }),
+                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                      "input",
+                      {
+                        type: "number",
+                        id: `input-${mode}-size-radius`,
+                        className: "prefix-input",
+                        value: radius,
+                        min: 0,
+                        max: 20,
+                        onChange: handleRadiusChange,
+                        onKeyDown: (e) => e.key === "Enter" && handleSave()
+                      }
+                    )
+                  ] }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                    "div",
+                    {
+                      className: "phase-input-row-wrapper",
+                      ref: dropdownRef,
+                      style: { position: "relative" },
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                          "div",
+                          {
+                            className: `size-dropdown-box${dropdownOpen ? " active" : ""}`,
+                            onClick: () => setDropdownOpen(!dropdownOpen),
+                            title: "Select height mode",
+                            tabIndex: 0,
+                            style: {
+                              cursor: "pointer"
+                            },
+                            children: [
+                              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-dropdown-left", style: { display: "flex", alignItems: "center", gap: 6 }, children: [
+                                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }, children: sizeMode === "hug" ? HUG_SVG2 : FIXED_SVG2 }),
+                                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { id: `text-${mode}-size-mode`, style: { fontSize: 11, color: "#ffffff" }, children: sizeMode === "fixed" ? "Fixed height" : "Hug contents" })
+                              ] }),
+                              /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                                "svg",
+                                {
+                                  width: "16",
+                                  height: "16",
+                                  viewBox: "0 0 16 16",
+                                  fill: "none",
+                                  style: {
+                                    transform: dropdownOpen ? "rotate(180deg)" : "none",
+                                    transition: "transform 0.15s ease",
+                                    flexShrink: 0
+                                  },
+                                  children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                                    "path",
+                                    {
+                                      d: "M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z",
+                                      fill: "currentColor"
+                                    }
+                                  )
+                                }
+                              )
+                            ]
+                          }
+                        ),
+                        dropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                          "div",
+                          {
+                            style: {
+                              position: "absolute",
+                              top: "calc(100% + 4px)",
+                              left: 0,
+                              width: "100%",
+                              background: "#222222",
+                              border: "1px solid rgba(255, 255, 255, 0.12)",
+                              borderRadius: 8,
+                              padding: 4,
+                              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5)",
+                              zIndex: 200,
+                              boxSizing: "border-box",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 2,
+                              animation: "modalFadeIn 0.12s ease-out"
+                            },
+                            children: [
+                              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                                "div",
+                                {
+                                  onClick: () => {
+                                    setSizeMode("fixed");
+                                    setDropdownOpen(false);
+                                  },
+                                  style: {
+                                    height: 28,
+                                    padding: "0 6px",
+                                    borderRadius: 5,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                    cursor: "pointer",
+                                    fontSize: 11,
+                                    color: "#ffffff",
+                                    background: "transparent",
+                                    transition: "background 0.12s, color 0.12s"
+                                  },
+                                  onMouseEnter: (e) => {
+                                    e.currentTarget.style.background = "#8C4CF6";
+                                  },
+                                  onMouseLeave: (e) => {
+                                    e.currentTarget.style.background = "transparent";
+                                  },
+                                  children: [
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "fixed" && CHECK_SVG }),
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: FIXED_SVG2 }),
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap", letterSpacing: 0 }, children: "Fixed height" })
+                                  ]
+                                }
+                              ),
+                              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                                "div",
+                                {
+                                  onClick: () => {
+                                    setSizeMode("hug");
+                                    setDropdownOpen(false);
+                                  },
+                                  style: {
+                                    height: 28,
+                                    padding: "0 6px",
+                                    borderRadius: 5,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                    cursor: "pointer",
+                                    fontSize: 11,
+                                    color: "#ffffff",
+                                    background: "transparent",
+                                    transition: "background 0.12s, color 0.12s"
+                                  },
+                                  onMouseEnter: (e) => {
+                                    e.currentTarget.style.background = "#8C4CF6";
+                                  },
+                                  onMouseLeave: (e) => {
+                                    e.currentTarget.style.background = "transparent";
+                                  },
+                                  children: [
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "hug" && CHECK_SVG }),
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: HUG_SVG2 }),
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap", letterSpacing: 0 }, children: "Hug contents" })
+                                  ]
+                                }
+                              )
+                            ]
+                          }
+                        )
+                      ]
+                    }
+                  )
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-modal-footer", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("button", { type: "button", className: "btn-phase-modal-cancel", onClick: onClose, children: "Cancel" }),
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("button", { type: "button", className: "btn-phase-modal-save", onClick: handleSave, children: "Save" })
+              ] })
+            ]
+          }
+        )
+      }
+    );
+  }
+
+  // src/ui/components/modals/FigmaDesignPickerModal.tsx
+  var import_react17 = __toESM(require_react());
+  var import_jsx_runtime23 = __toESM(require_jsx_runtime());
+  function FigmaDesignPickerModal({ onClose }) {
+    const {
+      designFrames,
+      loadDesignFrames,
+      setLastNodeConfig,
+      addSizePreset,
+      sizePresets,
+      applyCurrentNodeState
+    } = useApp();
+    const [searchQuery, setSearchQuery] = (0, import_react17.useState)("");
+    const [selectedFrameId, setSelectedFrameId] = (0, import_react17.useState)(null);
+    const [saveAsPreset, setSaveAsPreset] = (0, import_react17.useState)(true);
+    const [linkToFrame, setLinkToFrame] = (0, import_react17.useState)(true);
+    (0, import_react17.useEffect)(() => {
+      loadDesignFrames();
+    }, [loadDesignFrames]);
+    (0, import_react17.useEffect)(() => {
+      if (designFrames.length > 0 && !selectedFrameId) {
+        setSelectedFrameId(designFrames[0].id);
+      }
+    }, [designFrames, selectedFrameId]);
+    const filteredFrames = (0, import_react17.useMemo)(() => {
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return designFrames;
+      return designFrames.filter((f) => f.name.toLowerCase().includes(q));
+    }, [designFrames, searchQuery]);
+    const selectedFrame = (0, import_react17.useMemo)(() => {
+      return designFrames.find((f) => f.id === selectedFrameId) || null;
+    }, [designFrames, selectedFrameId]);
+    function handleApply() {
+      if (!selectedFrame) return;
+      const wEl = document.getElementById("input-size-w");
+      const hEl = document.getElementById("input-size-h");
+      const rEl = document.getElementById("input-size-radius");
+      if (wEl) wEl.value = String(selectedFrame.width);
+      if (hEl) hEl.value = String(selectedFrame.height);
+      if (rEl) rEl.value = String(selectedFrame.cornerRadius ?? 0);
+      const fixedValEl = document.getElementById("size-mode-val-fixed");
+      if (fixedValEl) fixedValEl.textContent = String(selectedFrame.height);
+      const updatePayload = {
+        width: selectedFrame.width,
+        height: selectedFrame.height,
+        cornerRadius: selectedFrame.cornerRadius ?? 0,
+        sizeMode: "fixed"
+      };
+      if (linkToFrame) {
+        updatePayload.figmaFrameId = selectedFrame.id;
+        const urlInput = document.getElementById("single-screen-url");
+        if (urlInput) {
+          urlInput.value = `figma://node/${selectedFrame.id}`;
+        }
+      }
+      setLastNodeConfig(updatePayload);
+      if (saveAsPreset) {
+        const exists = sizePresets.some(
+          (p) => p.w === selectedFrame.width && p.h === selectedFrame.height
+        );
+        if (!exists) {
+          addSizePreset({
+            name: selectedFrame.name || "Custom Screen",
+            w: selectedFrame.width,
+            h: selectedFrame.height,
+            radius: selectedFrame.cornerRadius ?? 0,
+            sizeMode: "fixed"
+          });
+        }
+      }
+      applyCurrentNodeState("fixed");
+      onClose();
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+      "div",
+      {
+        className: "popover-backdrop",
+        style: { display: "flex", zIndex: 1e3 },
+        onClick: (e) => {
+          if (e.target === e.currentTarget) onClose();
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+          "div",
+          {
+            className: "size-modal-card",
+            style: {
+              width: 320,
+              maxHeight: 460,
+              display: "flex",
+              flexDirection: "column",
+              padding: 0,
+              overflow: "hidden",
+              background: "var(--color-bg-dark-modal, #1e1e1e)",
+              border: "1px solid var(--color-border-dark-modal, #383838)",
+              borderRadius: 12,
+              boxShadow: "0 16px 32px rgba(0, 0, 0, 0.45)"
+            },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                "div",
+                {
+                  style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 14px",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.08)"
+                  },
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 6 }, children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                        "path",
+                        {
+                          d: "M5 2V14M11 2V14M2 5H14M2 11H14",
+                          stroke: "currentColor",
+                          strokeWidth: "1.3",
+                          strokeLinecap: "round"
+                        }
+                      ) }),
+                      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                        "span",
+                        {
+                          style: {
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#ffffff",
+                            letterSpacing: 0
+                          },
+                          children: "Select Figma Design"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        className: "size-modal-close-btn",
+                        onClick: onClose,
+                        title: "Close",
+                        style: {
+                          background: "transparent",
+                          border: "none",
+                          color: "var(--color-text-secondary, #999)",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 24,
+                          height: 24,
+                          borderRadius: 4
+                        },
+                        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                          "path",
+                          {
+                            d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
+                            fill: "currentColor"
+                          }
+                        ) })
+                      }
+                    )
+                  ]
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                "div",
+                {
+                  style: {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 12px",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+                    background: "rgba(0, 0, 0, 0.15)"
+                  },
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "picker-search-box", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", style: { opacity: 0.6 }, children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                          "path",
+                          {
+                            d: "M7 12C9.76142 12 12 9.76142 12 7C12 4.23858 9.76142 2 7 2C4.23858 2 2 4.23858 2 7C2 9.76142 4.23858 12 7 12Z",
+                            stroke: "currentColor",
+                            strokeWidth: "1.3"
+                          }
+                        ),
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("path", { d: "M11 11L14 14", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" })
+                      ] }),
+                      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                        "input",
+                        {
+                          type: "text",
+                          placeholder: "Search design screens...",
+                          value: searchQuery,
+                          onChange: (e) => setSearchQuery(e.target.value),
+                          style: {
+                            background: "transparent",
+                            border: "none",
+                            outline: "none",
+                            color: "#fff",
+                            fontSize: 11,
+                            width: "100%",
+                            letterSpacing: 0
+                          }
+                        }
+                      ),
+                      searchQuery && /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => setSearchQuery(""),
+                          style: {
+                            background: "none",
+                            border: "none",
+                            color: "#888",
+                            cursor: "pointer",
+                            padding: 0,
+                            display: "flex"
+                          },
+                          children: "\u2715"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: loadDesignFrames,
+                        title: "Refresh frames from canvas",
+                        style: {
+                          background: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid rgba(255, 255, 255, 0.12)",
+                          borderRadius: 6,
+                          width: 28,
+                          height: 28,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#bbb",
+                          cursor: "pointer"
+                        },
+                        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                          "path",
+                          {
+                            d: "M13.65 2.35A7.95 7.95 0 0 0 8 0C3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 8 14c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z",
+                            fill: "currentColor"
+                          }
+                        ) })
+                      }
+                    )
+                  ]
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                "div",
+                {
+                  style: {
+                    flex: 1,
+                    maxHeight: 200,
+                    overflowY: "auto",
+                    padding: "6px 8px"
+                  },
+                  children: filteredFrames.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                    "div",
+                    {
+                      style: {
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "28px 16px",
+                        textAlign: "center",
+                        color: "var(--color-text-secondary, #888)",
+                        gap: 8
+                      },
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", style: { opacity: 0.4 }, children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2", stroke: "currentColor", strokeWidth: "1.5" }),
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("path", { d: "M3 9H21", stroke: "currentColor", strokeWidth: "1.5" })
+                        ] }),
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { style: { fontSize: 11, color: "#aaa", letterSpacing: 0 }, children: searchQuery ? "\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4." : "\uD604\uC7AC \uD398\uC774\uC9C0\uC5D0 \uB514\uC790\uC778 \uD504\uB808\uC784\uC774 \uC5C6\uC2B5\uB2C8\uB2E4." }),
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { style: { fontSize: 10, color: "#666", letterSpacing: 0 }, children: "\uD53C\uADF8\uB9C8 \uCE94\uBC84\uC2A4\uC5D0 \uD504\uB808\uC784(Screen)\uC744 \uCD94\uAC00\uD55C \uD6C4 \uC0C8\uB85C\uACE0\uCE68\uD574 \uC8FC\uC138\uC694." })
+                      ]
+                    }
+                  ) : /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("div", { style: { display: "flex", flexDirection: "column", gap: 2 }, children: filteredFrames.map((frame) => {
+                    const isSelected = frame.id === selectedFrameId;
+                    return /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                      "div",
+                      {
+                        onClick: () => setSelectedFrameId(frame.id),
+                        onDoubleClick: handleApply,
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "6px 8px",
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          background: isSelected ? "rgba(13, 153, 255, 0.15)" : "transparent",
+                          border: isSelected ? "1px solid #0D99FF" : "1px solid transparent",
+                          transition: "background 0.12s ease"
+                        },
+                        children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                            "div",
+                            {
+                              style: {
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                minWidth: 0,
+                                flex: 1
+                              },
+                              children: [
+                                /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                                  "svg",
+                                  {
+                                    width: "14",
+                                    height: "14",
+                                    viewBox: "0 0 16 16",
+                                    fill: "none",
+                                    style: {
+                                      flexShrink: 0,
+                                      color: isSelected ? "#0D99FF" : "#888"
+                                    },
+                                    children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                                      "path",
+                                      {
+                                        d: "M5 2V14M11 2V14M2 5H14M2 11H14",
+                                        stroke: "currentColor",
+                                        strokeWidth: "1.2",
+                                        strokeLinecap: "round"
+                                      }
+                                    )
+                                  }
+                                ),
+                                /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                                  "span",
+                                  {
+                                    style: {
+                                      fontSize: 11,
+                                      fontWeight: isSelected ? 500 : 400,
+                                      color: isSelected ? "#ffffff" : "#d4d4d4",
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      letterSpacing: 0
+                                    },
+                                    title: frame.name,
+                                    children: frame.name
+                                  }
+                                )
+                              ]
+                            }
+                          ),
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                            "div",
+                            {
+                              style: {
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                flexShrink: 0
+                              },
+                              children: [
+                                /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                                  "span",
+                                  {
+                                    style: {
+                                      fontSize: 10,
+                                      color: isSelected ? "#a0d1ff" : "#888",
+                                      background: "rgba(255, 255, 255, 0.06)",
+                                      padding: "2px 6px",
+                                      borderRadius: 4,
+                                      letterSpacing: 0
+                                    },
+                                    children: [
+                                      frame.width,
+                                      " \xD7 ",
+                                      frame.height
+                                    ]
+                                  }
+                                ),
+                                Boolean(frame.cornerRadius) && /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                                  "span",
+                                  {
+                                    style: {
+                                      fontSize: 9,
+                                      color: "#666",
+                                      letterSpacing: 0
+                                    },
+                                    children: [
+                                      "r:",
+                                      frame.cornerRadius
+                                    ]
+                                  }
+                                )
+                              ]
+                            }
+                          )
+                        ]
+                      },
+                      frame.id
+                    );
+                  }) })
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                "div",
+                {
+                  style: {
+                    padding: "8px 12px",
+                    borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+                    background: "rgba(0, 0, 0, 0.1)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6
+                  },
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                      "label",
+                      {
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: 11,
+                          color: "#bbb",
+                          cursor: "pointer",
+                          userSelect: "none",
+                          letterSpacing: 0
+                        },
+                        children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                            "input",
+                            {
+                              type: "checkbox",
+                              checked: saveAsPreset,
+                              onChange: (e) => setSaveAsPreset(e.target.checked),
+                              style: {
+                                accentColor: "#0D99FF",
+                                cursor: "pointer"
+                              }
+                            }
+                          ),
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { children: "\uC0AC\uC774\uC988 \uD504\uB9AC\uC14B\uC73C\uB85C \uC800\uC7A5 (Save to presets)" })
+                        ]
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                      "label",
+                      {
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: 11,
+                          color: "#bbb",
+                          cursor: "pointer",
+                          userSelect: "none",
+                          letterSpacing: 0
+                        },
+                        children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                            "input",
+                            {
+                              type: "checkbox",
+                              checked: linkToFrame,
+                              onChange: (e) => setLinkToFrame(e.target.checked),
+                              style: {
+                                accentColor: "#0D99FF",
+                                cursor: "pointer"
+                              }
+                            }
+                          ),
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { children: "\uD53C\uADF8\uB9C8 \uB9C1\uD06C \uC5F0\uB3D9 (Link to frame)" })
+                        ]
+                      }
+                    )
+                  ]
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+                "div",
+                {
+                  style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: 8,
+                    padding: "10px 12px",
+                    borderTop: "1px solid rgba(255, 255, 255, 0.08)"
+                  },
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-phase-modal-cancel",
+                        onClick: onClose,
+                        style: {
+                          height: 28,
+                          padding: "0 12px",
+                          fontSize: 11,
+                          letterSpacing: 0
+                        },
+                        children: "Cancel"
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-phase-modal-save",
+                        disabled: !selectedFrame,
+                        onClick: handleApply,
+                        style: {
+                          height: 28,
+                          padding: "0 14px",
+                          fontSize: 11,
+                          background: selectedFrame ? "#0D99FF" : "rgba(255, 255, 255, 0.1)",
+                          color: selectedFrame ? "#ffffff" : "#666",
+                          cursor: selectedFrame ? "pointer" : "default",
+                          border: "none",
+                          borderRadius: 6,
+                          fontWeight: 500,
+                          letterSpacing: 0
+                        },
+                        children: "Select"
+                      }
+                    )
+                  ]
+                }
+              )
+            ]
+          }
+        )
+      }
+    );
+  }
+
+  // src/ui/components/modals/StyleModal.tsx
+  var import_react18 = __toESM(require_react());
+  var import_jsx_runtime24 = __toESM(require_jsx_runtime());
+  var CLOSE_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+    "path",
+    {
+      d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
+      fill: "currentColor"
+    }
+  ) });
+  var PALETTE_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+    "path",
+    {
+      d: "M8 1.5C4.41 1.5 1.5 4.41 1.5 8C1.5 11.59 4.41 14.5 8 14.5C8.69 14.5 9.25 13.94 9.25 13.25C9.25 12.93 9.12 12.64 8.91 12.43C8.7 12.22 8.57 11.93 8.57 11.61C8.57 10.92 9.13 10.36 9.82 10.36H11.25C13.04 10.36 14.5 8.9 14.5 7.11C14.5 4.02 11.59 1.5 8 1.5ZM4.25 8C3.7 8 3.25 7.55 3.25 7C3.25 6.45 3.7 6 4.25 6C4.8 6 5.25 6.45 5.25 7C5.25 7.55 4.8 8 4.25 8ZM6.25 5C5.7 5 5.25 4.55 5.25 4C5.25 3.45 5.7 3 6.25 3C6.8 3 7.25 3.45 7.25 4C7.25 4.55 6.8 5 6.25 5ZM9.75 5C9.2 5 8.75 4.55 8.75 4C8.75 3.45 9.2 3 9.75 3C10.3 3 10.75 3.45 10.75 4C10.75 4.55 10.3 5 9.75 5ZM11.75 8C11.2 8 10.75 7.55 10.75 7C10.75 6.45 11.2 6 11.75 6C12.3 6 12.75 6.45 12.75 7C12.75 7.55 12.3 8 11.75 8Z",
+      fill: "currentColor"
+    }
+  ) });
+  var STROKE_ICON_SVG = /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+    "path",
+    {
+      d: "M2.5 4.5H13.5M2.5 8H13.5M2.5 11.5H13.5",
+      stroke: "currentColor",
+      strokeWidth: "1.2",
+      strokeLinecap: "round"
+    }
+  ) });
+  function hexToHsv2(hex) {
+    let clean = hex.replace("#", "").trim();
+    if (clean.length === 3) {
+      clean = clean.split("").map((c) => c + c).join("");
+    }
+    const r = (parseInt(clean.substring(0, 2), 16) || 0) / 255;
+    const g = (parseInt(clean.substring(2, 4), 16) || 0) / 255;
+    const b = (parseInt(clean.substring(4, 6), 16) || 0) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const d = max - min;
+    let h = 0;
+    const s = max === 0 ? 0 : d / max;
+    const v = max;
+    if (max !== min) {
+      switch (max) {
+        case r:
+          h = (g - b) / d + (g < b ? 6 : 0);
+          break;
+        case g:
+          h = (b - r) / d + 2;
+          break;
+        case b:
+          h = (r - g) / d + 4;
+          break;
+      }
+      h /= 6;
+    }
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      v: Math.round(v * 100)
+    };
+  }
+  function hsvToHex2(h, s, v) {
+    const sNorm = Math.max(0, Math.min(100, s)) / 100;
+    const vNorm = Math.max(0, Math.min(100, v)) / 100;
+    const c = vNorm * sNorm;
+    const x = c * (1 - Math.abs(h / 60 % 2 - 1));
+    const m = vNorm - c;
+    let r = 0, g = 0, b = 0;
+    if (h >= 0 && h < 60) {
+      r = c;
+      g = x;
+      b = 0;
+    } else if (h >= 60 && h < 120) {
+      r = x;
+      g = c;
+      b = 0;
+    } else if (h >= 120 && h < 180) {
+      r = 0;
+      g = c;
+      b = x;
+    } else if (h >= 180 && h < 240) {
+      r = 0;
+      g = x;
+      b = c;
+    } else if (h >= 240 && h < 300) {
+      r = x;
+      g = 0;
+      b = c;
+    } else if (h >= 300 && h <= 360) {
+      r = c;
+      g = 0;
+      b = x;
+    }
+    const rHex = Math.round((r + m) * 255).toString(16).padStart(2, "0");
+    const gHex = Math.round((g + m) * 255).toString(16).padStart(2, "0");
+    const bHex = Math.round((b + m) * 255).toString(16).padStart(2, "0");
+    return `${rHex}${gHex}${bHex}`.toUpperCase();
+  }
+  function getHueSliderPercent2(h) {
+    if (h >= 350 || h <= 5) return 0;
+    return h / 360 * 100;
+  }
+  function StyleModal({ onClose, initialColor }) {
+    const {
+      uiState,
+      setUIState,
+      setLastNodeConfig,
+      applyCurrentNodeState,
+      addStylePreset,
+      showToast,
+      selectedNodes
+    } = useApp();
+    const resolvedColor = (initialColor || uiState.selectedColor || "#EA2039").replace("#", "").trim().toUpperCase();
+    const validFill = resolvedColor.length === 6 ? resolvedColor : "EA2039";
+    const [fillHex, setFillHex] = (0, import_react18.useState)(validFill);
+    const [fillHsv, setFillHsv] = (0, import_react18.useState)(() => hexToHsv2(validFill));
+    const [strokeHex, setStrokeHex] = (0, import_react18.useState)(validFill);
+    const [strokeHsv, setStrokeHsv] = (0, import_react18.useState)(() => hexToHsv2(validFill));
+    const [strokeWeight, setStrokeWeight] = (0, import_react18.useState)(0);
+    const [activePicker, setActivePicker] = (0, import_react18.useState)("fill");
+    const hueBarRef = (0, import_react18.useRef)(null);
+    const satValRef = (0, import_react18.useRef)(null);
+    function handleHexChange(type, value) {
+      const clean = value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6).toUpperCase();
+      if (type === "fill") {
+        setFillHex(clean);
+        if (clean.length === 6) {
+          setFillHsv(hexToHsv2(clean));
+        }
+      } else {
+        setStrokeHex(clean);
+        if (clean.length === 6) {
+          setStrokeHsv(hexToHsv2(clean));
+        }
+      }
+    }
+    const handleHueDrag = (0, import_react18.useCallback)(
+      (e) => {
+        if (!hueBarRef.current || !activePicker) return;
+        const rect = hueBarRef.current.getBoundingClientRect();
+        const clientX = "clientX" in e ? e.clientX : e.clientX;
+        const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const h = Math.round(percent * 360);
+        if (activePicker === "fill") {
+          const nextHsv = { ...fillHsv, h };
+          setFillHsv(nextHsv);
+          setFillHex(hsvToHex2(nextHsv.h, nextHsv.s, nextHsv.v));
+        } else {
+          const nextHsv = { ...strokeHsv, h };
+          setStrokeHsv(nextHsv);
+          setStrokeHex(hsvToHex2(nextHsv.h, nextHsv.s, nextHsv.v));
+        }
+      },
+      [activePicker, fillHsv, strokeHsv]
+    );
+    const startHueDrag = (e) => {
+      e.preventDefault();
+      handleHueDrag(e);
+      const onMove = (ev) => handleHueDrag(ev);
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    };
+    const handleSatValDrag = (0, import_react18.useCallback)(
+      (e) => {
+        if (!satValRef.current || !activePicker) return;
+        const rect = satValRef.current.getBoundingClientRect();
+        const clientX = "clientX" in e ? e.clientX : e.clientX;
+        const clientY = "clientY" in e ? e.clientY : e.clientY;
+        const s = Math.round(Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * 100);
+        const v = Math.round(Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height)) * 100);
+        if (activePicker === "fill") {
+          const nextHsv = { ...fillHsv, s, v };
+          setFillHsv(nextHsv);
+          setFillHex(hsvToHex2(nextHsv.h, nextHsv.s, nextHsv.v));
+        } else {
+          const nextHsv = { ...strokeHsv, s, v };
+          setStrokeHsv(nextHsv);
+          setStrokeHex(hsvToHex2(nextHsv.h, nextHsv.s, nextHsv.v));
+        }
+      },
+      [activePicker, fillHsv, strokeHsv]
+    );
+    const startSatValDrag = (e) => {
+      e.preventDefault();
+      handleSatValDrag(e);
+      const onMove = (ev) => handleSatValDrag(ev);
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    };
+    function handleSave() {
+      const finalFillColor = `#${fillHex.padStart(6, "0")}`;
+      const finalStrokeColor = `#${strokeHex.padStart(6, "0")}`;
+      const finalStrokeWeight = Math.max(0, strokeWeight);
+      addStylePreset({
+        fillColor: finalFillColor,
+        strokeWeight: finalStrokeWeight,
+        strokeColor: finalStrokeColor
+      });
+      if (selectedNodes && selectedNodes.length > 0) {
+        selectedNodes.forEach((node) => {
+          parent.postMessage(
             {
-              type: "text",
-              className: "phase-text-input",
-              placeholder: "Custom",
-              value: name,
-              onChange: (e) => setName(e.target.value)
-            }
-          ) })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "phase-field-group", style: { paddingBottom: 0 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "phase-field-label", children: "Size" }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "phase-input-row-wrapper", style: { gap: "6px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "prefix-input-box", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "prefix-label", children: "W" }),
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
-                "input",
-                {
-                  type: "number",
-                  className: "prefix-input",
-                  value: w,
-                  min: 20,
-                  onChange: (e) => setW(parseInt(e.target.value, 10) || 375)
+              pluginMessage: {
+                type: "UPDATE_FLOW_NODE",
+                payload: {
+                  nodeId: node.id,
+                  colorHex: finalFillColor,
+                  strokeColor: finalStrokeColor,
+                  strokeWeight: finalStrokeWeight
                 }
-              )
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "prefix-input-box", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "prefix-label", children: "H" }),
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
-                "input",
-                {
-                  type: "number",
-                  className: "prefix-input",
-                  value: h,
-                  min: 20,
-                  onChange: (e) => setH(parseInt(e.target.value, 10) || 812)
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "icon-input-box", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "icon-input-slot", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("path", { d: "M4 12V6C4 4.89543 4.89543 4 6 4H12", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" }) }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
-              "input",
-              {
-                type: "number",
-                className: "prefix-input",
-                value: radius,
-                min: 0,
-                max: 100,
-                onChange: (e) => setRadius(parseInt(e.target.value, 10) || 0)
               }
-            )
-          ] }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-dropdown-box", onClick: () => setSizeMode(sizeMode === "fixed" ? "hug" : "fixed"), children: [
-            /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-dropdown-left", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("path", { d: "M5 3H11M8 3V13M5 13H11", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { children: sizeMode === "fixed" ? "Fixed height" : "Hug contents" })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "8", height: "6", viewBox: "0 0 8 6", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("path", { d: "M1.5 2L4 4.5L6.5 2", stroke: "currentColor", strokeWidth: "1.2", strokeLinecap: "round", strokeLinejoin: "round" }) })
-          ] }) })
-        ] })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-modal-footer", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("button", { className: "btn-phase-modal-cancel", onClick: onClose, children: "Cancel" }),
-        /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("button", { className: "btn-phase-modal-save", onClick: handleSave, children: "Save" })
-      ] })
-    ] }) });
+            },
+            "*"
+          );
+        });
+      }
+      onClose();
+    }
+    const currentHsv = activePicker === "stroke" ? strokeHsv : fillHsv;
+    const currentHex = activePicker === "stroke" ? strokeHex : fillHex;
+    return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+      "div",
+      {
+        id: "modal-backdrop",
+        className: "popover-backdrop",
+        style: { display: "flex" },
+        onClick: (e) => {
+          if (e.target === e.currentTarget) onClose();
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)(
+          "div",
+          {
+            id: "modal-add-style",
+            className: "style-modal-card",
+            style: { display: "flex" },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { className: "style-modal-title", children: "Add Style" }),
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "style-modal-close-btn",
+                    onClick: onClose,
+                    title: "Close",
+                    children: CLOSE_SVG2
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)(
+                    "div",
+                    {
+                      className: "style-section-header",
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        height: 24,
+                        marginBottom: 6
+                      },
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Fill" }),
+                        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            className: `style-palette-btn${activePicker === "fill" ? " active" : ""}`,
+                            onClick: () => setActivePicker(activePicker === "fill" ? null : "fill"),
+                            title: "Toggle color picker",
+                            style: {
+                              background: "transparent",
+                              border: "none",
+                              color: activePicker === "fill" ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)",
+                              cursor: "pointer",
+                              padding: 2,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: 4,
+                              transition: "color 0.15s ease, background 0.15s ease"
+                            },
+                            children: PALETTE_SVG2
+                          }
+                        )
+                      ]
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)(
+                    "div",
+                    {
+                      className: `style-color-box${activePicker === "fill" ? " active" : ""}`,
+                      onClick: () => setActivePicker("fill"),
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                          "div",
+                          {
+                            className: "style-color-chip",
+                            style: { background: `#${fillHex.padStart(6, "0")}` },
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              setActivePicker(activePicker === "fill" ? null : "fill");
+                            }
+                          }
+                        ),
+                        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                          "input",
+                          {
+                            type: "text",
+                            className: "style-color-hex-text",
+                            value: fillHex,
+                            maxLength: 6,
+                            onFocus: (e) => {
+                              setActivePicker("fill");
+                              e.currentTarget.select();
+                            },
+                            onChange: (e) => handleHexChange("fill", e.target.value),
+                            autoComplete: "off",
+                            spellCheck: false
+                          }
+                        )
+                      ]
+                    }
+                  ),
+                  activePicker === "fill" && /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { style: { marginTop: 10, animation: "modalFadeIn 0.12s ease-out" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                      "div",
+                      {
+                        ref: satValRef,
+                        className: "style-sat-val-picker",
+                        onMouseDown: startSatValDrag,
+                        style: {
+                          backgroundColor: `hsl(${fillHsv.h}, 100%, 50%)`,
+                          marginBottom: 12
+                        },
+                        children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                          "div",
+                          {
+                            className: "style-sat-val-thumb",
+                            style: {
+                              left: `${fillHsv.s}%`,
+                              top: `${100 - fillHsv.v}%`
+                            }
+                          }
+                        )
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                      "div",
+                      {
+                        ref: hueBarRef,
+                        className: "style-hue-slider",
+                        style: { margin: 0 },
+                        onMouseDown: startHueDrag,
+                        children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                          "div",
+                          {
+                            className: "style-hue-thumb",
+                            style: {
+                              left: `${getHueSliderPercent2(fillHsv.h)}%`,
+                              background: `hsl(${fillHsv.h}, 100%, 50%)`
+                            }
+                          }
+                        )
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("div", { className: "style-divider", style: { margin: "12px 0" } }),
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)(
+                    "div",
+                    {
+                      className: "style-section-header",
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        height: 24,
+                        marginBottom: 6
+                      },
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Stroke" }),
+                        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            className: `style-palette-btn${activePicker === "stroke" ? " active" : ""}`,
+                            onClick: () => setActivePicker(activePicker === "stroke" ? null : "stroke"),
+                            title: "Toggle color picker",
+                            style: {
+                              background: "transparent",
+                              border: "none",
+                              color: activePicker === "stroke" ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)",
+                              cursor: "pointer",
+                              padding: 2,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: 4,
+                              transition: "color 0.15s ease, background 0.15s ease"
+                            },
+                            children: PALETTE_SVG2
+                          }
+                        )
+                      ]
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-control-row", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)(
+                      "div",
+                      {
+                        className: `style-color-box${activePicker === "stroke" ? " active" : ""}`,
+                        onClick: () => setActivePicker("stroke"),
+                        children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                            "div",
+                            {
+                              className: "style-color-chip",
+                              style: { background: `#${strokeHex.padStart(6, "0")}` },
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                setActivePicker(activePicker === "stroke" ? null : "stroke");
+                              }
+                            }
+                          ),
+                          /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                            "input",
+                            {
+                              type: "text",
+                              className: "style-color-hex-text",
+                              value: strokeHex,
+                              maxLength: 6,
+                              onFocus: (e) => {
+                                setActivePicker("stroke");
+                                e.currentTarget.select();
+                              },
+                              onChange: (e) => handleHexChange("stroke", e.target.value),
+                              autoComplete: "off",
+                              spellCheck: false
+                            }
+                          )
+                        ]
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "stroke-width-box", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                        "span",
+                        {
+                          style: {
+                            width: 16,
+                            height: 16,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "rgba(255, 255, 255, 0.6)",
+                            marginRight: 4,
+                            flexShrink: 0
+                          },
+                          children: STROKE_ICON_SVG
+                        }
+                      ),
+                      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                        "input",
+                        {
+                          type: "number",
+                          className: "prefix-input",
+                          min: 0,
+                          max: 50,
+                          value: strokeWeight,
+                          onChange: (e) => setStrokeWeight(parseInt(e.target.value, 10) || 0),
+                          onKeyDown: (e) => e.key === "Enter" && handleSave(),
+                          style: {
+                            width: "100%",
+                            textAlign: "left",
+                            letterSpacing: 0
+                          }
+                        }
+                      )
+                    ] })
+                  ] }),
+                  activePicker === "stroke" && /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { style: { marginTop: 10, animation: "modalFadeIn 0.12s ease-out" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                      "div",
+                      {
+                        ref: satValRef,
+                        className: "style-sat-val-picker",
+                        onMouseDown: startSatValDrag,
+                        style: {
+                          backgroundColor: `hsl(${strokeHsv.h}, 100%, 50%)`,
+                          marginBottom: 12
+                        },
+                        children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                          "div",
+                          {
+                            className: "style-sat-val-thumb",
+                            style: {
+                              left: `${strokeHsv.s}%`,
+                              top: `${100 - strokeHsv.v}%`
+                            }
+                          }
+                        )
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                      "div",
+                      {
+                        ref: hueBarRef,
+                        className: "style-hue-slider",
+                        style: { margin: 0 },
+                        onMouseDown: startHueDrag,
+                        children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                          "div",
+                          {
+                            className: "style-hue-thumb",
+                            style: {
+                              left: `${getHueSliderPercent2(strokeHsv.h)}%`,
+                              background: `hsl(${strokeHsv.h}, 100%, 50%)`
+                            }
+                          }
+                        )
+                      }
+                    )
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-modal-footer", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn-phase-modal-cancel",
+                    onClick: onClose,
+                    children: "Cancel"
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn-phase-modal-save",
+                    onClick: handleSave,
+                    children: "Save"
+                  }
+                )
+              ] })
+            ]
+          }
+        )
+      }
+    );
   }
 
   // src/ui/App.tsx
-  var import_jsx_runtime23 = __toESM(require_jsx_runtime());
+  var import_jsx_runtime25 = __toESM(require_jsx_runtime());
   var TABS = [
     { id: "node", label: "Node" },
     { id: "appearance", label: "Appearance" },
@@ -29498,18 +31685,18 @@
       showToast,
       autoResizeWindow
     } = useApp();
-    const [phases, setPhases] = (0, import_react16.useState)([
+    const [phases, setPhases] = (0, import_react19.useState)([
       { id: "phase-1", name: "Phase 1", color: "#EA2039" },
       { id: "phase-2", name: "Phase 2", color: "#8638E5" }
     ]);
-    const [editingPhase, setEditingPhase] = (0, import_react16.useState)(null);
+    const [editingPhase, setEditingPhase] = (0, import_react19.useState)(null);
     const nodeCount = selectedNodes.length;
     const allConnectors = nodeCount > 0 && selectedNodes.every((n) => n && n.isConnector);
     const isSingleConn = nodeCount === 1 && allConnectors;
     const isMultiConn = nodeCount >= 2 && allConnectors;
     const isConnSel = isSingleConn || isMultiConn;
     const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
-    (0, import_react16.useEffect)(() => {
+    (0, import_react19.useEffect)(() => {
       const tabNode = document.getElementById("tab-btn-node");
       const tabAppearance = document.getElementById("tab-btn-appearance");
       const tabConnection = document.getElementById("tab-btn-connection");
@@ -29529,7 +31716,7 @@
         tabConnection?.classList.remove("disabled");
       }
     }, [isConnSel, nodeCount, currentTab, setCurrentTab]);
-    (0, import_react16.useEffect)(() => {
+    (0, import_react19.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
     function switchTab(tabId) {
@@ -29539,7 +31726,7 @@
     }
     function handleRootClick(e) {
       const target = e.target;
-      const isPopoverTrigger = target.closest("#btn-phase-select") || target.closest("#btn-phase-more") || target.closest("#btn-size-mode-dropdown") || target.closest("#popover-phase") || target.closest("#popover-context") || target.closest("#popover-size-mode") || target.closest(".terminal-dropdown-wrap");
+      const isPopoverTrigger = target.closest("#btn-phase-select") || target.closest("#btn-phase-more") || target.closest("#btn-size-more") || target.closest("#btn-style-more") || target.closest("#btn-size-mode-dropdown") || target.closest("#popover-phase") || target.closest("#popover-context") || target.closest("#popover-size-mode") || target.closest(".terminal-dropdown-wrap");
       if (!isPopoverTrigger) {
         closeAllPopovers();
       }
@@ -29588,7 +31775,7 @@
     }
     function renderTitleBanner() {
       if (isSingleConn) {
-        return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
           "input",
           {
             type: "text",
@@ -29612,9 +31799,9 @@
         } else {
           selText = `${nodeCount} objects selected`;
         }
-        return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { id: "multi-selection-text", children: selText }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("span", { id: "multi-selection-text", children: selText }) });
       }
-      return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
         "input",
         {
           type: "text",
@@ -29629,9 +31816,9 @@
         }
       ) });
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("div", { className: "title-banner", children: renderTitleBanner() }),
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "title-banner", children: renderTitleBanner() }),
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
         "button",
         {
           id: `tab-btn-${tab.id}`,
@@ -29642,37 +31829,37 @@
         },
         tab.id
       )) }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("hr", { className: "section-divider" }),
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("main", { className: "tab-panels", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("hr", { className: "section-divider" }),
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("main", { className: "tab-panels", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
           "section",
           {
             id: "panel-node",
             className: "tab-panel",
             style: { display: currentTab === "node" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(NodePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(NodePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
           "section",
           {
             id: "panel-appearance",
             className: "tab-panel",
             style: { display: currentTab === "appearance" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(AppearancePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(AppearancePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
           "section",
           {
             id: "panel-connection",
             className: "tab-panel",
             style: { display: currentTab === "connection" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(ConnectionPanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(ConnectionPanel, {})
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
         "button",
         {
           id: "btn-main-cta",
@@ -29682,9 +31869,9 @@
           children: ctaLabel
         }
       ) }),
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(PhasePopover, { phases, onSelectPhase: handleSelectPhase }),
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
-      activeModal === "phase" && /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(PhasePopover, { phases, onSelectPhase: handleSelectPhase }),
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
+      activeModal === "phase" && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
         PhaseModal,
         {
           editingPhase,
@@ -29695,42 +31882,44 @@
           }
         }
       ),
-      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
         SizeModal,
         {
           mode: "add",
-          onSave: (preset) => {
-            showToast(`"${preset.name}" \uC0AC\uC774\uC988\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
-            const wEl = document.getElementById("input-size-w");
-            const hEl = document.getElementById("input-size-h");
-            if (wEl) wEl.value = String(preset.w);
-            if (hEl) hEl.value = String(preset.h);
-            applyCurrentNodeState();
-          },
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
         SizeModal,
         {
           mode: "edit",
-          onSave: (preset) => {
-            showToast(`"${preset.name}" \uC0AC\uC774\uC988\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
-          },
           onClose: () => setActiveModal("none")
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(FigmaTooltip, {})
+      activeModal === "figma-design-picker" && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+        FigmaDesignPickerModal,
+        {
+          onClose: () => setActiveModal("none")
+        }
+      ),
+      activeModal === "add-style" && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+        StyleModal,
+        {
+          initialColor: uiState.selectedColor,
+          onClose: () => setActiveModal("none")
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(FigmaTooltip, {})
     ] });
   }
 
   // src/ui/index.tsx
-  var import_jsx_runtime24 = __toESM(require_jsx_runtime());
+  var import_jsx_runtime26 = __toESM(require_jsx_runtime());
   var container = document.getElementById("root");
   if (!container) throw new Error("#root not found");
   var root = (0, import_client.createRoot)(container);
   root.render(
-    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(App, {}) })
+    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(App, {}) })
   );
 })();
 /*! Bundled license information:

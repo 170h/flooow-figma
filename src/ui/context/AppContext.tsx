@@ -11,6 +11,44 @@ import React, {
 // 타입 정의
 // ============================================================
 
+export interface SizePreset {
+  id: string;
+  name: string;
+  w: number;
+  h: number;
+  radius?: number;
+  sizeMode?: 'fixed' | 'hug';
+  isDefault?: boolean;
+}
+
+export const DEFAULT_SIZE_PRESETS: SizePreset[] = [
+  { id: 'default', name: 'Default', w: 250, h: 90, radius: 0, sizeMode: 'fixed', isDefault: true },
+  { id: 'square', name: 'Square', w: 180, h: 180, radius: 0, sizeMode: 'fixed', isDefault: true },
+  { id: 'web', name: 'Web', w: 320, h: 180, radius: 0, sizeMode: 'fixed', isDefault: true },
+  { id: 'mobile', name: 'Mobile', w: 160, h: 280, radius: 0, sizeMode: 'fixed', isDefault: true },
+];
+
+export interface StylePreset {
+  id: string;
+  name?: string;
+  fillColor: string;
+  strokeWeight: number;
+  strokeColor: string;
+  isDefault?: boolean;
+}
+
+export const DEFAULT_STYLE_PRESETS: StylePreset[] = [
+  { id: 'style-white', name: 'White', fillColor: '#ffffff', strokeWeight: 1.5, strokeColor: '#000000', isDefault: true },
+  { id: 'style-black', name: 'Black', fillColor: '#000000', strokeWeight: 0, strokeColor: '#000000', isDefault: true },
+  { id: 'style-red-1', name: 'Red 1', fillColor: '#EA2039', strokeWeight: 0, strokeColor: '#000000' },
+  { id: 'style-red-2', name: 'Red 2', fillColor: '#EB4C46', strokeWeight: 0, strokeColor: '#000000' },
+  { id: 'style-coral-1', name: 'Coral 1', fillColor: '#E03E3E', strokeWeight: 0, strokeColor: '#000000' },
+  { id: 'style-coral-2', name: 'Coral 2', fillColor: '#E05638', strokeWeight: 0, strokeColor: '#000000' },
+  { id: 'style-orange', name: 'Orange', fillColor: '#DF6246', strokeWeight: 0, strokeColor: '#000000' },
+  { id: 'style-pink', name: 'Pink', fillColor: '#EB5757', strokeWeight: 0, strokeColor: '#000000' },
+  { id: 'style-purple', name: 'Purple', fillColor: '#8638E5', strokeWeight: 0, strokeColor: '#000000' },
+];
+
 export interface NodeInfo {
   id: string;
   title?: string;
@@ -38,6 +76,9 @@ export interface NodeInfo {
   badgeShape?: string;
   elevationOn?: boolean;
   elevation?: number;
+  fillColorHex?: string;
+  strokeColorHex?: string;
+  strokeWeight?: number;
 }
 
 export interface LastNodeConfig {
@@ -50,6 +91,8 @@ export interface LastNodeConfig {
   cornerRadius: number;
   sizeMode: string;
   color: string;
+  strokeWeight?: number;
+  strokeColor?: string;
   elevationOn: boolean;
   elevation: number;
   statusOn: boolean;
@@ -71,6 +114,9 @@ export interface LastConnectorConfig {
 
 export interface UIState {
   selectedColor: string;
+  selectedStrokeWeight?: number;
+  selectedStrokeColor?: string;
+  selectedStylePresetId?: string | null;
   selectedElevation: number;
   selectedStatus: string;
   selectedBadgeCorner: string;
@@ -83,8 +129,10 @@ export interface UIState {
   selectedNodeType: string;
 }
 
+import { DesignFrameItem } from '../../types';
+
 // 모달 타입
-export type ModalType = 'none' | 'phase' | 'add-size' | 'edit-size' | 'add-style' | 'confirmation' | 'delete';
+export type ModalType = 'none' | 'phase' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'confirmation' | 'delete';
 
 export interface AppContextValue {
   // 선택 상태
@@ -119,13 +167,39 @@ export interface AppContextValue {
   setPhasePopoverPos: (pos: { top: number; left: number }) => void;
   contextMenuPos: { top: number; left: number };
   setContextMenuPos: (pos: { top: number; left: number }) => void;
+  contextMenuTarget: 'phase' | 'size' | 'style' | null;
+  setContextMenuTarget: (target: 'phase' | 'size' | 'style' | null) => void;
+  selectedSizePresetId: string | null;
+  setSelectedSizePresetId: (id: string | null) => void;
+  selectedStylePresetId: string | null;
+  setSelectedStylePresetId: (id: string | null) => void;
 
   // Phase 편집 상태
   phaseModalEditingId: string | null;
   setPhaseModalEditingId: (id: string | null) => void;
 
+  // 피그마 디자인 프레임 목록
+  designFrames: DesignFrameItem[];
+  setDesignFrames: React.Dispatch<React.SetStateAction<DesignFrameItem[]>>;
+  loadDesignFrames: () => void;
+
   // 핵심 함수들
-  applyCurrentNodeState: (overrideSizeMode?: string) => void;
+  sizePresets: SizePreset[];
+  addSizePreset: (preset: Omit<SizePreset, 'id'>) => void;
+  updateSizePreset: (id: string, preset: Partial<SizePreset>) => void;
+  deleteSizePreset: (id: string) => void;
+  stylePresets: StylePreset[];
+  addStylePreset: (preset: Omit<StylePreset, 'id'>) => void;
+  updateStylePreset: (id: string, preset: Partial<StylePreset>) => void;
+  deleteStylePreset: (id: string) => void;
+  applyCurrentNodeState: (
+    overrideSizeMode?: string,
+    styleOverrides?: {
+      colorHex?: string;
+      strokeWeight?: number;
+      strokeColor?: string;
+    }
+  ) => void;
   applyStatusToNode: (status?: string) => void;
   applyElevationToNodes: (level: number | null) => void;
   applyStepBadges: (startNumber?: number, corner?: string, shape?: string) => void;
@@ -218,7 +292,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [sizeModeDropdownOpen, setSizeModeDropdownOpen] = useState(false);
   const [phasePopoverPos, setPhasePopoverPos] = useState({ top: 0, left: 0 });
   const [contextMenuPos, setContextMenuPos] = useState({ top: 0, left: 0 });
+  const [contextMenuTarget, setContextMenuTarget] = useState<'phase' | 'size' | 'style' | null>(null);
+  const [selectedSizePresetId, setSelectedSizePresetId] = useState<string | null>('default');
+  const [selectedStylePresetId, setSelectedStylePresetId] = useState<string | null>('style-white');
   const [phaseModalEditingId, setPhaseModalEditingId] = useState<string | null>(null);
+  const [designFrames, setDesignFrames] = useState<DesignFrameItem[]>([]);
+
+  const loadDesignFrames = useCallback(() => {
+    parent.postMessage({ pluginMessage: { type: 'GET_DESIGN_FRAMES' } }, '*');
+  }, []);
+
+  // 사이즈 프리셋 상태 관리 (기본값 및 로컬스토리지 영속화)
+  const [sizePresets, setSizePresets] = useState<SizePreset[]>(() => {
+    try {
+      const saved = localStorage.getItem('ui_flow_size_presets');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return DEFAULT_SIZE_PRESETS;
+  });
+
+  const savePresets = useCallback((next: SizePreset[]) => {
+    setSizePresets(next);
+    try {
+      localStorage.setItem('ui_flow_size_presets', JSON.stringify(next));
+    } catch (_) {}
+  }, []);
+
+  // 스타일 프리셋 상태 관리 (보더 두께, 보더 컬러, 채움 컬러 영속화)
+  const [stylePresets, setStylePresets] = useState<StylePreset[]>(() => {
+    try {
+      const saved = localStorage.getItem('ui_flow_style_presets');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return DEFAULT_STYLE_PRESETS;
+  });
+
+  const saveStylePresets = useCallback((next: StylePreset[]) => {
+    setStylePresets(next);
+    try {
+      localStorage.setItem('ui_flow_style_presets', JSON.stringify(next));
+    } catch (_) {}
+  }, []);
 
   // ref로 최신 상태 참조 (콜백에서 stale closure 방지)
   const selectedNodesRef = useRef(selectedNodes);
@@ -287,7 +407,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ---- 핵심 피그마 통신 함수들 ----
 
-  const applyCurrentNodeState = useCallback((overrideSizeMode?: string) => {
+  const applyCurrentNodeState = useCallback((
+    overrideSizeMode?: string,
+    styleOverrides?: {
+      colorHex?: string;
+      strokeWeight?: number;
+      strokeColor?: string;
+    }
+  ) => {
     const nodes = selectedNodesRef.current;
     if (!nodes || nodes.length === 0) return;
 
@@ -307,10 +434,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const figmaUrl = urlEl?.value.trim() || '';
 
     const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
+    const finalColor = styleOverrides?.colorHex ?? selectedColor;
+    const finalStrokeWeight = styleOverrides?.strokeWeight;
+    const finalStrokeColor = styleOverrides?.strokeColor;
 
     const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || 'fixed';
 
-    setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: selectedColor, elevation: selectedElevation, singleLinkUrl: figmaUrl, sizeMode });
+    setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: finalColor, elevation: selectedElevation, singleLinkUrl: figmaUrl, sizeMode });
 
     nodes.forEach(node => {
       parent.postMessage({
@@ -324,7 +454,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             theme: 'light',
             figmaLink: figmaUrl,
             nodeType: selectedNodeType,
-            colorHex: selectedColor,
+            colorHex: finalColor,
+            strokeWeight: finalStrokeWeight,
+            strokeColor: finalStrokeColor,
             elevation: selectedElevation,
             sizeMode,
           }
@@ -332,6 +464,101 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }, '*');
     });
   }, [setLastNodeConfig]);
+
+  const addSizePreset = useCallback((preset: Omit<SizePreset, 'id'>) => {
+    const newId = `size-${Date.now()}`;
+    const newPreset: SizePreset = {
+      ...preset,
+      id: newId,
+    };
+    const next = [...sizePresets, newPreset];
+    savePresets(next);
+    setLastNodeConfig({
+      width: preset.w,
+      height: preset.h,
+      cornerRadius: preset.radius ?? 0,
+      sizeMode: preset.sizeMode || 'fixed',
+    });
+    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
+    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+    if (wEl) wEl.value = String(preset.w);
+    if (hEl) hEl.value = String(preset.h);
+    if (rEl) rEl.value = String(preset.radius ?? 0);
+    applyCurrentNodeState(preset.sizeMode);
+    showToast(`"${preset.name}" 사이즈가 추가되었습니다.`, 'success');
+  }, [sizePresets, savePresets, setLastNodeConfig, applyCurrentNodeState, showToast]);
+
+  const updateSizePreset = useCallback((id: string, partial: Partial<SizePreset>) => {
+    const next = sizePresets.map((p) => (p.id === id ? { ...p, ...partial } : p));
+    savePresets(next);
+    if (partial.w !== undefined || partial.h !== undefined) {
+      setLastNodeConfig({
+        width: partial.w,
+        height: partial.h,
+        cornerRadius: partial.radius,
+        sizeMode: partial.sizeMode,
+      });
+      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
+      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+      if (wEl && partial.w !== undefined) wEl.value = String(partial.w);
+      if (hEl && partial.h !== undefined) hEl.value = String(partial.h);
+      applyCurrentNodeState(partial.sizeMode);
+    }
+    showToast('사이즈가 업데이트되었습니다.', 'success');
+  }, [sizePresets, savePresets, setLastNodeConfig, applyCurrentNodeState, showToast]);
+
+  const deleteSizePreset = useCallback((id: string) => {
+    const target = sizePresets.find((p) => p.id === id);
+    const next = sizePresets.filter((p) => p.id !== id);
+    savePresets(next);
+    showToast(`"${target?.name || '사이즈'}" 프리셋이 삭제되었습니다.`, 'info');
+  }, [sizePresets, savePresets, showToast]);
+
+  const addStylePreset = useCallback((preset: Omit<StylePreset, 'id'>) => {
+    const newId = `style-${Date.now()}`;
+    const newPreset: StylePreset = {
+      ...preset,
+      id: newId,
+    };
+    const next = [...stylePresets, newPreset];
+    saveStylePresets(next);
+    setSelectedStylePresetId(newId);
+    setUIState({
+      selectedColor: preset.fillColor,
+      selectedStrokeWeight: preset.strokeWeight,
+      selectedStrokeColor: preset.strokeColor,
+      selectedStylePresetId: newId,
+    });
+    setLastNodeConfig({
+      color: preset.fillColor,
+      strokeWeight: preset.strokeWeight,
+      strokeColor: preset.strokeColor,
+    });
+    applyCurrentNodeState(undefined, {
+      colorHex: preset.fillColor,
+      strokeWeight: preset.strokeWeight,
+      strokeColor: preset.strokeColor,
+    });
+    showToast(`스타일이 추가되었습니다.`, 'success');
+  }, [stylePresets, saveStylePresets, setUIState, setLastNodeConfig, applyCurrentNodeState, showToast]);
+
+  const updateStylePreset = useCallback((id: string, partial: Partial<StylePreset>) => {
+    const next = stylePresets.map((p) => (p.id === id ? { ...p, ...partial } : p));
+    saveStylePresets(next);
+    showToast('스타일이 업데이트되었습니다.', 'success');
+  }, [stylePresets, saveStylePresets, showToast]);
+
+  const deleteStylePreset = useCallback((id: string) => {
+    const target = stylePresets.find((p) => p.id === id);
+    if (target?.isDefault || target?.id === 'style-white' || target?.id === 'style-black') {
+      showToast('기본 스타일은 삭제할 수 없습니다.', 'warning');
+      return;
+    }
+    const next = stylePresets.filter((p) => p.id !== id);
+    saveStylePresets(next);
+    showToast('스타일이 삭제되었습니다.', 'info');
+  }, [stylePresets, saveStylePresets, showToast]);
 
   const applyStatusToNode = useCallback((status?: string) => {
     const nodes = selectedNodesRef.current;
@@ -481,7 +708,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const desc = descEl?.value.trim() || '';
     const w = parseInt(wEl?.value || '250', 10) || 250;
     const h = parseInt(hEl?.value || '90', 10) || 90;
-    const radius = parseInt(rEl?.value || '0', 10) || 0;
+    let radius = parseInt(rEl?.value || '0', 10) || 0;
+    if (radius > 20) {
+      radius = 20;
+      if (rEl) rEl.value = '20';
+      showToast('최대값은 20입니다.', 'warning');
+    }
     const figmaUrl = urlEl?.value.trim() || '';
     const { selectedColor, selectedElevation, selectedNodeType, selectedStatus, selectedBadgeCorner, selectedBadgeShape } = uiStateRef.current;
 
@@ -566,14 +798,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const targetTab = lastNodeTabRef.current || 'node';
       setCurrentTab(targetTab);
 
-      // 선택된 노드의 엘리베이션 상태 동기화
+      // 선택된 노드의 엘리베이션 및 스타일(색상, 보더) 상태 동기화
       const flowNodes = nodes.filter(n => n && (n.isFlowNode || (!n.isConnector && n.flowNodeType)));
       if (flowNodes.length > 0) {
         const first = flowNodes[0];
         const eOn = Boolean(first.elevationOn);
         const eLevel = typeof first.elevation === 'number' ? first.elevation : 0;
-        setLastNodeConfig({ elevationOn: eOn, elevation: eLevel });
-        setUIState({ selectedElevation: eLevel });
+        const colorUpdates: Partial<UIState> = { selectedElevation: eLevel };
+        if (first.fillColorHex) {
+          colorUpdates.selectedColor = first.fillColorHex;
+          colorUpdates.selectedStrokeWeight = first.strokeWeight;
+          colorUpdates.selectedStrokeColor = first.strokeColorHex;
+          setLastNodeConfig({
+            elevationOn: eOn,
+            elevation: eLevel,
+            color: first.fillColorHex,
+            strokeWeight: first.strokeWeight,
+            strokeColor: first.strokeColorHex,
+          });
+        } else {
+          setLastNodeConfig({ elevationOn: eOn, elevation: eLevel });
+        }
+        setUIState(colorUpdates);
       }
     }
   }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState]);
@@ -602,8 +848,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPhasePopoverPos,
     contextMenuPos,
     setContextMenuPos,
+    contextMenuTarget,
+    setContextMenuTarget,
+    selectedSizePresetId,
+    setSelectedSizePresetId,
+    selectedStylePresetId,
+    setSelectedStylePresetId,
     phaseModalEditingId,
     setPhaseModalEditingId,
+    designFrames,
+    setDesignFrames,
+    loadDesignFrames,
+    sizePresets,
+    addSizePreset,
+    updateSizePreset,
+    deleteSizePreset,
+    stylePresets,
+    addStylePreset,
+    updateStylePreset,
+    deleteStylePreset,
     applyCurrentNodeState,
     applyStatusToNode,
     applyElevationToNodes,
