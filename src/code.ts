@@ -994,13 +994,21 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.maxHeight = null;
 
       if (isHug) {
-        // Hug contents: 너비만 고정, 높이는 자동
-        card.primaryAxisSizingMode = 'AUTO';
+        // Hug contents: 높이 자동, 너비만 고정
+        // resize()는 FIXED 크기를 강제하므로 사용 불가
+        // 너비는 counterAxisSizingMode=FIXED 후 직접 지정
         card.counterAxisSizingMode = 'FIXED';
-        card.resize(w, card.height); // 너비만 적용
+        card.primaryAxisSizingMode = 'AUTO'; // 높이 자동 확장
+        // 너비 변경 시에만 resize (height 인자는 현재값 유지 후 AUTO가 덮어씀)
+        if (card.width !== w) {
+          card.counterAxisSizingMode = 'FIXED';
+          card.resize(w, card.height);
+          card.primaryAxisSizingMode = 'AUTO';
+        }
         card.minWidth = w;
         card.maxWidth = w;
-        // 높이는 min/max 잠금 해제 유지 (콘텐츠에 맞게 자유 확장)
+        card.minHeight = null;
+        card.maxHeight = null;
       } else {
         // Fixed height: 너비·높이 모두 고정
         card.resize(w, h);

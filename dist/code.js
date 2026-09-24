@@ -1322,11 +1322,17 @@
         card.minHeight = null;
         card.maxHeight = null;
         if (isHug) {
-          card.primaryAxisSizingMode = "AUTO";
           card.counterAxisSizingMode = "FIXED";
-          card.resize(w, card.height);
+          card.primaryAxisSizingMode = "AUTO";
+          if (card.width !== w) {
+            card.counterAxisSizingMode = "FIXED";
+            card.resize(w, card.height);
+            card.primaryAxisSizingMode = "AUTO";
+          }
           card.minWidth = w;
           card.maxWidth = w;
+          card.minHeight = null;
+          card.maxHeight = null;
         } else {
           card.resize(w, h);
           card.primaryAxisSizingMode = "FIXED";
