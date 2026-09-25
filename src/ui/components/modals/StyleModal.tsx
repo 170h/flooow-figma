@@ -25,6 +25,7 @@ const STROKE_ICON_SVG = (
 interface StyleModalProps {
   onClose: () => void;
   initialColor?: string;
+  isMixed?: boolean;
 }
 
 /**
@@ -32,7 +33,7 @@ interface StyleModalProps {
  * - Fill: ColorWheelField (Hex 입력 필드 + 무지개 도넛 컬러 휠 + 원형 컬러휠)
  * - Stroke: ColorWheelField (Hex 입력 + 도넛 컬러 휠 + Stroke 두께 입력 박스 + 원형 컬러휠)
  */
-export function StyleModal({ onClose, initialColor }: StyleModalProps) {
+export function StyleModal({ onClose, initialColor, isMixed = false }: StyleModalProps) {
   const {
     uiState,
     setUIState,
@@ -50,7 +51,8 @@ export function StyleModal({ onClose, initialColor }: StyleModalProps) {
     .toUpperCase();
   const validFill = resolvedColor.length === 6 ? resolvedColor : 'EA2039';
 
-  const [fillHex, setFillHex] = useState(validFill);
+  const [fillHex, setFillHex] = useState(isMixed ? '' : validFill);
+  const [isFillMixed, setIsFillMixed] = useState(Boolean(isMixed));
   const [strokeHex, setStrokeHex] = useState(validFill);
   const [strokeWeight, setStrokeWeight] = useState(0);
 
@@ -59,7 +61,8 @@ export function StyleModal({ onClose, initialColor }: StyleModalProps) {
 
   // 저장 처리
   function handleSave() {
-    const finalFillColor = `#${fillHex.padStart(6, '0')}`;
+    const finalFill = fillHex.trim() ? fillHex : validFill;
+    const finalFillColor = `#${finalFill.padStart(6, '0')}`;
     const finalStrokeColor = `#${strokeHex.padStart(6, '0')}`;
     const finalStrokeWeight = Math.max(0, strokeWeight);
 
@@ -112,7 +115,14 @@ export function StyleModal({ onClose, initialColor }: StyleModalProps) {
       >
         {/* 모달 헤더 (Style 타이틀 + 닫기 버튼) */}
         <div className="style-modal-header">
-          <span className="style-modal-title">Style</span>
+          <span className="style-modal-title">
+            Style
+            {isFillMixed && (
+              <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+                (Mixed)
+              </span>
+            )}
+          </span>
           <button
             type="button"
             className="style-modal-close-btn"
@@ -145,7 +155,12 @@ export function StyleModal({ onClose, initialColor }: StyleModalProps) {
             {/* Fill 컬러 입력 필드 + 컬러휠 컴포넌트 */}
             <ColorWheelField
               value={fillHex}
-              onChange={(hex) => setFillHex(hex)}
+              isMixed={isFillMixed}
+              onMixedClear={() => setIsFillMixed(false)}
+              onChange={(hex) => {
+                setIsFillMixed(false);
+                setFillHex(hex);
+              }}
               onEnter={handleSave}
               isOpen={activePicker === 'fill'}
               onToggleOpen={(open) => setActivePicker(open ? 'fill' : null)}

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useApp } from './context/AppContext';
 import { useFigmaMessage } from './hooks/useFigmaMessage';
 import { useAutoResize } from './hooks/useAutoResize';
+import { useSelectionSummary } from './hooks/useSelectionSummary';
 
 import { NodePanel } from './components/node/NodePanel';
 import { AppearancePanel } from './components/appearance/AppearancePanel';
@@ -77,6 +78,7 @@ export function App() {
   ]);
   const [editingPhase, setEditingPhase] = useState<PhaseData | null>(null);
 
+  const summary = useSelectionSummary();
   const nodeCount = selectedNodes.length;
 
   // 커넥터 여부 판별
@@ -418,38 +420,40 @@ export function App() {
       {activeModal === 'add-style' && (
         <StyleModal
           initialColor={uiState.selectedColor}
+          isMixed={summary.isMultiFlowNode ? summary.color.isMixed : false}
           onClose={() => setActiveModal('none')}
         />
       )}
       {activeModal === 'connector-color' && (() => {
-        const connectorColors = selectedNodes
-          .filter((n) => n && n.isConnector)
-          .map((n) => n.connectorColorHex)
-          .filter((c): c is string => typeof c === 'string' && c.length > 0);
-        const firstColor = connectorColors[0] || '';
-        const isConnectorColorMixed =
-          connectorColors.length > 1 &&
-          !connectorColors.every((c) => c.toUpperCase() === firstColor.toUpperCase());
+        const isConnectorColorMixed = summary.isMultiConnector
+          ? summary.connectorColor.isMixed
+          : (summary.isMultiFlowNode ? summary.color.isMixed : false);
 
         return (
           <ConnectorColorModal
-            initialColor={uiState.selectedConnectorColor || '#000000'}
+            initialColor={isConnectorColorMixed ? '' : (uiState.selectedConnectorColor || '#000000')}
             isMixed={isConnectorColorMixed}
             onApply={(colorHex) => {
               const formatted = colorHex.toUpperCase();
               setUIState({ selectedConnectorColor: formatted });
 
-              // 선택된 커넥터가 있는 경우 바로 색상 변경 메시지 전송 (실시간 즉시 어플라이)
-              if (isConnSel && selectedNodes.length > 0) {
-                parent.postMessage(
-                  {
-                    pluginMessage: {
-                      type: 'UPDATE_CONNECTOR_STYLE',
-                      connectorColor: formatted,
+              // 선택된 커넥터가 있는 경우 모든 커넥터에 즉시 색상 변경 메시지 전송 (실시간 즉시 어플라이)
+              const connNodes = selectedNodes.filter((n) => n && n.isConnector);
+              if (connNodes.length > 0) {
+                connNodes.forEach((c) => {
+                  parent.postMessage(
+                    {
+                      pluginMessage: {
+                        type: 'UPDATE_CONNECTOR_PROPERTIES',
+                        payload: {
+                          connectorId: c.id,
+                          colorHex: formatted,
+                        },
+                      },
                     },
-                  },
-                  '*'
-                );
+                    '*'
+                  );
+                });
               }
             }}
             onClose={() => setActiveModal('none')}

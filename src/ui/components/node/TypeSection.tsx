@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 
 const NODE_TYPES = [
   'Screen', 'Action', 'Decision', 'System',
@@ -11,7 +12,11 @@ const NODE_TYPES = [
  */
 export function TypeSection() {
   const { uiState, setUIState, applyCurrentNodeState, setLastNodeConfig } = useApp();
+  const summary = useSelectionSummary();
   const { selectedNodeType } = uiState;
+
+  const isTypeMixed = summary.isMultiFlowNode && summary.nodeType.isMixed;
+  const activeType = isTypeMixed ? undefined : (summary.isMultiFlowNode ? summary.nodeType.value : selectedNodeType);
 
   function selectNodeType(type: string) {
     setUIState({ selectedNodeType: type });
@@ -23,20 +28,30 @@ export function TypeSection() {
   return (
     <div className="section-block">
       <div className="section-header">
-        <span className="section-title">Type</span>
+        <span className="section-title">
+          Type
+          {isTypeMixed && (
+            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+              (Mixed)
+            </span>
+          )}
+        </span>
       </div>
       <div className="section-body">
         <div className="chip-group" id="node-type-chips">
-          {NODE_TYPES.map(type => (
-            <button
-              key={type}
-              className={`chip-btn${selectedNodeType === type ? ' active' : ''}`}
-              data-type={type}
-              onClick={() => selectNodeType(type)}
-            >
-              {type}
-            </button>
-          ))}
+          {NODE_TYPES.map(type => {
+            const isActive = !isTypeMixed && activeType === type;
+            return (
+              <button
+                key={type}
+                className={`chip-btn${isActive ? ' active' : ''}`}
+                data-type={type}
+                onClick={() => selectNodeType(type)}
+              >
+                {type}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

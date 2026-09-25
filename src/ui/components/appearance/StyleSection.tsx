@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { useApp, StylePreset } from '../../context/AppContext';
+import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 
 /**
  * 기본 스타일 프리셋 ID 목록 (첫 번째: 흰색 + 1.5px 블랙 보더, 두 번째: 블랙 + 0px 보더)
@@ -29,17 +30,16 @@ export function StyleSection() {
     closeAllPopovers,
     selectedNodes,
   } = useApp();
+  const summary = useSelectionSummary();
   const { selectedColor } = uiState;
   const btnMoreRef = useRef<HTMLButtonElement>(null);
 
-  // 다중 노드 선택 시 컬러 또는 스타일 Mixed 여부 판별
-  const nodeColors = (selectedNodes || [])
-    .filter((n) => n && !n.isConnector)
-    .map((n) => n.fillColorHex)
-    .filter((c): c is string => typeof c === 'string' && c.length > 0);
-  const isNodeColorMixed =
-    nodeColors.length > 1 &&
-    !nodeColors.every((c) => c.toLowerCase() === (nodeColors[0] || '').toLowerCase());
+  // 다중 노드 선택 시 컬러 또는 보더 스타일 Mixed 여부 판별
+  const isNodeColorMixed = summary.isMultiFlowNode && (
+    summary.color.isMixed ||
+    summary.strokeWeight.isMixed ||
+    summary.strokeColor.isMixed
+  );
 
   // 현재 선택된 컬러 및 보더(두께, 색상)와 정확히 일치하는 프리셋 탐색 (일치하는 것이 없으면 undefined)
   const activeStylePreset = isNodeColorMixed
@@ -112,7 +112,14 @@ export function StyleSection() {
   return (
     <div className="section-block">
       <div className="section-header">
-        <span className="section-title">Style</span>
+        <span className="section-title">
+          Style
+          {isNodeColorMixed && (
+            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+              (Mixed)
+            </span>
+          )}
+        </span>
         <div className="section-actions">
           <button className="btn-action-icon" title="Add style" onClick={() => setActiveModal('add-style')}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z" fill="currentColor"/></svg>

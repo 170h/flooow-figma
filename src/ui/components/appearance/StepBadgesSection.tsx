@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 
 type BadgeColorMode = 'White' | 'Black' | 'Style';
 
@@ -82,12 +83,17 @@ export function StepBadgesSection() {
   const [isMixed, setIsMixed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  const isMultiMode = selectedNodes.length > 1;
+  const summary = useSelectionSummary();
+  const isMultiMode = summary.isMultiFlowNode;
+  const isCornerMixed = isMultiMode && summary.badgeCorner.isMixed;
+  const isShapeMixed = isMultiMode && summary.badgeShape.isMixed;
+  const isColorModeMixed = isMultiMode && summary.badgeColorMode.isMixed;
+
   // start number가 정의되어 있는지 여부 (빈 값이 아니고, Mixed가 아니며 유효한 숫자)
   const isStartNumberDefined = !isMixed && stepNumText.trim() !== '' && !isNaN(parseInt(stepNumText, 10));
-  const selectedBadgeCorner = uiState.selectedBadgeCorner || 'TOP_LEFT';
-  const selectedBadgeShape = uiState.selectedBadgeShape || 'Square';
-  const selectedBadgeColorMode: BadgeColorMode = uiState.selectedBadgeColorMode || 'Style';
+  const selectedBadgeCorner = isCornerMixed ? undefined : (summary.isMultiFlowNode && summary.badgeCorner.value ? summary.badgeCorner.value : (uiState.selectedBadgeCorner || 'TOP_LEFT'));
+  const selectedBadgeShape = isShapeMixed ? undefined : (summary.isMultiFlowNode && summary.badgeShape.value ? summary.badgeShape.value : (uiState.selectedBadgeShape || 'Square'));
+  const selectedBadgeColorMode: BadgeColorMode | undefined = isColorModeMixed ? undefined : (summary.isMultiFlowNode && summary.badgeColorMode.value ? (summary.badgeColorMode.value as BadgeColorMode) : (uiState.selectedBadgeColorMode || 'Style'));
 
 function isHexHighSaturation(hex: string): boolean {
   const clean = hex.replace('#', '');
@@ -156,11 +162,14 @@ function isHexDark(hex: string): boolean {
           setStepNumText('');
         }
 
-        const firstWithBadge = selectedNodes.find(n => n.badgeCorner || n.badgeShape || n.badgeColorMode);
-        if (firstWithBadge) {
-          if (firstWithBadge.badgeCorner) setUIState({ selectedBadgeCorner: firstWithBadge.badgeCorner });
-          if (firstWithBadge.badgeShape) setUIState({ selectedBadgeShape: firstWithBadge.badgeShape });
-          if (firstWithBadge.badgeColorMode) setUIState({ selectedBadgeColorMode: firstWithBadge.badgeColorMode });
+        if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
+          setUIState({ selectedBadgeCorner: summary.badgeCorner.value });
+        }
+        if (!summary.badgeShape.isMixed && summary.badgeShape.value) {
+          setUIState({ selectedBadgeShape: summary.badgeShape.value });
+        }
+        if (!summary.badgeColorMode.isMixed && summary.badgeColorMode.value) {
+          setUIState({ selectedBadgeColorMode: summary.badgeColorMode.value as BadgeColorMode });
         }
       }
     } else {
@@ -168,7 +177,7 @@ function isHexDark(hex: string): boolean {
       setIsMixed(false);
       setStepNumText('1');
     }
-  }, [selectedNodes, setUIState]);
+  }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, setUIState]);
 
   // 드롭다운 외부 클릭 닫기
   useEffect(() => {
@@ -450,10 +459,10 @@ function isHexDark(hex: string): boolean {
               >
                 <div className="figma-dropdown-btn-content">
                   <span className="figma-dropdown-current-icon">
-                    {renderColorSwatch(selectedBadgeColorMode, 14)}
+                    {selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 14) : null}
                   </span>
                   <span className="figma-dropdown-current-text">
-                    {selectedBadgeColorMode}
+                    {selectedBadgeColorMode || 'Mixed'}
                   </span>
                 </div>
                 <svg

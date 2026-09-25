@@ -42,7 +42,7 @@ export function ConnectorColorModal({
   isMixed: initialIsMixed = false,
 }: ConnectorColorModalProps) {
   const { stylePresets } = useApp();
-  const [colorHex, setColorHex] = useState(() => initialColor.replace('#', '').toUpperCase());
+  const [colorHex, setColorHex] = useState(() => (initialIsMixed ? '' : initialColor.replace('#', '').toUpperCase()));
   const [isMixed, setIsMixed] = useState(Boolean(initialIsMixed));
   const [showWheel, setShowWheel] = useState(false);
 
@@ -84,8 +84,12 @@ export function ConnectorColorModal({
 
   // 초기값 동기화
   useEffect(() => {
-    setColorHex(initialColor.replace('#', '').toUpperCase());
-  }, [initialColor]);
+    if (!initialIsMixed) {
+      setColorHex(initialColor.replace('#', '').toUpperCase());
+    } else {
+      setColorHex('');
+    }
+  }, [initialColor, initialIsMixed]);
 
   useEffect(() => {
     setIsMixed(Boolean(initialIsMixed));
@@ -102,18 +106,24 @@ export function ConnectorColorModal({
 
   // 2. 취소 핸들러 (원래 색상으로 복원 후 닫기)
   function handleCancel() {
-    onApply(initialColor);
+    if (!initialIsMixed) {
+      onApply(initialColor);
+    }
     onClose();
   }
 
   // 3. 적용 핸들러 (현재 선택된 컬러 확정 적용 후 닫기)
   function handleApply() {
+    if (!colorHex || colorHex.trim() === '') {
+      onClose();
+      return;
+    }
     const finalHex = `#${colorHex.padStart(6, '0')}`;
     onApply(finalHex);
     onClose();
   }
 
-  const currentFormattedHex = `#${colorHex.padStart(6, '0')}`;
+  const currentFormattedHex = colorHex ? `#${colorHex.padStart(6, '0')}` : '';
 
   return (
     <div
@@ -131,7 +141,14 @@ export function ConnectorColorModal({
       >
         {/* 1. 모달 헤더 (Connector Color + 닫기 버튼) */}
         <div className="conn-color-modal-header">
-          <span className="conn-color-modal-title">Connector Color</span>
+          <span className="conn-color-modal-title">
+            Connector Color
+            {isMixed && (
+              <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+                (Mixed)
+              </span>
+            )}
+          </span>
           <button
             type="button"
             className="style-modal-close-btn"

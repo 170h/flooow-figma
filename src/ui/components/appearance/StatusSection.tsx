@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 
 const STATUSES = [
   { id: 'draft', label: 'Draft', color: '#9CA3AF' },
@@ -24,21 +25,32 @@ export function StatusSection() {
     selectedNodes,
     autoResizeWindow
   } = useApp();
+  const summary = useSelectionSummary();
   const [isOn, setIsOn] = useState(false);
   const { selectedStatus } = uiState;
 
   // 선택된 노드의 상태와 UI 동기화
   React.useEffect(() => {
-    if (selectedNodes && selectedNodes.length === 1) {
+    if (summary.isSingleFlowNode) {
       const node = selectedNodes[0];
-      if (node.status) {
+      if (node && node.status) {
         setIsOn(true);
         setUIState({ selectedStatus: node.status });
       } else {
         setIsOn(false);
       }
+    } else if (summary.isMultiFlowNode) {
+      // 복수 노드 선택 시: 하나라도 상태가 있으면 패널 활성화
+      const hasAnyStatus = summary.statusOn.hasValue;
+      setIsOn(hasAnyStatus);
+      if (!summary.status.isMixed && summary.status.value) {
+        setUIState({ selectedStatus: summary.status.value });
+      }
     }
-  }, [selectedNodes, setUIState]);
+  }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, summary.statusOn.hasValue, selectedNodes, setUIState]);
+
+  const isStatusMixed = summary.isMultiFlowNode && summary.status.isMixed;
+  const activeStatus = isStatusMixed ? undefined : (summary.isMultiFlowNode ? summary.status.value : selectedStatus);
 
   function handleToggle(checked: boolean) {
     setIsOn(checked);
@@ -46,7 +58,7 @@ export function StatusSection() {
     const el = document.getElementById('status-options');
     if (el) el.classList.toggle('active', checked);
     if (checked) {
-      const targetStatus = selectedStatus || 'in_progress';
+      const targetStatus = activeStatus || selectedStatus || 'in_progress';
       applyStatusToNode(targetStatus);
     } else {
       applyStatusToNode('');
@@ -67,7 +79,14 @@ export function StatusSection() {
   return (
     <div className="section-block">
       <div className="section-header toggle-row">
-        <span className="section-title">Status</span>
+        <span className="section-title">
+          Status
+          {summary.isMultiFlowNode && (summary.statusOn.isMixed || isStatusMixed) && (
+            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+              (Mixed)
+            </span>
+          )}
+        </span>
         <label className="switch">
           <input type="checkbox" id="toggle-status" checked={isOn} onChange={e => handleToggle(e.target.checked)} />
           <span className="slider" />
@@ -75,19 +94,22 @@ export function StatusSection() {
       </div>
       <div className="section-body">
         <div className={`chip-group${isOn ? ' active' : ''}`} id="status-options">
-          {STATUSES.map(s => (
-            <button
-              key={s.id}
-              type="button"
-              className={`chip-btn${selectedStatus === s.id ? ' active' : ''}`}
-              data-status={s.id}
-              data-bullet-color={s.color}
-              onClick={() => selectStatus(s.id)}
-            >
-              <span className="tab-bullet" style={{ backgroundColor: s.color }} />
-              <span className="tab-label">{s.label}</span>
-            </button>
-          ))}
+          {STATUSES.map(s => {
+            const isChipActive = !isStatusMixed && activeStatus === s.id;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                className={`chip-btn${isChipActive ? ' active' : ''}`}
+                data-status={s.id}
+                data-bullet-color={s.color}
+                onClick={() => selectStatus(s.id)}
+              >
+                <span className="tab-bullet" style={{ backgroundColor: s.color }} />
+                <span className="tab-label">{s.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

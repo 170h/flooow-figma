@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useApp, StylePreset, NodeInfo } from '../../context/AppContext';
+import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { ConnectorTerminalType } from '../../../types';
 import { IcPalette } from '../shared/icons';
 
@@ -82,10 +83,20 @@ const CHEVRON_SVG = (
   </svg>
 );
 
-// 피그마 UI3 공식 Mixed 컬러 인디케이터 대시 SVG (16x16)
+// 피그마 UI3 공식 Mixed 컬러 인디케이터 대시 SVG (24×24 규격)
 const COLOR_MIXED_ICON = (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M4 8C4 7.72386 4.22386 7.5 4.5 7.5H11.5C11.7761 7.5 12 7.72386 12 8C12 8.27614 11.7761 8.5 11.5 8.5H4.5C4.22386 8.5 4 8.27614 4 8Z" fill="currentColor"/>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    className="conn-color-mixed-svg"
+  >
+    <path
+      d="M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z"
+      fill="currentColor"
+    />
   </svg>
 );
 
@@ -107,6 +118,7 @@ export function ConnectSection() {
     selectedStylePresetId,
     setSelectedStylePresetId,
   } = useApp();
+  const summary = useSelectionSummary();
   const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
 
   // 현재 활성화된 스타일 프리셋 탐색 (배경색 및 보더 동기화용)
@@ -134,6 +146,10 @@ export function ConnectSection() {
   // 다중 선택 시 Mixed 상태
   const [isColorMixed, setIsColorMixed] = useState(false);
   const [isWeightMixed, setIsWeightMixed] = useState(false);
+
+  // 라우팅 및 선 스타일 Mixed 상태
+  const isRoutingMixed = summary.isMultiConnector && summary.connectorRoutingType.isMixed;
+  const isLinePatternMixed = summary.isMultiConnector && summary.connectorStrokePattern.isMixed;
 
   // 스타일 프리셋 중 보더컬러가 있는 것은 보더 컬러만, 없는 것은 배경 컬러 반환 (커넥터 라인 컬러)
   const getPresetLineColor = (preset: StylePreset): string => {
@@ -199,106 +215,127 @@ export function ConnectSection() {
 
   // 선택된 노드 변경 시 터미널, 컬러 및 수치 상태 동기화
   useEffect(() => {
-    const connNodes = (selectedNodes || []).filter((n): n is NodeInfo => Boolean(n && n.isConnector));
-    const count = connNodes.length;
+    if (summary.isSingleConnector) {
+      // 커넥터 단일 선택
+      const node = selectedNodes[0];
+      setIsColorMixed(false);
+      setIsWeightMixed(false);
 
-    if (count > 0 && selectedNodes.length === count) {
-      if (count > 1) {
-        // 단자 동기화
-        const startTerms = connNodes.map(n => n.connectorStartTerminal).filter(Boolean);
-        const endTerms = connNodes.map(n => n.connectorEndTerminal).filter(Boolean);
-        if (startTerms.length > 0) {
-          const allSame = startTerms.every(t => t === startTerms[0]);
-          const val = (allSame ? startTerms[0] : 'MIXED') as ConnectorTerminalType;
-          setStartTermVal(val);
-          const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-          if (sel) sel.value = val;
-        }
-        if (endTerms.length > 0) {
-          const allSame = endTerms.every(t => t === endTerms[0]);
-          const val = (allSame ? endTerms[0] : 'MIXED') as ConnectorTerminalType;
-          setEndTermVal(val);
-          const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-          if (sel) sel.value = val;
-        }
+      if (node?.connectorStartTerminal) {
+        setStartTermVal(node.connectorStartTerminal as ConnectorTerminalType);
+        const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+        if (sel) sel.value = node.connectorStartTerminal;
+      }
+      if (node?.connectorEndTerminal) {
+        setEndTermVal(node.connectorEndTerminal as ConnectorTerminalType);
+        const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+        if (sel) sel.value = node.connectorEndTerminal;
+      }
+      if (node?.connectorColorHex) {
+        const hex = node.connectorColorHex.toUpperCase();
+        setSelectedColor(hex);
+        setHexInput(hex.replace('#', ''));
+        const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+        if (colSel) colSel.value = hex;
+      }
+      const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+      if (weightEl && typeof node?.connectorStrokeWeight === 'number') {
+        weightEl.value = String(node.connectorStrokeWeight);
+        weightEl.placeholder = '';
+      }
+      if (node?.connectorRoutingType) {
+        setUIState({ selectedRoutingType: node.connectorRoutingType });
+      }
+      if (node?.connectorStrokePattern) {
+        setUIState({ selectedLinePattern: node.connectorStrokePattern });
+      }
+    } else if (summary.isMultiConnector) {
+      // 커넥터 복수 선택
+      // 1. 단자
+      const startVal = summary.connectorStartTerminal.isMixed
+        ? 'MIXED'
+        : (summary.connectorStartTerminal.value || 'NONE');
+      setStartTermVal(startVal);
+      const startSel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+      if (startSel) startSel.value = startVal;
 
-        // 컬러 동기화 (색상이 서로 다르면 Mixed)
-        const colors = connNodes
-          .map(n => n.connectorColorHex)
-          .filter((c): c is string => typeof c === 'string' && c.length > 0);
-        if (colors.length > 0) {
-          const firstColor = colors[0] || '';
-          const allColorsSame = colors.every(c => c.toUpperCase() === firstColor.toUpperCase());
-          setIsColorMixed(!allColorsSame);
-          if (allColorsSame) {
-            const hex = firstColor.toUpperCase();
-            setSelectedColor(hex);
-            setHexInput(hex.replace('#', ''));
-            const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
-            if (colSel) colSel.value = hex;
-          } else {
-            setHexInput('');
-          }
-        }
+      const endVal = summary.connectorEndTerminal.isMixed
+        ? 'MIXED'
+        : (summary.connectorEndTerminal.value || 'ARROW');
+      setEndTermVal(endVal);
+      const endSel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+      if (endSel) endSel.value = endVal;
 
-        // 선 굵기 동기화 (굵기가 서로 다르면 Mixed)
-        const weights = connNodes.map(n => n.connectorStrokeWeight).filter((w): w is number => typeof w === 'number');
-        const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-        if (weights.length > 0) {
-          const allWeightsSame = weights.every(w => w === weights[0]);
-          setIsWeightMixed(!allWeightsSame);
-          if (weightEl) {
-            weightEl.value = allWeightsSame ? String(weights[0]) : '';
-            weightEl.placeholder = allWeightsSame ? '' : 'Mixed';
-          }
-        }
-      } else if (count === 1) {
-        setIsColorMixed(false);
-        setIsWeightMixed(false);
-        const node = selectedNodes[0];
-        if (node.connectorStartTerminal) {
-          setStartTermVal(node.connectorStartTerminal as ConnectorTerminalType);
-          const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-          if (sel) sel.value = node.connectorStartTerminal;
-        }
-        if (node.connectorEndTerminal) {
-          setEndTermVal(node.connectorEndTerminal as ConnectorTerminalType);
-          const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-          if (sel) sel.value = node.connectorEndTerminal;
-        }
-        if (node.connectorColorHex) {
-          const hex = node.connectorColorHex.toUpperCase();
-          setSelectedColor(hex);
-          setHexInput(hex.replace('#', ''));
-          const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
-          if (colSel) colSel.value = hex;
-        }
-        const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-        if (weightEl && typeof node.connectorStrokeWeight === 'number') {
-          weightEl.value = String(node.connectorStrokeWeight);
+      // 2. 컬러
+      setIsColorMixed(summary.connectorColor.isMixed);
+      if (!summary.connectorColor.isMixed && summary.connectorColor.value) {
+        const hex = summary.connectorColor.value.toUpperCase();
+        setSelectedColor(hex);
+        setHexInput(hex.replace('#', ''));
+        const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+        if (colSel) colSel.value = hex;
+      } else if (summary.connectorColor.isMixed) {
+        setHexInput('');
+      }
+
+      // 3. 선 굵기
+      setIsWeightMixed(summary.connectorStrokeWeight.isMixed);
+      const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+      if (weightEl) {
+        if (summary.connectorStrokeWeight.isMixed) {
+          weightEl.value = '';
+          weightEl.placeholder = 'Mixed';
+        } else if (summary.connectorStrokeWeight.value !== undefined) {
+          weightEl.value = String(summary.connectorStrokeWeight.value);
           weightEl.placeholder = '';
         }
       }
-    } else if (count >= 2) {
+
+      // 4. 라우팅
+      if (!summary.connectorRoutingType.isMixed && summary.connectorRoutingType.value) {
+        setUIState({ selectedRoutingType: summary.connectorRoutingType.value });
+      }
+
+      // 5. 선 스타일
+      if (!summary.connectorStrokePattern.isMixed && summary.connectorStrokePattern.value) {
+        setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
+      }
+    } else if (summary.isMultiFlowNode) {
       // 일반 노드 복수 선택: 노드들의 fill 컬러가 다르면 컬러 Mixed 적용
-      const colors = selectedNodes.map(n => n.fillColorHex).filter(Boolean);
-      if (colors.length > 0) {
-        const allColorsSame = colors.every(c => c.toUpperCase() === colors[0].toUpperCase());
-        setIsColorMixed(!allColorsSame);
-        if (allColorsSame) {
-          const hex = colors[0].toUpperCase();
-          setSelectedColor(hex);
-          setHexInput(hex.replace('#', ''));
-        } else {
-          setHexInput('');
-        }
+      setIsColorMixed(summary.color.isMixed);
+      if (!summary.color.isMixed && summary.color.value) {
+        const hex = summary.color.value.toUpperCase();
+        setSelectedColor(hex);
+        setHexInput(hex.replace('#', ''));
+      } else {
+        setHexInput('');
       }
       setIsWeightMixed(false);
     } else {
       setIsColorMixed(false);
       setIsWeightMixed(false);
     }
-  }, [selectedNodes]);
+  }, [
+    summary.isSingleConnector,
+    summary.isMultiConnector,
+    summary.isMultiFlowNode,
+    summary.connectorColor.isMixed,
+    summary.connectorColor.value,
+    summary.connectorStrokeWeight.isMixed,
+    summary.connectorStrokeWeight.value,
+    summary.connectorRoutingType.isMixed,
+    summary.connectorRoutingType.value,
+    summary.connectorStrokePattern.isMixed,
+    summary.connectorStrokePattern.value,
+    summary.connectorStartTerminal.isMixed,
+    summary.connectorStartTerminal.value,
+    summary.connectorEndTerminal.isMixed,
+    summary.connectorEndTerminal.value,
+    summary.color.isMixed,
+    summary.color.value,
+    selectedNodes,
+    setUIState
+  ]);
 
   // AppContext의 selectedConnectorColor가 변경되면(모달에서 Save 등) 동기화
   useEffect(() => {
@@ -478,7 +515,16 @@ export function ConnectSection() {
   return (
     <div className="section-block">
       <div className="section-header">
-        <span className="section-title">Connect</span>
+        <span className="section-title">
+          Connect
+          {summary.isMultiConnector && (
+            isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed
+          ) && (
+            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+              (Mixed)
+            </span>
+          )}
+        </span>
       </div>
       <div className="section-body">
         {/* 색상 + 선 패턴 (Figma UI3 1027385:6998) */}
@@ -497,10 +543,6 @@ export function ConnectSection() {
                 className="conn-color-chip"
                 style={{
                   backgroundColor: isColorMixed ? 'transparent' : selectedColor,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#111827',
                 }}
               >
                 {isColorMixed && COLOR_MIXED_ICON}
@@ -576,14 +618,17 @@ export function ConnectSection() {
 
           {/* 컬러 드롭박스 우측: 커넥터 모양 (ROUTING_TYPES 4개) */}
           <div className="routing-types-grid" style={{ flex: 1 }}>
-            {ROUTING_TYPES.map(r => (
-              <button key={r.type}
-                className={`routing-btn${selectedRoutingType === r.type ? ' active' : ''}`}
-                title={r.title}
-                onClick={() => selectRoutingType(r.type)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" dangerouslySetInnerHTML={{ __html: r.svg }} />
-              </button>
-            ))}
+            {ROUTING_TYPES.map(r => {
+              const isActive = !isRoutingMixed && selectedRoutingType === r.type;
+              return (
+                <button key={r.type}
+                  className={`routing-btn${isActive ? ' active' : ''}`}
+                  title={r.title}
+                  onClick={() => selectRoutingType(r.type)}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" dangerouslySetInnerHTML={{ __html: r.svg }} />
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -643,16 +688,19 @@ export function ConnectSection() {
             {[
               { pattern: 'SOLID', title: 'Solid', path: 'M18.5 11C18.7761 11 19 11.2239 19 11.5C19 11.7761 18.7761 12 18.5 12H5.5C5.22386 12 5 11.7761 5 11.5C5 11.2239 5.22386 11 5.5 11H18.5Z' },
               { pattern: 'DASHED', title: 'Dashed', path: 'M7.5 12C7.77614 12 8 12.2239 8 12.5C8 12.7761 7.77614 13 7.5 13H5.5C5.22386 13 5 12.7761 5 12.5C5 12.2239 5.22386 12 5.5 12H7.5ZM13 12C13.2761 12 13.5 12.2239 13.5 12.5C13.5 12.7761 13.2761 13 13 13H11C10.7239 13 10.5 12.7761 10.5 12.5C10.5 12.2239 10.7239 12 11 12H13ZM18.5 12C18.7761 12 19 12.2239 19 12.5C19 12.7761 18.7761 13 18.5 13H16.5C16.2239 13 16 12.7761 16 12.5C16 12.2239 16.2239 12 16.5 12H18.5Z' },
-            ].map(({ pattern, title, path }) => (
-              <button key={pattern}
-                className={`line-style-btn${selectedLinePattern === pattern ? ' active' : ''}`}
-                title={title}
-                onClick={e => selectLinePattern(pattern, e.currentTarget)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d={path} fill="currentColor"/></svg>
-              </button>
-            ))}
+            ].map(({ pattern, title, path }) => {
+              const isActive = !isLinePatternMixed && selectedLinePattern === pattern;
+              return (
+                <button key={pattern}
+                  className={`line-style-btn${isActive ? ' active' : ''}`}
+                  title={title}
+                  onClick={e => selectLinePattern(pattern, e.currentTarget)}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d={path} fill="currentColor"/></svg>
+                </button>
+              );
+            })}
             <button
-              className={`line-style-btn${selectedLinePattern === 'DOTTED' ? ' active' : ''}`}
+              className={`line-style-btn${!isLinePatternMixed && selectedLinePattern === 'DOTTED' ? ' active' : ''}`}
               title="Dotted"
               onClick={e => selectLinePattern('DOTTED', e.currentTarget)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">

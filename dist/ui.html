@@ -43,8 +43,9 @@
       --color-border-strong: var(--figma-color-border-strong, rgba(0, 0, 0, 0.16));
       --color-border-focus: var(--figma-color-border-brand, #8638e5);
       --color-border-dark: rgba(255, 255, 255, 0.12);
-      /* 피그마 UI3 공식 컬러칩 투명 보더 토큰 (Figma 노드 2327:86762 Light) */
+      /* 피그마 UI3 공식 컬러칩 투명 보더 및 믹스드 아이콘 컬러 토큰 */
       --color-chip-border: rgba(0, 0, 0, 0.1);
+      --color-chip-icon: rgba(0, 0, 0, 0.9);
 
       /* 고도 및 그림자 */
       --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -60,29 +61,53 @@
       --radius-full: 9999px;
     }
 
-    /* 다크 테마 자동 감지 시 */
+    /* 다크 테마 자동 감지 및 피그마 다크모드 토큰 대응 */
     @media (prefers-color-scheme: dark) {
       body.figma-dark-auto {
-        --color-bg: #2c2c2c;
-        --color-bg-secondary: #1e1e1e;
-        --color-bg-tertiary: #383838;
+        --color-bg: var(--figma-color-bg, #2c2c2c);
+        --color-bg-secondary: var(--figma-color-bg-secondary, #1e1e1e);
+        --color-bg-tertiary: var(--figma-color-bg-tertiary, #383838);
         --color-bg-hover: var(--figma-color-bg-hover, rgba(255, 255, 255, 0.06));
-        --color-text-primary: #ffffff;
-        --color-text-secondary: rgba(255, 255, 255, 0.65);
-        --color-text-tertiary: rgba(255, 255, 255, 0.4);
-        --color-border: rgba(255, 255, 255, 0.12);
-        /* 피그마 UI3 공식 컬러칩 투명 보더 토큰 (Figma 노드 2327:86775 Dark) */
-        --color-chip-border: rgba(255, 255, 255, 0.1);
+        --color-text-primary: var(--figma-color-text, #ffffff);
+        --color-text-secondary: var(--figma-color-text-secondary, rgba(255, 255, 255, 0.65));
+        --color-text-tertiary: var(--figma-color-text-tertiary, rgba(255, 255, 255, 0.4));
+        --color-border: var(--figma-color-border, rgba(255, 255, 255, 0.12));
+        --color-border-subtle: var(--figma-color-border-subtle, rgba(255, 255, 255, 0.08));
+        --color-border-strong: var(--figma-color-border-strong, rgba(255, 255, 255, 0.2));
+        --color-chip-border: rgba(255, 255, 255, 0.12);
+        --color-chip-icon: rgba(255, 255, 255, 0.9);
       }
     }
 
+    /* 피그마 플러그인 다크모드 클래스 및 다크 테마 지원 */
     body.figma-dark,
     .figma-dark,
-    [data-theme="dark"],
+    [data-theme="dark"] {
+      --color-bg: var(--figma-color-bg, #2c2c2c);
+      --color-bg-secondary: var(--figma-color-bg-secondary, #1e1e1e);
+      --color-bg-tertiary: var(--figma-color-bg-tertiary, #383838);
+      --color-bg-hover: var(--figma-color-bg-hover, rgba(255, 255, 255, 0.06));
+      --color-text-primary: var(--figma-color-text, #ffffff);
+      --color-text-secondary: var(--figma-color-text-secondary, rgba(255, 255, 255, 0.65));
+      --color-text-tertiary: var(--figma-color-text-tertiary, rgba(255, 255, 255, 0.4));
+      --color-border: var(--figma-color-border, rgba(255, 255, 255, 0.12));
+      --color-border-subtle: var(--figma-color-border-subtle, rgba(255, 255, 255, 0.08));
+      --color-border-strong: var(--figma-color-border-strong, rgba(255, 255, 255, 0.2));
+      --color-chip-border: rgba(255, 255, 255, 0.12);
+      --color-chip-icon: rgba(255, 255, 255, 0.9);
+    }
+
+    /* 다크 서피스 기반 모달 카드 공통 토큰 */
     .size-modal-card,
     .style-modal-card,
-    .conn-color-modal-card {
-      --color-chip-border: rgba(255, 255, 255, 0.1);
+    .conn-color-modal-card,
+    .phase-modal-card,
+    .design-picker-modal-card {
+      --color-chip-border: rgba(255, 255, 255, 0.12);
+      --color-chip-icon: rgba(255, 255, 255, 0.9);
+      --color-text-primary: #ffffff;
+      --color-text-secondary: rgba(255, 255, 255, 0.65);
+      --color-border: rgba(255, 255, 255, 0.12);
     }
 
     /* ============================================================ */
@@ -1605,6 +1630,12 @@
       box-sizing: border-box;
       pointer-events: none;
       user-select: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: visible;
+      color: var(--color-chip-icon, rgba(0, 0, 0, 0.9));
     }
 
     .conn-color-hex-input {
@@ -3360,8 +3391,31 @@
       height: 16px;
       border-radius: 4px;
       flex-shrink: 0;
-      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.1));
+      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.12));
       box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: visible;
+      color: var(--color-chip-icon, rgba(255, 255, 255, 0.9));
+    }
+
+    /* 24x24 믹스드 SVG 대시 아이콘을 16px 칩 정중앙에 완벽 배치 */
+    .conn-modal-hex-chip svg.conn-color-mixed-svg,
+    .conn-color-chip svg.conn-color-mixed-svg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px;
+      height: 24px;
+      pointer-events: none;
+    }
+
+    .conn-modal-hex-chip svg.conn-color-mixed-svg path,
+    .conn-color-chip svg.conn-color-mixed-svg path {
+      fill: var(--color-chip-icon, currentColor);
     }
 
     .conn-modal-hex-input {
@@ -3371,12 +3425,16 @@
       background: transparent;
       border: none;
       outline: none;
-      color: #ffffff;
+      color: var(--color-text-ondark, #ffffff);
       font-size: 12px;
       font-weight: 500;
       letter-spacing: 0 !important;
       text-transform: uppercase;
       padding: 0;
+    }
+
+    .conn-modal-hex-input::placeholder {
+      color: var(--color-text-ondark-muted, rgba(255, 255, 255, 0.45));
     }
 
     /* 사용자 첨부 이미지 완벽 일치: 모달 Hex 입력필드 우측 도넛 무지개 컬러 휠 토글 버튼 */
@@ -4694,7 +4752,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useCallback(callback, deps);
           }
-          function useMemo3(create, deps) {
+          function useMemo4(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useMemo(create, deps);
           }
@@ -5466,7 +5524,7 @@
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
           exports.useLayoutEffect = useLayoutEffect;
-          exports.useMemo = useMemo3;
+          exports.useMemo = useMemo4;
           exports.useReducer = useReducer;
           exports.useRef = useRef14;
           exports.useState = useState16;
@@ -28513,7 +28571,9 @@
     }, []);
     const applyCurrentConnectorState = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
-      if (!isConnectorSelectedRef.current || !nodes || nodes.length !== 1) return;
+      if (!isConnectorSelectedRef.current || !nodes || nodes.length === 0) return;
+      const connNodes = nodes.filter((n) => n && n.isConnector);
+      if (connNodes.length === 0) return;
       const labelToggleEl = document.getElementById("toggle-conn-label");
       const labelInputEl = document.getElementById("input-conn-label");
       const colorEl = document.getElementById("conn-line-color");
@@ -28522,30 +28582,36 @@
       const endTermEl = document.getElementById("select-end-terminal");
       const hasLabel = labelToggleEl?.checked || false;
       const label = hasLabel ? labelInputEl?.value.trim() || "" : "";
-      const color = colorEl?.value || "#000000";
-      const weight = parseFloat(weightEl?.value || "1.5") || 1.5;
-      const startTerm = startTermEl?.value || "NONE";
-      const endTerm = endTermEl?.value || "ARROW";
+      const colorRaw = colorEl?.value;
+      const color = colorRaw && colorRaw.trim() ? colorRaw : void 0;
+      const weightStr = weightEl?.value;
+      const weight = weightStr && weightStr.trim() !== "" ? parseFloat(weightStr) : void 0;
+      const startTermRaw = startTermEl?.value;
+      const startTerm = startTermRaw && startTermRaw !== "MIXED" ? startTermRaw : void 0;
+      const endTermRaw = endTermEl?.value;
+      const endTerm = endTermRaw && endTermRaw !== "MIXED" ? endTermRaw : void 0;
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
-      parent.postMessage({
-        pluginMessage: {
-          type: "UPDATE_CONNECTOR_PROPERTIES",
-          payload: {
-            connectorId: nodes[0].id,
-            colorHex: color,
-            strokeWeight: weight,
-            strokePattern: selectedLinePattern,
-            routingType: selectedRoutingType,
-            startTerminal: startTerm,
-            endTerminal: endTerm,
-            sourceMagnet,
-            targetMagnet,
-            label,
-            hasLabel,
-            isReversed: nodes[0]?.connectorIsReversed || false
+      connNodes.forEach((node) => {
+        parent.postMessage({
+          pluginMessage: {
+            type: "UPDATE_CONNECTOR_PROPERTIES",
+            payload: {
+              connectorId: node.id,
+              colorHex: color,
+              strokeWeight: weight,
+              strokePattern: selectedLinePattern,
+              routingType: selectedRoutingType,
+              startTerminal: startTerm,
+              endTerminal: endTerm,
+              sourceMagnet,
+              targetMagnet,
+              label,
+              hasLabel,
+              isReversed: node?.connectorIsReversed || false
+            }
           }
-        }
-      }, "*");
+        }, "*");
+      });
     }, []);
     const handleMainAction = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
@@ -28795,7 +28861,7 @@
   }
 
   // src/ui/App.tsx
-  var import_react21 = __toESM(require_react());
+  var import_react22 = __toESM(require_react());
 
   // src/ui/hooks/useFigmaMessage.ts
   var import_react3 = __toESM(require_react());
@@ -28933,8 +28999,88 @@
     }, [handleSelectionChange, setCurrentTab, setUIState, setLastNodeConfig, showToast]);
   }
 
-  // src/ui/components/node/PhaseSection.tsx
+  // src/ui/hooks/useSelectionSummary.ts
   var import_react4 = __toESM(require_react());
+
+  // src/ui/utils/selectionUtils.ts
+  function getCommonProperty(items, getter, equalityFn = (a, b) => a === b) {
+    if (!items || items.length === 0) {
+      return { value: void 0, isMixed: false, hasValue: false };
+    }
+    const values = items.map(getter).filter((v) => v !== void 0 && v !== null);
+    if (values.length === 0) {
+      return { value: void 0, isMixed: false, hasValue: false };
+    }
+    const allHaveValue = values.length === items.length;
+    const first = values[0];
+    const allSame = allHaveValue && values.every((v) => equalityFn(v, first));
+    return {
+      value: allSame ? first : void 0,
+      isMixed: !allSame,
+      hasValue: values.length > 0
+    };
+  }
+  function caseInsensitiveEqual(a, b) {
+    return a.toLowerCase() === b.toLowerCase();
+  }
+  function analyzeSelection(nodes) {
+    const validNodes = (nodes || []).filter((n) => Boolean(n));
+    const flowNodes = validNodes.filter((n) => !n.isConnector);
+    const connectorNodes = validNodes.filter((n) => n.isConnector);
+    const totalCount = validNodes.length;
+    const flowNodeCount = flowNodes.length;
+    const connectorCount = connectorNodes.length;
+    return {
+      totalCount,
+      flowNodeCount,
+      connectorCount,
+      isMulti: totalCount > 1,
+      isSingleFlowNode: flowNodeCount === 1 && connectorCount === 0,
+      isMultiFlowNode: flowNodeCount > 1,
+      isSingleConnector: connectorCount === 1 && flowNodeCount === 0,
+      isMultiConnector: connectorCount > 1 && flowNodeCount === 0,
+      // 플로우 노드 속성 요약
+      color: getCommonProperty(flowNodes, (n) => n.fillColorHex, caseInsensitiveEqual),
+      strokeWeight: getCommonProperty(flowNodes, (n) => n.strokeWeight),
+      strokeColor: getCommonProperty(flowNodes, (n) => n.strokeColorHex, caseInsensitiveEqual),
+      elevation: getCommonProperty(flowNodes, (n) => n.elevation),
+      elevationOn: getCommonProperty(flowNodes, (n) => n.elevationOn !== void 0 ? Boolean(n.elevationOn) : void 0),
+      status: getCommonProperty(flowNodes, (n) => n.status),
+      statusOn: getCommonProperty(flowNodes, (n) => Boolean(n.status)),
+      nodeType: getCommonProperty(flowNodes, (n) => n.flowNodeType || n.nodeType),
+      width: getCommonProperty(flowNodes, (n) => n.width),
+      height: getCommonProperty(flowNodes, (n) => n.height),
+      cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius),
+      sizeMode: getCommonProperty(flowNodes, (n) => n.sizeMode),
+      stepNumber: getCommonProperty(flowNodes, (n) => n.stepNumber),
+      hasStepBadge: getCommonProperty(flowNodes, (n) => n.stepNumber !== void 0),
+      badgeCorner: getCommonProperty(flowNodes, (n) => n.badgeCorner),
+      badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape),
+      badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode),
+      description: getCommonProperty(flowNodes, (n) => n.description),
+      hasDescription: getCommonProperty(flowNodes, (n) => Boolean(n.description && n.description.trim().length > 0)),
+      figmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink),
+      hasFigmaLink: getCommonProperty(flowNodes, (n) => Boolean(n.figmaLink && n.figmaLink.trim().length > 0)),
+      // 커넥터 노드 속성 요약
+      connectorColor: getCommonProperty(connectorNodes, (n) => n.connectorColorHex, caseInsensitiveEqual),
+      connectorStrokeWeight: getCommonProperty(connectorNodes, (n) => n.connectorStrokeWeight),
+      connectorStrokePattern: getCommonProperty(connectorNodes, (n) => n.connectorStrokePattern),
+      connectorRoutingType: getCommonProperty(connectorNodes, (n) => n.connectorRoutingType),
+      connectorStartTerminal: getCommonProperty(connectorNodes, (n) => n.connectorStartTerminal),
+      connectorEndTerminal: getCommonProperty(connectorNodes, (n) => n.connectorEndTerminal)
+    };
+  }
+
+  // src/ui/hooks/useSelectionSummary.ts
+  function useSelectionSummary() {
+    const { selectedNodes } = useApp();
+    return (0, import_react4.useMemo)(() => {
+      return analyzeSelection(selectedNodes);
+    }, [selectedNodes]);
+  }
+
+  // src/ui/components/node/PhaseSection.tsx
+  var import_react5 = __toESM(require_react());
   var import_jsx_runtime2 = __toESM(require_jsx_runtime());
   var CHEVRON_SVG = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
     "path",
@@ -28959,11 +29105,11 @@
       applyCurrentNodeState,
       setLastNodeConfig
     } = useApp();
-    const [phases, setPhases] = (0, import_react4.useState)([
+    const [phases, setPhases] = (0, import_react5.useState)([
       { id: "none", name: "None", color: null }
     ]);
-    const btnPhaseRef = (0, import_react4.useRef)(null);
-    const btnMoreRef = (0, import_react4.useRef)(null);
+    const btnPhaseRef = (0, import_react5.useRef)(null);
+    const btnMoreRef = (0, import_react5.useRef)(null);
     function togglePhasePopover(e) {
       e.stopPropagation();
       if (phasePopoverOpen) {
@@ -29089,29 +29235,38 @@
   ];
   function TypeSection() {
     const { uiState, setUIState, applyCurrentNodeState, setLastNodeConfig } = useApp();
+    const summary = useSelectionSummary();
     const { selectedNodeType } = uiState;
+    const isTypeMixed = summary.isMultiFlowNode && summary.nodeType.isMixed;
+    const activeType = isTypeMixed ? void 0 : summary.isMultiFlowNode ? summary.nodeType.value : selectedNodeType;
     function selectNodeType(type) {
       setUIState({ selectedNodeType: type });
       setLastNodeConfig({ nodeType: type });
       setTimeout(() => applyCurrentNodeState(), 0);
     }
     return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "section-block", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "section-title", children: "Type" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "chip-group", id: "node-type-chips", children: NODE_TYPES.map((type) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        "button",
-        {
-          className: `chip-btn${selectedNodeType === type ? " active" : ""}`,
-          "data-type": type,
-          onClick: () => selectNodeType(type),
-          children: type
-        },
-        type
-      )) }) })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: "section-title", children: [
+        "Type",
+        isTypeMixed && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+      ] }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "chip-group", id: "node-type-chips", children: NODE_TYPES.map((type) => {
+        const isActive = !isTypeMixed && activeType === type;
+        return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+          "button",
+          {
+            className: `chip-btn${isActive ? " active" : ""}`,
+            "data-type": type,
+            onClick: () => selectNodeType(type),
+            children: type
+          },
+          type
+        );
+      }) }) })
     ] });
   }
 
   // src/ui/components/node/DescriptionSection.tsx
-  var import_react5 = __toESM(require_react());
+  var import_react6 = __toESM(require_react());
 
   // src/ui/components/shared/icons.tsx
   var import_jsx_runtime4 = __toESM(require_jsx_runtime());
@@ -29129,23 +29284,25 @@
       setLastNodeConfig,
       autoResizeWindow
     } = useApp();
-    const [copied, setCopied] = (0, import_react5.useState)(false);
-    const timerRef = (0, import_react5.useRef)(null);
-    const debounceTimerRef = (0, import_react5.useRef)(null);
-    const lastSelectedNodeIdRef = (0, import_react5.useRef)(void 0);
-    const [isOn, setIsOn] = (0, import_react5.useState)(() => {
+    const summary = useSelectionSummary();
+    const [copied, setCopied] = (0, import_react6.useState)(false);
+    const timerRef = (0, import_react6.useRef)(null);
+    const debounceTimerRef = (0, import_react6.useRef)(null);
+    const lastSelectedNodeIdRef = (0, import_react6.useRef)(void 0);
+    const [isOn, setIsOn] = (0, import_react6.useState)(() => {
       if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
         return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
       }
       return Boolean(lastNodeConfig.descriptionOn);
     });
-    const [hasText, setHasText] = (0, import_react5.useState)(() => {
+    const [hasText, setHasText] = (0, import_react6.useState)(() => {
       if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
         return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
       }
       return false;
     });
-    (0, import_react5.useEffect)(() => {
+    const isDescMixed = summary.isMultiFlowNode && summary.description.isMixed;
+    (0, import_react6.useEffect)(() => {
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0].id : selectedNodes.length > 1 ? "MULTI" : null;
       if (currentNodeId !== lastSelectedNodeIdRef.current) {
         lastSelectedNodeIdRef.current = currentNodeId;
@@ -29158,12 +29315,12 @@
           setIsOn(Boolean(lastNodeConfig.descriptionOn));
           setHasText(false);
         } else {
-          const anyHasDesc = selectedNodes.some((n) => Boolean(n.description && n.description.trim()));
+          const anyHasDesc = summary.hasDescription.hasValue;
           setIsOn(anyHasDesc);
           setHasText(anyHasDesc);
         }
       }
-    }, [selectedNodes, lastNodeConfig.descriptionOn, setLastNodeConfig]);
+    }, [selectedNodes, lastNodeConfig.descriptionOn, summary.hasDescription.hasValue, setLastNodeConfig]);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastNodeConfig({ descriptionOn: checked });
@@ -29224,9 +29381,14 @@
       }
       document.body.removeChild(ta);
     }
+    const defaultDescValue = summary.isMultiFlowNode ? isDescMixed ? "" : summary.description.value || "" : selectedNodes.length === 1 ? selectedNodes[0]?.description || "" : "";
+    const descPlaceholder = isDescMixed ? "Mixed" : "Add a description";
     return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-block", style: { paddingBottom: isOn ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "section-title", children: "Description" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "section-title", children: [
+          "Description",
+          isDescMixed && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-actions", children: [
           isOn && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
             "button",
@@ -29259,17 +29421,17 @@
         {
           id: "node-description-input",
           className: "desc-textarea",
-          placeholder: "Add a description",
-          defaultValue: selectedNodes.length === 1 ? selectedNodes[0]?.description || "" : "",
+          placeholder: descPlaceholder,
+          defaultValue: defaultDescValue,
           onInput: handleInput
         },
-        selectedNodes.length === 1 ? selectedNodes[0]?.id : "none"
+        summary.isMultiFlowNode ? "multi-desc" : selectedNodes[0]?.id || "none"
       ) })
     ] });
   }
 
   // src/ui/components/node/FigmaLinkSection.tsx
-  var import_react6 = __toESM(require_react());
+  var import_react7 = __toESM(require_react());
   var import_jsx_runtime6 = __toESM(require_jsx_runtime());
   function normalizeUrl(url) {
     if (!url) return "";
@@ -29282,12 +29444,14 @@
   }
   function FigmaLinkSection() {
     const { autoResizeWindow, setLastNodeConfig, lastNodeConfig, selectedNodes, applyCurrentNodeState } = useApp();
-    const [isOn, setIsOn] = (0, import_react6.useState)(false);
-    const [url, setUrl] = (0, import_react6.useState)("");
-    const cachedUrlRef = (0, import_react6.useRef)("");
-    const lastSelectedNodeIdRef = (0, import_react6.useRef)(null);
-    const inputRef = (0, import_react6.useRef)(null);
-    (0, import_react6.useEffect)(() => {
+    const summary = useSelectionSummary();
+    const [isOn, setIsOn] = (0, import_react7.useState)(false);
+    const [url, setUrl] = (0, import_react7.useState)("");
+    const cachedUrlRef = (0, import_react7.useRef)("");
+    const lastSelectedNodeIdRef = (0, import_react7.useRef)(null);
+    const inputRef = (0, import_react7.useRef)(null);
+    const isLinkMixed = summary.isMultiFlowNode && summary.figmaLink.isMixed;
+    (0, import_react7.useEffect)(() => {
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0].id : selectedNodes.length > 1 ? "MULTI" : null;
       if (currentNodeId !== lastSelectedNodeIdRef.current) {
         lastSelectedNodeIdRef.current = currentNodeId;
@@ -29307,16 +29471,18 @@
           setUrl(link);
           cachedUrlRef.current = link;
         } else {
-          const firstWithLink = selectedNodes.find((n) => n.figmaLink);
-          const activeLink = firstWithLink?.figmaLink || "";
-          const cachedLink = selectedNodes.find((n) => n.cachedFigmaLink)?.cachedFigmaLink || activeLink;
-          const displayLink = activeLink || cachedLink;
-          setIsOn(Boolean(activeLink));
-          setUrl(displayLink);
-          cachedUrlRef.current = displayLink;
+          const anyHasLink = summary.hasFigmaLink.hasValue;
+          setIsOn(anyHasLink);
+          if (summary.figmaLink.isMixed) {
+            setUrl("");
+          } else {
+            const commonLink = summary.figmaLink.value || "";
+            setUrl(commonLink);
+            cachedUrlRef.current = commonLink;
+          }
         }
       }
-    }, [selectedNodes]);
+    }, [selectedNodes, lastNodeConfig.singleLinkOn, lastNodeConfig.singleLinkUrl, summary.hasFigmaLink.hasValue, summary.figmaLink.isMixed, summary.figmaLink.value, setLastNodeConfig]);
     function commitUrl(currentRawUrl) {
       const trimmed = currentRawUrl.trim();
       if (!trimmed) {
@@ -29379,7 +29545,10 @@
     }
     return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "section-block figma-link-section", style: { paddingBottom: isOn ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "section-title", children: "Figma Screen Link" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "section-title", children: [
+          "Figma Screen Link",
+          isLinkMixed && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("label", { className: "switch", children: [
           /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "input",
@@ -29402,7 +29571,7 @@
             id: "single-screen-url",
             className: "form-input",
             style: { width: "100%", paddingRight: url ? "28px" : "10px" },
-            placeholder: "Add a Figma Screen URL",
+            placeholder: isLinkMixed ? "Mixed" : "Add a Figma Screen URL",
             value: url,
             onChange: (e) => handleUrlChange(e.target.value),
             onKeyDown: handleKeyDown,
@@ -29461,7 +29630,7 @@
   }
 
   // src/ui/components/appearance/SizeSection.tsx
-  var import_react7 = __toESM(require_react());
+  var import_react8 = __toESM(require_react());
   var import_jsx_runtime8 = __toESM(require_jsx_runtime());
   var FIXED_SVG = /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) });
   var HUG_SVG = /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z", fill: "currentColor" }) });
@@ -29498,54 +29667,41 @@
       (p) => p.w === lastNodeConfig.width && p.h === lastNodeConfig.height
     );
     const isMoreDisabled = !activePreset || Boolean(activePreset.isDefault) || DEFAULT_PRESET_IDS.has(activePreset.id);
+    const summary = useSelectionSummary();
     const currentSizeMode = (() => {
-      if (selectedNodes && selectedNodes.length > 1) {
-        const first = selectedNodes[0]?.sizeMode;
-        const allSame = selectedNodes.every((n) => n && n.sizeMode === first);
-        if (!allSame) return "mixed";
-        return first || lastNodeConfig.sizeMode || "fixed";
+      if (summary.isMultiFlowNode) {
+        if (summary.sizeMode.isMixed) return "mixed";
+        return summary.sizeMode.value || lastNodeConfig.sizeMode || "fixed";
       }
-      if (selectedNodes && selectedNodes.length === 1) {
-        return selectedNodes[0]?.sizeMode || lastNodeConfig.sizeMode || "fixed";
+      if (summary.isSingleFlowNode) {
+        return summary.sizeMode.value || lastNodeConfig.sizeMode || "fixed";
       }
       return lastNodeConfig.sizeMode || "fixed";
     })();
-    const [isWMixed, setIsWMixed] = import_react7.default.useState(false);
-    const [isHMixed, setIsHMixed] = import_react7.default.useState(false);
-    const [isRMixed, setIsRMixed] = import_react7.default.useState(false);
-    import_react7.default.useEffect(() => {
+    const isWMixed = summary.isMultiFlowNode && summary.width.isMixed;
+    const isHMixed = summary.isMultiFlowNode && summary.height.isMixed;
+    const isRMixed = summary.isMultiFlowNode && summary.cornerRadius.isMixed;
+    import_react8.default.useEffect(() => {
       const validNodes = (selectedNodes || []).filter((n) => Boolean(n));
       if (validNodes.length > 0) {
         const wEl = document.getElementById("input-size-w");
         const hEl = document.getElementById("input-size-h");
         const rEl = document.getElementById("input-size-radius");
-        if (validNodes.length > 1) {
-          const widths = validNodes.map((n) => n.width).filter((v) => typeof v === "number");
-          const heights = validNodes.map((n) => n.height).filter((v) => typeof v === "number");
-          const radii = validNodes.map((n) => n.cornerRadius).filter((v) => typeof v === "number");
-          const allWSame = widths.length > 0 && widths.every((v) => v === widths[0]);
-          const allHSame = heights.length > 0 && heights.every((v) => v === heights[0]);
-          const allRSame = radii.length > 0 && radii.every((v) => v === radii[0]);
-          setIsWMixed(!allWSame);
-          setIsHMixed(!allHSame);
-          setIsRMixed(!allRSame);
+        if (summary.isMultiFlowNode) {
           if (wEl) {
-            wEl.value = allWSame ? String(widths[0]) : "";
-            wEl.placeholder = allWSame ? "" : "Mixed";
+            wEl.value = isWMixed ? "" : summary.width.value !== void 0 ? String(summary.width.value) : "";
+            wEl.placeholder = isWMixed ? "Mixed" : "";
           }
           if (hEl) {
-            hEl.value = allHSame ? String(heights[0]) : "";
-            hEl.placeholder = allHSame ? "" : "Mixed";
+            hEl.value = isHMixed ? "" : summary.height.value !== void 0 ? String(summary.height.value) : "";
+            hEl.placeholder = isHMixed ? "Mixed" : "";
           }
           if (rEl) {
-            rEl.value = allRSame ? String(radii[0]) : "";
-            rEl.placeholder = allRSame ? "" : "Mixed";
+            rEl.value = isRMixed ? "" : summary.cornerRadius.value !== void 0 ? String(summary.cornerRadius.value) : "";
+            rEl.placeholder = isRMixed ? "Mixed" : "";
           }
         } else {
           const first = validNodes[0];
-          setIsWMixed(false);
-          setIsHMixed(false);
-          setIsRMixed(false);
           if (wEl) {
             wEl.value = typeof first?.width === "number" ? String(first.width) : String(lastNodeConfig.width || 250);
             wEl.placeholder = "";
@@ -29560,7 +29716,7 @@
           }
         }
       }
-    }, [selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
+    }, [summary.isMultiFlowNode, isWMixed, isHMixed, isRMixed, summary.width.value, summary.height.value, summary.cornerRadius.value, selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
     function handleWChange(e) {
       const val = parseInt(e.target.value, 10);
       if (!isNaN(val)) {
@@ -29712,10 +29868,7 @@
                 defaultValue: 250,
                 min: 50,
                 placeholder: isWMixed ? "Mixed" : void 0,
-                onChange: (e) => {
-                  setIsWMixed(false);
-                  handleWChange(e);
-                },
+                onChange: handleWChange,
                 onBlur: triggerApply,
                 onKeyDown: (e) => e.key === "Enter" && triggerApply()
               }
@@ -29731,10 +29884,7 @@
                 defaultValue: 90,
                 min: 40,
                 placeholder: isHMixed ? "Mixed" : void 0,
-                onChange: (e) => {
-                  setIsHMixed(false);
-                  handleHChange(e);
-                },
+                onChange: handleHChange,
                 onBlur: triggerApply,
                 onKeyDown: (e) => e.key === "Enter" && triggerApply()
               }
@@ -29751,10 +29901,7 @@
                 min: 0,
                 max: 20,
                 placeholder: isRMixed ? "Mixed" : void 0,
-                onChange: (e) => {
-                  setIsRMixed(false);
-                  handleRChange(e);
-                },
+                onChange: handleRChange,
                 onBlur: triggerApply,
                 onKeyDown: (e) => e.key === "Enter" && triggerApply()
               }
@@ -29830,7 +29977,7 @@
   }
 
   // src/ui/components/appearance/StyleSection.tsx
-  var import_react8 = __toESM(require_react());
+  var import_react9 = __toESM(require_react());
   var import_jsx_runtime9 = __toESM(require_jsx_runtime());
   var DEFAULT_STYLE_PRESET_IDS = /* @__PURE__ */ new Set(["style-white", "style-black"]);
   function StyleSection() {
@@ -29851,10 +29998,10 @@
       closeAllPopovers,
       selectedNodes
     } = useApp();
+    const summary = useSelectionSummary();
     const { selectedColor } = uiState;
-    const btnMoreRef = (0, import_react8.useRef)(null);
-    const nodeColors = (selectedNodes || []).filter((n) => n && !n.isConnector).map((n) => n.fillColorHex).filter((c) => typeof c === "string" && c.length > 0);
-    const isNodeColorMixed = nodeColors.length > 1 && !nodeColors.every((c) => c.toLowerCase() === (nodeColors[0] || "").toLowerCase());
+    const btnMoreRef = (0, import_react9.useRef)(null);
+    const isNodeColorMixed = summary.isMultiFlowNode && (summary.color.isMixed || summary.strokeWeight.isMixed || summary.strokeColor.isMixed);
     const activeStylePreset = isNodeColorMixed ? void 0 : stylePresets.find((p) => {
       const matchFill = p.fillColor.toLowerCase() === (selectedColor || "").toLowerCase();
       if (!matchFill) return false;
@@ -29913,7 +30060,10 @@
     }
     return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "section-header", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "section-title", children: "Style" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "section-title", children: [
+          "Style",
+          isNodeColorMixed && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "section-actions", children: [
           /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "btn-action-icon", title: "Add style", onClick: () => setActiveModal("add-style"), children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z", fill: "currentColor" }) }) }),
           /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
@@ -29970,10 +30120,13 @@
   ];
   function ElevationSection() {
     const { uiState, lastNodeConfig, applyElevationToNodes, autoResizeWindow } = useApp();
-    const isOn = Boolean(lastNodeConfig.elevationOn);
-    const selectedElevation = typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
+    const summary = useSelectionSummary();
+    const isOn = summary.isMultiFlowNode ? summary.elevationOn.isMixed ? true : Boolean(summary.elevationOn.value) : Boolean(lastNodeConfig.elevationOn);
+    const isElevationMixed = summary.isMultiFlowNode && summary.elevation.isMixed;
+    const currentLevel = summary.isMultiFlowNode ? summary.elevation.value : typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
     function handleToggle(checked) {
-      applyElevationToNodes(checked ? selectedElevation : null);
+      const targetLevel = typeof currentLevel === "number" ? currentLevel : 0;
+      applyElevationToNodes(checked ? targetLevel : null);
       autoResizeWindow();
     }
     function selectElevation(level) {
@@ -29981,7 +30134,10 @@
     }
     return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "section-title", children: "Elevation" }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "section-title", children: [
+          "Elevation",
+          summary.isMultiFlowNode && (summary.elevationOn.isMixed || isElevationMixed) && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { className: "switch", children: [
           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             "input",
@@ -29995,22 +30151,25 @@
           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "slider" })
         ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: `elevation-cards-container${isOn ? " active" : ""}`, id: "elevation-options", children: ELEVATION_LEVELS.map(({ level, label, desc }) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-        "div",
-        {
-          className: `elevation-card elev-${level}${selectedElevation === level ? " selected" : ""}`,
-          title: `${label} (${desc})`,
-          "aria-label": `${label} (${desc})`,
-          onClick: () => selectElevation(level),
-          children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "elevation-inner-box" })
-        },
-        level
-      )) }) })
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: `elevation-cards-container${isOn ? " active" : ""}`, id: "elevation-options", children: ELEVATION_LEVELS.map(({ level, label, desc }) => {
+        const isSelected = !isElevationMixed && currentLevel === level;
+        return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+          "div",
+          {
+            className: `elevation-card elev-${level}${isSelected ? " selected" : ""}`,
+            title: `${label} (${desc})`,
+            "aria-label": `${label} (${desc})`,
+            onClick: () => selectElevation(level),
+            children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "elevation-inner-box" })
+          },
+          level
+        );
+      }) }) })
     ] });
   }
 
   // src/ui/components/appearance/StatusSection.tsx
-  var import_react9 = __toESM(require_react());
+  var import_react10 = __toESM(require_react());
   var import_jsx_runtime11 = __toESM(require_jsx_runtime());
   var STATUSES = [
     { id: "draft", label: "Draft", color: "#9CA3AF" },
@@ -30031,26 +30190,35 @@
       selectedNodes,
       autoResizeWindow
     } = useApp();
-    const [isOn, setIsOn] = (0, import_react9.useState)(false);
+    const summary = useSelectionSummary();
+    const [isOn, setIsOn] = (0, import_react10.useState)(false);
     const { selectedStatus } = uiState;
-    import_react9.default.useEffect(() => {
-      if (selectedNodes && selectedNodes.length === 1) {
+    import_react10.default.useEffect(() => {
+      if (summary.isSingleFlowNode) {
         const node = selectedNodes[0];
-        if (node.status) {
+        if (node && node.status) {
           setIsOn(true);
           setUIState({ selectedStatus: node.status });
         } else {
           setIsOn(false);
         }
+      } else if (summary.isMultiFlowNode) {
+        const hasAnyStatus = summary.statusOn.hasValue;
+        setIsOn(hasAnyStatus);
+        if (!summary.status.isMixed && summary.status.value) {
+          setUIState({ selectedStatus: summary.status.value });
+        }
       }
-    }, [selectedNodes, setUIState]);
+    }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, summary.statusOn.hasValue, selectedNodes, setUIState]);
+    const isStatusMixed = summary.isMultiFlowNode && summary.status.isMixed;
+    const activeStatus = isStatusMixed ? void 0 : summary.isMultiFlowNode ? summary.status.value : selectedStatus;
     function handleToggle(checked) {
       setIsOn(checked);
       setLastNodeConfig({ statusOn: checked });
       const el = document.getElementById("status-options");
       if (el) el.classList.toggle("active", checked);
       if (checked) {
-        const targetStatus = selectedStatus || "in_progress";
+        const targetStatus = activeStatus || selectedStatus || "in_progress";
         applyStatusToNode(targetStatus);
       } else {
         applyStatusToNode("");
@@ -30068,32 +30236,38 @@
     }
     return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "section-title", children: "Status" }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { className: "section-title", children: [
+          "Status",
+          summary.isMultiFlowNode && (summary.statusOn.isMixed || isStatusMixed) && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { className: "switch", children: [
           /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("input", { type: "checkbox", id: "toggle-status", checked: isOn, onChange: (e) => handleToggle(e.target.checked) }),
           /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "slider" })
         ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: `chip-group${isOn ? " active" : ""}`, id: "status-options", children: STATUSES.map((s) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
-        "button",
-        {
-          type: "button",
-          className: `chip-btn${selectedStatus === s.id ? " active" : ""}`,
-          "data-status": s.id,
-          "data-bullet-color": s.color,
-          onClick: () => selectStatus(s.id),
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "tab-bullet", style: { backgroundColor: s.color } }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "tab-label", children: s.label })
-          ]
-        },
-        s.id
-      )) }) })
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: `chip-group${isOn ? " active" : ""}`, id: "status-options", children: STATUSES.map((s) => {
+        const isChipActive = !isStatusMixed && activeStatus === s.id;
+        return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: `chip-btn${isChipActive ? " active" : ""}`,
+            "data-status": s.id,
+            "data-bullet-color": s.color,
+            onClick: () => selectStatus(s.id),
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "tab-bullet", style: { backgroundColor: s.color } }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "tab-label", children: s.label })
+            ]
+          },
+          s.id
+        );
+      }) }) })
     ] });
   }
 
   // src/ui/components/appearance/StepBadgesSection.tsx
-  var import_react10 = __toESM(require_react());
+  var import_react11 = __toESM(require_react());
   var import_jsx_runtime12 = __toESM(require_jsx_runtime());
   var BADGE_CORNERS = [
     {
@@ -30137,16 +30311,20 @@
       selectedNodes,
       autoResizeWindow
     } = useApp();
-    const [isOn, setIsOn] = (0, import_react10.useState)(false);
-    const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react10.useState)(false);
-    const [stepNumText, setStepNumText] = (0, import_react10.useState)("1");
-    const [isMixed, setIsMixed] = (0, import_react10.useState)(false);
-    const dropdownRef = (0, import_react10.useRef)(null);
-    const isMultiMode = selectedNodes.length > 1;
+    const [isOn, setIsOn] = (0, import_react11.useState)(false);
+    const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react11.useState)(false);
+    const [stepNumText, setStepNumText] = (0, import_react11.useState)("1");
+    const [isMixed, setIsMixed] = (0, import_react11.useState)(false);
+    const dropdownRef = (0, import_react11.useRef)(null);
+    const summary = useSelectionSummary();
+    const isMultiMode = summary.isMultiFlowNode;
+    const isCornerMixed = isMultiMode && summary.badgeCorner.isMixed;
+    const isShapeMixed = isMultiMode && summary.badgeShape.isMixed;
+    const isColorModeMixed = isMultiMode && summary.badgeColorMode.isMixed;
     const isStartNumberDefined = !isMixed && stepNumText.trim() !== "" && !isNaN(parseInt(stepNumText, 10));
-    const selectedBadgeCorner = uiState.selectedBadgeCorner || "TOP_LEFT";
-    const selectedBadgeShape = uiState.selectedBadgeShape || "Square";
-    const selectedBadgeColorMode = uiState.selectedBadgeColorMode || "Style";
+    const selectedBadgeCorner = isCornerMixed ? void 0 : summary.isMultiFlowNode && summary.badgeCorner.value ? summary.badgeCorner.value : uiState.selectedBadgeCorner || "TOP_LEFT";
+    const selectedBadgeShape = isShapeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeShape.value ? summary.badgeShape.value : uiState.selectedBadgeShape || "Square";
+    const selectedBadgeColorMode = isColorModeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeColorMode.value ? summary.badgeColorMode.value : uiState.selectedBadgeColorMode || "Style";
     function isHexHighSaturation(hex) {
       const clean = hex.replace("#", "");
       if (clean.length !== 6 && clean.length !== 3) return false;
@@ -30175,7 +30353,7 @@
     const firstNode = selectedNodes[0];
     const nodeBgColorHex = firstNode?.fillColorHex || "#E11D48";
     const hasNodeStroke = (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
-    (0, import_react10.useEffect)(() => {
+    (0, import_react11.useEffect)(() => {
       if (selectedNodes && selectedNodes.length > 0) {
         const hasStep = selectedNodes.some((n) => n.stepNumber !== void 0);
         setIsOn(hasStep);
@@ -30206,11 +30384,14 @@
             setIsMixed(true);
             setStepNumText("");
           }
-          const firstWithBadge = selectedNodes.find((n) => n.badgeCorner || n.badgeShape || n.badgeColorMode);
-          if (firstWithBadge) {
-            if (firstWithBadge.badgeCorner) setUIState({ selectedBadgeCorner: firstWithBadge.badgeCorner });
-            if (firstWithBadge.badgeShape) setUIState({ selectedBadgeShape: firstWithBadge.badgeShape });
-            if (firstWithBadge.badgeColorMode) setUIState({ selectedBadgeColorMode: firstWithBadge.badgeColorMode });
+          if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
+            setUIState({ selectedBadgeCorner: summary.badgeCorner.value });
+          }
+          if (!summary.badgeShape.isMixed && summary.badgeShape.value) {
+            setUIState({ selectedBadgeShape: summary.badgeShape.value });
+          }
+          if (!summary.badgeColorMode.isMixed && summary.badgeColorMode.value) {
+            setUIState({ selectedBadgeColorMode: summary.badgeColorMode.value });
           }
         }
       } else {
@@ -30218,8 +30399,8 @@
         setIsMixed(false);
         setStepNumText("1");
       }
-    }, [selectedNodes, setUIState]);
-    (0, import_react10.useEffect)(() => {
+    }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, setUIState]);
+    (0, import_react11.useEffect)(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
           setColorDropdownOpen(false);
@@ -30495,8 +30676,8 @@
                     onClick: () => setColorDropdownOpen(!colorDropdownOpen),
                     children: [
                       /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "figma-dropdown-btn-content", children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "figma-dropdown-current-icon", children: renderColorSwatch(selectedBadgeColorMode, 14) }),
-                        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "figma-dropdown-current-text", children: selectedBadgeColorMode })
+                        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "figma-dropdown-current-icon", children: selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 14) : null }),
+                        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "figma-dropdown-current-text", children: selectedBadgeColorMode || "Mixed" })
                       ] }),
                       /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                         "svg",
@@ -30677,10 +30858,10 @@
   }
 
   // src/ui/components/connection/ConnectionPanel.tsx
-  var import_react13 = __toESM(require_react());
+  var import_react14 = __toESM(require_react());
 
   // src/ui/components/connection/ConnectSection.tsx
-  var import_react11 = __toESM(require_react());
+  var import_react12 = __toESM(require_react());
   var import_jsx_runtime14 = __toESM(require_jsx_runtime());
   var TERMINAL_OPTIONS = [
     "NONE",
@@ -30740,7 +30921,24 @@
       fill: "currentColor"
     }
   ) });
-  var COLOR_MIXED_ICON = /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M4 8C4 7.72386 4.22386 7.5 4.5 7.5H11.5C11.7761 7.5 12 7.72386 12 8C12 8.27614 11.7761 8.5 11.5 8.5H4.5C4.22386 8.5 4 8.27614 4 8Z", fill: "currentColor" }) });
+  var COLOR_MIXED_ICON = /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      width: "24",
+      height: "24",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      className: "conn-color-mixed-svg",
+      children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+        "path",
+        {
+          d: "M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z",
+          fill: "currentColor"
+        }
+      )
+    }
+  );
   function ConnectSection() {
     const {
       uiState,
@@ -30753,6 +30951,7 @@
       selectedStylePresetId,
       setSelectedStylePresetId
     } = useApp();
+    const summary = useSelectionSummary();
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
     const activeStylePreset = stylePresets.find((p) => {
       const matchFill = p.fillColor.toLowerCase() === (uiState.selectedColor || "").toLowerCase();
@@ -30766,33 +30965,35 @@
       }
       return true;
     });
-    const [startTermPopupOpen, setStartTermPopupOpen] = (0, import_react11.useState)(false);
-    const [endTermPopupOpen, setEndTermPopupOpen] = (0, import_react11.useState)(false);
-    const [startTermVal, setStartTermVal] = (0, import_react11.useState)("NONE");
-    const [endTermVal, setEndTermVal] = (0, import_react11.useState)("ARROW");
-    const [isColorMixed, setIsColorMixed] = (0, import_react11.useState)(false);
-    const [isWeightMixed, setIsWeightMixed] = (0, import_react11.useState)(false);
+    const [startTermPopupOpen, setStartTermPopupOpen] = (0, import_react12.useState)(false);
+    const [endTermPopupOpen, setEndTermPopupOpen] = (0, import_react12.useState)(false);
+    const [startTermVal, setStartTermVal] = (0, import_react12.useState)("NONE");
+    const [endTermVal, setEndTermVal] = (0, import_react12.useState)("ARROW");
+    const [isColorMixed, setIsColorMixed] = (0, import_react12.useState)(false);
+    const [isWeightMixed, setIsWeightMixed] = (0, import_react12.useState)(false);
+    const isRoutingMixed = summary.isMultiConnector && summary.connectorRoutingType.isMixed;
+    const isLinePatternMixed = summary.isMultiConnector && summary.connectorStrokePattern.isMixed;
     const getPresetLineColor2 = (preset) => {
       const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
       return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
     };
-    const [selectedColor, setSelectedColor] = (0, import_react11.useState)(() => {
+    const [selectedColor, setSelectedColor] = (0, import_react12.useState)(() => {
       if (selectedConnectorColor) return selectedConnectorColor.toUpperCase();
       if (activeStylePreset) {
         return getPresetLineColor2(activeStylePreset);
       }
       return "#000000";
     });
-    const [hexInput, setHexInput] = (0, import_react11.useState)(() => {
+    const [hexInput, setHexInput] = (0, import_react12.useState)(() => {
       if (selectedConnectorColor) return selectedConnectorColor.replace("#", "").toUpperCase();
       if (activeStylePreset) {
         return getPresetLineColor2(activeStylePreset).replace("#", "");
       }
       return "000000";
     });
-    const hexInputRef = (0, import_react11.useRef)(null);
-    const nativeColorInputRef = (0, import_react11.useRef)(null);
-    (0, import_react11.useEffect)(() => {
+    const hexInputRef = (0, import_react12.useRef)(null);
+    const nativeColorInputRef = (0, import_react12.useRef)(null);
+    (0, import_react12.useEffect)(() => {
       if (activeStylePreset) {
         const connectorColor = getPresetLineColor2(activeStylePreset);
         setSelectedColor(connectorColor);
@@ -30801,7 +31002,7 @@
         if (colSel) colSel.value = connectorColor;
       }
     }, [uiState.selectedColor, uiState.selectedStrokeWeight, uiState.selectedStrokeColor, selectedStylePresetId]);
-    (0, import_react11.useEffect)(() => {
+    (0, import_react12.useEffect)(() => {
       if (selectedConnectorColor) {
         const formatted = selectedConnectorColor.toUpperCase();
         setSelectedColor(formatted);
@@ -30810,7 +31011,7 @@
         if (colSel) colSel.value = formatted;
       }
     }, [selectedConnectorColor]);
-    (0, import_react11.useEffect)(() => {
+    (0, import_react12.useEffect)(() => {
       function handleDocClick(e) {
         const target = e.target;
         if (!target.closest("#wrap-start-terminal")) {
@@ -30823,99 +31024,111 @@
       document.addEventListener("click", handleDocClick);
       return () => document.removeEventListener("click", handleDocClick);
     }, []);
-    (0, import_react11.useEffect)(() => {
-      const connNodes = (selectedNodes || []).filter((n) => Boolean(n && n.isConnector));
-      const count = connNodes.length;
-      if (count > 0 && selectedNodes.length === count) {
-        if (count > 1) {
-          const startTerms = connNodes.map((n) => n.connectorStartTerminal).filter(Boolean);
-          const endTerms = connNodes.map((n) => n.connectorEndTerminal).filter(Boolean);
-          if (startTerms.length > 0) {
-            const allSame = startTerms.every((t) => t === startTerms[0]);
-            const val = allSame ? startTerms[0] : "MIXED";
-            setStartTermVal(val);
-            const sel = document.getElementById("select-start-terminal");
-            if (sel) sel.value = val;
-          }
-          if (endTerms.length > 0) {
-            const allSame = endTerms.every((t) => t === endTerms[0]);
-            const val = allSame ? endTerms[0] : "MIXED";
-            setEndTermVal(val);
-            const sel = document.getElementById("select-end-terminal");
-            if (sel) sel.value = val;
-          }
-          const colors = connNodes.map((n) => n.connectorColorHex).filter((c) => typeof c === "string" && c.length > 0);
-          if (colors.length > 0) {
-            const firstColor = colors[0] || "";
-            const allColorsSame = colors.every((c) => c.toUpperCase() === firstColor.toUpperCase());
-            setIsColorMixed(!allColorsSame);
-            if (allColorsSame) {
-              const hex = firstColor.toUpperCase();
-              setSelectedColor(hex);
-              setHexInput(hex.replace("#", ""));
-              const colSel = document.getElementById("conn-line-color");
-              if (colSel) colSel.value = hex;
-            } else {
-              setHexInput("");
-            }
-          }
-          const weights = connNodes.map((n) => n.connectorStrokeWeight).filter((w) => typeof w === "number");
-          const weightEl = document.getElementById("input-stroke-weight");
-          if (weights.length > 0) {
-            const allWeightsSame = weights.every((w) => w === weights[0]);
-            setIsWeightMixed(!allWeightsSame);
-            if (weightEl) {
-              weightEl.value = allWeightsSame ? String(weights[0]) : "";
-              weightEl.placeholder = allWeightsSame ? "" : "Mixed";
-            }
-          }
-        } else if (count === 1) {
-          setIsColorMixed(false);
-          setIsWeightMixed(false);
-          const node = selectedNodes[0];
-          if (node.connectorStartTerminal) {
-            setStartTermVal(node.connectorStartTerminal);
-            const sel = document.getElementById("select-start-terminal");
-            if (sel) sel.value = node.connectorStartTerminal;
-          }
-          if (node.connectorEndTerminal) {
-            setEndTermVal(node.connectorEndTerminal);
-            const sel = document.getElementById("select-end-terminal");
-            if (sel) sel.value = node.connectorEndTerminal;
-          }
-          if (node.connectorColorHex) {
-            const hex = node.connectorColorHex.toUpperCase();
-            setSelectedColor(hex);
-            setHexInput(hex.replace("#", ""));
-            const colSel = document.getElementById("conn-line-color");
-            if (colSel) colSel.value = hex;
-          }
-          const weightEl = document.getElementById("input-stroke-weight");
-          if (weightEl && typeof node.connectorStrokeWeight === "number") {
-            weightEl.value = String(node.connectorStrokeWeight);
+    (0, import_react12.useEffect)(() => {
+      if (summary.isSingleConnector) {
+        const node = selectedNodes[0];
+        setIsColorMixed(false);
+        setIsWeightMixed(false);
+        if (node?.connectorStartTerminal) {
+          setStartTermVal(node.connectorStartTerminal);
+          const sel = document.getElementById("select-start-terminal");
+          if (sel) sel.value = node.connectorStartTerminal;
+        }
+        if (node?.connectorEndTerminal) {
+          setEndTermVal(node.connectorEndTerminal);
+          const sel = document.getElementById("select-end-terminal");
+          if (sel) sel.value = node.connectorEndTerminal;
+        }
+        if (node?.connectorColorHex) {
+          const hex = node.connectorColorHex.toUpperCase();
+          setSelectedColor(hex);
+          setHexInput(hex.replace("#", ""));
+          const colSel = document.getElementById("conn-line-color");
+          if (colSel) colSel.value = hex;
+        }
+        const weightEl = document.getElementById("input-stroke-weight");
+        if (weightEl && typeof node?.connectorStrokeWeight === "number") {
+          weightEl.value = String(node.connectorStrokeWeight);
+          weightEl.placeholder = "";
+        }
+        if (node?.connectorRoutingType) {
+          setUIState({ selectedRoutingType: node.connectorRoutingType });
+        }
+        if (node?.connectorStrokePattern) {
+          setUIState({ selectedLinePattern: node.connectorStrokePattern });
+        }
+      } else if (summary.isMultiConnector) {
+        const startVal = summary.connectorStartTerminal.isMixed ? "MIXED" : summary.connectorStartTerminal.value || "NONE";
+        setStartTermVal(startVal);
+        const startSel = document.getElementById("select-start-terminal");
+        if (startSel) startSel.value = startVal;
+        const endVal = summary.connectorEndTerminal.isMixed ? "MIXED" : summary.connectorEndTerminal.value || "ARROW";
+        setEndTermVal(endVal);
+        const endSel = document.getElementById("select-end-terminal");
+        if (endSel) endSel.value = endVal;
+        setIsColorMixed(summary.connectorColor.isMixed);
+        if (!summary.connectorColor.isMixed && summary.connectorColor.value) {
+          const hex = summary.connectorColor.value.toUpperCase();
+          setSelectedColor(hex);
+          setHexInput(hex.replace("#", ""));
+          const colSel = document.getElementById("conn-line-color");
+          if (colSel) colSel.value = hex;
+        } else if (summary.connectorColor.isMixed) {
+          setHexInput("");
+        }
+        setIsWeightMixed(summary.connectorStrokeWeight.isMixed);
+        const weightEl = document.getElementById("input-stroke-weight");
+        if (weightEl) {
+          if (summary.connectorStrokeWeight.isMixed) {
+            weightEl.value = "";
+            weightEl.placeholder = "Mixed";
+          } else if (summary.connectorStrokeWeight.value !== void 0) {
+            weightEl.value = String(summary.connectorStrokeWeight.value);
             weightEl.placeholder = "";
           }
         }
-      } else if (count >= 2) {
-        const colors = selectedNodes.map((n) => n.fillColorHex).filter(Boolean);
-        if (colors.length > 0) {
-          const allColorsSame = colors.every((c) => c.toUpperCase() === colors[0].toUpperCase());
-          setIsColorMixed(!allColorsSame);
-          if (allColorsSame) {
-            const hex = colors[0].toUpperCase();
-            setSelectedColor(hex);
-            setHexInput(hex.replace("#", ""));
-          } else {
-            setHexInput("");
-          }
+        if (!summary.connectorRoutingType.isMixed && summary.connectorRoutingType.value) {
+          setUIState({ selectedRoutingType: summary.connectorRoutingType.value });
+        }
+        if (!summary.connectorStrokePattern.isMixed && summary.connectorStrokePattern.value) {
+          setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
+        }
+      } else if (summary.isMultiFlowNode) {
+        setIsColorMixed(summary.color.isMixed);
+        if (!summary.color.isMixed && summary.color.value) {
+          const hex = summary.color.value.toUpperCase();
+          setSelectedColor(hex);
+          setHexInput(hex.replace("#", ""));
+        } else {
+          setHexInput("");
         }
         setIsWeightMixed(false);
       } else {
         setIsColorMixed(false);
         setIsWeightMixed(false);
       }
-    }, [selectedNodes]);
-    (0, import_react11.useEffect)(() => {
+    }, [
+      summary.isSingleConnector,
+      summary.isMultiConnector,
+      summary.isMultiFlowNode,
+      summary.connectorColor.isMixed,
+      summary.connectorColor.value,
+      summary.connectorStrokeWeight.isMixed,
+      summary.connectorStrokeWeight.value,
+      summary.connectorRoutingType.isMixed,
+      summary.connectorRoutingType.value,
+      summary.connectorStrokePattern.isMixed,
+      summary.connectorStrokePattern.value,
+      summary.connectorStartTerminal.isMixed,
+      summary.connectorStartTerminal.value,
+      summary.connectorEndTerminal.isMixed,
+      summary.connectorEndTerminal.value,
+      summary.color.isMixed,
+      summary.color.value,
+      selectedNodes,
+      setUIState
+    ]);
+    (0, import_react12.useEffect)(() => {
       if (selectedConnectorColor) {
         const formatted = selectedConnectorColor.toUpperCase();
         setSelectedColor(formatted);
@@ -31068,7 +31281,10 @@
       { type: "STRAIGHT", title: "\uC9C1\uC120 (Straight)", svg: '<path d="M17.2714 6.02145C17.4667 5.82618 17.7832 5.82618 17.9785 6.02145C18.1737 6.21671 18.1737 6.53322 17.9785 6.72848L6.72848 17.9785C6.53322 18.1737 6.21671 18.1737 6.02145 17.9785C5.82618 17.7832 5.82618 17.4667 6.02145 17.2714L17.2714 6.02145Z" fill="currentColor"/>' }
     ];
     return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "section-block", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "section-title", children: "Connect" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("span", { className: "section-title", children: [
+        "Connect",
+        summary.isMultiConnector && (isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed) && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+      ] }) }),
       /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "section-body", children: [
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { style: { display: "flex", gap: "6px", alignItems: "center" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "conn-color-input-wrapper", id: "wrap-conn-color", children: [
@@ -31086,11 +31302,7 @@
                     {
                       className: "conn-color-chip",
                       style: {
-                        backgroundColor: isColorMixed ? "transparent" : selectedColor,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#111827"
+                        backgroundColor: isColorMixed ? "transparent" : selectedColor
                       },
                       children: isColorMixed && COLOR_MIXED_ICON
                     }
@@ -31170,16 +31382,19 @@
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "routing-types-grid", style: { flex: 1 }, children: ROUTING_TYPES.map((r) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-            "button",
-            {
-              className: `routing-btn${selectedRoutingType === r.type ? " active" : ""}`,
-              title: r.title,
-              onClick: () => selectRoutingType(r.type),
-              children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", dangerouslySetInnerHTML: { __html: r.svg } })
-            },
-            r.type
-          )) })
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "routing-types-grid", style: { flex: 1 }, children: ROUTING_TYPES.map((r) => {
+            const isActive = !isRoutingMixed && selectedRoutingType === r.type;
+            return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              "button",
+              {
+                className: `routing-btn${isActive ? " active" : ""}`,
+                title: r.title,
+                onClick: () => selectRoutingType(r.type),
+                children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", dangerouslySetInnerHTML: { __html: r.svg } })
+              },
+              r.type
+            );
+          }) })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "connect-canvas-box", id: "conn-anchor-preview-box", children: [
           /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "node-preview-card", id: "preview-node-1", children: [
@@ -31248,20 +31463,23 @@
             [
               { pattern: "SOLID", title: "Solid", path: "M18.5 11C18.7761 11 19 11.2239 19 11.5C19 11.7761 18.7761 12 18.5 12H5.5C5.22386 12 5 11.7761 5 11.5C5 11.2239 5.22386 11 5.5 11H18.5Z" },
               { pattern: "DASHED", title: "Dashed", path: "M7.5 12C7.77614 12 8 12.2239 8 12.5C8 12.7761 7.77614 13 7.5 13H5.5C5.22386 13 5 12.7761 5 12.5C5 12.2239 5.22386 12 5.5 12H7.5ZM13 12C13.2761 12 13.5 12.2239 13.5 12.5C13.5 12.7761 13.2761 13 13 13H11C10.7239 13 10.5 12.7761 10.5 12.5C10.5 12.2239 10.7239 12 11 12H13ZM18.5 12C18.7761 12 19 12.2239 19 12.5C19 12.7761 18.7761 13 18.5 13H16.5C16.2239 13 16 12.7761 16 12.5C16 12.2239 16.2239 12 16.5 12H18.5Z" }
-            ].map(({ pattern, title, path }) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-              "button",
-              {
-                className: `line-style-btn${selectedLinePattern === pattern ? " active" : ""}`,
-                title,
-                onClick: (e) => selectLinePattern(pattern, e.currentTarget),
-                children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: path, fill: "currentColor" }) })
-              },
-              pattern
-            )),
+            ].map(({ pattern, title, path }) => {
+              const isActive = !isLinePatternMixed && selectedLinePattern === pattern;
+              return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                "button",
+                {
+                  className: `line-style-btn${isActive ? " active" : ""}`,
+                  title,
+                  onClick: (e) => selectLinePattern(pattern, e.currentTarget),
+                  children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: path, fill: "currentColor" }) })
+                },
+                pattern
+              );
+            }),
             /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
               "button",
               {
-                className: `line-style-btn${selectedLinePattern === "DOTTED" ? " active" : ""}`,
+                className: `line-style-btn${!isLinePatternMixed && selectedLinePattern === "DOTTED" ? " active" : ""}`,
                 title: "Dotted",
                 onClick: (e) => selectLinePattern("DOTTED", e.currentTarget),
                 children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("g", { transform: "translate(5, 11.3)", children: [
@@ -31630,12 +31848,12 @@
   }
 
   // src/ui/components/connection/LabelSection.tsx
-  var import_react12 = __toESM(require_react());
+  var import_react13 = __toESM(require_react());
   var import_jsx_runtime15 = __toESM(require_jsx_runtime());
   var LABEL_PRESETS = ["Text", "Yes", "No", "Success", "Error", "Next", "Back"];
   function LabelSection() {
     const { setLastConnectorConfig, applyCurrentConnectorState, autoResizeWindow } = useApp();
-    const [isOn, setIsOn] = (0, import_react12.useState)(false);
+    const [isOn, setIsOn] = (0, import_react13.useState)(false);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastConnectorConfig({ labelOn: checked });
@@ -31701,7 +31919,7 @@
     const allConnectors = count > 0 && selectedNodes.every((n) => n && n.isConnector);
     const isSingleConn = count === 1 && allConnectors;
     const isMultiConn = count >= 2 && allConnectors;
-    (0, import_react13.useEffect)(() => {
+    (0, import_react14.useEffect)(() => {
       const anchorBox = document.getElementById("conn-anchor-preview-box");
       if (isSingleConn) {
         if (anchorBox) anchorBox.style.display = "";
@@ -31738,13 +31956,13 @@
   }
 
   // src/ui/components/shared/Tooltip.tsx
-  var import_react14 = __toESM(require_react());
+  var import_react15 = __toESM(require_react());
   var import_jsx_runtime17 = __toESM(require_jsx_runtime());
   function FigmaTooltip() {
-    const tooltipRef = (0, import_react14.useRef)(null);
-    const stateRef = (0, import_react14.useRef)({ visible: false, text: "", x: 0, y: 0 });
-    const showTimerRef = (0, import_react14.useRef)(null);
-    const show = (0, import_react14.useCallback)((target, text) => {
+    const tooltipRef = (0, import_react15.useRef)(null);
+    const stateRef = (0, import_react15.useRef)({ visible: false, text: "", x: 0, y: 0 });
+    const showTimerRef = (0, import_react15.useRef)(null);
+    const show = (0, import_react15.useCallback)((target, text) => {
       if (showTimerRef.current) clearTimeout(showTimerRef.current);
       showTimerRef.current = setTimeout(() => {
         const rect = target.getBoundingClientRect();
@@ -31765,12 +31983,12 @@
         tooltip.style.visibility = "visible";
       }, 600);
     }, []);
-    const hide = (0, import_react14.useCallback)(() => {
+    const hide = (0, import_react15.useCallback)(() => {
       if (showTimerRef.current) clearTimeout(showTimerRef.current);
       const tooltip = tooltipRef.current;
       if (tooltip) tooltip.style.display = "none";
     }, []);
-    (0, import_react14.useEffect)(() => {
+    (0, import_react15.useEffect)(() => {
       const handleMouseOver = (e) => {
         const target = e.target.closest("[data-tooltip]");
         if (target) show(target, target.getAttribute("data-tooltip") || "");
@@ -31929,10 +32147,10 @@
   }
 
   // src/ui/components/modals/PhaseModal.tsx
-  var import_react16 = __toESM(require_react());
+  var import_react17 = __toESM(require_react());
 
   // src/ui/components/shared/ColorWheelField.tsx
-  var import_react15 = __toESM(require_react());
+  var import_react16 = __toESM(require_react());
   var import_jsx_runtime20 = __toESM(require_jsx_runtime());
   function hexToHsv(hex, fallbackHue = 0) {
     let clean = hex.replace("#", "").trim();
@@ -32010,14 +32228,25 @@
     const bHex = Math.round((b + m) * 255).toString(16).padStart(2, "0");
     return `${rHex}${gHex}${bHex}`.toUpperCase();
   }
-  var COLOR_MIXED_ICON2 = /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-    "path",
+  var COLOR_MIXED_ICON2 = /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+    "svg",
     {
-      d: "M4 8C4 7.72386 4.22386 7.5 4.5 7.5H11.5C11.7761 7.5 12 7.72386 12 8C12 8.27614 11.7761 8.5 11.5 8.5H4.5C4.22386 8.5 4 8.27614 4 8Z",
-      fill: "black",
-      fillOpacity: "0.9"
+      xmlns: "http://www.w3.org/2000/svg",
+      width: "24",
+      height: "24",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      className: "conn-color-mixed-svg",
+      children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+        "path",
+        {
+          d: "M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z",
+          fill: "white",
+          fillOpacity: "0.9"
+        }
+      )
     }
-  ) });
+  );
   function ColorWheelField({
     value,
     onChange,
@@ -32030,12 +32259,12 @@
     onMixedClear
   }) {
     const cleanHex = value.replace("#", "").toUpperCase();
-    const [colorHex, setColorHex] = (0, import_react15.useState)(cleanHex);
-    const [colorHsv, setColorHsv] = (0, import_react15.useState)(() => hexToHsv(cleanHex));
-    const [internalOpen, setInternalOpen] = (0, import_react15.useState)(false);
-    const wheelRef = (0, import_react15.useRef)(null);
-    const innerDiscRef = (0, import_react15.useRef)(null);
-    const isInteractingRef = (0, import_react15.useRef)(false);
+    const [colorHex, setColorHex] = (0, import_react16.useState)(cleanHex);
+    const [colorHsv, setColorHsv] = (0, import_react16.useState)(() => hexToHsv(cleanHex));
+    const [internalOpen, setInternalOpen] = (0, import_react16.useState)(false);
+    const wheelRef = (0, import_react16.useRef)(null);
+    const innerDiscRef = (0, import_react16.useRef)(null);
+    const isInteractingRef = (0, import_react16.useRef)(false);
     const isWheelOpen = isOpen !== void 0 ? isOpen : internalOpen;
     const toggleWheel = () => {
       const next = !isWheelOpen;
@@ -32045,7 +32274,7 @@
         setInternalOpen(next);
       }
     };
-    (0, import_react15.useEffect)(() => {
+    (0, import_react16.useEffect)(() => {
       if (isInteractingRef.current) return;
       const nextClean = value.replace("#", "").toUpperCase();
       if (nextClean === colorHex) return;
@@ -32079,7 +32308,7 @@
         onChange(fallback);
       }
     }
-    const updateHueFromPoint = (0, import_react15.useCallback)(
+    const updateHueFromPoint = (0, import_react16.useCallback)(
       (clientX, clientY) => {
         if (!wheelRef.current) return;
         const rect = wheelRef.current.getBoundingClientRect();
@@ -32129,7 +32358,7 @@
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     };
-    const updateSatValFromPoint = (0, import_react15.useCallback)(
+    const updateSatValFromPoint = (0, import_react16.useCallback)(
       (clientX, clientY) => {
         if (!innerDiscRef.current) return;
         const rect = innerDiscRef.current.getBoundingClientRect();
@@ -32201,10 +32430,7 @@
             {
               className: "conn-modal-hex-chip",
               style: {
-                backgroundColor: isMixed ? "transparent" : currentFormattedHex,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center"
+                backgroundColor: isMixed ? "transparent" : currentFormattedHex
               },
               children: isMixed && COLOR_MIXED_ICON2
             }
@@ -32312,11 +32538,11 @@
   function PhaseModal({ editingPhase, onSave, onClose }) {
     const { activeModal } = useApp();
     const isOpen = activeModal === "phase";
-    const [name, setName] = (0, import_react16.useState)(editingPhase?.name || "");
+    const [name, setName] = (0, import_react17.useState)(editingPhase?.name || "");
     const initialColor = (editingPhase?.color || "#EA2039").replace("#", "").trim().toUpperCase();
     const validHex = initialColor.length === 6 ? initialColor : "EA2039";
-    const [colorHex, setColorHex] = (0, import_react16.useState)(validHex);
-    const [pickerOpen, setPickerOpen] = (0, import_react16.useState)(false);
+    const [colorHex, setColorHex] = (0, import_react17.useState)(validHex);
+    const [pickerOpen, setPickerOpen] = (0, import_react17.useState)(false);
     function handleSave() {
       if (!name.trim()) return;
       const finalColor = `#${colorHex.padStart(6, "0")}`;
@@ -32448,7 +32674,7 @@
   }
 
   // src/ui/components/modals/SizeModal.tsx
-  var import_react17 = __toESM(require_react());
+  var import_react18 = __toESM(require_react());
   var import_jsx_runtime22 = __toESM(require_jsx_runtime());
   var FIXED_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
     "path",
@@ -32492,14 +32718,14 @@
     } = useApp();
     const isOpen = mode === "add" ? activeModal === "add-size" : activeModal === "edit-size";
     const currentPreset = editingPreset || sizePresets.find((p) => p.id === selectedSizePresetId) || sizePresets[0];
-    const [name, setName] = (0, import_react17.useState)("");
-    const [w, setW] = (0, import_react17.useState)(375);
-    const [h, setH] = (0, import_react17.useState)(812);
-    const [radius, setRadius] = (0, import_react17.useState)(0);
-    const [sizeMode, setSizeMode] = (0, import_react17.useState)("fixed");
-    const [dropdownOpen, setDropdownOpen] = (0, import_react17.useState)(false);
-    const dropdownRef = (0, import_react17.useRef)(null);
-    (0, import_react17.useEffect)(() => {
+    const [name, setName] = (0, import_react18.useState)("");
+    const [w, setW] = (0, import_react18.useState)(375);
+    const [h, setH] = (0, import_react18.useState)(812);
+    const [radius, setRadius] = (0, import_react18.useState)(0);
+    const [sizeMode, setSizeMode] = (0, import_react18.useState)("fixed");
+    const [dropdownOpen, setDropdownOpen] = (0, import_react18.useState)(false);
+    const dropdownRef = (0, import_react18.useRef)(null);
+    (0, import_react18.useEffect)(() => {
       if (!isOpen) return;
       setDropdownOpen(false);
       if (mode === "add") {
@@ -32518,7 +32744,7 @@
         }
       }
     }, [isOpen, mode, currentPreset, lastNodeConfig]);
-    (0, import_react17.useEffect)(() => {
+    (0, import_react18.useEffect)(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
           setDropdownOpen(false);
@@ -32835,7 +33061,7 @@
   }
 
   // src/ui/components/modals/FigmaDesignPickerModal.tsx
-  var import_react18 = __toESM(require_react());
+  var import_react19 = __toESM(require_react());
   var import_jsx_runtime23 = __toESM(require_jsx_runtime());
   function FigmaDesignPickerModal({ onClose }) {
     const {
@@ -32846,24 +33072,24 @@
       sizePresets,
       applyCurrentNodeState
     } = useApp();
-    const [searchQuery, setSearchQuery] = (0, import_react18.useState)("");
-    const [selectedFrameId, setSelectedFrameId] = (0, import_react18.useState)(null);
-    const [saveAsPreset, setSaveAsPreset] = (0, import_react18.useState)(true);
-    const [linkToFrame, setLinkToFrame] = (0, import_react18.useState)(true);
-    (0, import_react18.useEffect)(() => {
+    const [searchQuery, setSearchQuery] = (0, import_react19.useState)("");
+    const [selectedFrameId, setSelectedFrameId] = (0, import_react19.useState)(null);
+    const [saveAsPreset, setSaveAsPreset] = (0, import_react19.useState)(true);
+    const [linkToFrame, setLinkToFrame] = (0, import_react19.useState)(true);
+    (0, import_react19.useEffect)(() => {
       loadDesignFrames();
     }, [loadDesignFrames]);
-    (0, import_react18.useEffect)(() => {
+    (0, import_react19.useEffect)(() => {
       if (designFrames.length > 0 && !selectedFrameId) {
         setSelectedFrameId(designFrames[0].id);
       }
     }, [designFrames, selectedFrameId]);
-    const filteredFrames = (0, import_react18.useMemo)(() => {
+    const filteredFrames = (0, import_react19.useMemo)(() => {
       const q = searchQuery.trim().toLowerCase();
       if (!q) return designFrames;
       return designFrames.filter((f) => f.name.toLowerCase().includes(q));
     }, [designFrames, searchQuery]);
-    const selectedFrame = (0, import_react18.useMemo)(() => {
+    const selectedFrame = (0, import_react19.useMemo)(() => {
       return designFrames.find((f) => f.id === selectedFrameId) || null;
     }, [designFrames, selectedFrameId]);
     function handleApply() {
@@ -33375,7 +33601,7 @@
   }
 
   // src/ui/components/modals/StyleModal.tsx
-  var import_react19 = __toESM(require_react());
+  var import_react20 = __toESM(require_react());
   var import_jsx_runtime24 = __toESM(require_jsx_runtime());
   var CLOSE_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
     "path",
@@ -33391,7 +33617,7 @@
       fill: "currentColor"
     }
   ) });
-  function StyleModal({ onClose, initialColor }) {
+  function StyleModal({ onClose, initialColor, isMixed = false }) {
     const {
       uiState,
       setUIState,
@@ -33403,12 +33629,14 @@
     } = useApp();
     const resolvedColor = (initialColor || uiState.selectedColor || "#EA2039").replace("#", "").trim().toUpperCase();
     const validFill = resolvedColor.length === 6 ? resolvedColor : "EA2039";
-    const [fillHex, setFillHex] = (0, import_react19.useState)(validFill);
-    const [strokeHex, setStrokeHex] = (0, import_react19.useState)(validFill);
-    const [strokeWeight, setStrokeWeight] = (0, import_react19.useState)(0);
-    const [activePicker, setActivePicker] = (0, import_react19.useState)("fill");
+    const [fillHex, setFillHex] = (0, import_react20.useState)(isMixed ? "" : validFill);
+    const [isFillMixed, setIsFillMixed] = (0, import_react20.useState)(Boolean(isMixed));
+    const [strokeHex, setStrokeHex] = (0, import_react20.useState)(validFill);
+    const [strokeWeight, setStrokeWeight] = (0, import_react20.useState)(0);
+    const [activePicker, setActivePicker] = (0, import_react20.useState)("fill");
     function handleSave() {
-      const finalFillColor = `#${fillHex.padStart(6, "0")}`;
+      const finalFill = fillHex.trim() ? fillHex : validFill;
+      const finalFillColor = `#${finalFill.padStart(6, "0")}`;
       const finalStrokeColor = `#${strokeHex.padStart(6, "0")}`;
       const finalStrokeWeight = Math.max(0, strokeWeight);
       addStylePreset({
@@ -33454,7 +33682,10 @@
             onClick: (e) => e.stopPropagation(),
             children: [
               /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-modal-header", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { className: "style-modal-title", children: "Style" }),
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("span", { className: "style-modal-title", children: [
+                  "Style",
+                  isFillMixed && /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+                ] }),
                 /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
                   "button",
                   {
@@ -33485,7 +33716,12 @@
                     ColorWheelField,
                     {
                       value: fillHex,
-                      onChange: (hex) => setFillHex(hex),
+                      isMixed: isFillMixed,
+                      onMixedClear: () => setIsFillMixed(false),
+                      onChange: (hex) => {
+                        setIsFillMixed(false);
+                        setFillHex(hex);
+                      },
                       onEnter: handleSave,
                       isOpen: activePicker === "fill",
                       onToggleOpen: (open) => setActivePicker(open ? "fill" : null)
@@ -33582,7 +33818,7 @@
   }
 
   // src/ui/components/modals/ConnectorColorModal.tsx
-  var import_react20 = __toESM(require_react());
+  var import_react21 = __toESM(require_react());
   var import_jsx_runtime25 = __toESM(require_jsx_runtime());
   var CLOSE_SVG3 = /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
     "path",
@@ -33602,10 +33838,10 @@
     isMixed: initialIsMixed = false
   }) {
     const { stylePresets } = useApp();
-    const [colorHex, setColorHex] = (0, import_react20.useState)(() => initialColor.replace("#", "").toUpperCase());
-    const [isMixed, setIsMixed] = (0, import_react20.useState)(Boolean(initialIsMixed));
-    const [showWheel, setShowWheel] = (0, import_react20.useState)(false);
-    const uniqueColorPresets = (0, import_react20.useMemo)(() => {
+    const [colorHex, setColorHex] = (0, import_react21.useState)(() => initialIsMixed ? "" : initialColor.replace("#", "").toUpperCase());
+    const [isMixed, setIsMixed] = (0, import_react21.useState)(Boolean(initialIsMixed));
+    const [showWheel, setShowWheel] = (0, import_react21.useState)(false);
+    const uniqueColorPresets = (0, import_react21.useMemo)(() => {
       const seen = /* @__PURE__ */ new Set();
       const result = [];
       const baseColors = [
@@ -33632,10 +33868,14 @@
     }, [stylePresets]);
     const presetsRow1 = uniqueColorPresets.slice(0, 5);
     const presetsRow2 = uniqueColorPresets.slice(5);
-    (0, import_react20.useEffect)(() => {
-      setColorHex(initialColor.replace("#", "").toUpperCase());
-    }, [initialColor]);
-    (0, import_react20.useEffect)(() => {
+    (0, import_react21.useEffect)(() => {
+      if (!initialIsMixed) {
+        setColorHex(initialColor.replace("#", "").toUpperCase());
+      } else {
+        setColorHex("");
+      }
+    }, [initialColor, initialIsMixed]);
+    (0, import_react21.useEffect)(() => {
       setIsMixed(Boolean(initialIsMixed));
     }, [initialIsMixed]);
     function handleSelectPreset(hex) {
@@ -33646,15 +33886,21 @@
       onClose();
     }
     function handleCancel() {
-      onApply(initialColor);
+      if (!initialIsMixed) {
+        onApply(initialColor);
+      }
       onClose();
     }
     function handleApply() {
+      if (!colorHex || colorHex.trim() === "") {
+        onClose();
+        return;
+      }
       const finalHex = `#${colorHex.padStart(6, "0")}`;
       onApply(finalHex);
       onClose();
     }
-    const currentFormattedHex = `#${colorHex.padStart(6, "0")}`;
+    const currentFormattedHex = colorHex ? `#${colorHex.padStart(6, "0")}` : "";
     return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
       "div",
       {
@@ -33672,7 +33918,10 @@
             onClick: (e) => e.stopPropagation(),
             children: [
               /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { className: "conn-color-modal-header", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("span", { className: "conn-color-modal-title", children: "Connector Color" }),
+                /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("span", { className: "conn-color-modal-title", children: [
+                  "Connector Color",
+                  isMixed && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+                ] }),
                 /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
                   "button",
                   {
@@ -33813,18 +34062,19 @@
       stylePresets,
       setSelectedStylePresetId
     } = useApp();
-    const [phases, setPhases] = (0, import_react21.useState)([
+    const [phases, setPhases] = (0, import_react22.useState)([
       { id: "phase-1", name: "Phase 1", color: "#EA2039" },
       { id: "phase-2", name: "Phase 2", color: "#8638E5" }
     ]);
-    const [editingPhase, setEditingPhase] = (0, import_react21.useState)(null);
+    const [editingPhase, setEditingPhase] = (0, import_react22.useState)(null);
+    const summary = useSelectionSummary();
     const nodeCount = selectedNodes.length;
     const allConnectors = nodeCount > 0 && selectedNodes.every((n) => n && n.isConnector);
     const isSingleConn = nodeCount === 1 && allConnectors;
     const isMultiConn = nodeCount >= 2 && allConnectors;
     const isConnSel = isSingleConn || isMultiConn;
     const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
-    (0, import_react21.useEffect)(() => {
+    (0, import_react22.useEffect)(() => {
       const tabNode = document.getElementById("tab-btn-node");
       const tabAppearance = document.getElementById("tab-btn-appearance");
       const tabConnection = document.getElementById("tab-btn-connection");
@@ -33844,10 +34094,10 @@
         tabConnection?.classList.remove("disabled");
       }
     }, [isConnSel, nodeCount, currentTab, setCurrentTab]);
-    (0, import_react21.useEffect)(() => {
+    (0, import_react22.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
-    (0, import_react21.useEffect)(() => {
+    (0, import_react22.useEffect)(() => {
       let newlyFocusedInput = null;
       const handleFocusIn = (e) => {
         const target = e.target;
@@ -34087,31 +34337,36 @@
         StyleModal,
         {
           initialColor: uiState.selectedColor,
+          isMixed: summary.isMultiFlowNode ? summary.color.isMixed : false,
           onClose: () => setActiveModal("none")
         }
       ),
       activeModal === "connector-color" && (() => {
-        const connectorColors = selectedNodes.filter((n) => n && n.isConnector).map((n) => n.connectorColorHex).filter((c) => typeof c === "string" && c.length > 0);
-        const firstColor = connectorColors[0] || "";
-        const isConnectorColorMixed = connectorColors.length > 1 && !connectorColors.every((c) => c.toUpperCase() === firstColor.toUpperCase());
+        const isConnectorColorMixed = summary.isMultiConnector ? summary.connectorColor.isMixed : summary.isMultiFlowNode ? summary.color.isMixed : false;
         return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
           ConnectorColorModal,
           {
-            initialColor: uiState.selectedConnectorColor || "#000000",
+            initialColor: isConnectorColorMixed ? "" : uiState.selectedConnectorColor || "#000000",
             isMixed: isConnectorColorMixed,
             onApply: (colorHex) => {
               const formatted = colorHex.toUpperCase();
               setUIState({ selectedConnectorColor: formatted });
-              if (isConnSel && selectedNodes.length > 0) {
-                parent.postMessage(
-                  {
-                    pluginMessage: {
-                      type: "UPDATE_CONNECTOR_STYLE",
-                      connectorColor: formatted
-                    }
-                  },
-                  "*"
-                );
+              const connNodes = selectedNodes.filter((n) => n && n.isConnector);
+              if (connNodes.length > 0) {
+                connNodes.forEach((c) => {
+                  parent.postMessage(
+                    {
+                      pluginMessage: {
+                        type: "UPDATE_CONNECTOR_PROPERTIES",
+                        payload: {
+                          connectorId: c.id,
+                          colorHex: formatted
+                        }
+                      }
+                    },
+                    "*"
+                  );
+                });
               }
             },
             onClose: () => setActiveModal("none")

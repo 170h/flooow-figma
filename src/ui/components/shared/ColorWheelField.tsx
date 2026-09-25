@@ -82,12 +82,19 @@ export function hsvToHex(h: number, s: number, v: number): string {
   return `${rHex}${gHex}${bHex}`.toUpperCase();
 }
 
-// 2개 이상 다중 선택 시 Mixed 표시용 16×16 대시 SVG 아이콘
+// 2개 이상 다중 선택 시 Mixed 표시용 24×24 대시 SVG 아이콘 (피그마 UI3 다크모드 대응)
 const COLOR_MIXED_ICON = (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    className="conn-color-mixed-svg"
+  >
     <path
-      d="M4 8C4 7.72386 4.22386 7.5 4.5 7.5H11.5C11.7761 7.5 12 7.72386 12 8C12 8.27614 11.7761 8.5 11.5 8.5H4.5C4.22386 8.5 4 8.27614 4 8Z"
-      fill="black"
+      d="M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z"
+      fill="white"
       fillOpacity="0.9"
     />
   </svg>
@@ -338,9 +345,6 @@ export function ColorWheelField({
             className="conn-modal-hex-chip"
             style={{
               backgroundColor: isMixed ? 'transparent' : currentFormattedHex,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
             }}
           >
             {isMixed && COLOR_MIXED_ICON}

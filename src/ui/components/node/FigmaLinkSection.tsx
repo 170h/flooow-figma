@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 
 /**
  * 프로토콜(http, https, figma 등)이 누락된 URL에 자동으로 https://를 붙여 유효한 링크로 정규화합니다.
@@ -19,11 +20,14 @@ function normalizeUrl(url: string): string {
  */
 export function FigmaLinkSection() {
   const { autoResizeWindow, setLastNodeConfig, lastNodeConfig, selectedNodes, applyCurrentNodeState } = useApp();
+  const summary = useSelectionSummary();
   const [isOn, setIsOn] = useState(false);
   const [url, setUrl] = useState('');
   const cachedUrlRef = useRef<string>('');
   const lastSelectedNodeIdRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const isLinkMixed = summary.isMultiFlowNode && summary.figmaLink.isMixed;
 
   // 노드 선택 대상이 실제로 변경되었을 때만 figmaLink / cachedLink 동기화
   useEffect(() => {
@@ -50,16 +54,18 @@ export function FigmaLinkSection() {
         setUrl(link);
         cachedUrlRef.current = link;
       } else {
-        const firstWithLink = selectedNodes.find(n => n.figmaLink);
-        const activeLink = firstWithLink?.figmaLink || '';
-        const cachedLink = selectedNodes.find(n => n.cachedFigmaLink)?.cachedFigmaLink || activeLink;
-        const displayLink = activeLink || cachedLink;
-        setIsOn(Boolean(activeLink));
-        setUrl(displayLink);
-        cachedUrlRef.current = displayLink;
+        const anyHasLink = summary.hasFigmaLink.hasValue;
+        setIsOn(anyHasLink);
+        if (summary.figmaLink.isMixed) {
+          setUrl('');
+        } else {
+          const commonLink = summary.figmaLink.value || '';
+          setUrl(commonLink);
+          cachedUrlRef.current = commonLink;
+        }
       }
     }
-  }, [selectedNodes]);
+  }, [selectedNodes, lastNodeConfig.singleLinkOn, lastNodeConfig.singleLinkUrl, summary.hasFigmaLink.hasValue, summary.figmaLink.isMixed, summary.figmaLink.value, setLastNodeConfig]);
 
   function commitUrl(currentRawUrl: string) {
     const trimmed = currentRawUrl.trim();
@@ -134,7 +140,14 @@ export function FigmaLinkSection() {
   return (
     <div className="section-block figma-link-section" style={{ paddingBottom: isOn ? '12px' : '0px' }}>
       <div className="section-header toggle-row">
-        <span className="section-title">Figma Screen Link</span>
+        <span className="section-title">
+          Figma Screen Link
+          {isLinkMixed && (
+            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+              (Mixed)
+            </span>
+          )}
+        </span>
         <label className="switch">
           <input
             type="checkbox"
@@ -154,7 +167,7 @@ export function FigmaLinkSection() {
               id="single-screen-url"
               className="form-input"
               style={{ width: '100%', paddingRight: url ? '28px' : '10px' }}
-              placeholder="Add a Figma Screen URL"
+              placeholder={isLinkMixed ? 'Mixed' : 'Add a Figma Screen URL'}
               value={url}
               onChange={e => handleUrlChange(e.target.value)}
               onKeyDown={handleKeyDown}

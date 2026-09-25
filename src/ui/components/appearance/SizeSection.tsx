@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { useApp, SizePreset, NodeInfo } from '../../context/AppContext';
+import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 
 const FIXED_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -59,22 +60,22 @@ export function SizeSection() {
     Boolean(activePreset.isDefault) ||
     DEFAULT_PRESET_IDS.has(activePreset.id);
 
+  const summary = useSelectionSummary();
+
   const currentSizeMode = (() => {
-    if (selectedNodes && selectedNodes.length > 1) {
-      const first = selectedNodes[0]?.sizeMode;
-      const allSame = selectedNodes.every((n) => n && n.sizeMode === first);
-      if (!allSame) return 'mixed';
-      return first || lastNodeConfig.sizeMode || 'fixed';
+    if (summary.isMultiFlowNode) {
+      if (summary.sizeMode.isMixed) return 'mixed';
+      return summary.sizeMode.value || lastNodeConfig.sizeMode || 'fixed';
     }
-    if (selectedNodes && selectedNodes.length === 1) {
-      return selectedNodes[0]?.sizeMode || lastNodeConfig.sizeMode || 'fixed';
+    if (summary.isSingleFlowNode) {
+      return summary.sizeMode.value || lastNodeConfig.sizeMode || 'fixed';
     }
     return lastNodeConfig.sizeMode || 'fixed';
   })();
 
-  const [isWMixed, setIsWMixed] = React.useState(false);
-  const [isHMixed, setIsHMixed] = React.useState(false);
-  const [isRMixed, setIsRMixed] = React.useState(false);
+  const isWMixed = summary.isMultiFlowNode && summary.width.isMixed;
+  const isHMixed = summary.isMultiFlowNode && summary.height.isMixed;
+  const isRMixed = summary.isMultiFlowNode && summary.cornerRadius.isMixed;
 
   // 2. 선택된 노드 변경 시 W, H, Radius 인풋 필드 값 동기화
   React.useEffect(() => {
@@ -84,36 +85,21 @@ export function SizeSection() {
       const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
       const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
 
-      if (validNodes.length > 1) {
-        const widths = validNodes.map((n) => n.width).filter((v): v is number => typeof v === 'number');
-        const heights = validNodes.map((n) => n.height).filter((v): v is number => typeof v === 'number');
-        const radii = validNodes.map((n) => n.cornerRadius).filter((v): v is number => typeof v === 'number');
-
-        const allWSame = widths.length > 0 && widths.every((v) => v === widths[0]);
-        const allHSame = heights.length > 0 && heights.every((v) => v === heights[0]);
-        const allRSame = radii.length > 0 && radii.every((v) => v === radii[0]);
-
-        setIsWMixed(!allWSame);
-        setIsHMixed(!allHSame);
-        setIsRMixed(!allRSame);
-
+      if (summary.isMultiFlowNode) {
         if (wEl) {
-          wEl.value = allWSame ? String(widths[0]) : '';
-          wEl.placeholder = allWSame ? '' : 'Mixed';
+          wEl.value = isWMixed ? '' : (summary.width.value !== undefined ? String(summary.width.value) : '');
+          wEl.placeholder = isWMixed ? 'Mixed' : '';
         }
         if (hEl) {
-          hEl.value = allHSame ? String(heights[0]) : '';
-          hEl.placeholder = allHSame ? '' : 'Mixed';
+          hEl.value = isHMixed ? '' : (summary.height.value !== undefined ? String(summary.height.value) : '');
+          hEl.placeholder = isHMixed ? 'Mixed' : '';
         }
         if (rEl) {
-          rEl.value = allRSame ? String(radii[0]) : '';
-          rEl.placeholder = allRSame ? '' : 'Mixed';
+          rEl.value = isRMixed ? '' : (summary.cornerRadius.value !== undefined ? String(summary.cornerRadius.value) : '');
+          rEl.placeholder = isRMixed ? 'Mixed' : '';
         }
       } else {
         const first = validNodes[0];
-        setIsWMixed(false);
-        setIsHMixed(false);
-        setIsRMixed(false);
         if (wEl) {
           wEl.value = typeof first?.width === 'number' ? String(first.width) : String(lastNodeConfig.width || 250);
           wEl.placeholder = '';
@@ -128,7 +114,7 @@ export function SizeSection() {
         }
       }
     }
-  }, [selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
+  }, [summary.isMultiFlowNode, isWMixed, isHMixed, isRMixed, summary.width.value, summary.height.value, summary.cornerRadius.value, selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
 
   // 3. 이벤트 핸들러 함수들
   function handleWChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -280,10 +266,7 @@ export function SizeSection() {
             <span className="scrubber-label" data-tooltip="Width">W</span>
             <input type="number" id="input-size-w" defaultValue={250} min={50}
               placeholder={isWMixed ? 'Mixed' : undefined}
-              onChange={(e) => {
-                setIsWMixed(false);
-                handleWChange(e);
-              }}
+              onChange={handleWChange}
               onBlur={triggerApply}
               onKeyDown={e => e.key === 'Enter' && triggerApply()} />
           </div>
@@ -291,10 +274,7 @@ export function SizeSection() {
             <span className="scrubber-label" data-tooltip="Height">H</span>
             <input type="number" id="input-size-h" defaultValue={90} min={40}
               placeholder={isHMixed ? 'Mixed' : undefined}
-              onChange={(e) => {
-                setIsHMixed(false);
-                handleHChange(e);
-              }}
+              onChange={handleHChange}
               onBlur={triggerApply}
               onKeyDown={e => e.key === 'Enter' && triggerApply()} />
           </div>
@@ -304,10 +284,7 @@ export function SizeSection() {
               defaultValue={typeof selectedNodes[0]?.cornerRadius === 'number' ? selectedNodes[0].cornerRadius : (lastNodeConfig.cornerRadius || 0)}
               min={0} max={20}
               placeholder={isRMixed ? 'Mixed' : undefined}
-              onChange={(e) => {
-                setIsRMixed(false);
-                handleRChange(e);
-              }}
+              onChange={handleRChange}
               onBlur={triggerApply}
               onKeyDown={e => e.key === 'Enter' && triggerApply()} />
           </div>

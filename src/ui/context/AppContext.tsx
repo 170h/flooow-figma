@@ -642,7 +642,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const applyCurrentConnectorState = useCallback(() => {
     const nodes = selectedNodesRef.current;
-    if (!isConnectorSelectedRef.current || !nodes || nodes.length !== 1) return;
+    if (!isConnectorSelectedRef.current || !nodes || nodes.length === 0) return;
+
+    const connNodes = nodes.filter(n => n && n.isConnector);
+    if (connNodes.length === 0) return;
 
     const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
     const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
@@ -653,28 +656,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const hasLabel = labelToggleEl?.checked || false;
     const label = hasLabel ? (labelInputEl?.value.trim() || '') : '';
-    const color = colorEl?.value || '#000000';
-    const weight = parseFloat(weightEl?.value || '1.5') || 1.5;
-    const startTerm = startTermEl?.value || 'NONE';
-    const endTerm = endTermEl?.value || 'ARROW';
+    const colorRaw = colorEl?.value;
+    const color = colorRaw && colorRaw.trim() ? colorRaw : undefined;
+    const weightStr = weightEl?.value;
+    const weight = weightStr && weightStr.trim() !== '' ? parseFloat(weightStr) : undefined;
+    const startTermRaw = startTermEl?.value;
+    const startTerm = startTermRaw && startTermRaw !== 'MIXED' ? (startTermRaw as ConnectorTerminalType) : undefined;
+    const endTermRaw = endTermEl?.value;
+    const endTerm = endTermRaw && endTermRaw !== 'MIXED' ? (endTermRaw as ConnectorTerminalType) : undefined;
 
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
 
-    parent.postMessage({
-      pluginMessage: {
-        type: 'UPDATE_CONNECTOR_PROPERTIES',
-        payload: {
-          connectorId: nodes[0].id,
-          colorHex: color, strokeWeight: weight,
-          strokePattern: selectedLinePattern,
-          routingType: selectedRoutingType,
-          startTerminal: startTerm, endTerminal: endTerm,
-          sourceMagnet, targetMagnet,
-          label, hasLabel,
-          isReversed: nodes[0]?.connectorIsReversed || false,
+    connNodes.forEach(node => {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'UPDATE_CONNECTOR_PROPERTIES',
+          payload: {
+            connectorId: node.id,
+            colorHex: color,
+            strokeWeight: weight,
+            strokePattern: selectedLinePattern,
+            routingType: selectedRoutingType,
+            startTerminal: startTerm,
+            endTerminal: endTerm,
+            sourceMagnet,
+            targetMagnet,
+            label,
+            hasLabel,
+            isReversed: node?.connectorIsReversed || false,
+          }
         }
-      }
-    }, '*');
+      }, '*');
+    });
   }, []);
 
   const handleMainAction = useCallback(() => {
