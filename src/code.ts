@@ -1156,8 +1156,8 @@ async function handleSelectionChange() {
     }
 
     const savedType = node.getPluginData('node_type') as DiagramNodeType;
-    const flowNodeType: DiagramNodeType = savedType || 'Screen';
-    const savedStatus = node.getPluginData('workflow_status') as WorkflowStatus;
+    const flowNodeType: DiagramNodeType | undefined = isFlowNode ? (savedType || 'Screen') : undefined;
+    const savedStatus = isFlowNode ? (node.getPluginData('workflow_status') as WorkflowStatus) : undefined;
 
     let sizeMode: 'fixed' | 'hug' = 'fixed';
     let hugHeight = Math.round(node.height);
@@ -1721,8 +1721,8 @@ async function createFlowNode(payload: FlowNodePayload) {
   try {
     await loadRequiredFonts();
 
-    const title = (payload.title || '').trim() || 'Welcome';
-    const description = (payload.description || '').trim() || 'Entry point of the flow.';
+    const title = (payload.title || '').trim() || 'Untitled';
+    const description = (payload.description || '').trim();
     const theme = payload.theme || 'light';
     const width = payload.width ? Math.max(120, payload.width) : 250;
     const height = payload.height ? Math.max(50, payload.height) : 90;
@@ -1760,20 +1760,32 @@ async function createFlowNode(payload: FlowNodePayload) {
     card.counterAxisSizingMode = 'FIXED';
     const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
     const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
-    card.paddingTop = 14;
-    card.paddingBottom = (hasStatus || hasLink) ? 36 : 16;
+    const hasBottomBar = hasStatus || hasLink;
+
+    // 디스크립션 유무에 따른 패딩 및 세로 정렬
+    if (!description && !hasBottomBar) {
+      card.paddingTop = 14;
+      card.paddingBottom = 14;
+      card.primaryAxisAlignItems = 'CENTER';
+    } else {
+      card.paddingTop = 14;
+      card.paddingBottom = hasBottomBar ? 36 : 16;
+      card.primaryAxisAlignItems = 'MIN';
+    }
     card.paddingLeft = 16;
     card.paddingRight = 16;
     card.itemSpacing = 8;
-    card.primaryAxisAlignItems = 'MIN';
     card.counterAxisAlignItems = 'MIN';
-    card.resize(width, height);
+
+    const finalHeight = height;
+
+    card.resize(width, finalHeight);
 
     // 캔버스 기즈모 리사이즈 원천 차단 (현재 크기로 min/max 완전 고정)
     card.minWidth = width;
     card.maxWidth = width;
-    card.minHeight = height;
-    card.maxHeight = height;
+    card.minHeight = finalHeight;
+    card.maxHeight = finalHeight;
 
     // 2. 헤더 행 (타이틀 + 상태 뱃지 배치용)
     const headerRow = figma.createFrame();
@@ -1803,22 +1815,24 @@ async function createFlowNode(payload: FlowNodePayload) {
 
     card.appendChild(headerRow);
 
-    // 4. 설명 텍스트 (11px Regular 고정, 박스 높이 초과 시 .. 말줄임)
-    const descText = figma.createText();
-    descText.name = 'DescText';
-    descText.fontName = { family: 'Inter', style: 'Regular' };
-    descText.fontSize = 11;
-    descText.characters = description;
-    descText.fills = [descFill];
-    descText.textAlignHorizontal = 'LEFT';
-    descText.setPluginData('node_role', 'desc');
-    card.appendChild(descText);
+    // 4. 설명 텍스트 (11px Regular 고정, 박스 높이 초과 시 .. 말줄임) - 설명이 있는 경우에만 생성
+    if (description) {
+      const descText = figma.createText();
+      descText.name = 'DescText';
+      descText.fontName = { family: 'Inter', style: 'Regular' };
+      descText.fontSize = 11;
+      descText.characters = description;
+      descText.fills = [descFill];
+      descText.textAlignHorizontal = 'LEFT';
+      descText.setPluginData('node_role', 'desc');
+      card.appendChild(descText);
 
-    descText.layoutAlign = 'STRETCH';
-    const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
-    descText.resize(availW, descText.height);
-    descText.textAutoResize = 'HEIGHT';
-    await updateDescTextTruncation(card, descText, height, description);
+      descText.layoutAlign = 'STRETCH';
+      const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+      descText.resize(availW, descText.height);
+      descText.textAutoResize = 'HEIGHT';
+      await updateDescTextTruncation(card, descText, height, description);
+    }
 
     // 메타데이터 보관 (FigJam 네이티브 객체 속성을 Source of Truth로 사용하므로 중복 데이터 제거)
     card.name = title;
@@ -1958,79 +1972,12 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.strokes = [{ type: 'SOLID', color: hexToRgbColor(payload.strokeColor) }];
     }
 
-    // 크기 조정 (min/max 일시 해제 -> resize -> min/max 재잠금)
-    if (payload.width && payload.height) {
-      const w = Math.max(120, payload.width);
-      const h = Math.max(50, payload.height);
-      const isHug = payload.sizeMode === 'hug';
-
-      card.minWidth = null;
-      card.maxWidth = null;
-      card.minHeight = null;
-      card.maxHeight = null;
-
-      if (isHug) {
-        // Hug contents: 높이 자동, 너비만 고정
-        // 먼저 설명 텍스트의 줄수 제한(maxLines)을 풀어 전체 높이가 확장되도록 함
-        const existingDesc = card.children.find(
-          (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
-        ) as TextNode | undefined;
-        if (existingDesc) {
-          existingDesc.maxLines = null;
-        }
-
-        // 너비 변경 시에만 resize (height 인자는 현재값 유지 후 AUTO가 덮어씀)
-        if (card.width !== w) {
-          card.counterAxisSizingMode = 'FIXED';
-          card.resize(w, card.height);
-        }
-        card.counterAxisSizingMode = 'FIXED';
-        card.primaryAxisSizingMode = 'AUTO'; // 높이 자동 확장
-        card.minWidth = w;
-        card.maxWidth = w;
-        card.minHeight = null;
-        card.maxHeight = null;
-      } else {
-        // Fixed height: 너비·높이 모두 고정
-        card.resize(w, h);
-        card.primaryAxisSizingMode = 'FIXED';
-        card.counterAxisSizingMode = 'FIXED';
-        card.minWidth = w;
-        card.maxWidth = w;
-        card.minHeight = h;
-        card.maxHeight = h;
-      }
-
-      // 리사이즈 시 하단 오른쪽 박스 안쪽 상태 뱃지 위치 동기화
-      const statusBadge = card.children.find(
-        (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
-      ) as FrameNode | undefined;
-      if (statusBadge) {
-        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-        statusBadge.x = w - statusBadge.width - 10;
-        statusBadge.y = h - statusBadge.height - 10;
-      }
-
-      // 리사이즈 시 하단 왼쪽 링크 뱃지 위치 동기화
-      const linkBadge = card.children.find(
-        (c) => c.getPluginData('is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
-      ) as FrameNode | undefined;
-      if (linkBadge) {
-        linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
-        linkBadge.x = 16;
-        linkBadge.y = h - linkBadge.height - 10;
-      }
-    }
-
     // 카드 레이아웃 모드 및 정렬 방향 보장
     if (card.layoutMode !== 'VERTICAL') {
       card.layoutMode = 'VERTICAL';
     }
     if (card.counterAxisAlignItems !== 'MIN') {
       card.counterAxisAlignItems = 'MIN';
-    }
-    if (card.primaryAxisAlignItems !== 'MIN') {
-      card.primaryAxisAlignItems = 'MIN';
     }
 
     // 헤더 행 및 타이틀 텍스트 갱신
@@ -2069,47 +2016,77 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     await safeSetCharacters(titleText, title);
     titleText.fills = [titleFill];
 
-    // 설명 텍스트 갱신
+    // 설명 텍스트 갱신 (설명이 없는 경우 텍스트 노드 제거, 있는 경우에만 갱신)
     let descText = card.children.find(
       (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
     ) as TextNode | undefined;
 
-    if (!descText) {
-      descText = figma.createText();
-      descText.name = 'DescText';
-      descText.fontName = { family: 'Inter', style: 'Regular' };
-      descText.fontSize = 11;
+    if (!description) {
+      if (descText) {
+        descText.remove();
+        descText = undefined;
+      }
+    } else {
+      if (!descText) {
+        descText = figma.createText();
+        descText.name = 'DescText';
+        descText.fontName = { family: 'Inter', style: 'Regular' };
+        descText.fontSize = 11;
+        descText.textAlignHorizontal = 'LEFT';
+        descText.setPluginData('node_role', 'desc');
+        card.appendChild(descText);
+      }
+
       descText.textAlignHorizontal = 'LEFT';
-      descText.setPluginData('node_role', 'desc');
-      card.appendChild(descText);
+      descText.layoutAlign = 'STRETCH';
+      const availW = Math.max(50, card.width - card.paddingLeft - card.paddingRight);
+      if (Math.abs(descText.width - availW) > 1) {
+        descText.resize(availW, descText.height);
+      }
+      descText.textAutoResize = 'HEIGHT';
+
+      const currentH = payload.height || card.height;
+      await updateDescTextTruncation(card, descText, currentH, description);
+
+      await safeSetCharacters(descText, description);
+      descText.fills = [descFill];
+      try {
+        const descFont: FontName = { family: 'Inter', style: 'Regular' };
+        await figma.loadFontAsync(descFont);
+        const dLen = descText.characters.length;
+        if (dLen > 0) {
+          descText.setRangeFontName(0, dLen, descFont);
+          descText.setRangeFontSize(0, dLen, 11);
+        } else {
+          descText.fontName = descFont;
+          descText.fontSize = 11;
+        }
+      } catch (_) {}
     }
 
-    descText.textAlignHorizontal = 'LEFT';
-    descText.layoutAlign = 'STRETCH';
-    const availW = Math.max(50, card.width - card.paddingLeft - card.paddingRight);
-    if (Math.abs(descText.width - availW) > 1) {
-      descText.resize(availW, descText.height);
-    }
-    descText.textAutoResize = 'HEIGHT';
-
-    // 상태 여부 및 링크 여부에 따른 하단 패딩 및 설명 텍스트 줄수 동기화
+    // 상태 여부 및 링크 여부에 따른 하단 패딩 및 세로 정렬 동기화
     let statusBadge = card.children.find(
       (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
     ) as FrameNode | undefined;
     const hasStatus = Boolean(statusBadge || (payload.status && STATUS_CONFIG[payload.status]));
     const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
-    card.paddingBottom = (hasStatus || hasLink) ? 36 : 16;
+    const hasBottomBar = hasStatus || hasLink;
 
-    const currentH = payload.height || card.height;
-    await updateDescTextTruncation(card, descText, currentH, description);
+    if (!description && !hasBottomBar) {
+      card.paddingTop = 14;
+      card.paddingBottom = 14;
+      card.primaryAxisAlignItems = 'CENTER';
+    } else {
+      card.paddingTop = 14;
+      card.paddingBottom = hasBottomBar ? 36 : 16;
+      card.primaryAxisAlignItems = 'MIN';
+    }
 
     if (statusBadge) {
       statusBadge.paddingLeft = 9;
       statusBadge.paddingRight = 9;
       statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
       statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-      statusBadge.x = card.width - statusBadge.width - 10;
-      statusBadge.y = card.height - statusBadge.height - 10;
 
       // 노드 배경색 변화에 따른 상태 뱃지 컬러 동기화
       const currentStatus = (payload.status || card.getPluginData('workflow_status')) as WorkflowStatus;
@@ -2140,20 +2117,57 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
     }
 
-    await safeSetCharacters(descText, description);
-    descText.fills = [descFill];
-    try {
-      const descFont: FontName = { family: 'Inter', style: 'Regular' };
-      await figma.loadFontAsync(descFont);
-      const dLen = descText.characters.length;
-      if (dLen > 0) {
-        descText.setRangeFontName(0, dLen, descFont);
-        descText.setRangeFontSize(0, dLen, 11);
+    // 내부 자식(DescText, Header, Badges 등) 정리 완료 후 최종 크기 조정 및 min/max 재잠금
+    if (payload.width && payload.height) {
+      const w = Math.max(120, payload.width);
+      const targetH = Math.max(50, payload.height);
+      const isHug = payload.sizeMode === 'hug';
+
+      card.minWidth = null;
+      card.maxWidth = null;
+      card.minHeight = null;
+      card.maxHeight = null;
+
+      if (isHug) {
+        if (descText) {
+          descText.maxLines = null;
+        }
+        if (card.width !== w) {
+          card.counterAxisSizingMode = 'FIXED';
+          card.resize(w, card.height);
+        }
+        card.counterAxisSizingMode = 'FIXED';
+        card.primaryAxisSizingMode = 'AUTO';
+        card.minWidth = w;
+        card.maxWidth = w;
+        card.minHeight = null;
+        card.maxHeight = null;
       } else {
-        descText.fontName = descFont;
-        descText.fontSize = 11;
+        card.primaryAxisSizingMode = 'FIXED';
+        card.counterAxisSizingMode = 'FIXED';
+        card.resize(w, targetH);
+        card.minWidth = w;
+        card.maxWidth = w;
+        card.minHeight = targetH;
+        card.maxHeight = targetH;
       }
-    } catch (_) {}
+
+      // 최종 높이에 맞춰 상태 뱃지 및 링크 뱃지 Y좌표 동기화
+      const curH = card.height;
+      if (statusBadge) {
+        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+        statusBadge.x = w - statusBadge.width - 10;
+        statusBadge.y = curH - statusBadge.height - 10;
+      }
+      const linkBadge = card.children.find(
+        (c) => c.getPluginData('is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+      ) as FrameNode | undefined;
+      if (linkBadge) {
+        linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
+        linkBadge.x = 16;
+        linkBadge.y = curH - linkBadge.height - 10;
+      }
+    }
 
     // 실제 FigJam 프레임 노드 이름 동기화
     card.name = title;

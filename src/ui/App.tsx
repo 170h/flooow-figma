@@ -242,7 +242,7 @@ export function App() {
           type="text"
           id="node-title-input"
           className="node-title-input"
-          defaultValue={nodeCount === 1 ? (selectedNodes[0]?.title || selectedNodes[0]?.name || 'Untitled') : 'Welcome'}
+          defaultValue={nodeCount === 1 ? (selectedNodes[0]?.title || selectedNodes[0]?.name || 'Untitled') : 'Untitled'}
           placeholder="Enter node title"
           onInput={() => {
             clearTimeout((window as any)._titleDebounce);
@@ -304,17 +304,19 @@ export function App() {
         </section>
       </main>
 
-      {/* 4. CTA 버튼 */}
-      <footer className="app-footer">
-        <button
-          id="btn-main-cta"
-          className="btn-cta-primary"
-          type="button"
-          onClick={handleMainAction}
-        >
-          {ctaLabel}
-        </button>
-      </footer>
+      {/* 4. CTA 버튼 (Connection 탭에서는 ConnectSection 하단에 연결 버튼이 위치하므로 푸터 숨김) */}
+      {currentTab !== 'connection' && (
+        <footer className="app-footer">
+          <button
+            id="btn-main-cta"
+            className="btn-cta-primary"
+            type="button"
+            onClick={handleMainAction}
+          >
+            {ctaLabel}
+          </button>
+        </footer>
+      )}
 
       {/* 팝오버 레이어 */}
       <PhasePopover phases={phases} onSelectPhase={handleSelectPhase} />
@@ -354,28 +356,11 @@ export function App() {
       {activeModal === 'connector-color' && (
         <ConnectorColorModal
           initialColor={uiState.selectedConnectorColor || '#000000'}
-          onSave={(colorHex) => {
+          onApply={(colorHex) => {
             const formatted = colorHex.toUpperCase();
             setUIState({ selectedConnectorColor: formatted });
 
-            // 스타일 프리셋과 동기화
-            const matched = stylePresets.find(
-              (p) =>
-                p.fillColor.toUpperCase() === formatted ||
-                (p.strokeWeight > 0 && p.strokeColor.toUpperCase() === formatted)
-            );
-            if (matched) {
-              setSelectedStylePresetId(matched.id);
-              setUIState({
-                selectedColor: matched.fillColor,
-                selectedStrokeWeight: matched.strokeWeight,
-                selectedStrokeColor: matched.strokeColor,
-                selectedStylePresetId: matched.id,
-                selectedConnectorColor: formatted,
-              });
-            }
-
-            // 선택된 커넥터가 있는 경우 바로 색상 변경 메시지 전송
+            // 선택된 커넥터가 있는 경우 바로 색상 변경 메시지 전송 (실시간 즉시 어플라이)
             if (isConnSel && selectedNodes.length > 0) {
               parent.postMessage(
                 {

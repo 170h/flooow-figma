@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -13,48 +13,94 @@ const CLOSE_SVG = (
 
 
 import { ColorWheelField } from '../shared/ColorWheelField';
-import { useApp } from '../../context/AppContext';
+import { useApp, StylePreset } from '../../context/AppContext';
+
+// 스타일 프리셋 중 보더컬러가 있는 것은 보더 컬러만, 없는 것은 배경 컬러 반환 (커넥터 라인 컬러)
+function getPresetLineColor(preset: StylePreset): string {
+  const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
+  return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
+}
 
 export interface ConnectorColorModalProps {
   initialColor: string;
-  onSave: (colorHex: string) => void;
+  onApply: (colorHex: string) => void;
   onClose: () => void;
 }
 
 /**
  * Connector Color 모달 (Figma UI3 Node 1027394:7443 공식 디자인)
  * - 상단: Connector Color 타이틀 및 닫기 버튼
- * - 색상 프리셋 그리드: 5개 + 4개 카드 (White 선택 시 퍼플 링)
+ * - 색상 프리셋 그리드: 중복 제거된 단일 라인 컬러 카드 (White 선택 시 퍼플 링)
  * - 일체형 ColorWheelField: 16진수 입력 필드 + 레인보우 도넛 휠 배지 + 원형 컬러 휠(Hue) + 2D 채도/명도 디스크
- * - Cancel / Save 버튼
+ * - Cancel / Apply 버튼
  */
 export function ConnectorColorModal({
   initialColor,
-  onSave,
+  onApply,
   onClose,
 }: ConnectorColorModalProps) {
   const { stylePresets } = useApp();
   const [colorHex, setColorHex] = useState(() => initialColor.replace('#', '').toUpperCase());
   const [showWheel, setShowWheel] = useState(false);
 
+  // 기본 무채색 3종(White, Gray, Black) + 스타일 프리셋의 고유 컬러(중복 제외)
+  const uniqueColorPresets = useMemo(() => {
+    const seen = new Set<string>();
+    const result: { id: string; name?: string; color: string }[] = [];
+
+    // 1. 기본 무채색 3종 (화이트, 그레이, 블랙)
+    const baseColors = [
+      { id: 'conn-default-white', name: 'White', color: '#FFFFFF' },
+      { id: 'conn-default-gray', name: 'Gray', color: '#757575' },
+      { id: 'conn-default-black', name: 'Black', color: '#000000' },
+    ];
+
+    for (const base of baseColors) {
+      seen.add(base.color.toUpperCase());
+      result.push(base);
+    }
+
+    // 2. 스타일 프리셋에서 중복되지 않는 라인 컬러 순차 추가
+    for (const preset of stylePresets) {
+      const lineColor = getPresetLineColor(preset);
+      if (!seen.has(lineColor)) {
+        seen.add(lineColor);
+        result.push({
+          id: preset.id,
+          name: preset.name,
+          color: lineColor,
+        });
+      }
+    }
+    return result;
+  }, [stylePresets]);
+
   // 상단 5개, 하단 나머지 행으로 분할
-  const presetsRow1 = stylePresets.slice(0, 5);
-  const presetsRow2 = stylePresets.slice(5);
+  const presetsRow1 = uniqueColorPresets.slice(0, 5);
+  const presetsRow2 = uniqueColorPresets.slice(5);
 
   // 초기값 동기화
   useEffect(() => {
     setColorHex(initialColor.replace('#', '').toUpperCase());
   }, [initialColor]);
 
-  // 1. 프리셋 색상 선택
+  // 1. 프리셋 색상 선택 (즉각 실시간 어플라이)
   function handleSelectPreset(hex: string) {
-    setColorHex(hex.replace('#', '').toUpperCase());
+    const formatted = hex.replace('#', '').toUpperCase();
+    setColorHex(formatted);
+    onApply(`#${formatted}`);
   }
 
-  // 2. 저장 핸들러
-  function handleSave() {
+  // 2. 취소 핸들러 (원래 색상으로 복원 후 닫기)
+  function handleCancel() {
+    onApply(initialColor);
+    onClose();
+  }
+
+  // 3. 적용 핸들러 (현재 선택된 컬러 확정 적용 후 닫기)
+  function handleApply() {
     const finalHex = `#${colorHex.padStart(6, '0')}`;
-    onSave(finalHex);
+    onApply(finalHex);
     onClose();
   }
 
@@ -89,55 +135,51 @@ export function ConnectorColorModal({
 
         <div className="conn-color-modal-divider" />
 
-        {/* 2. 컬러 프리셋 카드 그리드 (스타일 프리셋과 동일한 스타일로 동기화) */}
+        {/* 2. 컬러 프리셋 카드 그리드 (중복 제거된 라인 반영 컬러 단일 솔리드로 표시) */}
         <div className="conn-color-presets-wrapper">
-          {/* 상단 1행 (5개) */}
-          <div className="conn-color-presets-row">
-            {presetsRow1.map((preset) => {
-              const isSelected = currentFormattedHex.toUpperCase() === preset.fillColor.toUpperCase();
-              const hasBorder = (preset.strokeWeight ?? 0) > 0;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={`conn-preset-card${isSelected ? ' selected' : ''}`}
-                  style={{
-                    backgroundColor: preset.fillColor,
-                    border: hasBorder ? `${preset.strokeWeight}px solid ${preset.strokeColor}` : 'none',
-                    boxSizing: 'border-box',
-                    boxShadow: hasBorder && !isSelected ? 'none' : undefined,
-                  }}
-                  data-color={preset.fillColor.toLowerCase()}
-                  onClick={() => handleSelectPreset(preset.fillColor)}
-                  title={preset.name || preset.fillColor}
-                />
-              );
-            })}
-          </div>
+          {/* 상단 1행 */}
+          {presetsRow1.length > 0 && (
+            <div className="conn-color-presets-row">
+              {presetsRow1.map((item) => {
+                const isSelected = currentFormattedHex.toUpperCase() === item.color.toUpperCase();
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`conn-preset-card${isSelected ? ' selected' : ''}`}
+                    style={{
+                      backgroundColor: item.color,
+                    }}
+                    data-color={item.color.toLowerCase()}
+                    onClick={() => handleSelectPreset(item.color)}
+                    title={item.color}
+                  />
+                );
+              })}
+            </div>
+          )}
 
-          {/* 하단 2행 (4개) */}
-          <div className="conn-color-presets-row">
-            {presetsRow2.map((preset) => {
-              const isSelected = currentFormattedHex.toUpperCase() === preset.fillColor.toUpperCase();
-              const hasBorder = (preset.strokeWeight ?? 0) > 0;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={`conn-preset-card${isSelected ? ' selected' : ''}`}
-                  style={{
-                    backgroundColor: preset.fillColor,
-                    border: hasBorder ? `${preset.strokeWeight}px solid ${preset.strokeColor}` : 'none',
-                    boxSizing: 'border-box',
-                    boxShadow: hasBorder && !isSelected ? 'none' : undefined,
-                  }}
-                  data-color={preset.fillColor.toLowerCase()}
-                  onClick={() => handleSelectPreset(preset.fillColor)}
-                  title={preset.name || preset.fillColor}
-                />
-              );
-            })}
-          </div>
+          {/* 하단 2행 */}
+          {presetsRow2.length > 0 && (
+            <div className="conn-color-presets-row">
+              {presetsRow2.map((item) => {
+                const isSelected = currentFormattedHex.toUpperCase() === item.color.toUpperCase();
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`conn-preset-card${isSelected ? ' selected' : ''}`}
+                    style={{
+                      backgroundColor: item.color,
+                    }}
+                    data-color={item.color.toLowerCase()}
+                    onClick={() => handleSelectPreset(item.color)}
+                    title={item.color}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="conn-color-modal-divider" />
@@ -145,8 +187,13 @@ export function ConnectorColorModal({
         {/* 3. Hex 입력 필드 + 무지개 컬러 휠 도넛 링 아이콘 + 원형 컬러휠 (ColorWheelField) */}
         <ColorWheelField
           value={colorHex}
-          onChange={(newHex) => setColorHex(newHex)}
-          onEnter={handleSave}
+          onChange={(newHex) => {
+            setColorHex(newHex);
+            if (newHex.length === 6) {
+              onApply(`#${newHex.toUpperCase()}`);
+            }
+          }}
+          onEnter={handleApply}
           isOpen={showWheel}
           onToggleOpen={setShowWheel}
         />
@@ -154,21 +201,21 @@ export function ConnectorColorModal({
         {/* 4. 하단 구분선 (다른 모달과 동일한 보더 라인) */}
         <div className="conn-color-modal-divider" />
 
-        {/* 5. 모달 푸터 버튼 (Cancel / Save) */}
+        {/* 5. 모달 푸터 버튼 (Cancel / Apply) */}
         <div className="conn-color-modal-footer">
           <button
             type="button"
             className="conn-btn-cancel"
-            onClick={onClose}
+            onClick={handleCancel}
           >
             Cancel
           </button>
           <button
             type="button"
             className="conn-btn-save"
-            onClick={handleSave}
+            onClick={handleApply}
           >
-            Save
+            Apply
           </button>
         </div>
       </div>

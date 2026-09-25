@@ -25,17 +25,17 @@
     },
     in_review: {
       label: "In Review",
-      color: { r: 0.792, g: 0.541, b: 0.016 },
-      // #CA8A04
+      color: { r: 1, g: 0.62, b: 0.259 },
+      // #FF9E42
       textColor: { r: 1, g: 1, b: 1 },
-      hex: "#CA8A04"
+      hex: "#FF9E42"
     },
     revision: {
       label: "Revision",
-      color: { r: 0.918, g: 0.345, b: 0.047 },
-      // #EA580C
+      color: { r: 0.949, g: 0.282, b: 0.133 },
+      // #F24822
       textColor: { r: 1, g: 1, b: 1 },
-      hex: "#EA580C"
+      hex: "#F24822"
     },
     approved: {
       label: "Approved",
@@ -1417,8 +1417,8 @@
         description = extracted.description;
       }
       const savedType = node.getPluginData("node_type");
-      const flowNodeType = savedType || "Screen";
-      const savedStatus = node.getPluginData("workflow_status");
+      const flowNodeType = isFlowNode ? savedType || "Screen" : void 0;
+      const savedStatus = isFlowNode ? node.getPluginData("workflow_status") : void 0;
       let sizeMode = "fixed";
       let hugHeight = Math.round(node.height);
       if (isFlowNode && node.type === "FRAME") {
@@ -1957,8 +1957,8 @@
   async function createFlowNode(payload) {
     try {
       await loadRequiredFonts();
-      const title = (payload.title || "").trim() || "Welcome";
-      const description = (payload.description || "").trim() || "Entry point of the flow.";
+      const title = (payload.title || "").trim() || "Untitled";
+      const description = (payload.description || "").trim();
       const theme = payload.theme || "light";
       const width = payload.width ? Math.max(120, payload.width) : 250;
       const height = payload.height ? Math.max(50, payload.height) : 90;
@@ -1991,18 +1991,26 @@
       card.counterAxisSizingMode = "FIXED";
       const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
       const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
-      card.paddingTop = 14;
-      card.paddingBottom = hasStatus || hasLink ? 36 : 16;
+      const hasBottomBar = hasStatus || hasLink;
+      if (!description && !hasBottomBar) {
+        card.paddingTop = 14;
+        card.paddingBottom = 14;
+        card.primaryAxisAlignItems = "CENTER";
+      } else {
+        card.paddingTop = 14;
+        card.paddingBottom = hasBottomBar ? 36 : 16;
+        card.primaryAxisAlignItems = "MIN";
+      }
       card.paddingLeft = 16;
       card.paddingRight = 16;
       card.itemSpacing = 8;
-      card.primaryAxisAlignItems = "MIN";
       card.counterAxisAlignItems = "MIN";
-      card.resize(width, height);
+      const finalHeight = height;
+      card.resize(width, finalHeight);
       card.minWidth = width;
       card.maxWidth = width;
-      card.minHeight = height;
-      card.maxHeight = height;
+      card.minHeight = finalHeight;
+      card.maxHeight = finalHeight;
       const headerRow = figma.createFrame();
       headerRow.name = "Header";
       headerRow.layoutMode = "HORIZONTAL";
@@ -2026,20 +2034,22 @@
       titleText.setPluginData("node_role", "title");
       headerRow.appendChild(titleText);
       card.appendChild(headerRow);
-      const descText = figma.createText();
-      descText.name = "DescText";
-      descText.fontName = { family: "Inter", style: "Regular" };
-      descText.fontSize = 11;
-      descText.characters = description;
-      descText.fills = [descFill];
-      descText.textAlignHorizontal = "LEFT";
-      descText.setPluginData("node_role", "desc");
-      card.appendChild(descText);
-      descText.layoutAlign = "STRETCH";
-      const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
-      descText.resize(availW, descText.height);
-      descText.textAutoResize = "HEIGHT";
-      await updateDescTextTruncation(card, descText, height, description);
+      if (description) {
+        const descText = figma.createText();
+        descText.name = "DescText";
+        descText.fontName = { family: "Inter", style: "Regular" };
+        descText.fontSize = 11;
+        descText.characters = description;
+        descText.fills = [descFill];
+        descText.textAlignHorizontal = "LEFT";
+        descText.setPluginData("node_role", "desc");
+        card.appendChild(descText);
+        descText.layoutAlign = "STRETCH";
+        const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+        descText.resize(availW, descText.height);
+        descText.textAutoResize = "HEIGHT";
+        await updateDescTextTruncation(card, descText, height, description);
+      }
       card.name = title;
       card.setPluginData("is_flow_node", "true");
       card.setPluginData("schema_version", "2");
@@ -2154,65 +2164,11 @@
       } else if (payload.strokeColor) {
         card.strokes = [{ type: "SOLID", color: hexToRgbColor(payload.strokeColor) }];
       }
-      if (payload.width && payload.height) {
-        const w = Math.max(120, payload.width);
-        const h = Math.max(50, payload.height);
-        const isHug = payload.sizeMode === "hug";
-        card.minWidth = null;
-        card.maxWidth = null;
-        card.minHeight = null;
-        card.maxHeight = null;
-        if (isHug) {
-          const existingDesc = card.children.find(
-            (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
-          );
-          if (existingDesc) {
-            existingDesc.maxLines = null;
-          }
-          if (card.width !== w) {
-            card.counterAxisSizingMode = "FIXED";
-            card.resize(w, card.height);
-          }
-          card.counterAxisSizingMode = "FIXED";
-          card.primaryAxisSizingMode = "AUTO";
-          card.minWidth = w;
-          card.maxWidth = w;
-          card.minHeight = null;
-          card.maxHeight = null;
-        } else {
-          card.resize(w, h);
-          card.primaryAxisSizingMode = "FIXED";
-          card.counterAxisSizingMode = "FIXED";
-          card.minWidth = w;
-          card.maxWidth = w;
-          card.minHeight = h;
-          card.maxHeight = h;
-        }
-        const statusBadge2 = card.children.find(
-          (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
-        );
-        if (statusBadge2) {
-          statusBadge2.constraints = { horizontal: "MAX", vertical: "MAX" };
-          statusBadge2.x = w - statusBadge2.width - 10;
-          statusBadge2.y = h - statusBadge2.height - 10;
-        }
-        const linkBadge = card.children.find(
-          (c) => c.getPluginData("is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
-        );
-        if (linkBadge) {
-          linkBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
-          linkBadge.x = 16;
-          linkBadge.y = h - linkBadge.height - 10;
-        }
-      }
       if (card.layoutMode !== "VERTICAL") {
         card.layoutMode = "VERTICAL";
       }
       if (card.counterAxisAlignItems !== "MIN") {
         card.counterAxisAlignItems = "MIN";
-      }
-      if (card.primaryAxisAlignItems !== "MIN") {
-        card.primaryAxisAlignItems = "MIN";
       }
       let headerRow = card.children.find(isHeaderFrame);
       if (!headerRow) {
@@ -2247,37 +2203,66 @@
       let descText = card.children.find(
         (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
       );
-      if (!descText) {
-        descText = figma.createText();
-        descText.name = "DescText";
-        descText.fontName = { family: "Inter", style: "Regular" };
-        descText.fontSize = 11;
+      if (!description) {
+        if (descText) {
+          descText.remove();
+          descText = void 0;
+        }
+      } else {
+        if (!descText) {
+          descText = figma.createText();
+          descText.name = "DescText";
+          descText.fontName = { family: "Inter", style: "Regular" };
+          descText.fontSize = 11;
+          descText.textAlignHorizontal = "LEFT";
+          descText.setPluginData("node_role", "desc");
+          card.appendChild(descText);
+        }
         descText.textAlignHorizontal = "LEFT";
-        descText.setPluginData("node_role", "desc");
-        card.appendChild(descText);
+        descText.layoutAlign = "STRETCH";
+        const availW = Math.max(50, card.width - card.paddingLeft - card.paddingRight);
+        if (Math.abs(descText.width - availW) > 1) {
+          descText.resize(availW, descText.height);
+        }
+        descText.textAutoResize = "HEIGHT";
+        const currentH = payload.height || card.height;
+        await updateDescTextTruncation(card, descText, currentH, description);
+        await safeSetCharacters(descText, description);
+        descText.fills = [descFill];
+        try {
+          const descFont = { family: "Inter", style: "Regular" };
+          await figma.loadFontAsync(descFont);
+          const dLen = descText.characters.length;
+          if (dLen > 0) {
+            descText.setRangeFontName(0, dLen, descFont);
+            descText.setRangeFontSize(0, dLen, 11);
+          } else {
+            descText.fontName = descFont;
+            descText.fontSize = 11;
+          }
+        } catch (_) {
+        }
       }
-      descText.textAlignHorizontal = "LEFT";
-      descText.layoutAlign = "STRETCH";
-      const availW = Math.max(50, card.width - card.paddingLeft - card.paddingRight);
-      if (Math.abs(descText.width - availW) > 1) {
-        descText.resize(availW, descText.height);
-      }
-      descText.textAutoResize = "HEIGHT";
       let statusBadge = card.children.find(
         (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
       );
       const hasStatus = Boolean(statusBadge || payload.status && STATUS_CONFIG[payload.status]);
       const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
-      card.paddingBottom = hasStatus || hasLink ? 36 : 16;
-      const currentH = payload.height || card.height;
-      await updateDescTextTruncation(card, descText, currentH, description);
+      const hasBottomBar = hasStatus || hasLink;
+      if (!description && !hasBottomBar) {
+        card.paddingTop = 14;
+        card.paddingBottom = 14;
+        card.primaryAxisAlignItems = "CENTER";
+      } else {
+        card.paddingTop = 14;
+        card.paddingBottom = hasBottomBar ? 36 : 16;
+        card.primaryAxisAlignItems = "MIN";
+      }
       if (statusBadge) {
         statusBadge.paddingLeft = 9;
         statusBadge.paddingRight = 9;
         statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
         statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-        statusBadge.x = card.width - statusBadge.width - 10;
-        statusBadge.y = card.height - statusBadge.height - 10;
         const currentStatus = payload.status || card.getPluginData("workflow_status");
         if (currentStatus && STATUS_CONFIG[currentStatus]) {
           const { badgeBg, badgeTextColor } = getStatusBadgeColors(currentStatus, bgColor, isDark);
@@ -2301,20 +2286,51 @@
           applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
         }
       }
-      await safeSetCharacters(descText, description);
-      descText.fills = [descFill];
-      try {
-        const descFont = { family: "Inter", style: "Regular" };
-        await figma.loadFontAsync(descFont);
-        const dLen = descText.characters.length;
-        if (dLen > 0) {
-          descText.setRangeFontName(0, dLen, descFont);
-          descText.setRangeFontSize(0, dLen, 11);
+      if (payload.width && payload.height) {
+        const w = Math.max(120, payload.width);
+        const targetH = Math.max(50, payload.height);
+        const isHug = payload.sizeMode === "hug";
+        card.minWidth = null;
+        card.maxWidth = null;
+        card.minHeight = null;
+        card.maxHeight = null;
+        if (isHug) {
+          if (descText) {
+            descText.maxLines = null;
+          }
+          if (card.width !== w) {
+            card.counterAxisSizingMode = "FIXED";
+            card.resize(w, card.height);
+          }
+          card.counterAxisSizingMode = "FIXED";
+          card.primaryAxisSizingMode = "AUTO";
+          card.minWidth = w;
+          card.maxWidth = w;
+          card.minHeight = null;
+          card.maxHeight = null;
         } else {
-          descText.fontName = descFont;
-          descText.fontSize = 11;
+          card.primaryAxisSizingMode = "FIXED";
+          card.counterAxisSizingMode = "FIXED";
+          card.resize(w, targetH);
+          card.minWidth = w;
+          card.maxWidth = w;
+          card.minHeight = targetH;
+          card.maxHeight = targetH;
         }
-      } catch (_) {
+        const curH = card.height;
+        if (statusBadge) {
+          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+          statusBadge.x = w - statusBadge.width - 10;
+          statusBadge.y = curH - statusBadge.height - 10;
+        }
+        const linkBadge = card.children.find(
+          (c) => c.getPluginData("is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
+        );
+        if (linkBadge) {
+          linkBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
+          linkBadge.x = 16;
+          linkBadge.y = curH - linkBadge.height - 10;
+        }
       }
       card.name = title;
       card.setPluginData("is_flow_node", "true");

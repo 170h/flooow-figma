@@ -110,6 +110,7 @@ export interface LastNodeConfig {
   badgeColorMode?: 'White' | 'Black' | 'Style';
   singleLinkOn: boolean;
   singleLinkUrl: string;
+  descriptionOn?: boolean;
 }
 
 export interface LastConnectorConfig {
@@ -254,6 +255,7 @@ const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
   badgeColorMode: 'Style',
   singleLinkOn: false,
   singleLinkUrl: '',
+  descriptionOn: false,
 };
 
 const DEFAULT_LAST_CONNECTOR_CONFIG: LastConnectorConfig = {
@@ -440,6 +442,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
     const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
+    const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
     const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
     const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
     const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
@@ -448,7 +451,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
 
     const title = titleEl?.value.trim() || 'Untitled';
-    const desc = descEl?.value.trim() || '';
+    const isDescOn = descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false);
+    const desc = isDescOn ? (descEl?.value.trim() || '') : '';
     const w = parseInt(wEl?.value || '250', 10) || 250;
     const h = parseInt(hEl?.value || '90', 10) || 90;
     const radius = parseInt(rEl?.value || '0', 10) || 0;
@@ -733,8 +737,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const stepNumEl = document.getElementById('input-step-number') as HTMLInputElement | null;
     const singleLinkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
 
-    const title = titleEl?.value.trim() || 'Welcome';
-    const desc = descEl?.value.trim() || '';
+    const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
+    const title = titleEl?.value.trim() || 'Untitled';
+    const isDescOn = descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false);
+    const desc = isDescOn ? (descEl?.value.trim() || '') : '';
     const w = parseInt(wEl?.value || '250', 10) || 250;
     const h = parseInt(hEl?.value || '90', 10) || 90;
     let radius = parseInt(rEl?.value || '0', 10) || 0;
@@ -758,6 +764,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stepNumber: parseInt(stepNumEl?.value || '1', 10) || 1,
       badgeCorner: selectedBadgeCorner, badgeShape: selectedBadgeShape,
       singleLinkOn: singleLinkToggleEl?.checked || false, singleLinkUrl: figmaUrl,
+      descriptionOn: isDescOn,
     };
     setLastNodeConfig(newConfig);
 
@@ -823,15 +830,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (newIsConnSel) {
       setCurrentTab('connection');
     } else if (count === 0) {
-      // 바탕화면 클릭 (신규 생성 모드): 항상 node 탭이 기본
+      // 바탕화면 클릭 (신규 생성 모드): 항상 node 탭이 기본 (플러그인 노드의 이전 스타일 캐시는 유지)
       setCurrentTab('node');
     } else {
       // 일반 노드 선택: 이전 노드에서 마지막으로 선택했던 탭으로 복원
       const targetTab = lastNodeTabRef.current || 'node';
       setCurrentTab(targetTab);
 
-      // 선택된 노드의 엘리베이션 및 스타일(색상, 보더) 상태 동기화
-      const flowNodes = nodes.filter(n => n && (n.isFlowNode || (!n.isConnector && n.flowNodeType)));
+      // 플러그인으로 생성된 플로우 노드(isFlowNode === true)인 경우에만 스타일(색상, 보더) 캐시 동기화
+      const flowNodes = nodes.filter(n => n && n.isFlowNode);
       if (flowNodes.length > 0) {
         const first = flowNodes[0];
         const eOn = Boolean(first.elevationOn);
@@ -845,6 +852,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           colorUpdates.selectedColor = first.fillColorHex;
           colorUpdates.selectedStrokeWeight = first.strokeWeight;
           colorUpdates.selectedStrokeColor = first.strokeColorHex;
+
+          // 등록된 스타일 프리셋 중 정확히 일치하는 것이 있는지 탐색
+          const matchedPreset = stylePresets.find((p) => {
+            const matchFill = p.fillColor.toLowerCase() === first.fillColorHex!.toLowerCase();
+            if (!matchFill) return false;
+            const currentWeight = first.strokeWeight !== undefined ? first.strokeWeight : 1.5;
+            if (p.strokeWeight !== currentWeight) return false;
+            if (p.strokeWeight > 0 && first.strokeColorHex) {
+              if (p.strokeColor.toLowerCase() !== first.strokeColorHex.toLowerCase()) return false;
+            }
+            return true;
+          });
+          const matchedId = matchedPreset ? matchedPreset.id : null;
+          colorUpdates.selectedStylePresetId = matchedId;
+          setSelectedStylePresetId(matchedId);
+
           setLastNodeConfig({
             elevationOn: eOn,
             elevation: eLevel,

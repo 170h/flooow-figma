@@ -650,12 +650,12 @@
     }
 
     .chip-btn[data-status="in_review"].active {
-      background: #CA8A04;
+      background: #FF9E42;
       color: #ffffff;
     }
 
     .chip-btn[data-status="revision"].active {
-      background: #EA580C;
+      background: #F24822;
       color: #ffffff;
     }
 
@@ -4590,7 +4590,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useRef(initialValue);
           }
-          function useEffect14(create, deps) {
+          function useEffect15(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useEffect(create, deps);
           }
@@ -4606,7 +4606,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useCallback(callback, deps);
           }
-          function useMemo2(create, deps) {
+          function useMemo3(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useMemo(create, deps);
           }
@@ -5373,12 +5373,12 @@
           exports.useContext = useContext2;
           exports.useDebugValue = useDebugValue;
           exports.useDeferredValue = useDeferredValue;
-          exports.useEffect = useEffect14;
+          exports.useEffect = useEffect15;
           exports.useId = useId;
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
           exports.useLayoutEffect = useLayoutEffect;
-          exports.useMemo = useMemo2;
+          exports.useMemo = useMemo3;
           exports.useReducer = useReducer;
           exports.useRef = useRef14;
           exports.useState = useState16;
@@ -28023,7 +28023,8 @@
     badgeShape: "Square",
     badgeColorMode: "Style",
     singleLinkOn: false,
-    singleLinkUrl: ""
+    singleLinkUrl: "",
+    descriptionOn: false
   };
   var DEFAULT_LAST_CONNECTOR_CONFIG = {
     labelOn: false,
@@ -28179,6 +28180,7 @@
       if (!nodes || nodes.length === 0) return;
       const titleEl = document.getElementById("node-title-input");
       const descEl = document.getElementById("node-description-input");
+      const descToggleEl = document.getElementById("toggle-description");
       const wEl = document.getElementById("input-size-w");
       const hEl = document.getElementById("input-size-h");
       const rEl = document.getElementById("input-size-radius");
@@ -28186,7 +28188,8 @@
       const singleLinkToggleEl = document.getElementById("toggle-single-figma-link");
       const sizeModeEl = document.getElementById("select-size-mode");
       const title = titleEl?.value.trim() || "Untitled";
-      const desc = descEl?.value.trim() || "";
+      const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
+      const desc = isDescOn ? descEl?.value.trim() || "" : "";
       const w = parseInt(wEl?.value || "250", 10) || 250;
       const h = parseInt(hEl?.value || "90", 10) || 90;
       const radius = parseInt(rEl?.value || "0", 10) || 0;
@@ -28455,8 +28458,10 @@
       const stepToggleEl = document.getElementById("toggle-step-badges");
       const stepNumEl = document.getElementById("input-step-number");
       const singleLinkToggleEl = document.getElementById("toggle-single-figma-link");
-      const title = titleEl?.value.trim() || "Welcome";
-      const desc = descEl?.value.trim() || "";
+      const descToggleEl = document.getElementById("toggle-description");
+      const title = titleEl?.value.trim() || "Untitled";
+      const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
+      const desc = isDescOn ? descEl?.value.trim() || "" : "";
       const w = parseInt(wEl?.value || "250", 10) || 250;
       const h = parseInt(hEl?.value || "90", 10) || 90;
       let radius = parseInt(rEl?.value || "0", 10) || 0;
@@ -28483,7 +28488,8 @@
         badgeCorner: selectedBadgeCorner,
         badgeShape: selectedBadgeShape,
         singleLinkOn: singleLinkToggleEl?.checked || false,
-        singleLinkUrl: figmaUrl
+        singleLinkUrl: figmaUrl,
+        descriptionOn: isDescOn
       };
       setLastNodeConfig(newConfig);
       if (nodes.length === 1) {
@@ -28535,7 +28541,7 @@
       } else {
         const targetTab = lastNodeTabRef.current || "node";
         setCurrentTab(targetTab);
-        const flowNodes = nodes.filter((n) => n && (n.isFlowNode || !n.isConnector && n.flowNodeType));
+        const flowNodes = nodes.filter((n) => n && n.isFlowNode);
         if (flowNodes.length > 0) {
           const first = flowNodes[0];
           const eOn = Boolean(first.elevationOn);
@@ -28548,6 +28554,19 @@
             colorUpdates.selectedColor = first.fillColorHex;
             colorUpdates.selectedStrokeWeight = first.strokeWeight;
             colorUpdates.selectedStrokeColor = first.strokeColorHex;
+            const matchedPreset = stylePresets.find((p) => {
+              const matchFill = p.fillColor.toLowerCase() === first.fillColorHex.toLowerCase();
+              if (!matchFill) return false;
+              const currentWeight = first.strokeWeight !== void 0 ? first.strokeWeight : 1.5;
+              if (p.strokeWeight !== currentWeight) return false;
+              if (p.strokeWeight > 0 && first.strokeColorHex) {
+                if (p.strokeColor.toLowerCase() !== first.strokeColorHex.toLowerCase()) return false;
+              }
+              return true;
+            });
+            const matchedId = matchedPreset ? matchedPreset.id : null;
+            colorUpdates.selectedStylePresetId = matchedId;
+            setSelectedStylePresetId(matchedId);
             setLastNodeConfig({
               elevationOn: eOn,
               elevation: eLevel,
@@ -28636,6 +28655,7 @@
       showToast
     } = useApp();
     const handlerRef = (0, import_react2.useRef)(null);
+    const prevNodeIdRef = (0, import_react2.useRef)(void 0);
     (0, import_react2.useEffect)(() => {
       const handler = (event) => {
         const msg = event.data?.pluginMessage;
@@ -28644,63 +28664,88 @@
           case "SELECTION_CHANGED": {
             const { count, nodes, meta } = msg;
             handleSelectionChange(count || 0, nodes || [], meta || {});
+            const currentNodeId = nodes && nodes.length === 1 && nodes[0]?.id ? nodes[0].id : nodes && nodes.length > 1 ? "MULTI" : null;
+            const isDifferentNode = currentNodeId !== prevNodeIdRef.current;
+            prevNodeIdRef.current = currentNodeId;
             if (nodes && nodes.length === 1) {
               const node = nodes[0];
-              const titleEl = document.getElementById("node-title-input");
-              const descEl = document.getElementById("node-description-input");
-              const wEl = document.getElementById("input-size-w");
-              const hEl = document.getElementById("input-size-h");
-              const rEl = document.getElementById("input-size-radius");
-              if (titleEl) titleEl.value = node.title || node.name || "Untitled";
-              if (descEl && node.description) descEl.value = node.description;
-              if (wEl && node.width) wEl.value = String(node.width);
-              if (hEl && node.height) hEl.value = String(node.height);
-              if (rEl && typeof node.cornerRadius === "number") rEl.value = String(node.cornerRadius);
-              if (node.flowNodeType) {
-                setUIState({ selectedNodeType: node.flowNodeType });
+              if (node.isFlowNode) {
+                const titleEl = document.getElementById("node-title-input");
+                const descEl = document.getElementById("node-description-input");
+                const wEl = document.getElementById("input-size-w");
+                const hEl = document.getElementById("input-size-h");
+                const rEl = document.getElementById("input-size-radius");
+                if (isDifferentNode) {
+                  const hasDesc = Boolean(node.description && node.description.trim());
+                  const descToggleEl = document.getElementById("toggle-description");
+                  if (descToggleEl) descToggleEl.checked = hasDesc;
+                  if (titleEl) titleEl.value = node.title || node.name || "Untitled";
+                  if (descEl) descEl.value = node.description || "";
+                  setLastNodeConfig({ descriptionOn: hasDesc });
+                }
+                if (wEl && node.width) wEl.value = String(node.width);
+                if (hEl && node.height) hEl.value = String(node.height);
+                if (rEl && typeof node.cornerRadius === "number") rEl.value = String(node.cornerRadius);
+                if (node.flowNodeType) {
+                  setUIState({ selectedNodeType: node.flowNodeType });
+                }
+                const fixedValEl = document.getElementById("size-mode-val-fixed");
+                const hugValEl = document.getElementById("size-mode-val-hug");
+                if (fixedValEl && node.height) fixedValEl.textContent = String(node.height);
+                if (hugValEl && node.hugHeight) hugValEl.textContent = String(node.hugHeight);
+                if (node.sizeMode) {
+                  setLastNodeConfig({
+                    sizeMode: node.sizeMode,
+                    width: node.width,
+                    height: node.height,
+                    cornerRadius: node.cornerRadius ?? 0
+                  });
+                } else if (typeof node.cornerRadius === "number") {
+                  setLastNodeConfig({ cornerRadius: node.cornerRadius });
+                }
+                const currentStatus = node.status || msg.currentStatus;
+                if (currentStatus) {
+                  setUIState({ selectedStatus: currentStatus });
+                  setLastNodeConfig({ status: currentStatus, statusOn: true });
+                  const toggleEl = document.getElementById("toggle-status");
+                  if (toggleEl) toggleEl.checked = true;
+                  const statusOptionsEl = document.getElementById("status-options");
+                  if (statusOptionsEl) statusOptionsEl.classList.add("active");
+                } else {
+                  setLastNodeConfig({ statusOn: false });
+                  const toggleEl = document.getElementById("toggle-status");
+                  if (toggleEl) toggleEl.checked = false;
+                  const statusOptionsEl = document.getElementById("status-options");
+                  if (statusOptionsEl) statusOptionsEl.classList.remove("active");
+                }
+                const figmaLink = node.figmaLink || "";
+                if (figmaLink) {
+                  setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
+                  const linkToggleEl = document.getElementById("toggle-single-figma-link");
+                  if (linkToggleEl) linkToggleEl.checked = true;
+                  const linkUrlEl = document.getElementById("single-screen-url");
+                  if (linkUrlEl) linkUrlEl.value = figmaLink;
+                } else {
+                  setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: "" });
+                  const linkToggleEl = document.getElementById("toggle-single-figma-link");
+                  if (linkToggleEl) linkToggleEl.checked = false;
+                  const linkUrlEl = document.getElementById("single-screen-url");
+                  if (linkUrlEl) linkUrlEl.value = "";
+                }
               }
-              const fixedValEl = document.getElementById("size-mode-val-fixed");
-              const hugValEl = document.getElementById("size-mode-val-hug");
-              if (fixedValEl && node.height) fixedValEl.textContent = String(node.height);
-              if (hugValEl && node.hugHeight) hugValEl.textContent = String(node.hugHeight);
-              if (node.sizeMode) {
-                setLastNodeConfig({
-                  sizeMode: node.sizeMode,
-                  width: node.width,
-                  height: node.height,
-                  cornerRadius: node.cornerRadius ?? 0
-                });
-              } else if (typeof node.cornerRadius === "number") {
-                setLastNodeConfig({ cornerRadius: node.cornerRadius });
-              }
-              const currentStatus = node.status || msg.currentStatus;
-              if (currentStatus) {
-                setUIState({ selectedStatus: currentStatus });
-                setLastNodeConfig({ status: currentStatus, statusOn: true });
-                const toggleEl = document.getElementById("toggle-status");
-                if (toggleEl) toggleEl.checked = true;
-                const statusOptionsEl = document.getElementById("status-options");
-                if (statusOptionsEl) statusOptionsEl.classList.add("active");
-              } else {
-                setLastNodeConfig({ statusOn: false });
-                const toggleEl = document.getElementById("toggle-status");
-                if (toggleEl) toggleEl.checked = false;
-                const statusOptionsEl = document.getElementById("status-options");
-                if (statusOptionsEl) statusOptionsEl.classList.remove("active");
-              }
-              const figmaLink = node.figmaLink || "";
-              if (figmaLink) {
-                setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
-                const linkToggleEl = document.getElementById("toggle-single-figma-link");
-                if (linkToggleEl) linkToggleEl.checked = true;
-                const linkUrlEl = document.getElementById("single-screen-url");
-                if (linkUrlEl) linkUrlEl.value = figmaLink;
-              } else {
-                setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: "" });
-                const linkToggleEl = document.getElementById("toggle-single-figma-link");
-                if (linkToggleEl) linkToggleEl.checked = false;
-                const linkUrlEl = document.getElementById("single-screen-url");
-                if (linkUrlEl) linkUrlEl.value = "";
+            } else if (!nodes || nodes.length === 0) {
+              if (isDifferentNode) {
+                const titleEl = document.getElementById("node-title-input");
+                const descEl = document.getElementById("node-description-input");
+                const descToggleEl = document.getElementById("toggle-description");
+                const hEl = document.getElementById("input-size-h");
+                const fixedValEl = document.getElementById("size-mode-val-fixed");
+                if (titleEl) titleEl.value = "Untitled";
+                if (descEl) descEl.value = "";
+                if (descToggleEl) descToggleEl.checked = false;
+                if (hEl) hEl.value = "90";
+                if (fixedValEl) fixedValEl.textContent = "90";
+                setLastNodeConfig({ descriptionOn: false, height: 90 });
               }
             }
             break;
@@ -28968,16 +29013,79 @@
   // src/ui/components/node/DescriptionSection.tsx
   var import_jsx_runtime5 = __toESM(require_jsx_runtime());
   function DescriptionSection() {
-    const { applyCurrentNodeState, showToast } = useApp();
+    const {
+      applyCurrentNodeState,
+      showToast,
+      selectedNodes,
+      lastNodeConfig,
+      setLastNodeConfig,
+      autoResizeWindow
+    } = useApp();
     const [copied, setCopied] = (0, import_react5.useState)(false);
     const timerRef = (0, import_react5.useRef)(null);
-    let debounceTimer = null;
-    function handleInput() {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => applyCurrentNodeState(), 400);
+    const debounceTimerRef = (0, import_react5.useRef)(null);
+    const lastSelectedNodeIdRef = (0, import_react5.useRef)(void 0);
+    const [isOn, setIsOn] = (0, import_react5.useState)(() => {
+      if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+        return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
+      }
+      return Boolean(lastNodeConfig.descriptionOn);
+    });
+    const [hasText, setHasText] = (0, import_react5.useState)(() => {
+      if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+        return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
+      }
+      return false;
+    });
+    (0, import_react5.useEffect)(() => {
+      const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0].id : selectedNodes.length > 1 ? "MULTI" : null;
+      if (currentNodeId !== lastSelectedNodeIdRef.current) {
+        lastSelectedNodeIdRef.current = currentNodeId;
+        if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+          const hasDesc = Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
+          setIsOn(hasDesc);
+          setHasText(hasDesc);
+          setLastNodeConfig({ descriptionOn: hasDesc });
+        } else if (selectedNodes.length === 0) {
+          setIsOn(Boolean(lastNodeConfig.descriptionOn));
+          setHasText(false);
+        } else {
+          const anyHasDesc = selectedNodes.some((n) => Boolean(n.description && n.description.trim()));
+          setIsOn(anyHasDesc);
+          setHasText(anyHasDesc);
+        }
+      }
+    }, [selectedNodes, lastNodeConfig.descriptionOn, setLastNodeConfig]);
+    function handleToggle(checked) {
+      setIsOn(checked);
+      setLastNodeConfig({ descriptionOn: checked });
+      if (!checked) {
+        setHasText(false);
+        const ta = document.getElementById("node-description-input");
+        if (ta) ta.value = "";
+        setTimeout(() => applyCurrentNodeState(), 0);
+      } else {
+        setTimeout(() => {
+          const ta = document.getElementById("node-description-input");
+          ta?.focus();
+          setHasText(Boolean(ta?.value.trim()));
+          applyCurrentNodeState();
+        }, 50);
+      }
+      autoResizeWindow();
+    }
+    function handleInput(e) {
+      const val = e.target.value;
+      setHasText(Boolean(val.trim()));
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => applyCurrentNodeState(), 400);
     }
     function copyDescription() {
-      const val = document.getElementById("node-description-input")?.value || "";
+      const val = document.getElementById("node-description-input")?.value || (selectedNodes.length === 1 ? selectedNodes[0]?.description || "" : "");
+      if (!val.trim()) {
+        showToast("\uBCF5\uC0AC\uD560 \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+        return;
+      }
       const handleSuccess = () => {
         setCopied(true);
         if (timerRef.current) clearTimeout(timerRef.current);
@@ -29008,28 +29116,46 @@
       }
       document.body.removeChild(ta);
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-block", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-header", children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-block", style: { paddingBottom: isOn ? "12px" : "0px" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-header toggle-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "section-title", children: "Description" }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "section-actions", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-          "button",
-          {
-            id: "btn-copy-desc",
-            className: `btn-action-icon${copied ? " copied" : ""}`,
-            title: copied ? "\uBCF5\uC0AC \uC644\uB8CC" : "Copy",
-            onClick: copyDescription,
-            children: copied ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(IcCheckLarge, {}) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(IcCopy, {})
-          }
-        ) })
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-actions", children: [
+          isOn && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+            "button",
+            {
+              id: "btn-copy-desc",
+              type: "button",
+              className: `btn-action-icon${copied ? " copied" : ""}${!hasText ? " disabled" : ""}`,
+              title: copied ? "\uBCF5\uC0AC \uC644\uB8CC" : hasText ? "Copy" : "\uC785\uB825\uB41C \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+              disabled: !hasText,
+              onClick: copyDescription,
+              children: copied ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(IcCheckLarge, {}) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(IcCopy, {})
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("label", { className: "switch", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+              "input",
+              {
+                type: "checkbox",
+                id: "toggle-description",
+                checked: isOn,
+                onChange: (e) => handleToggle(e.target.checked)
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "slider" })
+          ] })
+        ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      isOn && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "section-body collapsible-body", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
         "textarea",
         {
           id: "node-description-input",
           className: "desc-textarea",
           placeholder: "Add a description",
+          defaultValue: selectedNodes.length === 1 ? selectedNodes[0]?.description || "" : "",
           onInput: handleInput
-        }
+        },
+        selectedNodes.length === 1 ? selectedNodes[0]?.id : "none"
       ) })
     ] });
   }
@@ -29572,11 +29698,17 @@
     const { selectedColor } = uiState;
     const btnMoreRef = (0, import_react8.useRef)(null);
     const activeStylePreset = stylePresets.find((p) => {
-      if (selectedStylePresetId && p.id === selectedStylePresetId) return true;
-      const matchFill = p.fillColor.toLowerCase() === selectedColor.toLowerCase();
-      const matchStroke = uiState.selectedStrokeWeight !== void 0 ? p.strokeWeight === uiState.selectedStrokeWeight : true;
-      return matchFill && matchStroke;
-    }) || stylePresets.find((p) => p.fillColor.toLowerCase() === selectedColor.toLowerCase());
+      const matchFill = p.fillColor.toLowerCase() === (selectedColor || "").toLowerCase();
+      if (!matchFill) return false;
+      const currentWeight = uiState.selectedStrokeWeight !== void 0 ? uiState.selectedStrokeWeight : 1.5;
+      if (p.strokeWeight !== currentWeight) return false;
+      if (p.strokeWeight > 0 && uiState.selectedStrokeColor) {
+        if (p.strokeColor.toLowerCase() !== uiState.selectedStrokeColor.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
+    });
     const isMoreDisabled = !activeStylePreset || Boolean(activeStylePreset.isDefault) || DEFAULT_STYLE_PRESET_IDS.has(activeStylePreset.id);
     function selectStylePreset(preset) {
       setSelectedStylePresetId(preset.id);
@@ -29645,7 +29777,7 @@
         ] })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "swatches-grid", id: "style-swatches", children: stylePresets.map((preset) => {
-        const isSelected = activeStylePreset?.id === preset.id || selectedColor.toLowerCase() === preset.fillColor.toLowerCase() && (uiState.selectedStrokeWeight === void 0 || uiState.selectedStrokeWeight === preset.strokeWeight);
+        const isSelected = Boolean(activeStylePreset && activeStylePreset.id === preset.id);
         const hasBorder = preset.strokeWeight > 0;
         return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
           "div",
@@ -29726,8 +29858,8 @@
     { id: "draft", label: "Draft", color: "#9CA3AF" },
     { id: "wireframe", label: "Wireframe", color: "#6B7280" },
     { id: "in_progress", label: "In Progress", color: "#3B82F6" },
-    { id: "in_review", label: "In Review", color: "#CA8A04" },
-    { id: "revision", label: "Revision", color: "#EA580C" },
+    { id: "in_review", label: "In Review", color: "#FF9E42" },
+    { id: "revision", label: "Revision", color: "#F24822" },
     { id: "approved", label: "Approved", color: "#8B5CF6" },
     { id: "ready_for_dev", label: "Ready for Dev", color: "#16A34A" },
     { id: "done", label: "Done", color: "#374151" }
@@ -30442,6 +30574,7 @@
       setUIState,
       setActiveModal,
       applyCurrentConnectorState,
+      handleMainAction,
       selectedNodes,
       stylePresets,
       selectedStylePresetId,
@@ -30449,27 +30582,36 @@
     } = useApp();
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
     const activeStylePreset = stylePresets.find((p) => {
-      if (selectedStylePresetId && p.id === selectedStylePresetId) return true;
       const matchFill = p.fillColor.toLowerCase() === (uiState.selectedColor || "").toLowerCase();
-      const matchStroke = uiState.selectedStrokeWeight !== void 0 ? p.strokeWeight === uiState.selectedStrokeWeight : true;
-      return matchFill && matchStroke;
-    }) || stylePresets.find((p) => p.fillColor.toLowerCase() === (uiState.selectedColor || "").toLowerCase());
+      if (!matchFill) return false;
+      const currentWeight = uiState.selectedStrokeWeight !== void 0 ? uiState.selectedStrokeWeight : 1.5;
+      if (p.strokeWeight !== currentWeight) return false;
+      if (p.strokeWeight > 0 && uiState.selectedStrokeColor) {
+        if (p.strokeColor.toLowerCase() !== uiState.selectedStrokeColor.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
+    });
     const [startTermPopupOpen, setStartTermPopupOpen] = (0, import_react11.useState)(false);
     const [endTermPopupOpen, setEndTermPopupOpen] = (0, import_react11.useState)(false);
     const [startTermVal, setStartTermVal] = (0, import_react11.useState)("NONE");
     const [endTermVal, setEndTermVal] = (0, import_react11.useState)("ARROW");
+    const getPresetLineColor2 = (preset) => {
+      const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
+      return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
+    };
     const [selectedColor, setSelectedColor] = (0, import_react11.useState)(() => {
       if (selectedConnectorColor) return selectedConnectorColor.toUpperCase();
       if (activeStylePreset) {
-        return (activeStylePreset.fillColor.toLowerCase() === "#ffffff" && activeStylePreset.strokeWeight > 0 ? activeStylePreset.strokeColor : activeStylePreset.fillColor).toUpperCase();
+        return getPresetLineColor2(activeStylePreset);
       }
       return "#000000";
     });
     const [hexInput, setHexInput] = (0, import_react11.useState)(() => {
       if (selectedConnectorColor) return selectedConnectorColor.replace("#", "").toUpperCase();
       if (activeStylePreset) {
-        const c = activeStylePreset.fillColor.toLowerCase() === "#ffffff" && activeStylePreset.strokeWeight > 0 ? activeStylePreset.strokeColor : activeStylePreset.fillColor;
-        return c.replace("#", "").toUpperCase();
+        return getPresetLineColor2(activeStylePreset).replace("#", "");
       }
       return "000000";
     });
@@ -30477,14 +30619,22 @@
     const nativeColorInputRef = (0, import_react11.useRef)(null);
     (0, import_react11.useEffect)(() => {
       if (activeStylePreset) {
-        const connectorColor = activeStylePreset.fillColor.toLowerCase() === "#ffffff" && activeStylePreset.strokeWeight > 0 ? activeStylePreset.strokeColor : activeStylePreset.fillColor;
-        const formatted = connectorColor.toUpperCase();
+        const connectorColor = getPresetLineColor2(activeStylePreset);
+        setSelectedColor(connectorColor);
+        setHexInput(connectorColor.replace("#", ""));
+        const colSel = document.getElementById("conn-line-color");
+        if (colSel) colSel.value = connectorColor;
+      }
+    }, [uiState.selectedColor, uiState.selectedStrokeWeight, uiState.selectedStrokeColor, selectedStylePresetId]);
+    (0, import_react11.useEffect)(() => {
+      if (selectedConnectorColor) {
+        const formatted = selectedConnectorColor.toUpperCase();
         setSelectedColor(formatted);
         setHexInput(formatted.replace("#", ""));
         const colSel = document.getElementById("conn-line-color");
         if (colSel) colSel.value = formatted;
       }
-    }, [uiState.selectedColor, uiState.selectedStrokeWeight, uiState.selectedStrokeColor, selectedStylePresetId]);
+    }, [selectedConnectorColor]);
     (0, import_react11.useEffect)(() => {
       function handleDocClick(e) {
         const target = e.target;
@@ -30620,15 +30770,10 @@
       setHexInput(formatted.replace("#", ""));
       setUIState({ selectedConnectorColor: formatted });
       const matchedPreset = stylePresets.find(
-        (p) => p.fillColor.toUpperCase() === formatted || p.strokeWeight > 0 && p.strokeColor.toUpperCase() === formatted
+        (p) => getPresetLineColor2(p) === formatted
       );
       if (matchedPreset) {
-        setSelectedStylePresetId(matchedPreset.id);
         setUIState({
-          selectedColor: matchedPreset.fillColor,
-          selectedStrokeWeight: matchedPreset.strokeWeight,
-          selectedStrokeColor: matchedPreset.strokeColor,
-          selectedStylePresetId: matchedPreset.id,
           selectedConnectorColor: formatted
         });
       }
@@ -30684,9 +30829,7 @@
                     {
                       className: "conn-color-chip",
                       style: {
-                        backgroundColor: activeStylePreset ? activeStylePreset.fillColor : selectedColor,
-                        border: activeStylePreset && activeStylePreset.strokeWeight > 0 ? `${activeStylePreset.strokeWeight}px solid ${activeStylePreset.strokeColor}` : void 0,
-                        boxSizing: "border-box"
+                        backgroundColor: selectedColor
                       },
                       title: "Color wheel modal",
                       onClick: (e) => {
@@ -31099,7 +31242,55 @@
             )
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "input-scrubber-box", style: { width: "70px" }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { type: "number", id: "input-end-offset", placeholder: "Offset", defaultValue: 0 }) })
-        ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+          "div",
+          {
+            style: {
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              gap: "8px"
+            },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                "span",
+                {
+                  style: {
+                    fontSize: "10px",
+                    lineHeight: "1.3",
+                    color: "var(--color-text-secondary, #6B7280)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap"
+                  },
+                  title: selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector) ? "Update selected connector" : selectedNodes.length >= 2 ? `${selectedNodes.length} nodes selected to connect` : "Select 2 or more nodes to connect",
+                  children: selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector) ? "Connector selected" : selectedNodes.length >= 2 ? `${selectedNodes.length} nodes selected` : "Select 2+ nodes to connect"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+                "button",
+                {
+                  type: "button",
+                  id: "btn-section-connect",
+                  className: "btn-add-step-badges",
+                  disabled: selectedNodes.length < 2 && !(selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector)),
+                  onClick: handleMainAction,
+                  title: selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector) ? "Update Connector" : selectedNodes.length >= 2 ? "Connect selected nodes" : "Select 2 or more nodes to connect",
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M3 4H7C8.10457 4 9 4.89543 9 6V10C9 11.1046 9.89543 12 11 12H13", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }),
+                      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("circle", { cx: "2.5", cy: "4", r: "1.5", fill: "currentColor" }),
+                      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M12 9.5L14.5 12L12 14.5", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" })
+                    ] }),
+                    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { children: selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector) ? "Update Connector" : "Connect" })
+                  ]
+                }
+              )
+            ]
+          }
+        )
       ] })
     ] });
   }
@@ -33032,25 +33223,60 @@
       fill: "currentColor"
     }
   ) });
+  function getPresetLineColor(preset) {
+    const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
+    return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
+  }
   function ConnectorColorModal({
     initialColor,
-    onSave,
+    onApply,
     onClose
   }) {
     const { stylePresets } = useApp();
     const [colorHex, setColorHex] = (0, import_react20.useState)(() => initialColor.replace("#", "").toUpperCase());
     const [showWheel, setShowWheel] = (0, import_react20.useState)(false);
-    const presetsRow1 = stylePresets.slice(0, 5);
-    const presetsRow2 = stylePresets.slice(5);
+    const uniqueColorPresets = (0, import_react20.useMemo)(() => {
+      const seen = /* @__PURE__ */ new Set();
+      const result = [];
+      const baseColors = [
+        { id: "conn-default-white", name: "White", color: "#FFFFFF" },
+        { id: "conn-default-gray", name: "Gray", color: "#757575" },
+        { id: "conn-default-black", name: "Black", color: "#000000" }
+      ];
+      for (const base of baseColors) {
+        seen.add(base.color.toUpperCase());
+        result.push(base);
+      }
+      for (const preset of stylePresets) {
+        const lineColor = getPresetLineColor(preset);
+        if (!seen.has(lineColor)) {
+          seen.add(lineColor);
+          result.push({
+            id: preset.id,
+            name: preset.name,
+            color: lineColor
+          });
+        }
+      }
+      return result;
+    }, [stylePresets]);
+    const presetsRow1 = uniqueColorPresets.slice(0, 5);
+    const presetsRow2 = uniqueColorPresets.slice(5);
     (0, import_react20.useEffect)(() => {
       setColorHex(initialColor.replace("#", "").toUpperCase());
     }, [initialColor]);
     function handleSelectPreset(hex) {
-      setColorHex(hex.replace("#", "").toUpperCase());
+      const formatted = hex.replace("#", "").toUpperCase();
+      setColorHex(formatted);
+      onApply(`#${formatted}`);
     }
-    function handleSave() {
+    function handleCancel() {
+      onApply(initialColor);
+      onClose();
+    }
+    function handleApply() {
       const finalHex = `#${colorHex.padStart(6, "0")}`;
-      onSave(finalHex);
+      onApply(finalHex);
       onClose();
     }
     const currentFormattedHex = `#${colorHex.padStart(6, "0")}`;
@@ -33085,46 +33311,38 @@
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-modal-divider" }),
               /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { className: "conn-color-presets-wrapper", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-row", children: presetsRow1.map((preset) => {
-                  const isSelected = currentFormattedHex.toUpperCase() === preset.fillColor.toUpperCase();
-                  const hasBorder = (preset.strokeWeight ?? 0) > 0;
+                presetsRow1.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-row", children: presetsRow1.map((item) => {
+                  const isSelected = currentFormattedHex.toUpperCase() === item.color.toUpperCase();
                   return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
                     "button",
                     {
                       type: "button",
                       className: `conn-preset-card${isSelected ? " selected" : ""}`,
                       style: {
-                        backgroundColor: preset.fillColor,
-                        border: hasBorder ? `${preset.strokeWeight}px solid ${preset.strokeColor}` : "none",
-                        boxSizing: "border-box",
-                        boxShadow: hasBorder && !isSelected ? "none" : void 0
+                        backgroundColor: item.color
                       },
-                      "data-color": preset.fillColor.toLowerCase(),
-                      onClick: () => handleSelectPreset(preset.fillColor),
-                      title: preset.name || preset.fillColor
+                      "data-color": item.color.toLowerCase(),
+                      onClick: () => handleSelectPreset(item.color),
+                      title: item.color
                     },
-                    preset.id
+                    item.id
                   );
                 }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-row", children: presetsRow2.map((preset) => {
-                  const isSelected = currentFormattedHex.toUpperCase() === preset.fillColor.toUpperCase();
-                  const hasBorder = (preset.strokeWeight ?? 0) > 0;
+                presetsRow2.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-row", children: presetsRow2.map((item) => {
+                  const isSelected = currentFormattedHex.toUpperCase() === item.color.toUpperCase();
                   return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
                     "button",
                     {
                       type: "button",
                       className: `conn-preset-card${isSelected ? " selected" : ""}`,
                       style: {
-                        backgroundColor: preset.fillColor,
-                        border: hasBorder ? `${preset.strokeWeight}px solid ${preset.strokeColor}` : "none",
-                        boxSizing: "border-box",
-                        boxShadow: hasBorder && !isSelected ? "none" : void 0
+                        backgroundColor: item.color
                       },
-                      "data-color": preset.fillColor.toLowerCase(),
-                      onClick: () => handleSelectPreset(preset.fillColor),
-                      title: preset.name || preset.fillColor
+                      "data-color": item.color.toLowerCase(),
+                      onClick: () => handleSelectPreset(item.color),
+                      title: item.color
                     },
-                    preset.id
+                    item.id
                   );
                 }) })
               ] }),
@@ -33133,8 +33351,13 @@
                 ColorWheelField,
                 {
                   value: colorHex,
-                  onChange: (newHex) => setColorHex(newHex),
-                  onEnter: handleSave,
+                  onChange: (newHex) => {
+                    setColorHex(newHex);
+                    if (newHex.length === 6) {
+                      onApply(`#${newHex.toUpperCase()}`);
+                    }
+                  },
+                  onEnter: handleApply,
                   isOpen: showWheel,
                   onToggleOpen: setShowWheel
                 }
@@ -33146,7 +33369,7 @@
                   {
                     type: "button",
                     className: "conn-btn-cancel",
-                    onClick: onClose,
+                    onClick: handleCancel,
                     children: "Cancel"
                   }
                 ),
@@ -33155,8 +33378,8 @@
                   {
                     type: "button",
                     className: "conn-btn-save",
-                    onClick: handleSave,
-                    children: "Save"
+                    onClick: handleApply,
+                    children: "Apply"
                   }
                 )
               ] })
@@ -33334,7 +33557,7 @@
           type: "text",
           id: "node-title-input",
           className: "node-title-input",
-          defaultValue: nodeCount === 1 ? selectedNodes[0]?.title || selectedNodes[0]?.name || "Untitled" : "Welcome",
+          defaultValue: nodeCount === 1 ? selectedNodes[0]?.title || selectedNodes[0]?.name || "Untitled" : "Untitled",
           placeholder: "Enter node title",
           onInput: () => {
             clearTimeout(window._titleDebounce);
@@ -33386,7 +33609,7 @@
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+      currentTab !== "connection" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         "button",
         {
           id: "btn-main-cta",
@@ -33440,22 +33663,9 @@
         ConnectorColorModal,
         {
           initialColor: uiState.selectedConnectorColor || "#000000",
-          onSave: (colorHex) => {
+          onApply: (colorHex) => {
             const formatted = colorHex.toUpperCase();
             setUIState({ selectedConnectorColor: formatted });
-            const matched = stylePresets.find(
-              (p) => p.fillColor.toUpperCase() === formatted || p.strokeWeight > 0 && p.strokeColor.toUpperCase() === formatted
-            );
-            if (matched) {
-              setSelectedStylePresetId(matched.id);
-              setUIState({
-                selectedColor: matched.fillColor,
-                selectedStrokeWeight: matched.strokeWeight,
-                selectedStrokeColor: matched.strokeColor,
-                selectedStylePresetId: matched.id,
-                selectedConnectorColor: formatted
-              });
-            }
             if (isConnSel && selectedNodes.length > 0) {
               parent.postMessage(
                 {

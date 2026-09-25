@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useApp, StylePreset } from '../../context/AppContext';
 import { ConnectorTerminalType } from '../../../types';
 import { IcPalette } from '../shared/icons';
 
@@ -94,6 +94,7 @@ export function ConnectSection() {
     setUIState,
     setActiveModal,
     applyCurrentConnectorState,
+    handleMainAction,
     selectedNodes,
     stylePresets,
     selectedStylePresetId,
@@ -103,13 +104,17 @@ export function ConnectSection() {
 
   // 현재 활성화된 스타일 프리셋 탐색 (배경색 및 보더 동기화용)
   const activeStylePreset = stylePresets.find((p) => {
-    if (selectedStylePresetId && p.id === selectedStylePresetId) return true;
     const matchFill = p.fillColor.toLowerCase() === (uiState.selectedColor || '').toLowerCase();
-    const matchStroke = uiState.selectedStrokeWeight !== undefined
-      ? p.strokeWeight === uiState.selectedStrokeWeight
-      : true;
-    return matchFill && matchStroke;
-  }) || stylePresets.find((p) => p.fillColor.toLowerCase() === (uiState.selectedColor || '').toLowerCase());
+    if (!matchFill) return false;
+    const currentWeight = uiState.selectedStrokeWeight !== undefined ? uiState.selectedStrokeWeight : 1.5;
+    if (p.strokeWeight !== currentWeight) return false;
+    if (p.strokeWeight > 0 && uiState.selectedStrokeColor) {
+      if (p.strokeColor.toLowerCase() !== uiState.selectedStrokeColor.toLowerCase()) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   // 드롭다운 열림 상태
   const [startTermPopupOpen, setStartTermPopupOpen] = useState(false);
@@ -118,22 +123,23 @@ export function ConnectSection() {
   // 드롭다운 선택 값 상태
   const [startTermVal, setStartTermVal] = useState<ConnectorTerminalType>('NONE');
   const [endTermVal, setEndTermVal] = useState<ConnectorTerminalType>('ARROW');
+  // 스타일 프리셋 중 보더컬러가 있는 것은 보더 컬러만, 없는 것은 배경 컬러 반환 (커넥터 라인 컬러)
+  const getPresetLineColor = (preset: StylePreset): string => {
+    const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
+    return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
+  };
+
   const [selectedColor, setSelectedColor] = useState<string>(() => {
     if (selectedConnectorColor) return selectedConnectorColor.toUpperCase();
     if (activeStylePreset) {
-      return (activeStylePreset.fillColor.toLowerCase() === '#ffffff' && activeStylePreset.strokeWeight > 0
-        ? activeStylePreset.strokeColor
-        : activeStylePreset.fillColor).toUpperCase();
+      return getPresetLineColor(activeStylePreset);
     }
     return '#000000';
   });
   const [hexInput, setHexInput] = useState<string>(() => {
     if (selectedConnectorColor) return selectedConnectorColor.replace('#', '').toUpperCase();
     if (activeStylePreset) {
-      const c = activeStylePreset.fillColor.toLowerCase() === '#ffffff' && activeStylePreset.strokeWeight > 0
-        ? activeStylePreset.strokeColor
-        : activeStylePreset.fillColor;
-      return c.replace('#', '').toUpperCase();
+      return getPresetLineColor(activeStylePreset).replace('#', '');
     }
     return '000000';
   });
@@ -141,19 +147,27 @@ export function ConnectSection() {
   const hexInputRef = useRef<HTMLInputElement>(null);
   const nativeColorInputRef = useRef<HTMLInputElement>(null);
 
-  // 스타일 섹션의 컬러 및 프리셋 변경 시 커넥터 컬러 동기화
+  // 스타일 섹션의 컬러 및 프리셋 변경 시 커넥터 라인 컬러 동기화 (보더컬러 우선, 없을 시 배경컬러)
   useEffect(() => {
     if (activeStylePreset) {
-      const connectorColor = activeStylePreset.fillColor.toLowerCase() === '#ffffff' && activeStylePreset.strokeWeight > 0
-        ? activeStylePreset.strokeColor
-        : activeStylePreset.fillColor;
-      const formatted = connectorColor.toUpperCase();
+      const connectorColor = getPresetLineColor(activeStylePreset);
+      setSelectedColor(connectorColor);
+      setHexInput(connectorColor.replace('#', ''));
+      const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+      if (colSel) colSel.value = connectorColor;
+    }
+  }, [uiState.selectedColor, uiState.selectedStrokeWeight, uiState.selectedStrokeColor, selectedStylePresetId]);
+
+  // selectedConnectorColor 변경 시 로컬 입력필드 및 컬러칩 동기화 (모달 실시간 어플라이 연동)
+  useEffect(() => {
+    if (selectedConnectorColor) {
+      const formatted = selectedConnectorColor.toUpperCase();
       setSelectedColor(formatted);
       setHexInput(formatted.replace('#', ''));
       const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
       if (colSel) colSel.value = formatted;
     }
-  }, [uiState.selectedColor, uiState.selectedStrokeWeight, uiState.selectedStrokeColor, selectedStylePresetId]);
+  }, [selectedConnectorColor]);
 
   // 외부 클릭 시 모든 커넥션 드롭다운 닫기
   useEffect(() => {
@@ -306,19 +320,12 @@ export function ConnectSection() {
     setHexInput(formatted.replace('#', ''));
     setUIState({ selectedConnectorColor: formatted });
 
-    // 일치하는 스타일 프리셋이 있다면 스타일 프리셋도 동기화
+    // 일치하는 스타일 프리셋이 있다면 커넥터 라인 컬러 반영
     const matchedPreset = stylePresets.find(
-      (p) =>
-        p.fillColor.toUpperCase() === formatted ||
-        (p.strokeWeight > 0 && p.strokeColor.toUpperCase() === formatted)
+      (p) => getPresetLineColor(p) === formatted
     );
     if (matchedPreset) {
-      setSelectedStylePresetId(matchedPreset.id);
       setUIState({
-        selectedColor: matchedPreset.fillColor,
-        selectedStrokeWeight: matchedPreset.strokeWeight,
-        selectedStrokeColor: matchedPreset.strokeColor,
-        selectedStylePresetId: matchedPreset.id,
         selectedConnectorColor: formatted,
       });
     }
@@ -377,15 +384,11 @@ export function ConnectSection() {
               className="conn-color-input-box"
               onClick={() => hexInputRef.current?.focus()}
             >
-              {/* 컬러 칩 (클릭 시 피그마 공식 커넥터 컬러 모달 열기) */}
+              {/* 컬러 칩 (보더라인 없이 라인 컬러 단일 솔리드로 표시, 클릭 시 피그마 공식 커넥터 컬러 모달 열기) */}
               <span
                 className="conn-color-chip"
                 style={{
-                  backgroundColor: activeStylePreset ? activeStylePreset.fillColor : selectedColor,
-                  border: activeStylePreset && activeStylePreset.strokeWeight > 0
-                    ? `${activeStylePreset.strokeWeight}px solid ${activeStylePreset.strokeColor}`
-                    : undefined,
-                  boxSizing: 'border-box',
+                  backgroundColor: selectedColor,
                 }}
                 title="Color wheel modal"
                 onClick={(e) => {
@@ -801,6 +804,65 @@ export function ConnectSection() {
           <div className="input-scrubber-box" style={{ width: '70px' }}>
             <input type="number" id="input-end-offset" placeholder="Offset" defaultValue={0} />
           </div>
+        </div>
+
+        {/* 하단 연결 버튼 행 (설정 행들과 동일한 간격으로 배치) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            gap: '8px',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '10px',
+              lineHeight: '1.3',
+              color: 'var(--color-text-secondary, #6B7280)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={
+              selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector)
+                ? 'Update selected connector'
+                : selectedNodes.length >= 2
+                ? `${selectedNodes.length} nodes selected to connect`
+                : 'Select 2 or more nodes to connect'
+            }
+          >
+            {selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector)
+              ? 'Connector selected'
+              : selectedNodes.length >= 2
+              ? `${selectedNodes.length} nodes selected`
+              : 'Select 2+ nodes to connect'}
+          </span>
+          <button
+            type="button"
+            id="btn-section-connect"
+            className="btn-add-step-badges"
+            disabled={selectedNodes.length < 2 && !(selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector))}
+            onClick={handleMainAction}
+            title={
+              selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector)
+                ? 'Update Connector'
+                : selectedNodes.length >= 2
+                ? 'Connect selected nodes'
+                : 'Select 2 or more nodes to connect'
+            }
+          >
+            {/* 커넥터 연결 아이콘 */}
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M3 4H7C8.10457 4 9 4.89543 9 6V10C9 11.1046 9.89543 12 11 12H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="2.5" cy="4" r="1.5" fill="currentColor" />
+              <path d="M12 9.5L14.5 12L12 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>
+              {selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector) ? 'Update Connector' : 'Connect'}
+            </span>
+          </button>
         </div>
       </div>
     </div>

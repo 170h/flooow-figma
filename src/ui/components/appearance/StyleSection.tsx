@@ -31,15 +31,19 @@ export function StyleSection() {
   const { selectedColor } = uiState;
   const btnMoreRef = useRef<HTMLButtonElement>(null);
 
-  // 현재 선택된 컬러 및 보더 두께와 일치하는 프리셋 탐색
+  // 현재 선택된 컬러 및 보더(두께, 색상)와 정확히 일치하는 프리셋 탐색 (일치하는 것이 없으면 undefined)
   const activeStylePreset = stylePresets.find((p) => {
-    if (selectedStylePresetId && p.id === selectedStylePresetId) return true;
-    const matchFill = p.fillColor.toLowerCase() === selectedColor.toLowerCase();
-    const matchStroke = uiState.selectedStrokeWeight !== undefined
-      ? p.strokeWeight === uiState.selectedStrokeWeight
-      : true;
-    return matchFill && matchStroke;
-  }) || stylePresets.find((p) => p.fillColor.toLowerCase() === selectedColor.toLowerCase());
+    const matchFill = p.fillColor.toLowerCase() === (selectedColor || '').toLowerCase();
+    if (!matchFill) return false;
+    const currentWeight = uiState.selectedStrokeWeight !== undefined ? uiState.selectedStrokeWeight : 1.5;
+    if (p.strokeWeight !== currentWeight) return false;
+    if (p.strokeWeight > 0 && uiState.selectedStrokeColor) {
+      if (p.strokeColor.toLowerCase() !== uiState.selectedStrokeColor.toLowerCase()) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   // 기본 스타일이거나 일치하는 프리셋이 없으면 수정/삭제 불가 (모어 버튼 비활성화)
   const isMoreDisabled = !activeStylePreset ||
@@ -120,9 +124,7 @@ export function StyleSection() {
       <div className="section-body">
         <div className="swatches-grid" id="style-swatches">
           {stylePresets.map((preset) => {
-            const isSelected = activeStylePreset?.id === preset.id ||
-              (selectedColor.toLowerCase() === preset.fillColor.toLowerCase() &&
-               (uiState.selectedStrokeWeight === undefined || uiState.selectedStrokeWeight === preset.strokeWeight));
+            const isSelected = Boolean(activeStylePreset && activeStylePreset.id === preset.id);
 
             const hasBorder = preset.strokeWeight > 0;
             return (

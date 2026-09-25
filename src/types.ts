@@ -36,15 +36,15 @@ export const STATUS_CONFIG: Record<WorkflowStatus, StatusMeta> = {
   },
   in_review: {
     label: 'In Review',
-    color: { r: 0.792, g: 0.541, b: 0.016 }, // #CA8A04
+    color: { r: 1, g: 0.62, b: 0.259 }, // #FF9E42
     textColor: { r: 1, g: 1, b: 1 },
-    hex: '#CA8A04',
+    hex: '#FF9E42',
   },
   revision: {
     label: 'Revision',
-    color: { r: 0.918, g: 0.345, b: 0.047 }, // #EA580C
+    color: { r: 0.949, g: 0.282, b: 0.133 }, // #F24822
     textColor: { r: 1, g: 1, b: 1 },
-    hex: '#EA580C',
+    hex: '#F24822',
   },
   approved: {
     label: 'Approved',

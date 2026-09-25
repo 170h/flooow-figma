@@ -644,12 +644,12 @@
     }
 
     .chip-btn[data-status="in_review"].active {
-      background: #CA8A04;
+      background: #FF9E42;
       color: #ffffff;
     }
 
     .chip-btn[data-status="revision"].active {
-      background: #EA580C;
+      background: #F24822;
       color: #ffffff;
     }
 
