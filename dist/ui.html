@@ -3415,9 +3415,14 @@
       border: 2px solid #ffffff;
       box-shadow: 0 0 2px rgba(0, 0, 0, 0.8), inset 0 0 1px rgba(0, 0, 0, 0.5);
       transform: translate(-50%, -50%);
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: grab;
       box-sizing: border-box;
-      z-index: 5;
+      z-index: 10;
+    }
+
+    .conn-disc-handle:active {
+      cursor: grabbing;
     }
 
     .conn-wheel-hue-knob {
@@ -3428,8 +3433,14 @@
       border: 2px solid #ffffff;
       box-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
       transform: translate(-50%, -50%);
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: grab;
       box-sizing: border-box;
+      z-index: 8;
+    }
+
+    .conn-wheel-hue-knob:active {
+      cursor: grabbing;
     }
 
     .conn-color-modal-footer {
@@ -29874,11 +29885,6 @@
     const firstNode = selectedNodes[0];
     const nodeBgColorHex = firstNode?.fillColorHex || "#E11D48";
     const hasNodeStroke = (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
-    const isDarkNode = isHexDark(nodeBgColorHex);
-    const isHighSat = isHexHighSaturation(nodeBgColorHex);
-    const isStrokeBlack = firstNode?.strokeColorHex ? isHexDark(firstNode.strokeColorHex) : true;
-    const styleSwatchBorderColor = hasNodeStroke && !(isDarkNode && isStrokeBlack) ? firstNode?.strokeColorHex : isDarkNode ? "#FFFFFF" : "#D1D5DB";
-    const whiteSwatchBorderColor = hasNodeStroke ? firstNode?.strokeColorHex : isHighSat ? nodeBgColorHex : isDarkNode ? "#18181B" : "#D1D5DB";
     (0, import_react10.useEffect)(() => {
       if (selectedNodes && selectedNodes.length > 0) {
         const hasStep = selectedNodes.some((n) => n.stepNumber !== void 0);
@@ -29995,7 +30001,8 @@
               height: size,
               borderRadius: 3,
               backgroundColor: "#FFFFFF",
-              border: `1.5px solid ${whiteSwatchBorderColor}`,
+              border: "none",
+              boxShadow: "inset 0 0 0 1px var(--color-chip-border)",
               display: "inline-block",
               flexShrink: 0,
               boxSizing: "border-box"
@@ -30012,7 +30019,8 @@
               height: size,
               borderRadius: 3,
               backgroundColor: "#18181B",
-              border: "1.5px solid #FFFFFF",
+              border: "none",
+              boxShadow: "inset 0 0 0 1px var(--color-chip-border)",
               display: "inline-block",
               flexShrink: 0,
               boxSizing: "border-box"
@@ -30028,8 +30036,8 @@
             height: size,
             borderRadius: 3,
             backgroundColor: nodeBgColorHex,
-            border: `1.5px solid ${styleSwatchBorderColor}`,
-            boxShadow: "0 0 0 0.5px rgba(0,0,0,0.1)",
+            border: hasNodeStroke ? `${Math.min(firstNode?.strokeWeight || 1, 2)}px solid ${firstNode?.strokeColorHex}` : "none",
+            boxShadow: hasNodeStroke ? void 0 : "inset 0 0 0 1px var(--color-chip-border)",
             display: "inline-block",
             flexShrink: 0,
             boxSizing: "border-box"
@@ -30414,18 +30422,6 @@
       SQUARE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1.2"/><rect x="28.5" y="5.5" width="5" height="5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`
     }
   };
-  var LINE_COLOR_OPTIONS = [
-    { value: "#000000", label: "#000000" },
-    { value: "#EA2039", label: "#EA2039" },
-    { value: "#EB5757", label: "#EB5757" },
-    { value: "#FF7300", label: "#FF7300" },
-    { value: "#F2C94C", label: "#F2C94C" },
-    { value: "#27AE60", label: "#27AE60" },
-    { value: "#5F92F3", label: "#5F92F3" },
-    { value: "#8638E5", label: "#8638E5" },
-    { value: "#777777", label: "#777777" },
-    { value: "#FFFFFF", label: "#FFFFFF" }
-  ];
   var CHECK_SVG = /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
     "path",
     {
@@ -30460,7 +30456,6 @@
     }) || stylePresets.find((p) => p.fillColor.toLowerCase() === (uiState.selectedColor || "").toLowerCase());
     const [startTermPopupOpen, setStartTermPopupOpen] = (0, import_react11.useState)(false);
     const [endTermPopupOpen, setEndTermPopupOpen] = (0, import_react11.useState)(false);
-    const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react11.useState)(false);
     const [startTermVal, setStartTermVal] = (0, import_react11.useState)("NONE");
     const [endTermVal, setEndTermVal] = (0, import_react11.useState)("ARROW");
     const [selectedColor, setSelectedColor] = (0, import_react11.useState)(() => {
@@ -30498,9 +30493,6 @@
         }
         if (!target.closest("#wrap-end-terminal")) {
           setEndTermPopupOpen(false);
-        }
-        if (!target.closest("#wrap-conn-color")) {
-          setColorDropdownOpen(false);
         }
       }
       document.addEventListener("click", handleDocClick);
@@ -30626,7 +30618,6 @@
       const formatted = colorHex.toUpperCase();
       setSelectedColor(formatted);
       setHexInput(formatted.replace("#", ""));
-      setColorDropdownOpen(false);
       setUIState({ selectedConnectorColor: formatted });
       const matchedPreset = stylePresets.find(
         (p) => p.fillColor.toUpperCase() === formatted || p.strokeWeight > 0 && p.strokeColor.toUpperCase() === formatted
@@ -30685,7 +30676,7 @@
             /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
               "div",
               {
-                className: `conn-color-input-box${colorDropdownOpen ? " active" : ""}`,
+                className: "conn-color-input-box",
                 onClick: () => hexInputRef.current?.focus(),
                 children: [
                   /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
@@ -30694,15 +30685,16 @@
                       className: "conn-color-chip",
                       style: {
                         backgroundColor: activeStylePreset ? activeStylePreset.fillColor : selectedColor,
-                        border: activeStylePreset && activeStylePreset.strokeWeight > 0 ? `${activeStylePreset.strokeWeight}px solid ${activeStylePreset.strokeColor}` : "1px solid rgba(255, 255, 255, 0.15)",
+                        border: activeStylePreset && activeStylePreset.strokeWeight > 0 ? `${activeStylePreset.strokeWeight}px solid ${activeStylePreset.strokeColor}` : void 0,
                         boxSizing: "border-box"
                       },
-                      title: "\uC0C9\uC0C1 \uC120\uD0DD \uBA54\uB274 \uC5F4\uAE30",
+                      title: "Color wheel modal",
                       onClick: (e) => {
                         e.stopPropagation();
-                        setColorDropdownOpen(!colorDropdownOpen);
                         setStartTermPopupOpen(false);
                         setEndTermPopupOpen(false);
+                        setUIState({ selectedConnectorColor: selectedColor });
+                        setActiveModal("connector-color");
                       }
                     }
                   ),
@@ -30747,7 +30739,6 @@
                       title: "Color wheel modal",
                       onClick: (e) => {
                         e.stopPropagation();
-                        setColorDropdownOpen(false);
                         setStartTermPopupOpen(false);
                         setEndTermPopupOpen(false);
                         setUIState({ selectedConnectorColor: selectedColor });
@@ -30767,124 +30758,6 @@
                 value: selectedColor,
                 onChange: () => {
                 }
-              }
-            ),
-            colorDropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
-              "div",
-              {
-                className: "figma-dropdown-menu active",
-                id: "popup-conn-line-color",
-                style: {
-                  position: "absolute",
-                  top: "calc(100% + 4px)",
-                  left: 0,
-                  right: "auto",
-                  width: "140px",
-                  maxHeight: "260px",
-                  overflowY: "auto",
-                  padding: "6px",
-                  zIndex: 1050
-                },
-                children: [
-                  !LINE_COLOR_OPTIONS.some((c) => c.value.toUpperCase() === selectedColor.toUpperCase()) && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
-                    "div",
-                    {
-                      className: "figma-dropdown-item selected",
-                      style: { width: "100%" },
-                      onClick: () => selectColor(selectedColor),
-                      children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-check-slot", style: { width: "18px" }, children: CHECK_SVG }),
-                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-                          "span",
-                          {
-                            style: {
-                              width: "12px",
-                              height: "12px",
-                              borderRadius: "3px",
-                              backgroundColor: selectedColor,
-                              border: "1px solid rgba(255, 255, 255, 0.2)",
-                              display: "inline-block",
-                              marginRight: "6px",
-                              flexShrink: 0
-                            }
-                          }
-                        ),
-                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-label", children: selectedColor })
-                      ]
-                    }
-                  ),
-                  LINE_COLOR_OPTIONS.map((c) => {
-                    const isSelected = selectedColor.toUpperCase() === c.value.toUpperCase();
-                    const matchedPreset = stylePresets.find(
-                      (p) => p.fillColor.toUpperCase() === c.value.toUpperCase() || p.strokeWeight > 0 && p.strokeColor.toUpperCase() === c.value.toUpperCase()
-                    );
-                    const hasBorder = matchedPreset && matchedPreset.strokeWeight > 0;
-                    return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
-                      "div",
-                      {
-                        className: `figma-dropdown-item${isSelected ? " selected" : ""}`,
-                        style: { width: "100%" },
-                        onClick: () => selectColor(c.value),
-                        children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-check-slot", style: { width: "18px" }, children: isSelected && CHECK_SVG }),
-                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-                            "span",
-                            {
-                              style: {
-                                width: "12px",
-                                height: "12px",
-                                borderRadius: "3px",
-                                backgroundColor: c.value,
-                                border: hasBorder ? `${matchedPreset.strokeWeight}px solid ${matchedPreset.strokeColor}` : "1px solid rgba(255, 255, 255, 0.2)",
-                                display: "inline-block",
-                                marginRight: "6px",
-                                flexShrink: 0,
-                                boxSizing: "border-box"
-                              }
-                            }
-                          ),
-                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-label", children: c.label })
-                        ]
-                      },
-                      c.value
-                    );
-                  }),
-                  /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
-                    "div",
-                    {
-                      className: "figma-dropdown-item",
-                      style: {
-                        width: "100%",
-                        borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                        marginTop: "4px",
-                        paddingTop: "6px"
-                      },
-                      onClick: () => {
-                        setColorDropdownOpen(false);
-                        setUIState({ selectedConnectorColor: selectedColor });
-                        setActiveModal("connector-color");
-                      },
-                      children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-check-slot", style: { width: "18px" } }),
-                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-                          "span",
-                          {
-                            style: {
-                              width: "14px",
-                              height: "14px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              marginRight: "6px"
-                            },
-                            children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(IcPalette, {})
-                          }
-                        ),
-                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-label", style: { fontSize: "11px", color: "rgba(255, 255, 255, 0.85)" }, children: "Color Wheel..." })
-                      ]
-                    }
-                  )
-                ]
               }
             )
           ] }),
@@ -30990,7 +30863,6 @@
                   e.stopPropagation();
                   setStartTermPopupOpen(!startTermPopupOpen);
                   setEndTermPopupOpen(false);
-                  setColorDropdownOpen(false);
                 },
                 children: [
                   /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "figma-dropdown-btn-content", style: { justifyContent: "center" }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "icon-start-terminal", style: { display: "inline-flex", alignItems: "center", justifyContent: "center", width: "100%" }, children: renderTerminalButtonGraphic("start", startTermVal) }) }),
@@ -31115,7 +30987,6 @@
                   e.stopPropagation();
                   setEndTermPopupOpen(!endTermPopupOpen);
                   setStartTermPopupOpen(false);
-                  setColorDropdownOpen(false);
                 },
                 children: [
                   /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "figma-dropdown-btn-content", style: { justifyContent: "center" }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "icon-end-terminal", style: { display: "inline-flex", alignItems: "center", justifyContent: "center", width: "100%" }, children: renderTerminalButtonGraphic("end", endTermVal) }) }),
@@ -31686,6 +31557,18 @@
     );
     const startHueDrag = (e) => {
       e.preventDefault();
+      if (!wheelRef.current) return;
+      const rect = wheelRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const dx = e.clientX - centerX;
+      const dy = e.clientY - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const target = e.target;
+      const isTargetHueKnob = target?.classList.contains("conn-wheel-hue-knob");
+      if (!isTargetHueKnob && dist < 54) {
+        return;
+      }
       isInteractingRef.current = true;
       updateHueFromPoint(e.clientX, e.clientY);
       const onMove = (ev) => updateHueFromPoint(ev.clientX, ev.clientY);
@@ -31827,6 +31710,10 @@
                         left: `${satValX}px`,
                         top: `${satValY}px`,
                         backgroundColor: currentFormattedHex
+                      },
+                      onMouseDown: (e) => {
+                        e.stopPropagation();
+                        startSatValDrag(e);
                       }
                     }
                   )
@@ -31841,6 +31728,10 @@
                   left: `${hueKnobX}px`,
                   top: `${hueKnobY}px`,
                   backgroundColor: `hsl(${colorHsv.h}, 100%, 50%)`
+                },
+                onMouseDown: (e) => {
+                  e.stopPropagation();
+                  startHueDrag(e);
                 }
               }
             )

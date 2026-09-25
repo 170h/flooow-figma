@@ -3409,9 +3409,14 @@
       border: 2px solid #ffffff;
       box-shadow: 0 0 2px rgba(0, 0, 0, 0.8), inset 0 0 1px rgba(0, 0, 0, 0.5);
       transform: translate(-50%, -50%);
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: grab;
       box-sizing: border-box;
-      z-index: 5;
+      z-index: 10;
+    }
+
+    .conn-disc-handle:active {
+      cursor: grabbing;
     }
 
     .conn-wheel-hue-knob {
@@ -3422,8 +3427,14 @@
       border: 2px solid #ffffff;
       box-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
       transform: translate(-50%, -50%);
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: grab;
       box-sizing: border-box;
+      z-index: 8;
+    }
+
+    .conn-wheel-hue-knob:active {
+      cursor: grabbing;
     }
 
     .conn-color-modal-footer {

@@ -195,6 +195,22 @@ export function ColorWheelField({
 
   const startHueDrag = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (!wheelRef.current) return;
+    const rect = wheelRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // 마우스 클릭 위치가 내부 디스크 영역(반경 54px 이하)인데
+    // 사용자가 Hue 핸들을 직접 클릭한 것이 아니라면 내부 디스크의 동작을 방해하지 않음
+    const target = e.target as HTMLElement | null;
+    const isTargetHueKnob = target?.classList.contains('conn-wheel-hue-knob');
+    if (!isTargetHueKnob && dist < 54) {
+      return;
+    }
+
     isInteractingRef.current = true;
     updateHueFromPoint(e.clientX, e.clientY);
 
@@ -357,16 +373,24 @@ export function ColorWheelField({
                   top: `${satValY}px`,
                   backgroundColor: currentFormattedHex,
                 }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  startSatValDrag(e);
+                }}
               />
             </div>
 
-            {/* 외부 Hue 조절 핸들 (28px 서클) */}
+            {/* 외부 Hue 조절 핸들 (28px 서클, 직접 드래그 우선권) */}
             <div
               className="conn-wheel-hue-knob"
               style={{
                 left: `${hueKnobX}px`,
                 top: `${hueKnobY}px`,
                 backgroundColor: `hsl(${colorHsv.h}, 100%, 50%)`,
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                startHueDrag(e);
               }}
             />
           </div>

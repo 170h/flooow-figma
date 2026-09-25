@@ -60,18 +60,7 @@ const TERMINAL_SVGS_SHORT: Record<'start' | 'end', Record<TerminalOption, string
   },
 };
 
-const LINE_COLOR_OPTIONS = [
-  { value: '#000000', label: '#000000' },
-  { value: '#EA2039', label: '#EA2039' },
-  { value: '#EB5757', label: '#EB5757' },
-  { value: '#FF7300', label: '#FF7300' },
-  { value: '#F2C94C', label: '#F2C94C' },
-  { value: '#27AE60', label: '#27AE60' },
-  { value: '#5F92F3', label: '#5F92F3' },
-  { value: '#8638E5', label: '#8638E5' },
-  { value: '#777777', label: '#777777' },
-  { value: '#FFFFFF', label: '#FFFFFF' },
-];
+
 
 // 피그마 UI3 표준 체크마크 SVG
 const CHECK_SVG = (
@@ -125,7 +114,6 @@ export function ConnectSection() {
   // 드롭다운 열림 상태
   const [startTermPopupOpen, setStartTermPopupOpen] = useState(false);
   const [endTermPopupOpen, setEndTermPopupOpen] = useState(false);
-  const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
 
   // 드롭다운 선택 값 상태
   const [startTermVal, setStartTermVal] = useState<ConnectorTerminalType>('NONE');
@@ -177,9 +165,7 @@ export function ConnectSection() {
       if (!target.closest('#wrap-end-terminal')) {
         setEndTermPopupOpen(false);
       }
-      if (!target.closest('#wrap-conn-color')) {
-        setColorDropdownOpen(false);
-      }
+
     }
     document.addEventListener('click', handleDocClick);
     return () => document.removeEventListener('click', handleDocClick);
@@ -318,7 +304,6 @@ export function ConnectSection() {
     const formatted = colorHex.toUpperCase();
     setSelectedColor(formatted);
     setHexInput(formatted.replace('#', ''));
-    setColorDropdownOpen(false);
     setUIState({ selectedConnectorColor: formatted });
 
     // 일치하는 스타일 프리셋이 있다면 스타일 프리셋도 동기화
@@ -386,28 +371,29 @@ export function ConnectSection() {
       <div className="section-body">
         {/* 색상 + 선 패턴 (Figma UI3 1027385:6998) */}
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          {/* 표준 피그마 컬러 컨트롤 (입력 필드 + 컬러 아이콘 + 드롭다운) */}
+          {/* 표준 피그마 컬러 컨트롤 (입력 필드 + 컬러 아이콘) */}
           <div className="conn-color-input-wrapper" id="wrap-conn-color">
             <div
-              className={`conn-color-input-box${colorDropdownOpen ? ' active' : ''}`}
+              className="conn-color-input-box"
               onClick={() => hexInputRef.current?.focus()}
             >
-              {/* 컬러 칩 (스타일 컬러칩과 동일한 배경/보더 설정값 동기화 반영) */}
+              {/* 컬러 칩 (클릭 시 피그마 공식 커넥터 컬러 모달 열기) */}
               <span
                 className="conn-color-chip"
                 style={{
                   backgroundColor: activeStylePreset ? activeStylePreset.fillColor : selectedColor,
                   border: activeStylePreset && activeStylePreset.strokeWeight > 0
                     ? `${activeStylePreset.strokeWeight}px solid ${activeStylePreset.strokeColor}`
-                    : '1px solid rgba(255, 255, 255, 0.15)',
+                    : undefined,
                   boxSizing: 'border-box',
                 }}
-                title="색상 선택 메뉴 열기"
+                title="Color wheel modal"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setColorDropdownOpen(!colorDropdownOpen);
                   setStartTermPopupOpen(false);
                   setEndTermPopupOpen(false);
+                  setUIState({ selectedConnectorColor: selectedColor });
+                  setActiveModal('connector-color');
                 }}
               />
 
@@ -449,7 +435,6 @@ export function ConnectSection() {
                 title="Color wheel modal"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setColorDropdownOpen(false);
                   setStartTermPopupOpen(false);
                   setEndTermPopupOpen(false);
                   setUIState({ selectedConnectorColor: selectedColor });
@@ -467,122 +452,6 @@ export function ConnectSection() {
               value={selectedColor}
               onChange={() => {}}
             />
-
-            {/* 피그마 UI3 표준 컬러 드롭다운 메뉴 */}
-            {colorDropdownOpen && (
-              <div
-                className="figma-dropdown-menu active"
-                id="popup-conn-line-color"
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 4px)',
-                  left: 0,
-                  right: 'auto',
-                  width: '140px',
-                  maxHeight: '260px',
-                  overflowY: 'auto',
-                  padding: '6px',
-                  zIndex: 1050,
-                }}
-              >
-                {/* 만약 selectedColor가 프리셋 목록에 없는 커스텀 컬러라면 맨 위에 표시 */}
-                {!LINE_COLOR_OPTIONS.some((c) => c.value.toUpperCase() === selectedColor.toUpperCase()) && (
-                  <div
-                    className="figma-dropdown-item selected"
-                    style={{ width: '100%' }}
-                    onClick={() => selectColor(selectedColor)}
-                  >
-                    <span className="figma-dropdown-check-slot" style={{ width: '18px' }}>
-                      {CHECK_SVG}
-                    </span>
-                    <span
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '3px',
-                        backgroundColor: selectedColor,
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        display: 'inline-block',
-                        marginRight: '6px',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span className="figma-dropdown-label">{selectedColor}</span>
-                  </div>
-                )}
-
-                {LINE_COLOR_OPTIONS.map((c) => {
-                  const isSelected = selectedColor.toUpperCase() === c.value.toUpperCase();
-                  const matchedPreset = stylePresets.find(
-                    (p) =>
-                      p.fillColor.toUpperCase() === c.value.toUpperCase() ||
-                      (p.strokeWeight > 0 && p.strokeColor.toUpperCase() === c.value.toUpperCase())
-                  );
-                  const hasBorder = matchedPreset && matchedPreset.strokeWeight > 0;
-                  return (
-                    <div
-                      key={c.value}
-                      className={`figma-dropdown-item${isSelected ? ' selected' : ''}`}
-                      style={{ width: '100%' }}
-                      onClick={() => selectColor(c.value)}
-                    >
-                      <span className="figma-dropdown-check-slot" style={{ width: '18px' }}>
-                        {isSelected && CHECK_SVG}
-                      </span>
-                      <span
-                        style={{
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '3px',
-                          backgroundColor: c.value,
-                          border: hasBorder
-                            ? `${matchedPreset.strokeWeight}px solid ${matchedPreset.strokeColor}`
-                            : '1px solid rgba(255, 255, 255, 0.2)',
-                          display: 'inline-block',
-                          marginRight: '6px',
-                          flexShrink: 0,
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                      <span className="figma-dropdown-label">{c.label}</span>
-                    </div>
-                  );
-                })}
-
-                {/* 피그마 UI3 원형 컬러 휠 모달 열기 옵션 */}
-                <div
-                  className="figma-dropdown-item"
-                  style={{
-                    width: '100%',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                    marginTop: '4px',
-                    paddingTop: '6px',
-                  }}
-                  onClick={() => {
-                    setColorDropdownOpen(false);
-                    setUIState({ selectedConnectorColor: selectedColor });
-                    setActiveModal('connector-color');
-                  }}
-                >
-                  <span className="figma-dropdown-check-slot" style={{ width: '18px' }} />
-                  <span
-                    style={{
-                      width: '14px',
-                      height: '14px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: '6px',
-                    }}
-                  >
-                    <IcPalette />
-                  </span>
-                  <span className="figma-dropdown-label" style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.85)' }}>
-                    Color Wheel...
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="line-style-segment" style={{ flex: 1 }}>
@@ -673,7 +542,6 @@ export function ConnectSection() {
                 e.stopPropagation();
                 setStartTermPopupOpen(!startTermPopupOpen);
                 setEndTermPopupOpen(false);
-                setColorDropdownOpen(false);
               }}
             >
               <div className="figma-dropdown-btn-content" style={{ justifyContent: 'center' }}>
@@ -808,7 +676,6 @@ export function ConnectSection() {
                 e.stopPropagation();
                 setEndTermPopupOpen(!endTermPopupOpen);
                 setStartTermPopupOpen(false);
-                setColorDropdownOpen(false);
               }}
             >
               <div className="figma-dropdown-btn-content" style={{ justifyContent: 'center' }}>

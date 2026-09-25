@@ -1081,6 +1081,14 @@
     }
     return { title, description };
   }
+  function isHeaderFrame(c) {
+    if (c.type !== "FRAME") return false;
+    if (c.name === "Header") return true;
+    if (c.name.startsWith("[Step]") || c.getPluginData("is_step_badge") === "true") return false;
+    if (c.name === "StatusBadge" || c.getPluginData("is_status_badge") === "true") return false;
+    if (c.name === "FigmaLinkBadge" || c.getPluginData("is_figma_link_badge") === "true") return false;
+    return c.layoutMode === "HORIZONTAL";
+  }
   function calculateCardHugHeight(card, textCharacters) {
     const isAuto = card.primaryAxisSizingMode === "AUTO";
     if (isAuto && textCharacters === void 0) {
@@ -1121,30 +1129,101 @@
       return Math.round(card.height);
     }
   }
-  function updateDescTextTruncation(card, descText, currentHeight, textCharacters) {
-    descText.textTruncation = "ENDING";
-    const isHug = card.primaryAxisSizingMode === "AUTO";
-    if (isHug) {
-      descText.maxLines = null;
-      return;
+  async function ensureTextNodeFontsLoaded(textNode) {
+    if (!textNode) return;
+    try {
+      const len = textNode.characters.length;
+      if (len > 0) {
+        const fontNames = textNode.getRangeAllFontNames(0, len);
+        for (const fn of fontNames) {
+          await figma.loadFontAsync(fn);
+        }
+      } else {
+        if ("fontName" in textNode && textNode.fontName !== figma.mixed) {
+          await figma.loadFontAsync(textNode.fontName);
+        } else {
+          await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+        }
+      }
+    } catch (e) {
+      try {
+        await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+        await figma.loadFontAsync({ family: "Inter", style: "Bold" });
+      } catch (_) {
+      }
     }
-    const hugH = calculateCardHugHeight(card, textCharacters);
-    if (currentHeight >= hugH - 4) {
-      descText.maxLines = null;
-      return;
-    }
-    const statusBadge = card.children.find(
-      (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
-    );
-    const pb = statusBadge ? 36 : 16;
-    const headerRow = card.children.find(
-      (c) => c.name === "Header" || c.type === "FRAME" && c.layoutMode === "HORIZONTAL"
-    );
-    const headerH = headerRow ? headerRow.height : 20;
-    const availableH = Math.max(14, currentHeight - 14 - pb - 8 - Math.round(headerH));
-    descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
   }
-  function handleSelectionChange() {
+  async function updateDescTextTruncation(card, descText, currentHeight, textCharacters) {
+    try {
+      const descFont = { family: "Inter", style: "Regular" };
+      await figma.loadFontAsync(descFont);
+      await ensureTextNodeFontsLoaded(descText);
+      const len = descText.characters.length;
+      if (len > 0) {
+        try {
+          descText.setRangeFontName(0, len, descFont);
+        } catch (_) {
+          try {
+            descText.fontName = descFont;
+          } catch (_2) {
+          }
+        }
+        try {
+          descText.setRangeFontSize(0, len, 11);
+        } catch (_) {
+          try {
+            descText.fontSize = 11;
+          } catch (_2) {
+          }
+        }
+      } else {
+        try {
+          descText.fontName = descFont;
+        } catch (_) {
+        }
+        try {
+          descText.fontSize = 11;
+        } catch (_) {
+        }
+      }
+      descText.textTruncation = "ENDING";
+      descText.textAlignHorizontal = "LEFT";
+      if (descText.layoutAlign !== "STRETCH") {
+        descText.layoutAlign = "STRETCH";
+      }
+      const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
+      const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
+      const availW = Math.max(50, card.width - pl - pr);
+      if (Math.abs(descText.width - availW) > 1) {
+        descText.resize(availW, descText.height);
+      }
+      if (descText.textAutoResize !== "HEIGHT") {
+        descText.textAutoResize = "HEIGHT";
+      }
+      const isHug = card.primaryAxisSizingMode === "AUTO";
+      if (isHug) {
+        descText.maxLines = null;
+        return;
+      }
+      const hugH = calculateCardHugHeight(card, textCharacters);
+      if (currentHeight >= hugH - 4) {
+        descText.maxLines = null;
+        return;
+      }
+      const statusBadge = card.children.find(
+        (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+      );
+      const pb = statusBadge ? 36 : 16;
+      const headerRow = card.children.find(isHeaderFrame);
+      const headerH = headerRow ? headerRow.height : 20;
+      const availableH = Math.max(14, currentHeight - 14 - pb - 8 - Math.round(headerH));
+      descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
+    } catch (err) {
+      console.warn("updateDescTextTruncation failed:", err);
+    }
+  }
+  async function handleSelectionChange() {
+    await loadRequiredFonts();
     const rawSelection = figma.currentPage.selection;
     const resolvedNodesMap = /* @__PURE__ */ new Map();
     for (const node of rawSelection) {
@@ -1176,7 +1255,7 @@
     } else {
       uniqueNodes = otherObjects;
     }
-    const nodes = uniqueNodes.map((node) => {
+    const nodes = await Promise.all(uniqueNodes.map(async (node) => {
       const isFlowNode = node.getPluginData("is_flow_node") === "true";
       if (isFlowNode && node.type === "FRAME") {
         const frame = node;
@@ -1206,7 +1285,16 @@
           const textChild = statusBadge.children.find((c) => c.type === "TEXT");
           if (textChild) textChild.locked = true;
         }
-        const headerFrame = frame.children.find((c) => c.name === "Header");
+        if (frame.layoutMode !== "VERTICAL") {
+          frame.layoutMode = "VERTICAL";
+        }
+        if (frame.counterAxisAlignItems !== "MIN") {
+          frame.counterAxisAlignItems = "MIN";
+        }
+        if (frame.primaryAxisAlignItems !== "MIN") {
+          frame.primaryAxisAlignItems = "MIN";
+        }
+        const headerFrame = frame.children.find(isHeaderFrame);
         const titleText = headerFrame ? headerFrame.children.find((c) => c.type === "TEXT") : frame.children.find((c) => c.type === "TEXT" && (c.name === "TitleText" || c.getPluginData("node_role") === "title"));
         if (titleText) {
           enforceTitleStandardStyle(titleText, frame);
@@ -1215,7 +1303,8 @@
           (c) => c.type === "TEXT" && (c.name === "DescText" || c.getPluginData("node_role") === "desc")
         );
         if (descText) {
-          lockTextFontSizeAndAutoResize(descText, 11);
+          await lockTextFontSizeAndAutoResize(descText, 11);
+          await updateDescTextTruncation(frame, descText, frame.height);
         }
       }
       let title = "";
@@ -1401,7 +1490,7 @@
         strokeColorHex: nodeStrokeColor,
         strokeWeight: nodeStrokeWeight
       };
-    });
+    }));
     let currentStatus;
     if (uniqueNodes.length === 1) {
       const saved = uniqueNodes[0].getPluginData("workflow_status");
@@ -1441,16 +1530,65 @@
     }
     textNode.characters = newText;
   }
-  function lockTextFontSizeAndAutoResize(textNode, targetSize) {
+  async function lockTextFontSizeAndAutoResize(textNode, targetSize) {
     try {
-      if (textNode.fontSize !== targetSize) {
-        textNode.fontSize = targetSize;
+      const descFont = { family: "Inter", style: "Regular" };
+      await figma.loadFontAsync(descFont);
+      await ensureTextNodeFontsLoaded(textNode);
+      const len = textNode.characters.length;
+      if (len > 0) {
+        try {
+          textNode.setRangeFontName(0, len, descFont);
+        } catch (_) {
+          try {
+            textNode.fontName = descFont;
+          } catch (_2) {
+          }
+        }
+        try {
+          textNode.setRangeFontSize(0, len, targetSize);
+        } catch (_) {
+          try {
+            textNode.fontSize = targetSize;
+          } catch (_2) {
+          }
+        }
+      } else {
+        try {
+          textNode.fontName = descFont;
+        } catch (_) {
+        }
+        try {
+          textNode.fontSize = targetSize;
+        } catch (_) {
+        }
       }
-      if (textNode.textAutoResize !== "HEIGHT") {
-        textNode.textAutoResize = "HEIGHT";
+      if (textNode.textAlignHorizontal !== "LEFT") {
+        textNode.textAlignHorizontal = "LEFT";
+      }
+      if (textNode.parent && "layoutMode" in textNode.parent) {
+        const parentFrame = textNode.parent;
+        if (parentFrame.layoutMode !== "VERTICAL") {
+          parentFrame.layoutMode = "VERTICAL";
+        }
+        if (parentFrame.counterAxisAlignItems !== "MIN") {
+          parentFrame.counterAxisAlignItems = "MIN";
+        }
+        if (parentFrame.primaryAxisAlignItems !== "MIN") {
+          parentFrame.primaryAxisAlignItems = "MIN";
+        }
+        const pl = typeof parentFrame.paddingLeft === "number" ? parentFrame.paddingLeft : 16;
+        const pr = typeof parentFrame.paddingRight === "number" ? parentFrame.paddingRight : 16;
+        const availW = Math.max(50, parentFrame.width - pl - pr);
+        if (Math.abs(textNode.width - availW) > 1) {
+          textNode.resize(availW, textNode.height);
+        }
       }
       if (textNode.layoutAlign !== "STRETCH") {
         textNode.layoutAlign = "STRETCH";
+      }
+      if (textNode.textAutoResize !== "HEIGHT") {
+        textNode.textAutoResize = "HEIGHT";
       }
       textNode.textTruncation = "ENDING";
     } catch (err) {
@@ -1718,11 +1856,14 @@
     descText.fontSize = 11;
     descText.characters = desc;
     descText.fills = [descFill];
-    descText.layoutAlign = "STRETCH";
-    descText.textAutoResize = "HEIGHT";
-    updateDescTextTruncation(card, descText, height, desc);
+    descText.textAlignHorizontal = "LEFT";
     descText.setPluginData("node_role", "desc");
     card.appendChild(descText);
+    descText.layoutAlign = "STRETCH";
+    const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+    descText.resize(availW, descText.height);
+    descText.textAutoResize = "HEIGHT";
+    await updateDescTextTruncation(card, descText, height, desc);
     if (stepNumber) {
       const stepBadge = figma.createFrame();
       stepBadge.name = `[Step] ${stepNumber}`;
@@ -1891,11 +2032,14 @@
       descText.fontSize = 11;
       descText.characters = description;
       descText.fills = [descFill];
-      descText.layoutAlign = "STRETCH";
-      descText.textAutoResize = "HEIGHT";
-      updateDescTextTruncation(card, descText, height, description);
+      descText.textAlignHorizontal = "LEFT";
       descText.setPluginData("node_role", "desc");
       card.appendChild(descText);
+      descText.layoutAlign = "STRETCH";
+      const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+      descText.resize(availW, descText.height);
+      descText.textAutoResize = "HEIGHT";
+      await updateDescTextTruncation(card, descText, height, description);
       card.name = title;
       card.setPluginData("is_flow_node", "true");
       card.setPluginData("schema_version", "2");
@@ -2061,9 +2205,16 @@
           linkBadge.y = h - linkBadge.height - 10;
         }
       }
-      let headerRow = card.children.find(
-        (c) => c.name === "Header" || c.type === "FRAME" && c.layoutMode === "HORIZONTAL"
-      );
+      if (card.layoutMode !== "VERTICAL") {
+        card.layoutMode = "VERTICAL";
+      }
+      if (card.counterAxisAlignItems !== "MIN") {
+        card.counterAxisAlignItems = "MIN";
+      }
+      if (card.primaryAxisAlignItems !== "MIN") {
+        card.primaryAxisAlignItems = "MIN";
+      }
+      let headerRow = card.children.find(isHeaderFrame);
       if (!headerRow) {
         headerRow = figma.createFrame();
         headerRow.name = "Header";
@@ -2088,6 +2239,7 @@
         titleText.setPluginData("node_role", "title");
         headerRow.insertChild(0, titleText);
       }
+      titleText.textAlignHorizontal = "LEFT";
       titleText.textTruncation = "ENDING";
       titleText.maxLines = 1;
       await safeSetCharacters(titleText, title);
@@ -2100,11 +2252,17 @@
         descText.name = "DescText";
         descText.fontName = { family: "Inter", style: "Regular" };
         descText.fontSize = 11;
-        descText.layoutAlign = "STRETCH";
-        descText.textAutoResize = "HEIGHT";
+        descText.textAlignHorizontal = "LEFT";
         descText.setPluginData("node_role", "desc");
         card.appendChild(descText);
       }
+      descText.textAlignHorizontal = "LEFT";
+      descText.layoutAlign = "STRETCH";
+      const availW = Math.max(50, card.width - card.paddingLeft - card.paddingRight);
+      if (Math.abs(descText.width - availW) > 1) {
+        descText.resize(availW, descText.height);
+      }
+      descText.textAutoResize = "HEIGHT";
       let statusBadge = card.children.find(
         (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
       );
@@ -2112,7 +2270,7 @@
       const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
       card.paddingBottom = hasStatus || hasLink ? 36 : 16;
       const currentH = payload.height || card.height;
-      updateDescTextTruncation(card, descText, currentH, description);
+      await updateDescTextTruncation(card, descText, currentH, description);
       if (statusBadge) {
         statusBadge.paddingLeft = 9;
         statusBadge.paddingRight = 9;
@@ -2145,6 +2303,19 @@
       }
       await safeSetCharacters(descText, description);
       descText.fills = [descFill];
+      try {
+        const descFont = { family: "Inter", style: "Regular" };
+        await figma.loadFontAsync(descFont);
+        const dLen = descText.characters.length;
+        if (dLen > 0) {
+          descText.setRangeFontName(0, dLen, descFont);
+          descText.setRangeFontSize(0, dLen, 11);
+        } else {
+          descText.fontName = descFont;
+          descText.fontSize = 11;
+        }
+      } catch (_) {
+      }
       card.name = title;
       card.setPluginData("is_flow_node", "true");
       card.setPluginData("schema_version", "2");
@@ -2189,6 +2360,15 @@
       frame.maxWidth = null;
       frame.minHeight = null;
       frame.maxHeight = null;
+      if (frame.layoutMode !== "VERTICAL") {
+        frame.layoutMode = "VERTICAL";
+      }
+      if (frame.counterAxisAlignItems !== "MIN") {
+        frame.counterAxisAlignItems = "MIN";
+      }
+      if (frame.primaryAxisAlignItems !== "MIN") {
+        frame.primaryAxisAlignItems = "MIN";
+      }
       frame.resize(w, h);
       frame.primaryAxisSizingMode = "FIXED";
       frame.counterAxisSizingMode = "FIXED";
@@ -2197,14 +2377,13 @@
       frame.maxWidth = w;
       frame.minHeight = h;
       frame.maxHeight = h;
-      const headerRow = frame.children.find(
-        (c) => c.name === "Header" || c.type === "FRAME" && c.layoutMode === "HORIZONTAL"
-      );
+      const headerRow = frame.children.find(isHeaderFrame);
       if (headerRow) {
         const title = headerRow.children.find(
           (c) => c.name === "TitleText" || c.getPluginData("node_role") === "title"
         );
         if (title) {
+          title.textAlignHorizontal = "LEFT";
           title.textTruncation = "ENDING";
           title.maxLines = 1;
         }
@@ -2218,7 +2397,16 @@
         (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
       );
       if (desc) {
-        updateDescTextTruncation(frame, desc, h);
+        desc.textAlignHorizontal = "LEFT";
+        desc.layoutAlign = "STRETCH";
+        const pl = typeof frame.paddingLeft === "number" ? frame.paddingLeft : 16;
+        const pr = typeof frame.paddingRight === "number" ? frame.paddingRight : 16;
+        const availW = Math.max(50, w - pl - pr);
+        if (Math.abs(desc.width - availW) > 1) {
+          desc.resize(availW, desc.height);
+        }
+        desc.textAutoResize = "HEIGHT";
+        await updateDescTextTruncation(frame, desc, h);
       }
       if (statusBadge) {
         statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
@@ -2682,9 +2870,7 @@
       if (flowNode.type === "FRAME") {
         const card = flowNode;
         card.clipsContent = false;
-        const headerRow = card.children.find(
-          (c) => c.name === "Header" || c.type === "FRAME" && c.layoutMode === "HORIZONTAL"
-        );
+        const headerRow = card.children.find(isHeaderFrame);
         let oldBadgeInHeader;
         if (headerRow) {
           oldBadgeInHeader = headerRow.children.find(
@@ -2703,7 +2889,7 @@
             (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
           );
           if (descText) {
-            updateDescTextTruncation(card, descText, card.height);
+            await updateDescTextTruncation(card, descText, card.height);
           }
           continue;
         }
@@ -2766,7 +2952,7 @@
             (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
           );
           if (descText) {
-            updateDescTextTruncation(card, descText, card.height);
+            await updateDescTextTruncation(card, descText, card.height);
           }
         }
       }
@@ -3319,7 +3505,7 @@
               if (isTitle) {
                 await enforceTitleStandardStyle(textNode, flowNode);
               } else if (isDesc) {
-                lockTextFontSizeAndAutoResize(textNode, 11);
+                await lockTextFontSizeAndAutoResize(textNode, 11);
               }
             }
           }

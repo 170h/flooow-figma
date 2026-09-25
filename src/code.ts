@@ -755,6 +755,16 @@ function extractNodeText(node: SceneNode): { title: string; description: string 
   return { title, description };
 }
 
+// 헤더 프레임 판별 헬퍼 (StepBadge, StatusBadge, FigmaLinkBadge 등 다른 수평 프레임 배제)
+function isHeaderFrame(c: SceneNode): boolean {
+  if (c.type !== 'FRAME') return false;
+  if (c.name === 'Header') return true;
+  if (c.name.startsWith('[Step]') || c.getPluginData('is_step_badge') === 'true') return false;
+  if (c.name === 'StatusBadge' || c.getPluginData('is_status_badge') === 'true') return false;
+  if (c.name === 'FigmaLinkBadge' || c.getPluginData('is_figma_link_badge') === 'true') return false;
+  return (c as FrameNode).layoutMode === 'HORIZONTAL';
+}
+
 // 카드의 전체 내용(헤더 + 패딩 + 설명 텍스트 전체 + 상태 뱃지 여백)을 모두 수용하기 위한 최소 Hug 높이 정밀 산출
 // 피그마 네이티브 오토레이아웃 렌더링 엔진을 Source of Truth로 사용하여 1픽셀의 오차도 없이 일원화
 function calculateCardHugHeight(card: FrameNode, textCharacters?: string): number {
@@ -805,44 +815,110 @@ function calculateCardHugHeight(card: FrameNode, textCharacters?: string): numbe
   }
 }
 
+// 텍스트 노드의 현재 폰트를 안전하게 사전 로드하는 헬퍼
+async function ensureTextNodeFontsLoaded(textNode: TextNode | TextSublayerNode) {
+  if (!textNode) return;
+  try {
+    const len = textNode.characters.length;
+    if (len > 0) {
+      const fontNames = textNode.getRangeAllFontNames(0, len);
+      for (const fn of fontNames) {
+        await figma.loadFontAsync(fn);
+      }
+    } else {
+      if ('fontName' in textNode && textNode.fontName !== figma.mixed) {
+        await figma.loadFontAsync(textNode.fontName as FontName);
+      } else {
+        await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+      }
+    }
+  } catch (e) {
+    try {
+      await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+      await figma.loadFontAsync({ family: 'Inter', style: 'Bold' });
+    } catch (_) {}
+  }
+}
+
 // 설명 텍스트 말줄임(...) 처리 함수
 // 디스크립션 박스는 기본적으로 auto(maxLines = null, textAutoResize = 'HEIGHT')로 동작합니다.
 // 1. Hug contents 모드이거나,
 // 2. Fixed height 모드이더라도 카드 높이가 텍스트 전체를 담을 수 있을 만큼 충분한 경우 (currentHeight >= hugH - 4)
 //    -> maxLines = null로 유지하여 어떠한 말줄임(...)도 생기지 않습니다.
 // 3. 오직 카드가 작아서 텍스트가 카드 바깥으로 실제로 넘칠 때에만 가용 높이에 맞추어 maxLines(...)를 적용합니다.
-function updateDescTextTruncation(card: FrameNode, descText: TextNode, currentHeight: number, textCharacters?: string) {
-  descText.textTruncation = 'ENDING';
-  const isHug = card.primaryAxisSizingMode === 'AUTO';
-  if (isHug) {
-    descText.maxLines = null;
-    return;
+async function updateDescTextTruncation(card: FrameNode, descText: TextNode, currentHeight: number, textCharacters?: string) {
+  try {
+    const descFont: FontName = { family: 'Inter', style: 'Regular' };
+    await figma.loadFontAsync(descFont);
+    await ensureTextNodeFontsLoaded(descText);
+
+    // 폰트 패밀리 Inter, 스타일 Regular, 폰트 크기 11px 고정
+    const len = descText.characters.length;
+    if (len > 0) {
+      try {
+        descText.setRangeFontName(0, len, descFont);
+      } catch (_) {
+        try { descText.fontName = descFont; } catch (_) {}
+      }
+      try {
+        descText.setRangeFontSize(0, len, 11);
+      } catch (_) {
+        try { descText.fontSize = 11; } catch (_) {}
+      }
+    } else {
+      try { descText.fontName = descFont; } catch (_) {}
+      try { descText.fontSize = 11; } catch (_) {}
+    }
+
+    descText.textTruncation = 'ENDING';
+    descText.textAlignHorizontal = 'LEFT';
+    if (descText.layoutAlign !== 'STRETCH') {
+      descText.layoutAlign = 'STRETCH';
+    }
+
+    // 가용 너비(카드 너비 - 좌우 패딩) 복원 및 textAutoResize 고정 (세로 변형 방지)
+    const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
+    const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
+    const availW = Math.max(50, card.width - pl - pr);
+    if (Math.abs(descText.width - availW) > 1) {
+      descText.resize(availW, descText.height);
+    }
+    if (descText.textAutoResize !== 'HEIGHT') {
+      descText.textAutoResize = 'HEIGHT';
+    }
+
+    const isHug = card.primaryAxisSizingMode === 'AUTO';
+    if (isHug) {
+      descText.maxLines = null;
+      return;
+    }
+
+    const hugH = calculateCardHugHeight(card, textCharacters);
+    // 카드 높이가 텍스트 전체를 담을 수 있는 크기(Hug 높이) 이상이거나 여유가 있으면 말줄임 불필요 (기본 Auto 유지)
+    if (currentHeight >= hugH - 4) {
+      descText.maxLines = null;
+      return;
+    }
+
+    // 박스 높이를 실제로 벗어나는 경우에만 가용 줄수 계산하여 말줄임
+    const statusBadge = card.children.find(
+      (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+    );
+    const pb = statusBadge ? 36 : 16;
+    const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+    const headerH = headerRow ? headerRow.height : 20;
+
+    const availableH = Math.max(14, currentHeight - 14 - pb - 8 - Math.round(headerH));
+    // Inter 11px의 1줄 실질 높이는 약 13.5px
+    descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
+  } catch (err) {
+    console.warn('updateDescTextTruncation failed:', err);
   }
-
-  const hugH = calculateCardHugHeight(card, textCharacters);
-  // 카드 높이가 텍스트 전체를 담을 수 있는 크기(Hug 높이) 이상이거나 여유가 있으면 말줄임 불필요 (기본 Auto 유지)
-  if (currentHeight >= hugH - 4) {
-    descText.maxLines = null;
-    return;
-  }
-
-  // 박스 높이를 실제로 벗어나는 경우에만 가용 줄수 계산하여 말줄임
-  const statusBadge = card.children.find(
-    (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
-  );
-  const pb = statusBadge ? 36 : 16;
-  const headerRow = card.children.find(
-    (c) => c.name === 'Header' || (c.type === 'FRAME' && (c as FrameNode).layoutMode === 'HORIZONTAL')
-  ) as FrameNode | undefined;
-  const headerH = headerRow ? headerRow.height : 20;
-
-  const availableH = Math.max(14, currentHeight - 14 - pb - 8 - Math.round(headerH));
-  // Inter 11px의 1줄 실질 높이는 약 13.5px
-  descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
 }
 
 // 선택 영역 변경 감지 시 UI 갱신 (바탕화면 클릭 ➔ 빈 폼 / 노드 클릭 ➔ 상세 수정 폼)
-function handleSelectionChange() {
+async function handleSelectionChange() {
+  await loadRequiredFonts();
   const rawSelection = figma.currentPage.selection;
 
   // 1. 커넥터 및 플로우 노드 정확 매핑 (자식/선/라벨 클릭 시에도 정확한 최상위 엔티티로 매핑)
@@ -890,7 +966,7 @@ function handleSelectionChange() {
     uniqueNodes = otherObjects;
   }
 
-  const nodes: SelectedNodeInfo[] = uniqueNodes.map((node) => {
+  const nodes: SelectedNodeInfo[] = await Promise.all(uniqueNodes.map(async (node) => {
     const isFlowNode = node.getPluginData('is_flow_node') === 'true';
 
     // 캔버스 기즈모로 사이즈 조절이 되지 않도록 min/max 치수를 현재 크기로 완전 잠금
@@ -925,8 +1001,19 @@ function handleSelectionChange() {
         if (textChild) textChild.locked = true;
       }
 
+      // 프레임 레이아웃 모드 및 정렬 방향 보장
+      if (frame.layoutMode !== 'VERTICAL') {
+        frame.layoutMode = 'VERTICAL';
+      }
+      if (frame.counterAxisAlignItems !== 'MIN') {
+        frame.counterAxisAlignItems = 'MIN';
+      }
+      if (frame.primaryAxisAlignItems !== 'MIN') {
+        frame.primaryAxisAlignItems = 'MIN';
+      }
+
       // 타이틀 텍스트 서식(블릿, 링크, 볼드, 취소선 등) 차단 및 표준 규격 검사
-      const headerFrame = frame.children.find((c) => c.name === 'Header') as FrameNode | undefined;
+      const headerFrame = frame.children.find(isHeaderFrame) as FrameNode | undefined;
       const titleText = headerFrame
         ? (headerFrame.children.find((c) => c.type === 'TEXT') as TextNode | undefined)
         : (frame.children.find((c) => c.type === 'TEXT' && (c.name === 'TitleText' || c.getPluginData('node_role') === 'title')) as TextNode | undefined);
@@ -937,7 +1024,8 @@ function handleSelectionChange() {
         (c) => c.type === 'TEXT' && (c.name === 'DescText' || c.getPluginData('node_role') === 'desc')
       ) as TextNode | undefined;
       if (descText) {
-        lockTextFontSizeAndAutoResize(descText, 11);
+        await lockTextFontSizeAndAutoResize(descText, 11);
+        await updateDescTextTruncation(frame, descText, frame.height);
       }
     }
 
@@ -1148,7 +1236,7 @@ function handleSelectionChange() {
       strokeColorHex: nodeStrokeColor,
       strokeWeight: nodeStrokeWeight,
     };
-  });
+  }));
 
   let currentStatus: WorkflowStatus | undefined;
   if (uniqueNodes.length === 1) {
@@ -1196,22 +1284,62 @@ async function safeSetCharacters(textNode: TextNode | TextSublayerNode, newText:
   textNode.characters = newText;
 }
 
-// 설명 텍스트용: 폰트 사이즈(11px) 및 텍스트 박스 자동 리사이즈 모드만 고정하고,
-// 나머지 서식(굵기, 색상, 이탤릭, 링크 등)은 모두 자유롭게 허용하는 헬퍼
-function lockTextFontSizeAndAutoResize(textNode: TextNode, targetSize: number) {
+// 설명 텍스트용: 폰트 Inter Regular 및 11px 고정, 텍스트 박스 자동 리사이즈 모드 고정 헬퍼
+async function lockTextFontSizeAndAutoResize(textNode: TextNode, targetSize: number) {
   try {
-    // 1. 폰트 사이즈만 고정 (볼드, 색상, 이탤릭 등 다른 서식은 100% 보존)
-    if (textNode.fontSize !== targetSize) {
-      textNode.fontSize = targetSize;
+    const descFont: FontName = { family: 'Inter', style: 'Regular' };
+    await figma.loadFontAsync(descFont);
+    await ensureTextNodeFontsLoaded(textNode);
+
+    // 1. 폰트 패밀리 Inter 및 스타일 Regular, 폰트 사이즈(11px) 고정
+    const len = textNode.characters.length;
+    if (len > 0) {
+      try {
+        textNode.setRangeFontName(0, len, descFont);
+      } catch (_) {
+        try { textNode.fontName = descFont; } catch (_) {}
+      }
+      try {
+        textNode.setRangeFontSize(0, len, targetSize);
+      } catch (_) {
+        try { textNode.fontSize = targetSize; } catch (_) {}
+      }
+    } else {
+      try { textNode.fontName = descFont; } catch (_) {}
+      try { textNode.fontSize = targetSize; } catch (_) {}
+    }
+
+    if (textNode.textAlignHorizontal !== 'LEFT') {
+      textNode.textAlignHorizontal = 'LEFT';
+    }
+
+    if (textNode.parent && 'layoutMode' in textNode.parent) {
+      const parentFrame = textNode.parent as FrameNode;
+      if (parentFrame.layoutMode !== 'VERTICAL') {
+        parentFrame.layoutMode = 'VERTICAL';
+      }
+      if (parentFrame.counterAxisAlignItems !== 'MIN') {
+        parentFrame.counterAxisAlignItems = 'MIN';
+      }
+      if (parentFrame.primaryAxisAlignItems !== 'MIN') {
+        parentFrame.primaryAxisAlignItems = 'MIN';
+      }
+
+      const pl = typeof parentFrame.paddingLeft === 'number' ? parentFrame.paddingLeft : 16;
+      const pr = typeof parentFrame.paddingRight === 'number' ? parentFrame.paddingRight : 16;
+      const availW = Math.max(50, parentFrame.width - pl - pr);
+      if (Math.abs(textNode.width - availW) > 1) {
+        textNode.resize(availW, textNode.height);
+      }
+    }
+
+    if (textNode.layoutAlign !== 'STRETCH') {
+      textNode.layoutAlign = 'STRETCH';
     }
 
     // 2. 텍스트 박스 크기 조절 모드 고정 (너비는 부모 프레임에 맞춤, 높이는 내용에 맞춰 자동 조절)
     if (textNode.textAutoResize !== 'HEIGHT') {
       textNode.textAutoResize = 'HEIGHT';
-    }
-
-    if (textNode.layoutAlign !== 'STRETCH') {
-      textNode.layoutAlign = 'STRETCH';
     }
 
     // 영역 초과 시 말줄임(...) 처리
@@ -1475,11 +1603,15 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   descText.fontSize = 11;
   descText.characters = desc;
   descText.fills = [descFill];
-  descText.layoutAlign = 'STRETCH';
-  descText.textAutoResize = 'HEIGHT';
-  updateDescTextTruncation(card, descText, height, desc);
+  descText.textAlignHorizontal = 'LEFT';
   descText.setPluginData('node_role', 'desc');
   card.appendChild(descText);
+
+  descText.layoutAlign = 'STRETCH';
+  const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+  descText.resize(availW, descText.height);
+  descText.textAutoResize = 'HEIGHT';
+  await updateDescTextTruncation(card, descText, height, desc);
 
   // 스텝 번호 뱃지 복원
   if (stepNumber) {
@@ -1678,11 +1810,15 @@ async function createFlowNode(payload: FlowNodePayload) {
     descText.fontSize = 11;
     descText.characters = description;
     descText.fills = [descFill];
-    descText.layoutAlign = 'STRETCH';
-    descText.textAutoResize = 'HEIGHT';
-    updateDescTextTruncation(card, descText, height, description);
+    descText.textAlignHorizontal = 'LEFT';
     descText.setPluginData('node_role', 'desc');
     card.appendChild(descText);
+
+    descText.layoutAlign = 'STRETCH';
+    const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+    descText.resize(availW, descText.height);
+    descText.textAutoResize = 'HEIGHT';
+    await updateDescTextTruncation(card, descText, height, description);
 
     // 메타데이터 보관 (FigJam 네이티브 객체 속성을 Source of Truth로 사용하므로 중복 데이터 제거)
     card.name = title;
@@ -1886,10 +2022,19 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
     }
 
+    // 카드 레이아웃 모드 및 정렬 방향 보장
+    if (card.layoutMode !== 'VERTICAL') {
+      card.layoutMode = 'VERTICAL';
+    }
+    if (card.counterAxisAlignItems !== 'MIN') {
+      card.counterAxisAlignItems = 'MIN';
+    }
+    if (card.primaryAxisAlignItems !== 'MIN') {
+      card.primaryAxisAlignItems = 'MIN';
+    }
+
     // 헤더 행 및 타이틀 텍스트 갱신
-    let headerRow = card.children.find(
-      (c) => c.name === 'Header' || (c.type === 'FRAME' && (c as FrameNode).layoutMode === 'HORIZONTAL')
-    ) as FrameNode | undefined;
+    let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
 
     if (!headerRow) {
       headerRow = figma.createFrame();
@@ -1918,6 +2063,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       headerRow.insertChild(0, titleText);
     }
 
+    titleText.textAlignHorizontal = 'LEFT';
     titleText.textTruncation = 'ENDING';
     titleText.maxLines = 1;
     await safeSetCharacters(titleText, title);
@@ -1933,11 +2079,18 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       descText.name = 'DescText';
       descText.fontName = { family: 'Inter', style: 'Regular' };
       descText.fontSize = 11;
-      descText.layoutAlign = 'STRETCH';
-      descText.textAutoResize = 'HEIGHT';
+      descText.textAlignHorizontal = 'LEFT';
       descText.setPluginData('node_role', 'desc');
       card.appendChild(descText);
     }
+
+    descText.textAlignHorizontal = 'LEFT';
+    descText.layoutAlign = 'STRETCH';
+    const availW = Math.max(50, card.width - card.paddingLeft - card.paddingRight);
+    if (Math.abs(descText.width - availW) > 1) {
+      descText.resize(availW, descText.height);
+    }
+    descText.textAutoResize = 'HEIGHT';
 
     // 상태 여부 및 링크 여부에 따른 하단 패딩 및 설명 텍스트 줄수 동기화
     let statusBadge = card.children.find(
@@ -1948,7 +2101,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     card.paddingBottom = (hasStatus || hasLink) ? 36 : 16;
 
     const currentH = payload.height || card.height;
-    updateDescTextTruncation(card, descText, currentH, description);
+    await updateDescTextTruncation(card, descText, currentH, description);
 
     if (statusBadge) {
       statusBadge.paddingLeft = 9;
@@ -1989,6 +2142,18 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
     await safeSetCharacters(descText, description);
     descText.fills = [descFill];
+    try {
+      const descFont: FontName = { family: 'Inter', style: 'Regular' };
+      await figma.loadFontAsync(descFont);
+      const dLen = descText.characters.length;
+      if (dLen > 0) {
+        descText.setRangeFontName(0, dLen, descFont);
+        descText.setRangeFontSize(0, dLen, 11);
+      } else {
+        descText.fontName = descFont;
+        descText.fontSize = 11;
+      }
+    } catch (_) {}
 
     // 실제 FigJam 프레임 노드 이름 동기화
     card.name = title;
@@ -2048,6 +2213,16 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     frame.minHeight = null;
     frame.maxHeight = null;
 
+    if (frame.layoutMode !== 'VERTICAL') {
+      frame.layoutMode = 'VERTICAL';
+    }
+    if (frame.counterAxisAlignItems !== 'MIN') {
+      frame.counterAxisAlignItems = 'MIN';
+    }
+    if (frame.primaryAxisAlignItems !== 'MIN') {
+      frame.primaryAxisAlignItems = 'MIN';
+    }
+
     frame.resize(w, h);
     frame.primaryAxisSizingMode = 'FIXED';
     frame.counterAxisSizingMode = 'FIXED';
@@ -2059,14 +2234,13 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     frame.maxHeight = h;
 
     // 헤더 타이틀 말줄임 동기화
-    const headerRow = frame.children.find(
-      (c) => c.name === 'Header' || (c.type === 'FRAME' && (c as FrameNode).layoutMode === 'HORIZONTAL')
-    ) as FrameNode | undefined;
+    const headerRow = frame.children.find(isHeaderFrame) as FrameNode | undefined;
     if (headerRow) {
       const title = headerRow.children.find(
         (c) => c.name === 'TitleText' || c.getPluginData('node_role') === 'title'
       ) as TextNode | undefined;
       if (title) {
+        title.textAlignHorizontal = 'LEFT';
         title.textTruncation = 'ENDING';
         title.maxLines = 1;
       }
@@ -2084,7 +2258,16 @@ async function resizeNode(nodeId: string, width: number, height: number) {
       (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
     ) as TextNode | undefined;
     if (desc) {
-      updateDescTextTruncation(frame, desc, h);
+      desc.textAlignHorizontal = 'LEFT';
+      desc.layoutAlign = 'STRETCH';
+      const pl = typeof frame.paddingLeft === 'number' ? frame.paddingLeft : 16;
+      const pr = typeof frame.paddingRight === 'number' ? frame.paddingRight : 16;
+      const availW = Math.max(50, w - pl - pr);
+      if (Math.abs(desc.width - availW) > 1) {
+        desc.resize(availW, desc.height);
+      }
+      desc.textAutoResize = 'HEIGHT';
+      await updateDescTextTruncation(frame, desc, h);
     }
 
     // 리사이즈 시 하단 오른쪽 박스 안쪽 상태 뱃지 위치 동기화
@@ -2678,9 +2861,7 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
       card.clipsContent = false;
 
       // 1. 기존 Header 행 안에 남아있던 구형 상태 뱃지 탐색
-      const headerRow = card.children.find(
-        (c) => c.name === 'Header' || (c.type === 'FRAME' && (c as FrameNode).layoutMode === 'HORIZONTAL')
-      ) as FrameNode | undefined;
+      const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
 
       let oldBadgeInHeader: FrameNode | undefined;
       if (headerRow) {
@@ -2705,7 +2886,7 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
           (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
         ) as TextNode | undefined;
         if (descText) {
-          updateDescTextTruncation(card, descText, card.height);
+          await updateDescTextTruncation(card, descText, card.height);
         }
         continue;
       }
@@ -2780,7 +2961,7 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
           (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
         ) as TextNode | undefined;
         if (descText) {
-          updateDescTextTruncation(card, descText, card.height);
+          await updateDescTextTruncation(card, descText, card.height);
         }
       }
     }
@@ -3466,7 +3647,7 @@ figma.on('documentchange', async (event) => {
               await enforceTitleStandardStyle(textNode, flowNode);
             } else if (isDesc) {
               // 설명 텍스트: 11px 폰트 사이즈 및 리사이즈 모드 고정, 나머지 서식(굵기, 색상, 이탤릭 등)은 모두 자유롭게 허용
-              lockTextFontSizeAndAutoResize(textNode, 11);
+              await lockTextFontSizeAndAutoResize(textNode, 11);
             }
           }
         }

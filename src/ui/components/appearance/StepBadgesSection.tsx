@@ -120,26 +120,6 @@ function isHexDark(hex: string): boolean {
   const firstNode = selectedNodes[0];
   const nodeBgColorHex = firstNode?.fillColorHex || '#E11D48';
   const hasNodeStroke = (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
-  const isDarkNode = isHexDark(nodeBgColorHex);
-  const isHighSat = isHexHighSaturation(nodeBgColorHex);
-
-  const isStrokeBlack = firstNode?.strokeColorHex ? isHexDark(firstNode.strokeColorHex) : true;
-
-  // Style 모드 보더: 노드 보더가 있고 검정이 아니면 노드 보더색, 그 외(보더 0 또는 검정 보더) 어두운/검정 노드는 흰색(#FFFFFF), 밝은 노드는 #D1D5DB
-  const styleSwatchBorderColor = (hasNodeStroke && !(isDarkNode && isStrokeBlack))
-    ? firstNode?.strokeColorHex!
-    : isDarkNode
-    ? '#FFFFFF'
-    : '#D1D5DB';
-
-  // White 모드 보더: 노드 보더가 있으면 노드 보더색, 보더 0이고 채도가 높으면 노드 배경색, 검정/어두운 무채색은 검정색(#18181B), 밝은 무채색은 #D1D5DB
-  const whiteSwatchBorderColor = hasNodeStroke
-    ? firstNode?.strokeColorHex!
-    : isHighSat
-    ? nodeBgColorHex
-    : isDarkNode
-    ? '#18181B'
-    : '#D1D5DB';
 
   // 선택된 노드의 상태 동기화
   useEffect(() => {
@@ -263,7 +243,7 @@ function isHexDark(hex: string): boolean {
     applyStepBadges(start, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
   }
 
-  // 컬러 스와치 렌더러
+  // 컬러 스와치 렌더러 (컬러 입력필드 컬러칩 스타일과 동일한 투명 보더 반영)
   function renderColorSwatch(mode: BadgeColorMode, size = 14) {
     if (mode === 'White') {
       return (
@@ -273,7 +253,8 @@ function isHexDark(hex: string): boolean {
             height: size,
             borderRadius: 3,
             backgroundColor: '#FFFFFF',
-            border: `1.5px solid ${whiteSwatchBorderColor}`,
+            border: 'none',
+            boxShadow: 'inset 0 0 0 1px var(--color-chip-border)',
             display: 'inline-block',
             flexShrink: 0,
             boxSizing: 'border-box',
@@ -289,7 +270,8 @@ function isHexDark(hex: string): boolean {
             height: size,
             borderRadius: 3,
             backgroundColor: '#18181B',
-            border: '1.5px solid #FFFFFF',
+            border: 'none',
+            boxShadow: 'inset 0 0 0 1px var(--color-chip-border)',
             display: 'inline-block',
             flexShrink: 0,
             boxSizing: 'border-box',
@@ -297,7 +279,7 @@ function isHexDark(hex: string): boolean {
         />
       );
     }
-    // Style: 노드 배경색, 보더는 노드 보더 컬러 (보더 0이면 흰색)
+    // Style: 노드 배경색, 노드에 보더가 있으면 노드 보더 반영, 없으면 컬러 입력필드 컬러칩과 동일하게 투명 보더
     return (
       <span
         style={{
@@ -305,8 +287,8 @@ function isHexDark(hex: string): boolean {
           height: size,
           borderRadius: 3,
           backgroundColor: nodeBgColorHex,
-          border: `1.5px solid ${styleSwatchBorderColor}`,
-          boxShadow: '0 0 0 0.5px rgba(0,0,0,0.1)',
+          border: hasNodeStroke ? `${Math.min(firstNode?.strokeWeight || 1, 2)}px solid ${firstNode?.strokeColorHex}` : 'none',
+          boxShadow: hasNodeStroke ? undefined : 'inset 0 0 0 1px var(--color-chip-border)',
           display: 'inline-block',
           flexShrink: 0,
           boxSizing: 'border-box',
