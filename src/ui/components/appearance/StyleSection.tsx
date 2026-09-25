@@ -27,23 +27,35 @@ export function StyleSection() {
     setContextMenuTarget,
     setContextMenuPos,
     closeAllPopovers,
+    selectedNodes,
   } = useApp();
   const { selectedColor } = uiState;
   const btnMoreRef = useRef<HTMLButtonElement>(null);
 
+  // 다중 노드 선택 시 컬러 또는 스타일 Mixed 여부 판별
+  const nodeColors = (selectedNodes || [])
+    .filter((n) => n && !n.isConnector)
+    .map((n) => n.fillColorHex)
+    .filter((c): c is string => typeof c === 'string' && c.length > 0);
+  const isNodeColorMixed =
+    nodeColors.length > 1 &&
+    !nodeColors.every((c) => c.toLowerCase() === (nodeColors[0] || '').toLowerCase());
+
   // 현재 선택된 컬러 및 보더(두께, 색상)와 정확히 일치하는 프리셋 탐색 (일치하는 것이 없으면 undefined)
-  const activeStylePreset = stylePresets.find((p) => {
-    const matchFill = p.fillColor.toLowerCase() === (selectedColor || '').toLowerCase();
-    if (!matchFill) return false;
-    const currentWeight = uiState.selectedStrokeWeight !== undefined ? uiState.selectedStrokeWeight : 1.5;
-    if (p.strokeWeight !== currentWeight) return false;
-    if (p.strokeWeight > 0 && uiState.selectedStrokeColor) {
-      if (p.strokeColor.toLowerCase() !== uiState.selectedStrokeColor.toLowerCase()) {
-        return false;
-      }
-    }
-    return true;
-  });
+  const activeStylePreset = isNodeColorMixed
+    ? undefined
+    : stylePresets.find((p) => {
+        const matchFill = p.fillColor.toLowerCase() === (selectedColor || '').toLowerCase();
+        if (!matchFill) return false;
+        const currentWeight = uiState.selectedStrokeWeight !== undefined ? uiState.selectedStrokeWeight : 1.5;
+        if (p.strokeWeight !== currentWeight) return false;
+        if (p.strokeWeight > 0 && uiState.selectedStrokeColor) {
+          if (p.strokeColor.toLowerCase() !== uiState.selectedStrokeColor.toLowerCase()) {
+            return false;
+          }
+        }
+        return true;
+      });
 
   // 기본 스타일이거나 일치하는 프리셋이 없으면 수정/삭제 불가 (모어 버튼 비활성화)
   const isMoreDisabled = !activeStylePreset ||

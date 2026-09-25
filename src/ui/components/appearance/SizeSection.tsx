@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { useApp, SizePreset } from '../../context/AppContext';
+import { useApp, SizePreset, NodeInfo } from '../../context/AppContext';
 
 const FIXED_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -21,6 +21,8 @@ const CHEVRON_SVG = (
     />
   </svg>
 );
+
+const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
 
 /**
  * Size 섹션 - W/H/Radius 입력 + 사이즈 모드 드롭다운 + 프리셋 칩
@@ -47,12 +49,95 @@ export function SizeSection() {
     showToast,
   } = useApp();
 
+  // 1. 파생 상태 선언 (핸들러 및 Effect보다 먼저 선언)
+  const activePreset = sizePresets.find(
+    (p) => p.w === lastNodeConfig.width && p.h === lastNodeConfig.height
+  );
+
+  const isMoreDisabled =
+    !activePreset ||
+    Boolean(activePreset.isDefault) ||
+    DEFAULT_PRESET_IDS.has(activePreset.id);
+
+  const currentSizeMode = (() => {
+    if (selectedNodes && selectedNodes.length > 1) {
+      const first = selectedNodes[0]?.sizeMode;
+      const allSame = selectedNodes.every((n) => n && n.sizeMode === first);
+      if (!allSame) return 'mixed';
+      return first || lastNodeConfig.sizeMode || 'fixed';
+    }
+    if (selectedNodes && selectedNodes.length === 1) {
+      return selectedNodes[0]?.sizeMode || lastNodeConfig.sizeMode || 'fixed';
+    }
+    return lastNodeConfig.sizeMode || 'fixed';
+  })();
+
+  const [isWMixed, setIsWMixed] = React.useState(false);
+  const [isHMixed, setIsHMixed] = React.useState(false);
+  const [isRMixed, setIsRMixed] = React.useState(false);
+
+  // 2. 선택된 노드 변경 시 W, H, Radius 인풋 필드 값 동기화
+  React.useEffect(() => {
+    const validNodes = (selectedNodes || []).filter((n): n is NodeInfo => Boolean(n));
+    if (validNodes.length > 0) {
+      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
+      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+      const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+
+      if (validNodes.length > 1) {
+        const widths = validNodes.map((n) => n.width).filter((v): v is number => typeof v === 'number');
+        const heights = validNodes.map((n) => n.height).filter((v): v is number => typeof v === 'number');
+        const radii = validNodes.map((n) => n.cornerRadius).filter((v): v is number => typeof v === 'number');
+
+        const allWSame = widths.length > 0 && widths.every((v) => v === widths[0]);
+        const allHSame = heights.length > 0 && heights.every((v) => v === heights[0]);
+        const allRSame = radii.length > 0 && radii.every((v) => v === radii[0]);
+
+        setIsWMixed(!allWSame);
+        setIsHMixed(!allHSame);
+        setIsRMixed(!allRSame);
+
+        if (wEl) {
+          wEl.value = allWSame ? String(widths[0]) : '';
+          wEl.placeholder = allWSame ? '' : 'Mixed';
+        }
+        if (hEl) {
+          hEl.value = allHSame ? String(heights[0]) : '';
+          hEl.placeholder = allHSame ? '' : 'Mixed';
+        }
+        if (rEl) {
+          rEl.value = allRSame ? String(radii[0]) : '';
+          rEl.placeholder = allRSame ? '' : 'Mixed';
+        }
+      } else {
+        const first = validNodes[0];
+        setIsWMixed(false);
+        setIsHMixed(false);
+        setIsRMixed(false);
+        if (wEl) {
+          wEl.value = typeof first?.width === 'number' ? String(first.width) : String(lastNodeConfig.width || 250);
+          wEl.placeholder = '';
+        }
+        if (hEl) {
+          hEl.value = typeof first?.height === 'number' ? String(first.height) : String(lastNodeConfig.height || 90);
+          hEl.placeholder = '';
+        }
+        if (rEl) {
+          rEl.value = typeof first?.cornerRadius === 'number' ? String(first.cornerRadius) : String(lastNodeConfig.cornerRadius || 0);
+          rEl.placeholder = '';
+        }
+      }
+    }
+  }, [selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
+
+  // 3. 이벤트 핸들러 함수들
   function handleWChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
       setLastNodeConfig({ width: val });
     }
   }
+
   function handleHChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
@@ -61,6 +146,7 @@ export function SizeSection() {
       if (fixedValEl) fixedValEl.textContent = String(val);
     }
   }
+
   function handleRChange(e: React.ChangeEvent<HTMLInputElement>) {
     let val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
@@ -112,8 +198,6 @@ export function SizeSection() {
     applyCurrentNodeState(p.sizeMode);
   }
 
-const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
-
   function toggleSizeMoreMenu(e: React.MouseEvent) {
     e.stopPropagation();
     if (isMoreDisabled) return;
@@ -139,12 +223,12 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
   function toggleSizeModeDropdown(e: React.MouseEvent) {
     e.stopPropagation();
     if (!sizeModeDropdownOpen) {
-      const currentH = (document.getElementById('input-size-h') as HTMLInputElement | null)?.value || String(cfg.height || 90);
+      const currentH = (document.getElementById('input-size-h') as HTMLInputElement | null)?.value || String(lastNodeConfig.height || 90);
       const fixedValEl = document.getElementById('size-mode-val-fixed');
       const hugValEl = document.getElementById('size-mode-val-hug');
       if (fixedValEl && currentH) fixedValEl.textContent = currentH;
 
-      const hasStatus = Boolean(selectedNodes[0]?.status || cfg.statusOn || uiState.selectedStatus);
+      const hasStatus = Boolean(selectedNodes[0]?.status || lastNodeConfig.statusOn || uiState.selectedStatus);
       const defaultHugH = hasStatus ? 110 : 90;
       const isCurrentlyHug = currentSizeMode === 'hug' || selectedNodes[0]?.sizeMode === 'hug';
       const hugH = isCurrentlyHug ? Number(currentH) : (selectedNodes[0]?.hugHeight ?? defaultHugH);
@@ -165,46 +249,6 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
     closeAllPopovers();
     applyCurrentNodeState(mode);
   }
-
-  // 선택된 노드 변경 시 W, H, Radius 인풋 필드 값 동기화
-  React.useEffect(() => {
-    if (selectedNodes && selectedNodes.length > 0) {
-      const first = selectedNodes[0];
-      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-      const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-      if (wEl && typeof first.width === 'number') {
-        wEl.value = String(first.width);
-      }
-      if (hEl && typeof first.height === 'number') {
-        hEl.value = String(first.height);
-      }
-      if (rEl && typeof first.cornerRadius === 'number') {
-        rEl.value = String(first.cornerRadius);
-      }
-    }
-  }, [selectedNodes]);
-
-  const cfg = lastNodeConfig;
-
-  // 현재 노드의 W, H와 일치하는 프리셋 확인
-  const activePreset = sizePresets.find((p) => p.w === cfg.width && p.h === cfg.height);
-
-  // 디폴트, 스퀘어, 웹, 모바일이거나 일치하는 프리셋이 없으면 수정/삭제 불가 (모어 버튼 비활성화)
-  const isMoreDisabled = !activePreset || Boolean(activePreset.isDefault) || DEFAULT_PRESET_IDS.has(activePreset.id);
-
-  const currentSizeMode = (() => {
-    if (selectedNodes && selectedNodes.length > 1) {
-      const first = selectedNodes[0]?.sizeMode;
-      const allSame = selectedNodes.every(n => n.sizeMode === first);
-      if (!allSame) return 'mixed';
-      return first || cfg.sizeMode || 'fixed';
-    }
-    if (selectedNodes && selectedNodes.length === 1) {
-      return selectedNodes[0]?.sizeMode || cfg.sizeMode || 'fixed';
-    }
-    return cfg.sizeMode || 'fixed';
-  })();
 
   return (
     <div className="section-block">
@@ -235,23 +279,35 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
           <div className="input-scrubber-box">
             <span className="scrubber-label" data-tooltip="Width">W</span>
             <input type="number" id="input-size-w" defaultValue={250} min={50}
-              onChange={handleWChange}
+              placeholder={isWMixed ? 'Mixed' : undefined}
+              onChange={(e) => {
+                setIsWMixed(false);
+                handleWChange(e);
+              }}
               onBlur={triggerApply}
               onKeyDown={e => e.key === 'Enter' && triggerApply()} />
           </div>
           <div className="input-scrubber-box">
             <span className="scrubber-label" data-tooltip="Height">H</span>
             <input type="number" id="input-size-h" defaultValue={90} min={40}
-              onChange={handleHChange}
+              placeholder={isHMixed ? 'Mixed' : undefined}
+              onChange={(e) => {
+                setIsHMixed(false);
+                handleHChange(e);
+              }}
               onBlur={triggerApply}
               onKeyDown={e => e.key === 'Enter' && triggerApply()} />
           </div>
           <div className="input-scrubber-box">
             <svg data-tooltip="Corner radius" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z" fill="currentColor"/></svg>
             <input type="number" id="input-size-radius"
-              defaultValue={typeof selectedNodes[0]?.cornerRadius === 'number' ? selectedNodes[0].cornerRadius : (cfg.cornerRadius || 0)}
+              defaultValue={typeof selectedNodes[0]?.cornerRadius === 'number' ? selectedNodes[0].cornerRadius : (lastNodeConfig.cornerRadius || 0)}
               min={0} max={20}
-              onChange={handleRChange}
+              placeholder={isRMixed ? 'Mixed' : undefined}
+              onChange={(e) => {
+                setIsRMixed(false);
+                handleRChange(e);
+              }}
               onBlur={triggerApply}
               onKeyDown={e => e.key === 'Enter' && triggerApply()} />
           </div>
@@ -298,7 +354,7 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
                 <span className="size-mode-menu-item-check figma-dropdown-check-slot"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg></span>
                 <span className="size-mode-menu-item-icon figma-dropdown-icon-slot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z" fill="currentColor"/></svg></span>
                 <span className="size-mode-menu-item-label figma-dropdown-label">Fixed height</span>
-                <span className="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-fixed">{cfg.height || 90}</span>
+                <span className="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-fixed">{lastNodeConfig.height || 90}</span>
               </div>
               <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'hug' ? ' selected' : ''}`} data-value="hug" onClick={() => selectSizeMode('hug')}>
                 <span className="size-mode-menu-item-check figma-dropdown-check-slot"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg></span>
@@ -306,8 +362,8 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
                 <span className="size-mode-menu-item-label figma-dropdown-label">Hug contents</span>
                 <span className="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-hug">
                   {(currentSizeMode === 'hug' || selectedNodes[0]?.sizeMode === 'hug')
-                    ? (selectedNodes[0]?.height || cfg.height || 90)
-                    : (selectedNodes[0]?.hugHeight || ((cfg.statusOn || Boolean(uiState.selectedStatus)) ? 110 : 90))}
+                    ? (selectedNodes[0]?.height || lastNodeConfig.height || 90)
+                    : (selectedNodes[0]?.hugHeight || ((lastNodeConfig.statusOn || Boolean(uiState.selectedStatus)) ? 110 : 90))}
                 </span>
               </div>
             </div>
@@ -321,7 +377,7 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
             <button
               key={p.id}
               type="button"
-              className={`chip-btn${cfg.width === p.w && cfg.height === p.h ? ' active' : ''}`}
+              className={`chip-btn${lastNodeConfig.width === p.w && lastNodeConfig.height === p.h ? ' active' : ''}`}
               onClick={() => applySizePreset(p)}
               title={`${p.name} (${p.w}×${p.h})`}
             >

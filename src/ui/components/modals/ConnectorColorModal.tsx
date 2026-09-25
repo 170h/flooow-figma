@@ -25,6 +25,7 @@ export interface ConnectorColorModalProps {
   initialColor: string;
   onApply: (colorHex: string) => void;
   onClose: () => void;
+  isMixed?: boolean;
 }
 
 /**
@@ -38,9 +39,11 @@ export function ConnectorColorModal({
   initialColor,
   onApply,
   onClose,
+  isMixed: initialIsMixed = false,
 }: ConnectorColorModalProps) {
   const { stylePresets } = useApp();
   const [colorHex, setColorHex] = useState(() => initialColor.replace('#', '').toUpperCase());
+  const [isMixed, setIsMixed] = useState(Boolean(initialIsMixed));
   const [showWheel, setShowWheel] = useState(false);
 
   // 기본 무채색 3종(White, Gray, Black) + 스타일 프리셋의 고유 컬러(중복 제외)
@@ -84,11 +87,17 @@ export function ConnectorColorModal({
     setColorHex(initialColor.replace('#', '').toUpperCase());
   }, [initialColor]);
 
-  // 1. 프리셋 색상 선택 (즉각 실시간 어플라이)
+  useEffect(() => {
+    setIsMixed(Boolean(initialIsMixed));
+  }, [initialIsMixed]);
+
+  // 1. 프리셋 색상 선택 (컬러칩 클릭 시 어플라이 버튼 없이 즉시 적용 및 모달 닫기)
   function handleSelectPreset(hex: string) {
+    setIsMixed(false);
     const formatted = hex.replace('#', '').toUpperCase();
     setColorHex(formatted);
     onApply(`#${formatted}`);
+    onClose();
   }
 
   // 2. 취소 핸들러 (원래 색상으로 복원 후 닫기)
@@ -135,13 +144,13 @@ export function ConnectorColorModal({
 
         <div className="conn-color-modal-divider" />
 
-        {/* 2. 컬러 프리셋 카드 그리드 (중복 제거된 라인 반영 컬러 단일 솔리드로 표시) */}
+        {/* 2. 컬러 프리셋 카드 그리드 (중복 제거된 라인 반영 컬러 단일 솔리드로 표시, Mixed일 때는 활성 칩 없음) */}
         <div className="conn-color-presets-wrapper">
           {/* 상단 1행 */}
           {presetsRow1.length > 0 && (
             <div className="conn-color-presets-row">
               {presetsRow1.map((item) => {
-                const isSelected = currentFormattedHex.toUpperCase() === item.color.toUpperCase();
+                const isSelected = !isMixed && currentFormattedHex.toUpperCase() === item.color.toUpperCase();
                 return (
                   <button
                     key={item.id}
@@ -163,7 +172,7 @@ export function ConnectorColorModal({
           {presetsRow2.length > 0 && (
             <div className="conn-color-presets-row">
               {presetsRow2.map((item) => {
-                const isSelected = currentFormattedHex.toUpperCase() === item.color.toUpperCase();
+                const isSelected = !isMixed && currentFormattedHex.toUpperCase() === item.color.toUpperCase();
                 return (
                   <button
                     key={item.id}
@@ -187,7 +196,10 @@ export function ConnectorColorModal({
         {/* 3. Hex 입력 필드 + 무지개 컬러 휠 도넛 링 아이콘 + 원형 컬러휠 (ColorWheelField) */}
         <ColorWheelField
           value={colorHex}
+          isMixed={isMixed}
+          onMixedClear={() => setIsMixed(false)}
           onChange={(newHex) => {
+            setIsMixed(false);
             setColorHex(newHex);
             if (newHex.length === 6) {
               onApply(`#${newHex.toUpperCase()}`);

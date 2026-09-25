@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useApp, StylePreset } from '../../context/AppContext';
+import { useApp, StylePreset, NodeInfo } from '../../context/AppContext';
 import { ConnectorTerminalType } from '../../../types';
 import { IcPalette } from '../shared/icons';
 
@@ -82,6 +82,13 @@ const CHEVRON_SVG = (
   </svg>
 );
 
+// 피그마 UI3 공식 Mixed 컬러 인디케이터 대시 SVG (16x16)
+const COLOR_MIXED_ICON = (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M4 8C4 7.72386 4.22386 7.5 4.5 7.5H11.5C11.7761 7.5 12 7.72386 12 8C12 8.27614 11.7761 8.5 11.5 8.5H4.5C4.22386 8.5 4 8.27614 4 8Z" fill="currentColor"/>
+  </svg>
+);
+
 /**
  * Connect 섹션 - 피그마 UI3 키트 공식 디자인 완벽 반영
  * (Figma 1027261:5984, 6029, 6009, 6054)
@@ -123,6 +130,11 @@ export function ConnectSection() {
   // 드롭다운 선택 값 상태
   const [startTermVal, setStartTermVal] = useState<ConnectorTerminalType>('NONE');
   const [endTermVal, setEndTermVal] = useState<ConnectorTerminalType>('ARROW');
+
+  // 다중 선택 시 Mixed 상태
+  const [isColorMixed, setIsColorMixed] = useState(false);
+  const [isWeightMixed, setIsWeightMixed] = useState(false);
+
   // 스타일 프리셋 중 보더컬러가 있는 것은 보더 컬러만, 없는 것은 배경 컬러 반환 (커넥터 라인 컬러)
   const getPresetLineColor = (preset: StylePreset): string => {
     const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
@@ -185,48 +197,106 @@ export function ConnectSection() {
     return () => document.removeEventListener('click', handleDocClick);
   }, []);
 
-  // 선택된 노드 변경 시 터미널 및 컬러 상태 동기화
+  // 선택된 노드 변경 시 터미널, 컬러 및 수치 상태 동기화
   useEffect(() => {
-    const count = selectedNodes.length;
-    const allConnectors = count > 0 && selectedNodes.every(n => n && n.isConnector);
-    if (!allConnectors) return;
+    const connNodes = (selectedNodes || []).filter((n): n is NodeInfo => Boolean(n && n.isConnector));
+    const count = connNodes.length;
 
-    if (count > 1) {
-      const startTerms = selectedNodes.map(n => n.connectorStartTerminal).filter(Boolean);
-      const endTerms = selectedNodes.map(n => n.connectorEndTerminal).filter(Boolean);
-      if (startTerms.length > 0) {
-        const allSame = startTerms.every(t => t === startTerms[0]);
-        const val = (allSame ? startTerms[0] : 'MIXED') as ConnectorTerminalType;
-        setStartTermVal(val);
-        const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-        if (sel) sel.value = val;
+    if (count > 0 && selectedNodes.length === count) {
+      if (count > 1) {
+        // 단자 동기화
+        const startTerms = connNodes.map(n => n.connectorStartTerminal).filter(Boolean);
+        const endTerms = connNodes.map(n => n.connectorEndTerminal).filter(Boolean);
+        if (startTerms.length > 0) {
+          const allSame = startTerms.every(t => t === startTerms[0]);
+          const val = (allSame ? startTerms[0] : 'MIXED') as ConnectorTerminalType;
+          setStartTermVal(val);
+          const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+          if (sel) sel.value = val;
+        }
+        if (endTerms.length > 0) {
+          const allSame = endTerms.every(t => t === endTerms[0]);
+          const val = (allSame ? endTerms[0] : 'MIXED') as ConnectorTerminalType;
+          setEndTermVal(val);
+          const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+          if (sel) sel.value = val;
+        }
+
+        // 컬러 동기화 (색상이 서로 다르면 Mixed)
+        const colors = connNodes
+          .map(n => n.connectorColorHex)
+          .filter((c): c is string => typeof c === 'string' && c.length > 0);
+        if (colors.length > 0) {
+          const firstColor = colors[0] || '';
+          const allColorsSame = colors.every(c => c.toUpperCase() === firstColor.toUpperCase());
+          setIsColorMixed(!allColorsSame);
+          if (allColorsSame) {
+            const hex = firstColor.toUpperCase();
+            setSelectedColor(hex);
+            setHexInput(hex.replace('#', ''));
+            const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+            if (colSel) colSel.value = hex;
+          } else {
+            setHexInput('');
+          }
+        }
+
+        // 선 굵기 동기화 (굵기가 서로 다르면 Mixed)
+        const weights = connNodes.map(n => n.connectorStrokeWeight).filter((w): w is number => typeof w === 'number');
+        const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+        if (weights.length > 0) {
+          const allWeightsSame = weights.every(w => w === weights[0]);
+          setIsWeightMixed(!allWeightsSame);
+          if (weightEl) {
+            weightEl.value = allWeightsSame ? String(weights[0]) : '';
+            weightEl.placeholder = allWeightsSame ? '' : 'Mixed';
+          }
+        }
+      } else if (count === 1) {
+        setIsColorMixed(false);
+        setIsWeightMixed(false);
+        const node = selectedNodes[0];
+        if (node.connectorStartTerminal) {
+          setStartTermVal(node.connectorStartTerminal as ConnectorTerminalType);
+          const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+          if (sel) sel.value = node.connectorStartTerminal;
+        }
+        if (node.connectorEndTerminal) {
+          setEndTermVal(node.connectorEndTerminal as ConnectorTerminalType);
+          const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+          if (sel) sel.value = node.connectorEndTerminal;
+        }
+        if (node.connectorColorHex) {
+          const hex = node.connectorColorHex.toUpperCase();
+          setSelectedColor(hex);
+          setHexInput(hex.replace('#', ''));
+          const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+          if (colSel) colSel.value = hex;
+        }
+        const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+        if (weightEl && typeof node.connectorStrokeWeight === 'number') {
+          weightEl.value = String(node.connectorStrokeWeight);
+          weightEl.placeholder = '';
+        }
       }
-      if (endTerms.length > 0) {
-        const allSame = endTerms.every(t => t === endTerms[0]);
-        const val = (allSame ? endTerms[0] : 'MIXED') as ConnectorTerminalType;
-        setEndTermVal(val);
-        const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-        if (sel) sel.value = val;
+    } else if (count >= 2) {
+      // 일반 노드 복수 선택: 노드들의 fill 컬러가 다르면 컬러 Mixed 적용
+      const colors = selectedNodes.map(n => n.fillColorHex).filter(Boolean);
+      if (colors.length > 0) {
+        const allColorsSame = colors.every(c => c.toUpperCase() === colors[0].toUpperCase());
+        setIsColorMixed(!allColorsSame);
+        if (allColorsSame) {
+          const hex = colors[0].toUpperCase();
+          setSelectedColor(hex);
+          setHexInput(hex.replace('#', ''));
+        } else {
+          setHexInput('');
+        }
       }
-    } else if (count === 1) {
-      const node = selectedNodes[0];
-      if (node.connectorStartTerminal) {
-        setStartTermVal(node.connectorStartTerminal as ConnectorTerminalType);
-        const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-        if (sel) sel.value = node.connectorStartTerminal;
-      }
-      if (node.connectorEndTerminal) {
-        setEndTermVal(node.connectorEndTerminal as ConnectorTerminalType);
-        const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-        if (sel) sel.value = node.connectorEndTerminal;
-      }
-      if (node.connectorColorHex) {
-        const hex = node.connectorColorHex.toUpperCase();
-        setSelectedColor(hex);
-        setHexInput(hex.replace('#', ''));
-        const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
-        if (colSel) colSel.value = hex;
-      }
+      setIsWeightMixed(false);
+    } else {
+      setIsColorMixed(false);
+      setIsWeightMixed(false);
     }
   }, [selectedNodes]);
 
@@ -315,6 +385,7 @@ export function ConnectSection() {
   }
 
   function selectColor(colorHex: string) {
+    setIsColorMixed(false);
     const formatted = colorHex.toUpperCase();
     setSelectedColor(formatted);
     setHexInput(formatted.replace('#', ''));
@@ -334,6 +405,40 @@ export function ConnectSection() {
     if (selectEl) selectEl.value = formatted;
     setTimeout(() => applyCurrentConnectorState(), 0);
   }
+
+  // 두께 기본값(1.5) 리셋 핸들러
+  const handleResetStrokeWeight = () => {
+    setIsWeightMixed(false);
+    const input = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+    if (input) {
+      input.value = '1.5';
+      applyCurrentConnectorState();
+      input.focus();
+      input.select();
+    }
+  };
+
+  // 시작 오프셋 기본값(0) 리셋 핸들러
+  const handleResetStartOffset = () => {
+    const input = document.getElementById('input-start-offset') as HTMLInputElement | null;
+    if (input) {
+      input.value = '0';
+      applyCurrentConnectorState();
+      input.focus();
+      input.select();
+    }
+  };
+
+  // 끝 오프셋 기본값(0) 리셋 핸들러
+  const handleResetEndOffset = () => {
+    const input = document.getElementById('input-end-offset') as HTMLInputElement | null;
+    if (input) {
+      input.value = '0';
+      applyCurrentConnectorState();
+      input.focus();
+      input.select();
+    }
+  };
 
   // 드롭다운 버튼 전용 그래픽: "-short"가 빠진 기본(52x16) 아이콘 사용
   function renderTerminalButtonGraphic(side: 'start' | 'end', val: ConnectorTerminalType) {
@@ -382,23 +487,24 @@ export function ConnectSection() {
           <div className="conn-color-input-wrapper" id="wrap-conn-color">
             <div
               className="conn-color-input-box"
-              onClick={() => hexInputRef.current?.focus()}
+              onClick={() => {
+                hexInputRef.current?.focus();
+                hexInputRef.current?.select();
+              }}
             >
-              {/* 컬러 칩 (보더라인 없이 라인 컬러 단일 솔리드로 표시, 클릭 시 피그마 공식 커넥터 컬러 모달 열기) */}
+              {/* 컬러 칩 (피그마 UI3 표준 인풋 내 컬러 인디케이터 스와치) */}
               <span
                 className="conn-color-chip"
                 style={{
-                  backgroundColor: selectedColor,
+                  backgroundColor: isColorMixed ? 'transparent' : selectedColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#111827',
                 }}
-                title="Color wheel modal"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStartTermPopupOpen(false);
-                  setEndTermPopupOpen(false);
-                  setUIState({ selectedConnectorColor: selectedColor });
-                  setActiveModal('connector-color');
-                }}
-              />
+              >
+                {isColorMixed && COLOR_MIXED_ICON}
+              </span>
 
               {/* Hex 입력 필드 (예: EA2039) */}
               <input
@@ -406,11 +512,15 @@ export function ConnectSection() {
                 type="text"
                 id="input-conn-color-hex"
                 className="conn-color-hex-input"
-                value={hexInput}
+                value={isColorMixed ? '' : hexInput}
                 maxLength={7}
-                placeholder="000000"
-                onChange={handleHexChange}
+                placeholder={isColorMixed ? 'Mixed' : '000000'}
+                onChange={(e) => {
+                  setIsColorMixed(false);
+                  handleHexChange(e);
+                }}
                 onFocus={(e) => e.currentTarget.select()}
+                onClick={(e) => e.currentTarget.select()}
                 onBlur={handleHexBlur}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -430,7 +540,7 @@ export function ConnectSection() {
                 onChange={(e) => selectColor(e.target.value)}
               />
 
-              {/* 피그마 UI3 드롭다운 셰브론 아이콘 버튼 (클릭 시 피그마 공식 컬러 휠 모달 열기) */}
+              {/* 피그마 UI3 컬러 팔레트 아이콘 버튼 (클릭 시 피그마 공식 컬러 휠 모달 열기) */}
               <button
                 type="button"
                 id="btn-conn-color-palette"
@@ -444,7 +554,14 @@ export function ConnectSection() {
                   setActiveModal('connector-color');
                 }}
               >
-                {CHEVRON_SVG}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M7.04976 7.04976C9.78343 4.31609 14.2165 4.31609 16.9502 7.04976C18.1125 8.2121 18.7807 9.685 18.9541 11.2011C19.1539 12.9507 17.5939 14 16.2246 14H15C14.4477 14 14 14.4477 14 15V16.2246C14 17.594 12.9499 19.1542 11.2002 18.9541C9.68423 18.7806 8.21195 18.1123 7.04976 16.9502C4.31609 14.2165 4.31609 9.78343 7.04976 7.04976ZM16.2421 7.75777C13.899 5.41463 10.1009 5.41463 7.75777 7.75777C5.41463 10.1009 5.41463 13.899 7.75777 16.2421C8.75465 17.239 10.0147 17.8122 11.3144 17.9609C12.2846 18.0718 13 17.2011 13 16.2246V15C13 13.8954 13.8954 13 15 13H16.2246C17.2011 13 18.0718 12.2846 17.9609 11.3144C17.8123 10.0147 17.239 8.75467 16.2421 7.75777ZM13 8.00003C13 8.55232 12.5523 9.00003 12 9.00003C11.4477 9.00003 11 8.55232 11 8.00003C11 7.44775 11.4477 7.00003 12 7.00003C12.5523 7.00003 13 7.44775 13 8.00003ZM9.86617 10.5002C10.1423 10.0219 9.97843 9.41032 9.50014 9.13417C9.02185 8.85803 8.41026 9.02191 8.13411 9.5002C7.85797 9.97849 8.02185 10.5901 8.50014 10.8662C8.97843 11.1424 9.59002 10.9785 9.86617 10.5002ZM15.5001 10.8662C15.0218 11.1424 14.4103 10.9785 14.1341 10.5002C13.858 10.0219 14.0218 9.41032 14.5001 9.13417C14.9784 8.85803 15.59 9.02191 15.8662 9.5002C16.1423 9.97849 15.9784 10.5901 15.5001 10.8662ZM8.13411 14.5002C8.41026 14.9785 9.02185 15.1424 9.50014 14.8662C9.97843 14.5901 10.1423 13.9785 9.86617 13.5002C9.59002 13.0219 8.97843 12.858 8.50014 13.1342C8.02185 13.4103 7.85797 14.0219 8.13411 14.5002Z"
+                    fill="currentColor"
+                  />
+                </svg>
               </button>
             </div>
 
@@ -493,7 +610,9 @@ export function ConnectSection() {
                 onClick={() => selectAnchor(2, pos)} />
             ))}
             <span id="preview-node-2-text">
-              {selectedNodes[1]?.title || selectedNodes[1]?.name || 'Node 2'}
+              {selectedNodes.length >= 3
+                ? `${selectedNodes.length - 1} more ${selectedNodes.length - 1 === 1 ? 'node' : 'nodes'}`
+                : (selectedNodes[1]?.title || selectedNodes[1]?.name || 'Node 2')}
             </span>
           </div>
         </div>
@@ -501,8 +620,22 @@ export function ConnectSection() {
         {/* 두께 + 선 모양 */}
         <div style={{ display: 'flex', gap: '6px' }}>
           <div className="input-scrubber-box" style={{ width: '70px' }}>
-            <svg data-tooltip="Stroke width" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z" fill="currentColor"/></svg>
+            <svg
+              data-tooltip="Stroke width (Reset: 1.5)"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ cursor: 'pointer' }}
+              onClick={handleResetStrokeWeight}
+            >
+              <path d="M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z" fill="currentColor"/>
+            </svg>
             <input type="number" id="input-stroke-weight" defaultValue={1.5} step={0.5} min={1} max={10}
+              placeholder={isWeightMixed ? 'Mixed' : undefined}
+              onChange={() => setIsWeightMixed(false)}
+              onFocus={e => e.currentTarget.select()}
+              onClick={e => e.currentTarget.select()}
               onBlur={() => applyCurrentConnectorState()}
               onKeyDown={e => e.key === 'Enter' && applyCurrentConnectorState()} />
           </div>
@@ -538,10 +671,20 @@ export function ConnectSection() {
         {/* 단자 + 오프셋 */}
         <div className="terminal-offset-row">
           <div className="input-scrubber-box offset-start-box" style={{ width: '70px' }}>
-            <svg data-tooltip="Start offset" width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <svg
+              data-tooltip="Start offset (Reset: 0)"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ cursor: 'pointer' }}
+              onClick={handleResetStartOffset}
+            >
               <path d="M12 18V6M17.7333 9.63637L20.0001 11.8182L17.7333 14M20.0001 11.8182H14.4045" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <input type="number" id="input-start-offset" placeholder="Offset" defaultValue={0} />
+            <input type="number" id="input-start-offset" placeholder="Offset" defaultValue={0}
+              onFocus={e => e.currentTarget.select()}
+              onClick={e => e.currentTarget.select()} />
           </div>
 
           {/* 시작 단자 (Start Terminal) */}
@@ -595,8 +738,8 @@ export function ConnectSection() {
                   bottom: 'calc(100% + 4px)',
                   top: 'auto',
                   left: 0,
-                  right: 'auto',
-                  width: '76px',
+                  right: 0,
+                  width: '100%',
                   background: '#1e1e1e',
                   borderRadius: '13px',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -728,9 +871,9 @@ export function ConnectSection() {
                   position: 'absolute',
                   bottom: 'calc(100% + 4px)',
                   top: 'auto',
-                  left: 'auto',
+                  left: 0,
                   right: 0,
-                  width: '76px',
+                  width: '100%',
                   background: '#1e1e1e',
                   borderRadius: '13px',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -814,8 +957,23 @@ export function ConnectSection() {
 
           {/* 끝 오프셋 */}
           <div className="input-scrubber-box offset-end-box" style={{ width: '70px' }}>
-            <input type="number" id="input-end-offset" placeholder="Offset" defaultValue={0} />
-            <svg data-tooltip="End offset" width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <input
+              type="number"
+              id="input-end-offset"
+              placeholder="Offset"
+              defaultValue={0}
+              onFocus={e => e.currentTarget.select()}
+              onClick={e => e.currentTarget.select()}
+            />
+            <svg
+              data-tooltip="End offset (Reset: 0)"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ cursor: 'pointer' }}
+              onClick={handleResetEndOffset}
+            >
               <g transform="translate(3.5, 5.5)">
                 <path d="M8.49992 12.5V0.5M2.76672 8.5L0.5 6.31817L2.76672 4.13637M0.5 6.31817H6.09557" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
               </g>

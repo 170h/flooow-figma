@@ -120,6 +120,53 @@ export function App() {
     autoResizeWindow();
   }, [currentTab, autoResizeWindow]);
 
+  // 입력 필드 클릭/포커스 시 텍스트 전체 자동 선택 (Figma UI3 인스펙터 UX 표준)
+  useEffect(() => {
+    let newlyFocusedInput: HTMLInputElement | null = null;
+
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target instanceof HTMLInputElement &&
+        (target.type === 'text' || target.type === 'number' || !target.type) &&
+        !target.readOnly &&
+        !target.disabled
+      ) {
+        newlyFocusedInput = target;
+        // Tab 키 등 포커스 진입 시 전체 선택
+        requestAnimationFrame(() => {
+          target.select();
+        });
+      } else {
+        newlyFocusedInput = null;
+      }
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target instanceof HTMLInputElement &&
+        (target.type === 'text' || target.type === 'number' || !target.type) &&
+        !target.readOnly &&
+        !target.disabled
+      ) {
+        // 새로 포커스된 순간 마우스 클릭 시 전체 선택 보장 (이후 동일 인풋 재클릭 시에는 정상 커서 이동 가능)
+        if (newlyFocusedInput === target) {
+          target.select();
+          newlyFocusedInput = null;
+        }
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('click', handleClick);
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('click', handleClick);
+    };
+  }, []);
+
   // 탭 전환
   function switchTab(tabId: string) {
     // disabled 탭은 클릭 차단
@@ -257,7 +304,28 @@ export function App() {
     <div id="plugin-root" onClick={handleRootClick}>
       {/* 1. 타이틀 배너 */}
       <div className="title-banner">
-        {renderTitleBanner()}
+        <div style={{ flex: 1, minWidth: 0, marginRight: '8px' }}>
+          {renderTitleBanner()}
+        </div>
+        <button
+          type="button"
+          id="btn-header-settings"
+          className="btn-action-icon"
+          title="Settings"
+          data-tooltip="Settings"
+          onClick={() => {
+            showToast('Settings 메뉴입니다.');
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M13.2118 18.8955C12.8175 18.9644 12.4124 19 11.9999 19C11.6905 19 11.3854 18.9796 11.0858 18.9404L10.788 18.8955C10.092 18.7739 9.74773 18.1555 9.7499 17.6348C9.7512 17.2849 9.57075 16.9479 9.2499 16.7627C8.96936 16.6008 8.64204 16.5896 8.3622 16.707L8.24501 16.7656L8.1581 16.8115C7.70859 17.0267 7.06175 17.0052 6.63662 16.499C6.18276 15.9584 5.8085 15.3474 5.5331 14.6846L5.42177 14.3965C5.1802 13.7332 5.54323 13.1273 5.99501 12.8691C6.2988 12.6953 6.4999 12.3706 6.4999 12C6.49988 11.6294 6.29881 11.3046 5.99501 11.1309C5.54321 10.8727 5.18014 10.2668 5.42177 9.60352C5.70389 8.82934 6.11784 8.11892 6.63662 7.50098C7.08996 6.96123 7.79554 6.9726 8.24501 7.23438C8.54732 7.41038 8.92911 7.42241 9.2499 7.2373C9.57076 7.05205 9.75121 6.71515 9.7499 6.36523C9.74772 5.84453 10.092 5.22612 10.788 5.10449C11.1823 5.0356 11.5873 5 11.9999 5C12.4124 5 12.8175 5.03561 13.2118 5.10449C13.9078 5.22612 14.2521 5.84452 14.2499 6.36523C14.2486 6.71516 14.429 7.05205 14.7499 7.2373C15.0707 7.42244 15.4525 7.41036 15.7548 7.23438C16.2042 6.9726 16.9098 6.96129 17.3632 7.50098C17.882 8.11892 18.2969 8.82934 18.579 9.60352C18.8204 10.2666 18.4574 10.8727 18.0058 11.1309C17.7017 11.3046 17.4999 11.6293 17.4999 12C17.4999 12.3708 17.7017 12.6954 18.0058 12.8691C18.4574 13.1273 18.8204 13.7334 18.579 14.3965C18.2969 15.1707 17.882 15.8811 17.3632 16.499C16.938 17.0052 16.2912 17.0267 15.8417 16.8115L15.7548 16.7656C15.4524 16.5896 15.0707 16.5785 14.7499 16.7637C14.4292 16.9489 14.2486 17.285 14.2499 17.6348C14.2521 18.1555 13.9078 18.7739 13.2118 18.8955ZM10.9599 17.9102C11.2976 17.9692 11.6452 18 11.9999 18C12.3546 18 12.7022 17.9692 13.0399 17.9102C13.167 17.8879 13.2503 17.7687 13.2499 17.6396C13.247 16.9456 13.6058 16.2694 14.2499 15.8975C14.8939 15.5257 15.6591 15.5522 16.2587 15.9014C16.3701 15.9661 16.5147 15.9542 16.5976 15.8555C17.0425 15.3255 17.3971 14.7173 17.6386 14.0547C17.6827 13.9335 17.6216 13.8013 17.5097 13.7373C16.9068 13.3928 16.4999 12.7441 16.4999 12C16.4999 11.2559 16.9068 10.6072 17.5097 10.2627C17.6216 10.1987 17.6827 10.0665 17.6386 9.94531C17.3971 9.28272 17.0425 8.67453 16.5976 8.14453C16.5147 8.04584 16.3701 8.03387 16.2587 8.09863C15.6591 8.44785 14.8939 8.47434 14.2499 8.10254C13.6058 7.73058 13.247 7.05442 13.2499 6.36035C13.2503 6.23134 13.167 6.11205 13.0399 6.08984C12.7022 6.03082 12.3546 6 11.9999 6C11.6452 6 11.2976 6.03081 10.9599 6.08984C10.8328 6.11209 10.7495 6.23137 10.7499 6.36035C10.7528 7.05444 10.394 7.73059 9.7499 8.10254C9.10609 8.47424 8.34161 8.4476 7.74208 8.09863C7.63067 8.03375 7.48514 8.04579 7.40224 8.14453C6.95735 8.67452 6.60272 9.28273 6.36123 9.94531C6.31705 10.0665 6.37909 10.1987 6.49111 10.2627C7.09373 10.6072 7.49988 11.2561 7.4999 12C7.4999 12.7439 7.09372 13.3928 6.49111 13.7373C6.37909 13.8013 6.31705 13.9335 6.36123 14.0547C6.60272 14.7173 6.95735 15.3255 7.40224 15.8555C7.48514 15.9542 7.63067 15.9663 7.74208 15.9014C8.34161 15.5524 9.10609 15.5258 9.7499 15.8975C10.394 16.2694 10.7528 16.9456 10.7499 17.6396C10.7495 17.7686 10.8328 17.8879 10.9599 17.9102ZM12 13.5C12.8284 13.5 13.5 12.8284 13.5 12C13.5 11.1716 12.8284 10.5 12 10.5C11.1715 10.5 10.5 11.1716 10.5 12C10.5 12.8284 11.1715 13.5 12 13.5ZM12 9.5C13.3807 9.5 14.5 10.6193 14.5 12C14.5 13.3807 13.3807 14.5 12 14.5C10.6193 14.5 9.49997 13.3807 9.49997 12C9.49997 10.6193 10.6193 9.5 12 9.5Z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* 2. 메인 탭 세그먼트 컨트롤 */}
@@ -353,29 +421,41 @@ export function App() {
           onClose={() => setActiveModal('none')}
         />
       )}
-      {activeModal === 'connector-color' && (
-        <ConnectorColorModal
-          initialColor={uiState.selectedConnectorColor || '#000000'}
-          onApply={(colorHex) => {
-            const formatted = colorHex.toUpperCase();
-            setUIState({ selectedConnectorColor: formatted });
+      {activeModal === 'connector-color' && (() => {
+        const connectorColors = selectedNodes
+          .filter((n) => n && n.isConnector)
+          .map((n) => n.connectorColorHex)
+          .filter((c): c is string => typeof c === 'string' && c.length > 0);
+        const firstColor = connectorColors[0] || '';
+        const isConnectorColorMixed =
+          connectorColors.length > 1 &&
+          !connectorColors.every((c) => c.toUpperCase() === firstColor.toUpperCase());
 
-            // 선택된 커넥터가 있는 경우 바로 색상 변경 메시지 전송 (실시간 즉시 어플라이)
-            if (isConnSel && selectedNodes.length > 0) {
-              parent.postMessage(
-                {
-                  pluginMessage: {
-                    type: 'UPDATE_CONNECTOR_STYLE',
-                    connectorColor: formatted,
+        return (
+          <ConnectorColorModal
+            initialColor={uiState.selectedConnectorColor || '#000000'}
+            isMixed={isConnectorColorMixed}
+            onApply={(colorHex) => {
+              const formatted = colorHex.toUpperCase();
+              setUIState({ selectedConnectorColor: formatted });
+
+              // 선택된 커넥터가 있는 경우 바로 색상 변경 메시지 전송 (실시간 즉시 어플라이)
+              if (isConnSel && selectedNodes.length > 0) {
+                parent.postMessage(
+                  {
+                    pluginMessage: {
+                      type: 'UPDATE_CONNECTOR_STYLE',
+                      connectorColor: formatted,
+                    },
                   },
-                },
-                '*'
-              );
-            }
-          }}
-          onClose={() => setActiveModal('none')}
-        />
-      )}
+                  '*'
+                );
+              }
+            }}
+            onClose={() => setActiveModal('none')}
+          />
+        );
+      })()}
 
       {/* 툴팁 */}
       <FigmaTooltip />

@@ -36,7 +36,15 @@ export function ConnectionPanel(_props?: any) {
         const node1Text = document.getElementById('preview-node-1-text');
         const node2Text = document.getElementById('preview-node-2-text');
         if (node1Text) node1Text.textContent = selectedNodes[0]?.title || selectedNodes[0]?.name || 'Node 1';
-        if (node2Text) node2Text.textContent = selectedNodes[1]?.title || selectedNodes[1]?.name || 'Node 2';
+        if (node2Text) {
+          const effectiveCount = selectedNodes.length > 0 ? selectedNodes.length : count;
+          if (effectiveCount >= 3) {
+            const moreCount = effectiveCount - 1;
+            node2Text.textContent = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
+          } else {
+            node2Text.textContent = selectedNodes[1]?.title || selectedNodes[1]?.name || 'Node 2';
+          }
+        }
       }
     }
   }, [isSingleConn, isMultiConn, count, selectedNodes]);

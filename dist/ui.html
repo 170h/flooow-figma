@@ -1602,13 +1602,9 @@
       border: none;
       box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(0, 0, 0, 0.1));
       flex-shrink: 0;
-      cursor: pointer;
       box-sizing: border-box;
-      transition: transform 0.12s ease;
-    }
-
-    .conn-color-chip:hover {
-      transform: scale(1.1);
+      pointer-events: none;
+      user-select: none;
     }
 
     .conn-color-hex-input {
@@ -1631,8 +1627,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       padding: 0;
       background: transparent;
       border: none;
@@ -1644,8 +1640,8 @@
     }
 
     .conn-color-palette-btn svg {
-      width: 16px;
-      height: 16px;
+      width: 24px;
+      height: 24px;
       display: block;
     }
 
@@ -1834,7 +1830,9 @@
     .terminal-ui3-menu {
       position: absolute;
       bottom: calc(100% + 4px);
-      width: 76px;
+      left: 0;
+      right: 0;
+      width: 100%;
       background: #1e1e1e;
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 13px;
@@ -28543,7 +28541,8 @@
             sourceMagnet,
             targetMagnet,
             label,
-            hasLabel
+            hasLabel,
+            isReversed: nodes[0]?.connectorIsReversed || false
           }
         }
       }, "*");
@@ -29473,6 +29472,7 @@
       fill: "currentColor"
     }
   ) });
+  var DEFAULT_PRESET_IDS = /* @__PURE__ */ new Set(["default", "square", "web", "mobile"]);
   function SizeSection() {
     const {
       lastNodeConfig,
@@ -29494,6 +29494,73 @@
       autoResizeWindow,
       showToast
     } = useApp();
+    const activePreset = sizePresets.find(
+      (p) => p.w === lastNodeConfig.width && p.h === lastNodeConfig.height
+    );
+    const isMoreDisabled = !activePreset || Boolean(activePreset.isDefault) || DEFAULT_PRESET_IDS.has(activePreset.id);
+    const currentSizeMode = (() => {
+      if (selectedNodes && selectedNodes.length > 1) {
+        const first = selectedNodes[0]?.sizeMode;
+        const allSame = selectedNodes.every((n) => n && n.sizeMode === first);
+        if (!allSame) return "mixed";
+        return first || lastNodeConfig.sizeMode || "fixed";
+      }
+      if (selectedNodes && selectedNodes.length === 1) {
+        return selectedNodes[0]?.sizeMode || lastNodeConfig.sizeMode || "fixed";
+      }
+      return lastNodeConfig.sizeMode || "fixed";
+    })();
+    const [isWMixed, setIsWMixed] = import_react7.default.useState(false);
+    const [isHMixed, setIsHMixed] = import_react7.default.useState(false);
+    const [isRMixed, setIsRMixed] = import_react7.default.useState(false);
+    import_react7.default.useEffect(() => {
+      const validNodes = (selectedNodes || []).filter((n) => Boolean(n));
+      if (validNodes.length > 0) {
+        const wEl = document.getElementById("input-size-w");
+        const hEl = document.getElementById("input-size-h");
+        const rEl = document.getElementById("input-size-radius");
+        if (validNodes.length > 1) {
+          const widths = validNodes.map((n) => n.width).filter((v) => typeof v === "number");
+          const heights = validNodes.map((n) => n.height).filter((v) => typeof v === "number");
+          const radii = validNodes.map((n) => n.cornerRadius).filter((v) => typeof v === "number");
+          const allWSame = widths.length > 0 && widths.every((v) => v === widths[0]);
+          const allHSame = heights.length > 0 && heights.every((v) => v === heights[0]);
+          const allRSame = radii.length > 0 && radii.every((v) => v === radii[0]);
+          setIsWMixed(!allWSame);
+          setIsHMixed(!allHSame);
+          setIsRMixed(!allRSame);
+          if (wEl) {
+            wEl.value = allWSame ? String(widths[0]) : "";
+            wEl.placeholder = allWSame ? "" : "Mixed";
+          }
+          if (hEl) {
+            hEl.value = allHSame ? String(heights[0]) : "";
+            hEl.placeholder = allHSame ? "" : "Mixed";
+          }
+          if (rEl) {
+            rEl.value = allRSame ? String(radii[0]) : "";
+            rEl.placeholder = allRSame ? "" : "Mixed";
+          }
+        } else {
+          const first = validNodes[0];
+          setIsWMixed(false);
+          setIsHMixed(false);
+          setIsRMixed(false);
+          if (wEl) {
+            wEl.value = typeof first?.width === "number" ? String(first.width) : String(lastNodeConfig.width || 250);
+            wEl.placeholder = "";
+          }
+          if (hEl) {
+            hEl.value = typeof first?.height === "number" ? String(first.height) : String(lastNodeConfig.height || 90);
+            hEl.placeholder = "";
+          }
+          if (rEl) {
+            rEl.value = typeof first?.cornerRadius === "number" ? String(first.cornerRadius) : String(lastNodeConfig.cornerRadius || 0);
+            rEl.placeholder = "";
+          }
+        }
+      }
+    }, [selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
     function handleWChange(e) {
       const val = parseInt(e.target.value, 10);
       if (!isNaN(val)) {
@@ -29556,7 +29623,6 @@
       if (fixedValEl) fixedValEl.textContent = String(p.h);
       applyCurrentNodeState(p.sizeMode);
     }
-    const DEFAULT_PRESET_IDS = /* @__PURE__ */ new Set(["default", "square", "web", "mobile"]);
     function toggleSizeMoreMenu(e) {
       e.stopPropagation();
       if (isMoreDisabled) return;
@@ -29580,11 +29646,11 @@
     function toggleSizeModeDropdown(e) {
       e.stopPropagation();
       if (!sizeModeDropdownOpen) {
-        const currentH = document.getElementById("input-size-h")?.value || String(cfg.height || 90);
+        const currentH = document.getElementById("input-size-h")?.value || String(lastNodeConfig.height || 90);
         const fixedValEl = document.getElementById("size-mode-val-fixed");
         const hugValEl = document.getElementById("size-mode-val-hug");
         if (fixedValEl && currentH) fixedValEl.textContent = currentH;
-        const hasStatus = Boolean(selectedNodes[0]?.status || cfg.statusOn || uiState.selectedStatus);
+        const hasStatus = Boolean(selectedNodes[0]?.status || lastNodeConfig.statusOn || uiState.selectedStatus);
         const defaultHugH = hasStatus ? 110 : 90;
         const isCurrentlyHug = currentSizeMode === "hug" || selectedNodes[0]?.sizeMode === "hug";
         const hugH = isCurrentlyHug ? Number(currentH) : selectedNodes[0]?.hugHeight ?? defaultHugH;
@@ -29604,38 +29670,6 @@
       closeAllPopovers();
       applyCurrentNodeState(mode);
     }
-    import_react7.default.useEffect(() => {
-      if (selectedNodes && selectedNodes.length > 0) {
-        const first = selectedNodes[0];
-        const wEl = document.getElementById("input-size-w");
-        const hEl = document.getElementById("input-size-h");
-        const rEl = document.getElementById("input-size-radius");
-        if (wEl && typeof first.width === "number") {
-          wEl.value = String(first.width);
-        }
-        if (hEl && typeof first.height === "number") {
-          hEl.value = String(first.height);
-        }
-        if (rEl && typeof first.cornerRadius === "number") {
-          rEl.value = String(first.cornerRadius);
-        }
-      }
-    }, [selectedNodes]);
-    const cfg = lastNodeConfig;
-    const activePreset = sizePresets.find((p) => p.w === cfg.width && p.h === cfg.height);
-    const isMoreDisabled = !activePreset || Boolean(activePreset.isDefault) || DEFAULT_PRESET_IDS.has(activePreset.id);
-    const currentSizeMode = (() => {
-      if (selectedNodes && selectedNodes.length > 1) {
-        const first = selectedNodes[0]?.sizeMode;
-        const allSame = selectedNodes.every((n) => n.sizeMode === first);
-        if (!allSame) return "mixed";
-        return first || cfg.sizeMode || "fixed";
-      }
-      if (selectedNodes && selectedNodes.length === 1) {
-        return selectedNodes[0]?.sizeMode || cfg.sizeMode || "fixed";
-      }
-      return cfg.sizeMode || "fixed";
-    })();
     return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "section-header", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "section-title", children: "Size" }),
@@ -29677,7 +29711,11 @@
                 id: "input-size-w",
                 defaultValue: 250,
                 min: 50,
-                onChange: handleWChange,
+                placeholder: isWMixed ? "Mixed" : void 0,
+                onChange: (e) => {
+                  setIsWMixed(false);
+                  handleWChange(e);
+                },
                 onBlur: triggerApply,
                 onKeyDown: (e) => e.key === "Enter" && triggerApply()
               }
@@ -29692,7 +29730,11 @@
                 id: "input-size-h",
                 defaultValue: 90,
                 min: 40,
-                onChange: handleHChange,
+                placeholder: isHMixed ? "Mixed" : void 0,
+                onChange: (e) => {
+                  setIsHMixed(false);
+                  handleHChange(e);
+                },
                 onBlur: triggerApply,
                 onKeyDown: (e) => e.key === "Enter" && triggerApply()
               }
@@ -29705,10 +29747,14 @@
               {
                 type: "number",
                 id: "input-size-radius",
-                defaultValue: typeof selectedNodes[0]?.cornerRadius === "number" ? selectedNodes[0].cornerRadius : cfg.cornerRadius || 0,
+                defaultValue: typeof selectedNodes[0]?.cornerRadius === "number" ? selectedNodes[0].cornerRadius : lastNodeConfig.cornerRadius || 0,
                 min: 0,
                 max: 20,
-                onChange: handleRChange,
+                placeholder: isRMixed ? "Mixed" : void 0,
+                onChange: (e) => {
+                  setIsRMixed(false);
+                  handleRChange(e);
+                },
                 onBlur: triggerApply,
                 onKeyDown: (e) => e.key === "Enter" && triggerApply()
               }
@@ -29756,13 +29802,13 @@
                 /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Fixed height" }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-fixed", children: cfg.height || 90 })
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-fixed", children: lastNodeConfig.height || 90 })
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "hug" ? " selected" : ""}`, "data-value": "hug", onClick: () => selectSizeMode("hug"), children: [
                 /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z", fill: "currentColor" }) }) }),
                 /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Hug contents" }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-hug", children: currentSizeMode === "hug" || selectedNodes[0]?.sizeMode === "hug" ? selectedNodes[0]?.height || cfg.height || 90 : selectedNodes[0]?.hugHeight || (cfg.statusOn || Boolean(uiState.selectedStatus) ? 110 : 90) })
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-hug", children: currentSizeMode === "hug" || selectedNodes[0]?.sizeMode === "hug" ? selectedNodes[0]?.height || lastNodeConfig.height || 90 : selectedNodes[0]?.hugHeight || (lastNodeConfig.statusOn || Boolean(uiState.selectedStatus) ? 110 : 90) })
               ] })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { type: "hidden", id: "select-size-mode", defaultValue: "fixed" })
@@ -29772,7 +29818,7 @@
           "button",
           {
             type: "button",
-            className: `chip-btn${cfg.width === p.w && cfg.height === p.h ? " active" : ""}`,
+            className: `chip-btn${lastNodeConfig.width === p.w && lastNodeConfig.height === p.h ? " active" : ""}`,
             onClick: () => applySizePreset(p),
             title: `${p.name} (${p.w}\xD7${p.h})`,
             children: p.name
@@ -29802,11 +29848,14 @@
       contextMenuTarget,
       setContextMenuTarget,
       setContextMenuPos,
-      closeAllPopovers
+      closeAllPopovers,
+      selectedNodes
     } = useApp();
     const { selectedColor } = uiState;
     const btnMoreRef = (0, import_react8.useRef)(null);
-    const activeStylePreset = stylePresets.find((p) => {
+    const nodeColors = (selectedNodes || []).filter((n) => n && !n.isConnector).map((n) => n.fillColorHex).filter((c) => typeof c === "string" && c.length > 0);
+    const isNodeColorMixed = nodeColors.length > 1 && !nodeColors.every((c) => c.toLowerCase() === (nodeColors[0] || "").toLowerCase());
+    const activeStylePreset = isNodeColorMixed ? void 0 : stylePresets.find((p) => {
       const matchFill = p.fillColor.toLowerCase() === (selectedColor || "").toLowerCase();
       if (!matchFill) return false;
       const currentWeight = uiState.selectedStrokeWeight !== void 0 ? uiState.selectedStrokeWeight : 1.5;
@@ -30228,6 +30277,19 @@
         applyStepBadges(val, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
       }
     }
+    function handleResetNumber() {
+      setIsMixed(false);
+      setStepNumText("1");
+      setLastNodeConfig({ stepNumber: 1 });
+      if (isOn && !isMultiMode) {
+        applyStepBadges(1, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
+      }
+      const input = document.getElementById("input-step-number");
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }
     function handleAddStepBadgesMulti() {
       const start = getNumberValue();
       applyStepBadges(start, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
@@ -30324,12 +30386,13 @@
                   "svg",
                   {
                     id: "step-number-icon",
-                    "data-tooltip": isMultiMode ? "Start Number" : "Number",
+                    "data-tooltip": isMultiMode ? "Start Number (Reset: 1)" : "Number (Reset: 1)",
                     width: "24",
                     height: "24",
                     viewBox: "0 0 24 24",
                     fill: "none",
-                    style: { color: "#111827", flexShrink: 0 },
+                    style: { color: "#111827", flexShrink: 0, cursor: "pointer" },
+                    onClick: handleResetNumber,
                     children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                       "path",
                       {
@@ -30677,6 +30740,7 @@
       fill: "currentColor"
     }
   ) });
+  var COLOR_MIXED_ICON = /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M4 8C4 7.72386 4.22386 7.5 4.5 7.5H11.5C11.7761 7.5 12 7.72386 12 8C12 8.27614 11.7761 8.5 11.5 8.5H4.5C4.22386 8.5 4 8.27614 4 8Z", fill: "currentColor" }) });
   function ConnectSection() {
     const {
       uiState,
@@ -30706,6 +30770,8 @@
     const [endTermPopupOpen, setEndTermPopupOpen] = (0, import_react11.useState)(false);
     const [startTermVal, setStartTermVal] = (0, import_react11.useState)("NONE");
     const [endTermVal, setEndTermVal] = (0, import_react11.useState)("ARROW");
+    const [isColorMixed, setIsColorMixed] = (0, import_react11.useState)(false);
+    const [isWeightMixed, setIsWeightMixed] = (0, import_react11.useState)(false);
     const getPresetLineColor2 = (preset) => {
       const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
       return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
@@ -30758,45 +30824,95 @@
       return () => document.removeEventListener("click", handleDocClick);
     }, []);
     (0, import_react11.useEffect)(() => {
-      const count = selectedNodes.length;
-      const allConnectors = count > 0 && selectedNodes.every((n) => n && n.isConnector);
-      if (!allConnectors) return;
-      if (count > 1) {
-        const startTerms = selectedNodes.map((n) => n.connectorStartTerminal).filter(Boolean);
-        const endTerms = selectedNodes.map((n) => n.connectorEndTerminal).filter(Boolean);
-        if (startTerms.length > 0) {
-          const allSame = startTerms.every((t) => t === startTerms[0]);
-          const val = allSame ? startTerms[0] : "MIXED";
-          setStartTermVal(val);
-          const sel = document.getElementById("select-start-terminal");
-          if (sel) sel.value = val;
+      const connNodes = (selectedNodes || []).filter((n) => Boolean(n && n.isConnector));
+      const count = connNodes.length;
+      if (count > 0 && selectedNodes.length === count) {
+        if (count > 1) {
+          const startTerms = connNodes.map((n) => n.connectorStartTerminal).filter(Boolean);
+          const endTerms = connNodes.map((n) => n.connectorEndTerminal).filter(Boolean);
+          if (startTerms.length > 0) {
+            const allSame = startTerms.every((t) => t === startTerms[0]);
+            const val = allSame ? startTerms[0] : "MIXED";
+            setStartTermVal(val);
+            const sel = document.getElementById("select-start-terminal");
+            if (sel) sel.value = val;
+          }
+          if (endTerms.length > 0) {
+            const allSame = endTerms.every((t) => t === endTerms[0]);
+            const val = allSame ? endTerms[0] : "MIXED";
+            setEndTermVal(val);
+            const sel = document.getElementById("select-end-terminal");
+            if (sel) sel.value = val;
+          }
+          const colors = connNodes.map((n) => n.connectorColorHex).filter((c) => typeof c === "string" && c.length > 0);
+          if (colors.length > 0) {
+            const firstColor = colors[0] || "";
+            const allColorsSame = colors.every((c) => c.toUpperCase() === firstColor.toUpperCase());
+            setIsColorMixed(!allColorsSame);
+            if (allColorsSame) {
+              const hex = firstColor.toUpperCase();
+              setSelectedColor(hex);
+              setHexInput(hex.replace("#", ""));
+              const colSel = document.getElementById("conn-line-color");
+              if (colSel) colSel.value = hex;
+            } else {
+              setHexInput("");
+            }
+          }
+          const weights = connNodes.map((n) => n.connectorStrokeWeight).filter((w) => typeof w === "number");
+          const weightEl = document.getElementById("input-stroke-weight");
+          if (weights.length > 0) {
+            const allWeightsSame = weights.every((w) => w === weights[0]);
+            setIsWeightMixed(!allWeightsSame);
+            if (weightEl) {
+              weightEl.value = allWeightsSame ? String(weights[0]) : "";
+              weightEl.placeholder = allWeightsSame ? "" : "Mixed";
+            }
+          }
+        } else if (count === 1) {
+          setIsColorMixed(false);
+          setIsWeightMixed(false);
+          const node = selectedNodes[0];
+          if (node.connectorStartTerminal) {
+            setStartTermVal(node.connectorStartTerminal);
+            const sel = document.getElementById("select-start-terminal");
+            if (sel) sel.value = node.connectorStartTerminal;
+          }
+          if (node.connectorEndTerminal) {
+            setEndTermVal(node.connectorEndTerminal);
+            const sel = document.getElementById("select-end-terminal");
+            if (sel) sel.value = node.connectorEndTerminal;
+          }
+          if (node.connectorColorHex) {
+            const hex = node.connectorColorHex.toUpperCase();
+            setSelectedColor(hex);
+            setHexInput(hex.replace("#", ""));
+            const colSel = document.getElementById("conn-line-color");
+            if (colSel) colSel.value = hex;
+          }
+          const weightEl = document.getElementById("input-stroke-weight");
+          if (weightEl && typeof node.connectorStrokeWeight === "number") {
+            weightEl.value = String(node.connectorStrokeWeight);
+            weightEl.placeholder = "";
+          }
         }
-        if (endTerms.length > 0) {
-          const allSame = endTerms.every((t) => t === endTerms[0]);
-          const val = allSame ? endTerms[0] : "MIXED";
-          setEndTermVal(val);
-          const sel = document.getElementById("select-end-terminal");
-          if (sel) sel.value = val;
+      } else if (count >= 2) {
+        const colors = selectedNodes.map((n) => n.fillColorHex).filter(Boolean);
+        if (colors.length > 0) {
+          const allColorsSame = colors.every((c) => c.toUpperCase() === colors[0].toUpperCase());
+          setIsColorMixed(!allColorsSame);
+          if (allColorsSame) {
+            const hex = colors[0].toUpperCase();
+            setSelectedColor(hex);
+            setHexInput(hex.replace("#", ""));
+          } else {
+            setHexInput("");
+          }
         }
-      } else if (count === 1) {
-        const node = selectedNodes[0];
-        if (node.connectorStartTerminal) {
-          setStartTermVal(node.connectorStartTerminal);
-          const sel = document.getElementById("select-start-terminal");
-          if (sel) sel.value = node.connectorStartTerminal;
-        }
-        if (node.connectorEndTerminal) {
-          setEndTermVal(node.connectorEndTerminal);
-          const sel = document.getElementById("select-end-terminal");
-          if (sel) sel.value = node.connectorEndTerminal;
-        }
-        if (node.connectorColorHex) {
-          const hex = node.connectorColorHex.toUpperCase();
-          setSelectedColor(hex);
-          setHexInput(hex.replace("#", ""));
-          const colSel = document.getElementById("conn-line-color");
-          if (colSel) colSel.value = hex;
-        }
+        setIsWeightMixed(false);
+      } else {
+        setIsColorMixed(false);
+        setIsWeightMixed(false);
       }
     }, [selectedNodes]);
     (0, import_react11.useEffect)(() => {
@@ -30874,6 +30990,7 @@
       }
     }
     function selectColor(colorHex) {
+      setIsColorMixed(false);
       const formatted = colorHex.toUpperCase();
       setSelectedColor(formatted);
       setHexInput(formatted.replace("#", ""));
@@ -30890,6 +31007,34 @@
       if (selectEl) selectEl.value = formatted;
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
+    const handleResetStrokeWeight = () => {
+      setIsWeightMixed(false);
+      const input = document.getElementById("input-stroke-weight");
+      if (input) {
+        input.value = "1.5";
+        applyCurrentConnectorState();
+        input.focus();
+        input.select();
+      }
+    };
+    const handleResetStartOffset = () => {
+      const input = document.getElementById("input-start-offset");
+      if (input) {
+        input.value = "0";
+        applyCurrentConnectorState();
+        input.focus();
+        input.select();
+      }
+    };
+    const handleResetEndOffset = () => {
+      const input = document.getElementById("input-end-offset");
+      if (input) {
+        input.value = "0";
+        applyCurrentConnectorState();
+        input.focus();
+        input.select();
+      }
+    };
     function renderTerminalButtonGraphic(side, val) {
       if (val === "MIXED") {
         return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
@@ -30931,23 +31076,23 @@
               "div",
               {
                 className: "conn-color-input-box",
-                onClick: () => hexInputRef.current?.focus(),
+                onClick: () => {
+                  hexInputRef.current?.focus();
+                  hexInputRef.current?.select();
+                },
                 children: [
                   /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
                     "span",
                     {
                       className: "conn-color-chip",
                       style: {
-                        backgroundColor: selectedColor
+                        backgroundColor: isColorMixed ? "transparent" : selectedColor,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#111827"
                       },
-                      title: "Color wheel modal",
-                      onClick: (e) => {
-                        e.stopPropagation();
-                        setStartTermPopupOpen(false);
-                        setEndTermPopupOpen(false);
-                        setUIState({ selectedConnectorColor: selectedColor });
-                        setActiveModal("connector-color");
-                      }
+                      children: isColorMixed && COLOR_MIXED_ICON
                     }
                   ),
                   /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
@@ -30957,11 +31102,15 @@
                       type: "text",
                       id: "input-conn-color-hex",
                       className: "conn-color-hex-input",
-                      value: hexInput,
+                      value: isColorMixed ? "" : hexInput,
                       maxLength: 7,
-                      placeholder: "000000",
-                      onChange: handleHexChange,
+                      placeholder: isColorMixed ? "Mixed" : "000000",
+                      onChange: (e) => {
+                        setIsColorMixed(false);
+                        handleHexChange(e);
+                      },
                       onFocus: (e) => e.currentTarget.select(),
+                      onClick: (e) => e.currentTarget.select(),
                       onBlur: handleHexBlur,
                       onKeyDown: (e) => {
                         if (e.key === "Enter") {
@@ -30996,7 +31145,15 @@
                         setUIState({ selectedConnectorColor: selectedColor });
                         setActiveModal("connector-color");
                       },
-                      children: CHEVRON_SVG3
+                      children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                        "path",
+                        {
+                          fillRule: "evenodd",
+                          clipRule: "evenodd",
+                          d: "M7.04976 7.04976C9.78343 4.31609 14.2165 4.31609 16.9502 7.04976C18.1125 8.2121 18.7807 9.685 18.9541 11.2011C19.1539 12.9507 17.5939 14 16.2246 14H15C14.4477 14 14 14.4477 14 15V16.2246C14 17.594 12.9499 19.1542 11.2002 18.9541C9.68423 18.7806 8.21195 18.1123 7.04976 16.9502C4.31609 14.2165 4.31609 9.78343 7.04976 7.04976ZM16.2421 7.75777C13.899 5.41463 10.1009 5.41463 7.75777 7.75777C5.41463 10.1009 5.41463 13.899 7.75777 16.2421C8.75465 17.239 10.0147 17.8122 11.3144 17.9609C12.2846 18.0718 13 17.2011 13 16.2246V15C13 13.8954 13.8954 13 15 13H16.2246C17.2011 13 18.0718 12.2846 17.9609 11.3144C17.8123 10.0147 17.239 8.75467 16.2421 7.75777ZM13 8.00003C13 8.55232 12.5523 9.00003 12 9.00003C11.4477 9.00003 11 8.55232 11 8.00003C11 7.44775 11.4477 7.00003 12 7.00003C12.5523 7.00003 13 7.44775 13 8.00003ZM9.86617 10.5002C10.1423 10.0219 9.97843 9.41032 9.50014 9.13417C9.02185 8.85803 8.41026 9.02191 8.13411 9.5002C7.85797 9.97849 8.02185 10.5901 8.50014 10.8662C8.97843 11.1424 9.59002 10.9785 9.86617 10.5002ZM15.5001 10.8662C15.0218 11.1424 14.4103 10.9785 14.1341 10.5002C13.858 10.0219 14.0218 9.41032 14.5001 9.13417C14.9784 8.85803 15.59 9.02191 15.8662 9.5002C16.1423 9.97849 15.9784 10.5901 15.5001 10.8662ZM8.13411 14.5002C8.41026 14.9785 9.02185 15.1424 9.50014 14.8662C9.97843 14.5901 10.1423 13.9785 9.86617 13.5002C9.59002 13.0219 8.97843 12.858 8.50014 13.1342C8.02185 13.4103 7.85797 14.0219 8.13411 14.5002Z",
+                          fill: "currentColor"
+                        }
+                      ) })
                     }
                   )
                 ]
@@ -31051,12 +31208,24 @@
               },
               pos
             )),
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-2-text", children: selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2" })
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-2-text", children: selectedNodes.length >= 3 ? `${selectedNodes.length - 1} more ${selectedNodes.length - 1 === 1 ? "node" : "nodes"}` : selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2" })
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { style: { display: "flex", gap: "6px" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "input-scrubber-box", style: { width: "70px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { "data-tooltip": "Stroke width", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z", fill: "currentColor" }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              "svg",
+              {
+                "data-tooltip": "Stroke width (Reset: 1.5)",
+                width: "24",
+                height: "24",
+                viewBox: "0 0 24 24",
+                fill: "none",
+                style: { cursor: "pointer" },
+                onClick: handleResetStrokeWeight,
+                children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z", fill: "currentColor" })
+              }
+            ),
             /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
               "input",
               {
@@ -31066,6 +31235,10 @@
                 step: 0.5,
                 min: 1,
                 max: 10,
+                placeholder: isWeightMixed ? "Mixed" : void 0,
+                onChange: () => setIsWeightMixed(false),
+                onFocus: (e) => e.currentTarget.select(),
+                onClick: (e) => e.currentTarget.select(),
                 onBlur: () => applyCurrentConnectorState(),
                 onKeyDown: (e) => e.key === "Enter" && applyCurrentConnectorState()
               }
@@ -31104,8 +31277,30 @@
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "terminal-offset-row", children: [
           /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "input-scrubber-box offset-start-box", style: { width: "70px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { "data-tooltip": "Start offset", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M12 18V6M17.7333 9.63637L20.0001 11.8182L17.7333 14M20.0001 11.8182H14.4045", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round" }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { type: "number", id: "input-start-offset", placeholder: "Offset", defaultValue: 0 })
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              "svg",
+              {
+                "data-tooltip": "Start offset (Reset: 0)",
+                width: "24",
+                height: "24",
+                viewBox: "0 0 24 24",
+                fill: "none",
+                style: { cursor: "pointer" },
+                onClick: handleResetStartOffset,
+                children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M12 18V6M17.7333 9.63637L20.0001 11.8182L17.7333 14M20.0001 11.8182H14.4045", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round" })
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              "input",
+              {
+                type: "number",
+                id: "input-start-offset",
+                placeholder: "Offset",
+                defaultValue: 0,
+                onFocus: (e) => e.currentTarget.select(),
+                onClick: (e) => e.currentTarget.select()
+              }
+            )
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "figma-dropdown-wrapper", id: "wrap-start-terminal", style: { width: "100%" }, children: [
             /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
@@ -31150,8 +31345,8 @@
                   bottom: "calc(100% + 4px)",
                   top: "auto",
                   left: 0,
-                  right: "auto",
-                  width: "76px",
+                  right: 0,
+                  width: "100%",
                   background: "#1e1e1e",
                   borderRadius: "13px",
                   border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -31273,9 +31468,9 @@
                   position: "absolute",
                   bottom: "calc(100% + 4px)",
                   top: "auto",
-                  left: "auto",
+                  left: 0,
                   right: 0,
-                  width: "76px",
+                  width: "100%",
                   background: "#1e1e1e",
                   borderRadius: "13px",
                   border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -31356,8 +31551,30 @@
             )
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "input-scrubber-box offset-end-box", style: { width: "70px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { type: "number", id: "input-end-offset", placeholder: "Offset", defaultValue: 0 }),
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { "data-tooltip": "End offset", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("g", { transform: "translate(3.5, 5.5)", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M8.49992 12.5V0.5M2.76672 8.5L0.5 6.31817L2.76672 4.13637M0.5 6.31817H6.09557", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round" }) }) })
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              "input",
+              {
+                type: "number",
+                id: "input-end-offset",
+                placeholder: "Offset",
+                defaultValue: 0,
+                onFocus: (e) => e.currentTarget.select(),
+                onClick: (e) => e.currentTarget.select()
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              "svg",
+              {
+                "data-tooltip": "End offset (Reset: 0)",
+                width: "24",
+                height: "24",
+                viewBox: "0 0 24 24",
+                fill: "none",
+                style: { cursor: "pointer" },
+                onClick: handleResetEndOffset,
+                children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("g", { transform: "translate(3.5, 5.5)", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M8.49992 12.5V0.5M2.76672 8.5L0.5 6.31817L2.76672 4.13637M0.5 6.31817H6.09557", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round" }) })
+              }
+            )
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
@@ -31501,7 +31718,15 @@
           const node1Text = document.getElementById("preview-node-1-text");
           const node2Text = document.getElementById("preview-node-2-text");
           if (node1Text) node1Text.textContent = selectedNodes[0]?.title || selectedNodes[0]?.name || "Node 1";
-          if (node2Text) node2Text.textContent = selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2";
+          if (node2Text) {
+            const effectiveCount = selectedNodes.length > 0 ? selectedNodes.length : count;
+            if (effectiveCount >= 3) {
+              const moreCount = effectiveCount - 1;
+              node2Text.textContent = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
+            } else {
+              node2Text.textContent = selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2";
+            }
+          }
         }
       }
     }, [isSingleConn, isMultiConn, count, selectedNodes]);
@@ -31662,8 +31887,8 @@
       e.stopPropagation();
       setContextMenuOpen(false);
       if (contextMenuTarget === "size") {
-        const DEFAULT_PRESET_IDS = /* @__PURE__ */ new Set(["default", "square", "web", "mobile"]);
-        if (!selectedSizePresetId || DEFAULT_PRESET_IDS.has(selectedSizePresetId)) {
+        const DEFAULT_PRESET_IDS2 = /* @__PURE__ */ new Set(["default", "square", "web", "mobile"]);
+        if (!selectedSizePresetId || DEFAULT_PRESET_IDS2.has(selectedSizePresetId)) {
           showToast("\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
           return;
         }
@@ -31785,6 +32010,14 @@
     const bHex = Math.round((b + m) * 255).toString(16).padStart(2, "0");
     return `${rHex}${gHex}${bHex}`.toUpperCase();
   }
+  var COLOR_MIXED_ICON2 = /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+    "path",
+    {
+      d: "M4 8C4 7.72386 4.22386 7.5 4.5 7.5H11.5C11.7761 7.5 12 7.72386 12 8C12 8.27614 11.7761 8.5 11.5 8.5H4.5C4.22386 8.5 4 8.27614 4 8Z",
+      fill: "black",
+      fillOpacity: "0.9"
+    }
+  ) });
   function ColorWheelField({
     value,
     onChange,
@@ -31792,7 +32025,9 @@
     isOpen,
     onToggleOpen,
     extraControl,
-    extraControlPosition = "right"
+    extraControlPosition = "right",
+    isMixed = false,
+    onMixedClear
   }) {
     const cleanHex = value.replace("#", "").toUpperCase();
     const [colorHex, setColorHex] = (0, import_react15.useState)(cleanHex);
@@ -31818,6 +32053,9 @@
       setColorHsv((prev) => hexToHsv(nextClean, prev.h));
     }, [value, colorHex]);
     function handleHexChange(e) {
+      if (isMixed && onMixedClear) {
+        onMixedClear();
+      }
       let val = e.target.value.replace("#", "").toUpperCase().replace(/[^0-9A-F]/g, "");
       if (val.length > 6) val = val.slice(0, 6);
       setColorHex(val);
@@ -31865,6 +32103,9 @@
     );
     const startHueDrag = (e) => {
       e.preventDefault();
+      if (isMixed && onMixedClear) {
+        onMixedClear();
+      }
       if (!wheelRef.current) return;
       const rect = wheelRef.current.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
@@ -31922,6 +32163,9 @@
     );
     const startSatValDrag = (e) => {
       e.preventDefault();
+      if (isMixed && onMixedClear) {
+        onMixedClear();
+      }
       isInteractingRef.current = true;
       updateSatValFromPoint(e.clientX, e.clientY);
       const onMove = (ev) => updateSatValFromPoint(ev.clientX, ev.clientY);
@@ -31956,7 +32200,13 @@
             "span",
             {
               className: "conn-modal-hex-chip",
-              style: { backgroundColor: currentFormattedHex }
+              style: {
+                backgroundColor: isMixed ? "transparent" : currentFormattedHex,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center"
+              },
+              children: isMixed && COLOR_MIXED_ICON2
             }
           ),
           /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
@@ -31965,7 +32215,8 @@
               type: "text",
               size: 1,
               className: "conn-modal-hex-input",
-              value: colorHex,
+              value: isMixed ? "" : colorHex,
+              placeholder: isMixed ? "Mixed" : void 0,
               maxLength: 6,
               onChange: handleHexChange,
               onBlur: handleHexBlur,
@@ -33347,10 +33598,12 @@
   function ConnectorColorModal({
     initialColor,
     onApply,
-    onClose
+    onClose,
+    isMixed: initialIsMixed = false
   }) {
     const { stylePresets } = useApp();
     const [colorHex, setColorHex] = (0, import_react20.useState)(() => initialColor.replace("#", "").toUpperCase());
+    const [isMixed, setIsMixed] = (0, import_react20.useState)(Boolean(initialIsMixed));
     const [showWheel, setShowWheel] = (0, import_react20.useState)(false);
     const uniqueColorPresets = (0, import_react20.useMemo)(() => {
       const seen = /* @__PURE__ */ new Set();
@@ -33382,10 +33635,15 @@
     (0, import_react20.useEffect)(() => {
       setColorHex(initialColor.replace("#", "").toUpperCase());
     }, [initialColor]);
+    (0, import_react20.useEffect)(() => {
+      setIsMixed(Boolean(initialIsMixed));
+    }, [initialIsMixed]);
     function handleSelectPreset(hex) {
+      setIsMixed(false);
       const formatted = hex.replace("#", "").toUpperCase();
       setColorHex(formatted);
       onApply(`#${formatted}`);
+      onClose();
     }
     function handleCancel() {
       onApply(initialColor);
@@ -33429,7 +33687,7 @@
               /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-modal-divider" }),
               /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { className: "conn-color-presets-wrapper", children: [
                 presetsRow1.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-row", children: presetsRow1.map((item) => {
-                  const isSelected = currentFormattedHex.toUpperCase() === item.color.toUpperCase();
+                  const isSelected = !isMixed && currentFormattedHex.toUpperCase() === item.color.toUpperCase();
                   return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
                     "button",
                     {
@@ -33446,7 +33704,7 @@
                   );
                 }) }),
                 presetsRow2.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-row", children: presetsRow2.map((item) => {
-                  const isSelected = currentFormattedHex.toUpperCase() === item.color.toUpperCase();
+                  const isSelected = !isMixed && currentFormattedHex.toUpperCase() === item.color.toUpperCase();
                   return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
                     "button",
                     {
@@ -33468,7 +33726,10 @@
                 ColorWheelField,
                 {
                   value: colorHex,
+                  isMixed,
+                  onMixedClear: () => setIsMixed(false),
                   onChange: (newHex) => {
+                    setIsMixed(false);
                     setColorHex(newHex);
                     if (newHex.length === 6) {
                       onApply(`#${newHex.toUpperCase()}`);
@@ -33586,6 +33847,35 @@
     (0, import_react21.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
+    (0, import_react21.useEffect)(() => {
+      let newlyFocusedInput = null;
+      const handleFocusIn = (e) => {
+        const target = e.target;
+        if (target instanceof HTMLInputElement && (target.type === "text" || target.type === "number" || !target.type) && !target.readOnly && !target.disabled) {
+          newlyFocusedInput = target;
+          requestAnimationFrame(() => {
+            target.select();
+          });
+        } else {
+          newlyFocusedInput = null;
+        }
+      };
+      const handleClick = (e) => {
+        const target = e.target;
+        if (target instanceof HTMLInputElement && (target.type === "text" || target.type === "number" || !target.type) && !target.readOnly && !target.disabled) {
+          if (newlyFocusedInput === target) {
+            target.select();
+            newlyFocusedInput = null;
+          }
+        }
+      };
+      document.addEventListener("focusin", handleFocusIn);
+      document.addEventListener("click", handleClick);
+      return () => {
+        document.removeEventListener("focusin", handleFocusIn);
+        document.removeEventListener("click", handleClick);
+      };
+    }, []);
     function switchTab(tabId) {
       const btn = document.getElementById(`tab-btn-${tabId}`);
       if (btn?.classList.contains("disabled")) return;
@@ -33684,7 +33974,31 @@
       ) });
     }
     return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "title-banner", children: renderTitleBanner() }),
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "title-banner", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { style: { flex: 1, minWidth: 0, marginRight: "8px" }, children: renderTitleBanner() }),
+        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+          "button",
+          {
+            type: "button",
+            id: "btn-header-settings",
+            className: "btn-action-icon",
+            title: "Settings",
+            "data-tooltip": "Settings",
+            onClick: () => {
+              showToast("Settings \uBA54\uB274\uC785\uB2C8\uB2E4.");
+            },
+            children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+              "path",
+              {
+                fillRule: "evenodd",
+                clipRule: "evenodd",
+                d: "M13.2118 18.8955C12.8175 18.9644 12.4124 19 11.9999 19C11.6905 19 11.3854 18.9796 11.0858 18.9404L10.788 18.8955C10.092 18.7739 9.74773 18.1555 9.7499 17.6348C9.7512 17.2849 9.57075 16.9479 9.2499 16.7627C8.96936 16.6008 8.64204 16.5896 8.3622 16.707L8.24501 16.7656L8.1581 16.8115C7.70859 17.0267 7.06175 17.0052 6.63662 16.499C6.18276 15.9584 5.8085 15.3474 5.5331 14.6846L5.42177 14.3965C5.1802 13.7332 5.54323 13.1273 5.99501 12.8691C6.2988 12.6953 6.4999 12.3706 6.4999 12C6.49988 11.6294 6.29881 11.3046 5.99501 11.1309C5.54321 10.8727 5.18014 10.2668 5.42177 9.60352C5.70389 8.82934 6.11784 8.11892 6.63662 7.50098C7.08996 6.96123 7.79554 6.9726 8.24501 7.23438C8.54732 7.41038 8.92911 7.42241 9.2499 7.2373C9.57076 7.05205 9.75121 6.71515 9.7499 6.36523C9.74772 5.84453 10.092 5.22612 10.788 5.10449C11.1823 5.0356 11.5873 5 11.9999 5C12.4124 5 12.8175 5.03561 13.2118 5.10449C13.9078 5.22612 14.2521 5.84452 14.2499 6.36523C14.2486 6.71516 14.429 7.05205 14.7499 7.2373C15.0707 7.42244 15.4525 7.41036 15.7548 7.23438C16.2042 6.9726 16.9098 6.96129 17.3632 7.50098C17.882 8.11892 18.2969 8.82934 18.579 9.60352C18.8204 10.2666 18.4574 10.8727 18.0058 11.1309C17.7017 11.3046 17.4999 11.6293 17.4999 12C17.4999 12.3708 17.7017 12.6954 18.0058 12.8691C18.4574 13.1273 18.8204 13.7334 18.579 14.3965C18.2969 15.1707 17.882 15.8811 17.3632 16.499C16.938 17.0052 16.2912 17.0267 15.8417 16.8115L15.7548 16.7656C15.4524 16.5896 15.0707 16.5785 14.7499 16.7637C14.4292 16.9489 14.2486 17.285 14.2499 17.6348C14.2521 18.1555 13.9078 18.7739 13.2118 18.8955ZM10.9599 17.9102C11.2976 17.9692 11.6452 18 11.9999 18C12.3546 18 12.7022 17.9692 13.0399 17.9102C13.167 17.8879 13.2503 17.7687 13.2499 17.6396C13.247 16.9456 13.6058 16.2694 14.2499 15.8975C14.8939 15.5257 15.6591 15.5522 16.2587 15.9014C16.3701 15.9661 16.5147 15.9542 16.5976 15.8555C17.0425 15.3255 17.3971 14.7173 17.6386 14.0547C17.6827 13.9335 17.6216 13.8013 17.5097 13.7373C16.9068 13.3928 16.4999 12.7441 16.4999 12C16.4999 11.2559 16.9068 10.6072 17.5097 10.2627C17.6216 10.1987 17.6827 10.0665 17.6386 9.94531C17.3971 9.28272 17.0425 8.67453 16.5976 8.14453C16.5147 8.04584 16.3701 8.03387 16.2587 8.09863C15.6591 8.44785 14.8939 8.47434 14.2499 8.10254C13.6058 7.73058 13.247 7.05442 13.2499 6.36035C13.2503 6.23134 13.167 6.11205 13.0399 6.08984C12.7022 6.03082 12.3546 6 11.9999 6C11.6452 6 11.2976 6.03081 10.9599 6.08984C10.8328 6.11209 10.7495 6.23137 10.7499 6.36035C10.7528 7.05444 10.394 7.73059 9.7499 8.10254C9.10609 8.47424 8.34161 8.4476 7.74208 8.09863C7.63067 8.03375 7.48514 8.04579 7.40224 8.14453C6.95735 8.67452 6.60272 9.28273 6.36123 9.94531C6.31705 10.0665 6.37909 10.1987 6.49111 10.2627C7.09373 10.6072 7.49988 11.2561 7.4999 12C7.4999 12.7439 7.09372 13.3928 6.49111 13.7373C6.37909 13.8013 6.31705 13.9335 6.36123 14.0547C6.60272 14.7173 6.95735 15.3255 7.40224 15.8555C7.48514 15.9542 7.63067 15.9663 7.74208 15.9014C8.34161 15.5524 9.10609 15.5258 9.7499 15.8975C10.394 16.2694 10.7528 16.9456 10.7499 17.6396C10.7495 17.7686 10.8328 17.8879 10.9599 17.9102ZM12 13.5C12.8284 13.5 13.5 12.8284 13.5 12C13.5 11.1716 12.8284 10.5 12 10.5C11.1715 10.5 10.5 11.1716 10.5 12C10.5 12.8284 11.1715 13.5 12 13.5ZM12 9.5C13.3807 9.5 14.5 10.6193 14.5 12C14.5 13.3807 13.3807 14.5 12 14.5C10.6193 14.5 9.49997 13.3807 9.49997 12C9.49997 10.6193 10.6193 9.5 12 9.5Z",
+                fill: "currentColor"
+              }
+            ) })
+          }
+        )
+      ] }),
       /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         "button",
         {
@@ -33776,28 +34090,34 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "connector-color" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
-        ConnectorColorModal,
-        {
-          initialColor: uiState.selectedConnectorColor || "#000000",
-          onApply: (colorHex) => {
-            const formatted = colorHex.toUpperCase();
-            setUIState({ selectedConnectorColor: formatted });
-            if (isConnSel && selectedNodes.length > 0) {
-              parent.postMessage(
-                {
-                  pluginMessage: {
-                    type: "UPDATE_CONNECTOR_STYLE",
-                    connectorColor: formatted
-                  }
-                },
-                "*"
-              );
-            }
-          },
-          onClose: () => setActiveModal("none")
-        }
-      ),
+      activeModal === "connector-color" && (() => {
+        const connectorColors = selectedNodes.filter((n) => n && n.isConnector).map((n) => n.connectorColorHex).filter((c) => typeof c === "string" && c.length > 0);
+        const firstColor = connectorColors[0] || "";
+        const isConnectorColorMixed = connectorColors.length > 1 && !connectorColors.every((c) => c.toUpperCase() === firstColor.toUpperCase());
+        return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+          ConnectorColorModal,
+          {
+            initialColor: uiState.selectedConnectorColor || "#000000",
+            isMixed: isConnectorColorMixed,
+            onApply: (colorHex) => {
+              const formatted = colorHex.toUpperCase();
+              setUIState({ selectedConnectorColor: formatted });
+              if (isConnSel && selectedNodes.length > 0) {
+                parent.postMessage(
+                  {
+                    pluginMessage: {
+                      type: "UPDATE_CONNECTOR_STYLE",
+                      connectorColor: formatted
+                    }
+                  },
+                  "*"
+                );
+              }
+            },
+            onClose: () => setActiveModal("none")
+          }
+        );
+      })(),
       /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(FigmaTooltip, {})
     ] });
   }

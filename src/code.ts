@@ -1124,6 +1124,7 @@ async function handleSelectionChange() {
     let connectorTargetNodeName: string | undefined;
     let connectorSourceMagnet: MagnetPosition | undefined;
     let connectorTargetMagnet: MagnetPosition | undefined;
+    let connectorIsReversed = false;
 
     const isCustomConnector =
       node.getPluginData('is_custom_connector') === 'true' ||
@@ -1163,18 +1164,38 @@ async function handleSelectionChange() {
         connectorEndTerminal = mapCapToTerm(String(conn.connectorEndStrokeCap || 'NONE'));
 
         // Figma 네이티브 커넥터의 연결 엔드포인트 노드 정보 확인
+        let sourceEndpointNode: SceneNode | null = null;
+        let targetEndpointNode: SceneNode | null = null;
         if (conn.connectorStart && 'endpointNodeId' in conn.connectorStart && conn.connectorStart.endpointNodeId) {
-          const sNode = figma.getNodeById(conn.connectorStart.endpointNodeId);
-          if (sNode) connectorSourceNodeName = sNode.name;
+          sourceEndpointNode = figma.getNodeById(conn.connectorStart.endpointNodeId) as SceneNode | null;
+          if (sourceEndpointNode) connectorSourceNodeName = sourceEndpointNode.name;
           if ('magnet' in conn.connectorStart) {
             connectorSourceMagnet = conn.connectorStart.magnet as MagnetPosition;
           }
         }
         if (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
-          const tNode = figma.getNodeById(conn.connectorEnd.endpointNodeId);
-          if (tNode) connectorTargetNodeName = tNode.name;
+          targetEndpointNode = figma.getNodeById(conn.connectorEnd.endpointNodeId) as SceneNode | null;
+          if (targetEndpointNode) connectorTargetNodeName = targetEndpointNode.name;
           if ('magnet' in conn.connectorEnd) {
             connectorTargetMagnet = conn.connectorEnd.magnet as MagnetPosition;
+          }
+        }
+
+        // 연결된 두 노드의 캔버스 상 위치를 비교하여 상대적으로 위/왼쪽 노드가 기즈모 왼쪽(우선)에 오도록 정렬
+        if (sourceEndpointNode && targetEndpointNode) {
+          const sorted = sortNodesBySpatialPosition([sourceEndpointNode, targetEndpointNode]);
+          if (sorted[0].id === targetEndpointNode.id) {
+            connectorIsReversed = true;
+            connectorSourceNodeName = targetEndpointNode.name;
+            connectorTargetNodeName = sourceEndpointNode.name;
+
+            const tempMagnet = connectorSourceMagnet;
+            connectorSourceMagnet = connectorTargetMagnet;
+            connectorTargetMagnet = tempMagnet;
+
+            const tempTerm = connectorStartTerminal;
+            connectorStartTerminal = connectorEndTerminal;
+            connectorEndTerminal = tempTerm;
           }
         }
       } else {
@@ -1192,13 +1213,15 @@ async function handleSelectionChange() {
         // 연결된 소스 및 타깃 노드 정보 및 마그넷 위치 추출
         const srcId = node.getPluginData('source_node_id');
         const tgtId = node.getPluginData('target_node_id');
+        let sourceEndpointNode: SceneNode | null = null;
+        let targetEndpointNode: SceneNode | null = null;
         if (srcId) {
-          const sNode = figma.getNodeById(srcId);
-          if (sNode) connectorSourceNodeName = sNode.name;
+          sourceEndpointNode = figma.getNodeById(srcId) as SceneNode | null;
+          if (sourceEndpointNode) connectorSourceNodeName = sourceEndpointNode.name;
         }
         if (tgtId) {
-          const tNode = figma.getNodeById(tgtId);
-          if (tNode) connectorTargetNodeName = tNode.name;
+          targetEndpointNode = figma.getNodeById(tgtId) as SceneNode | null;
+          if (targetEndpointNode) connectorTargetNodeName = targetEndpointNode.name;
         }
         connectorSourceMagnet = (node.getPluginData('source_magnet') as MagnetPosition) || 'RIGHT';
         connectorTargetMagnet = (node.getPluginData('target_magnet') as MagnetPosition) || 'LEFT';
@@ -1223,6 +1246,24 @@ async function handleSelectionChange() {
           }
           if (!connectorTargetMagnet) {
             connectorTargetMagnet = (vectorChild.getPluginData('target_magnet') as MagnetPosition) || 'LEFT';
+          }
+        }
+
+        // 연결된 두 노드의 캔버스 상 위치를 비교하여 상대적으로 위/왼쪽 노드가 기즈모 왼쪽(우선)에 오도록 정렬
+        if (sourceEndpointNode && targetEndpointNode) {
+          const sorted = sortNodesBySpatialPosition([sourceEndpointNode, targetEndpointNode]);
+          if (sorted[0].id === targetEndpointNode.id) {
+            connectorIsReversed = true;
+            connectorSourceNodeName = targetEndpointNode.name;
+            connectorTargetNodeName = sourceEndpointNode.name;
+
+            const tempMagnet = connectorSourceMagnet;
+            connectorSourceMagnet = connectorTargetMagnet;
+            connectorTargetMagnet = tempMagnet;
+
+            const tempTerm = connectorStartTerminal;
+            connectorStartTerminal = connectorEndTerminal;
+            connectorEndTerminal = tempTerm;
           }
         }
       }
@@ -1302,6 +1343,7 @@ async function handleSelectionChange() {
       connectorTargetNodeName,
       connectorSourceMagnet,
       connectorTargetMagnet,
+      connectorIsReversed,
       width: Math.round(node.width),
       height: Math.round(node.height),
       cornerRadius,
@@ -2639,6 +2681,11 @@ async function updateConnectorProperties(payload: {
 
     await loadRequiredFonts();
 
+    const effectiveStartTerm = payload.isReversed ? payload.endTerminal : payload.startTerminal;
+    const effectiveEndTerm = payload.isReversed ? payload.startTerminal : payload.endTerminal;
+    const effectiveStartMagnet = payload.isReversed ? payload.targetMagnet : payload.sourceMagnet;
+    const effectiveEndMagnet = payload.isReversed ? payload.sourceMagnet : payload.targetMagnet;
+
     if (node.type === 'CONNECTOR') {
       const conn = node as ConnectorNode;
 
@@ -2686,11 +2733,11 @@ async function updateConnectorProperties(payload: {
             return 'NONE';
         }
       };
-      if (payload.startTerminal && payload.startTerminal !== 'MIXED') {
-        conn.connectorStartStrokeCap = mapCap(payload.startTerminal);
+      if (effectiveStartTerm && effectiveStartTerm !== 'MIXED') {
+        conn.connectorStartStrokeCap = mapCap(effectiveStartTerm);
       }
-      if (payload.endTerminal && payload.endTerminal !== 'MIXED') {
-        conn.connectorEndStrokeCap = mapCap(payload.endTerminal);
+      if (effectiveEndTerm && effectiveEndTerm !== 'MIXED') {
+        conn.connectorEndStrokeCap = mapCap(effectiveEndTerm);
       }
 
       // 6. 라벨
@@ -2703,16 +2750,16 @@ async function updateConnectorProperties(payload: {
       }
 
       // 7. Figma 네이티브 커넥터 마그넷 위치 갱신
-      if (payload.sourceMagnet && conn.connectorStart && 'endpointNodeId' in conn.connectorStart) {
+      if (effectiveStartMagnet && conn.connectorStart && 'endpointNodeId' in conn.connectorStart) {
         conn.connectorStart = {
           endpointNodeId: conn.connectorStart.endpointNodeId,
-          magnet: payload.sourceMagnet,
+          magnet: effectiveStartMagnet,
         };
       }
-      if (payload.targetMagnet && conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd) {
+      if (effectiveEndMagnet && conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd) {
         conn.connectorEnd = {
           endpointNodeId: conn.connectorEnd.endpointNodeId,
-          magnet: payload.targetMagnet,
+          magnet: effectiveEndMagnet,
         };
       }
     } else {
@@ -2740,7 +2787,7 @@ async function updateConnectorProperties(payload: {
         } else {
           vectorNode.dashPattern = [];
         }
-        if (payload.endTerminal === 'ARROW') {
+        if (effectiveEndTerm === 'ARROW') {
           vectorNode.strokeCap = 'ARROW_EQUILATERAL';
         } else {
           vectorNode.strokeCap = 'NONE';
@@ -2776,18 +2823,13 @@ async function updateConnectorProperties(payload: {
       if (payload.strokeWeight) node.setPluginData('connector_weight', String(payload.strokeWeight));
       if (payload.strokePattern) node.setPluginData('connector_pattern', payload.strokePattern);
       if (payload.routingType) node.setPluginData('connector_routing', payload.routingType);
-      if (payload.startTerminal) node.setPluginData('start_terminal', payload.startTerminal);
-      if (payload.endTerminal) node.setPluginData('end_terminal', payload.endTerminal);
-
-      if (payload.sourceMagnet) {
-        node.setPluginData('source_magnet', payload.sourceMagnet);
-      }
-      if (payload.targetMagnet) {
-        node.setPluginData('target_magnet', payload.targetMagnet);
-      }
+      if (effectiveStartTerm) node.setPluginData('start_terminal', effectiveStartTerm);
+      if (effectiveEndTerm) node.setPluginData('end_terminal', effectiveEndTerm);
+      if (effectiveStartMagnet) node.setPluginData('source_magnet', effectiveStartMagnet);
+      if (effectiveEndMagnet) node.setPluginData('target_magnet', effectiveEndMagnet);
 
       // 마그넷 또는 라우팅 변경 시 커스텀 벡터 직각 경로 즉시 재계산
-      await updateOrthogonalVectorConnector(node, payload.sourceMagnet, payload.targetMagnet);
+      await updateOrthogonalVectorConnector(node, effectiveStartMagnet, effectiveEndMagnet);
     }
 
     notify('커넥터 옵션이 성공적으로 수정되었습니다.', 'success');

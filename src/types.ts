@@ -231,6 +231,7 @@ export type PluginAction =
         targetMagnet?: MagnetPosition;
         label?: string;
         hasLabel?: boolean;
+        isReversed?: boolean;
       };
     }
   | { type: 'SET_CONNECTOR_LINE_TYPE'; connectorId?: string; lineType: 'ELBOWED' | 'STRAIGHT' }
@@ -272,6 +273,7 @@ export interface SelectedNodeInfo {
   connectorTargetNodeName?: string;
   connectorSourceMagnet?: MagnetPosition;
   connectorTargetMagnet?: MagnetPosition;
+  connectorIsReversed?: boolean;
   width?: number;
   height?: number;
   hugHeight?: number;

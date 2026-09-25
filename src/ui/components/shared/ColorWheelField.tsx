@@ -82,6 +82,17 @@ export function hsvToHex(h: number, s: number, v: number): string {
   return `${rHex}${gHex}${bHex}`.toUpperCase();
 }
 
+// 2개 이상 다중 선택 시 Mixed 표시용 16×16 대시 SVG 아이콘
+const COLOR_MIXED_ICON = (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path
+      d="M4 8C4 7.72386 4.22386 7.5 4.5 7.5H11.5C11.7761 7.5 12 7.72386 12 8C12 8.27614 11.7761 8.5 11.5 8.5H4.5C4.22386 8.5 4 8.27614 4 8Z"
+      fill="black"
+      fillOpacity="0.9"
+    />
+  </svg>
+);
+
 export interface ColorWheelFieldProps {
   value: string; // 예: 'EA2039' 또는 '#EA2039'
   onChange: (hex: string) => void;
@@ -90,6 +101,8 @@ export interface ColorWheelFieldProps {
   onToggleOpen?: (open: boolean) => void;
   extraControl?: React.ReactNode;
   extraControlPosition?: 'left' | 'right';
+  isMixed?: boolean;
+  onMixedClear?: () => void;
 }
 
 /**
@@ -107,6 +120,8 @@ export function ColorWheelField({
   onToggleOpen,
   extraControl,
   extraControlPosition = 'right',
+  isMixed = false,
+  onMixedClear,
 }: ColorWheelFieldProps) {
   const cleanHex = value.replace('#', '').toUpperCase();
   const [colorHex, setColorHex] = useState(cleanHex);
@@ -140,6 +155,9 @@ export function ColorWheelField({
 
   // Hex 입력 변경
   function handleHexChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (isMixed && onMixedClear) {
+      onMixedClear();
+    }
     let val = e.target.value.replace('#', '').toUpperCase().replace(/[^0-9A-F]/g, '');
     if (val.length > 6) val = val.slice(0, 6);
     setColorHex(val);
@@ -195,6 +213,9 @@ export function ColorWheelField({
 
   const startHueDrag = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isMixed && onMixedClear) {
+      onMixedClear();
+    }
     if (!wheelRef.current) return;
     const rect = wheelRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -269,6 +290,9 @@ export function ColorWheelField({
 
   const startSatValDrag = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isMixed && onMixedClear) {
+      onMixedClear();
+    }
     isInteractingRef.current = true;
     updateSatValFromPoint(e.clientX, e.clientY);
 
@@ -312,13 +336,21 @@ export function ColorWheelField({
         <div className="conn-modal-hex-box">
           <span
             className="conn-modal-hex-chip"
-            style={{ backgroundColor: currentFormattedHex }}
-          />
+            style={{
+              backgroundColor: isMixed ? 'transparent' : currentFormattedHex,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {isMixed && COLOR_MIXED_ICON}
+          </span>
           <input
             type="text"
             size={1}
             className="conn-modal-hex-input"
-            value={colorHex}
+            value={isMixed ? '' : colorHex}
+            placeholder={isMixed ? 'Mixed' : undefined}
             maxLength={6}
             onChange={handleHexChange}
             onBlur={handleHexBlur}

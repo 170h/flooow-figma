@@ -86,6 +86,7 @@ export interface NodeInfo {
   sizeMode?: 'fixed' | 'hug' | string;
   hugHeight?: number;
   cachedFigmaLink?: string;
+  connectorIsReversed?: boolean;
 }
 
 export interface LastNodeConfig {
@@ -670,6 +671,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           startTerminal: startTerm, endTerminal: endTerm,
           sourceMagnet, targetMagnet,
           label, hasLabel,
+          isReversed: nodes[0]?.connectorIsReversed || false,
         }
       }
     }, '*');
