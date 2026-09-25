@@ -17,6 +17,12 @@
       --color-brand-cta-hover: #8636ee;
       --color-brand-subtle: rgba(134, 56, 229, 0.12);
 
+      /* 피그잼 공식 프라이머리 및 셀렉트 토큰 (FigJam Purple #8C4CF6) */
+      --color-primary: #8C4CF6;
+      --color-primary-hover: #7B3CE3;
+      --color-primary-subtle: rgba(140, 76, 246, 0.15);
+      --color-border-selected: var(--color-primary);
+
       /* 텍스트 색상 */
       --color-text-primary: #000000;
       --color-text-secondary: rgba(0, 0, 0, 0.6);
@@ -31,6 +37,8 @@
       --color-border-strong: var(--figma-color-border-strong, rgba(0, 0, 0, 0.16));
       --color-border-focus: var(--figma-color-border-brand, #8638e5);
       --color-border-dark: rgba(255, 255, 255, 0.12);
+      /* 피그마 UI3 공식 컬러칩 투명 보더 토큰 (Figma 노드 2327:86762 Light) */
+      --color-chip-border: rgba(0, 0, 0, 0.1);
 
       /* 고도 및 그림자 */
       --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -57,7 +65,18 @@
         --color-text-secondary: rgba(255, 255, 255, 0.65);
         --color-text-tertiary: rgba(255, 255, 255, 0.4);
         --color-border: rgba(255, 255, 255, 0.12);
+        /* 피그마 UI3 공식 컬러칩 투명 보더 토큰 (Figma 노드 2327:86775 Dark) */
+        --color-chip-border: rgba(255, 255, 255, 0.1);
       }
+    }
+
+    body.figma-dark,
+    .figma-dark,
+    [data-theme="dark"],
+    .size-modal-card,
+    .style-modal-card,
+    .conn-color-modal-card {
+      --color-chip-border: rgba(255, 255, 255, 0.1);
     }
 
     /* ============================================================ */
@@ -1461,6 +1480,100 @@
       top: calc(50% - 4.5px);
     }
 
+    /* ============================================================ */
+    /* Connect 색상 입력 컨트롤 (Figma UI3 1027385:6998)           */
+    /* ============================================================ */
+    .conn-color-input-wrapper {
+      position: relative;
+      width: 110px;
+      flex-shrink: 0;
+    }
+
+    .conn-color-input-box {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 28px;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 2px 0 6px;
+      gap: 4px;
+      box-sizing: border-box;
+      color: var(--color-text-primary);
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .conn-color-input-box:hover {
+      border-color: var(--color-border);
+    }
+
+    .conn-color-input-box:focus-within,
+    .conn-color-input-box.active {
+      background-color: var(--color-bg);
+      border-color: var(--color-brand);
+    }
+
+    .conn-color-chip {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: none;
+      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(0, 0, 0, 0.1));
+      flex-shrink: 0;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: transform 0.12s ease;
+    }
+
+    .conn-color-chip:hover {
+      transform: scale(1.1);
+    }
+
+    .conn-color-hex-input {
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      text-transform: uppercase;
+      padding: 0;
+      margin: 0;
+      letter-spacing: 0 !important;
+    }
+
+    .conn-color-palette-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .conn-color-palette-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .conn-color-palette-btn:hover,
+    .conn-color-palette-btn.active {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-hover);
+    }
+
     .line-style-segment {
       display: flex;
       background: var(--color-bg-secondary);
@@ -2392,7 +2505,8 @@
       height: 14px;
       border-radius: 2px;
       background: #EA2039;
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      border: none;
+      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.1));
       flex-shrink: 0;
       box-sizing: border-box;
     }
@@ -2555,10 +2669,16 @@
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
+      transition: background-color 0.15s ease, opacity 0.15s ease;
     }
 
-    .btn-phase-modal-save:hover {
+    .btn-phase-modal-save:hover:not(:disabled) {
       background: #7A39E3;
+    }
+
+    .btn-phase-modal-save:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
 
     .btn-phase-modal-delete {
@@ -2807,7 +2927,8 @@
       height: 16px;
       border-radius: 3px;
       background: #EA2039;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: none;
+      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.1));
       flex-shrink: 0;
       box-sizing: border-box;
     }
@@ -2839,18 +2960,18 @@
     }
 
     .stroke-width-box {
-      width: 60px;
+      width: 56px;
       height: 28px;
-      background: #383838;
+      background: #2c2c2c;
       border: 1px solid transparent;
-      border-radius: 5px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 0 8px;
+      gap: 0;
+      padding: 0 6px 0 0;
       box-sizing: border-box;
       flex-shrink: 0;
-      transition: border-color 0.15s ease;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
     }
 
     .stroke-width-box:hover {
@@ -2858,7 +2979,8 @@
     }
 
     .stroke-width-box:focus-within {
-      border-color: #8C4CF6;
+      background-color: #222222;
+      border-color: var(--color-border-selected, #8C4CF6);
     }
 
     .style-divider {
@@ -3000,4 +3122,350 @@
 
     .picker-search-box:focus-within {
       border-color: #8C4CF6;
+    }
+
+    /* ============================================================ */
+    /* Connector Color 모달 (Figma UI3 1027394:7443 공식 디자인)    */
+    /* ============================================================ */
+    .conn-color-modal-card {
+      width: 200px;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-sizing: border-box;
+      user-select: none;
+      animation: modalFadeIn 0.15s ease-out;
+    }
+
+    .conn-color-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 24px;
+    }
+
+    .conn-color-modal-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0 !important;
+    }
+
+    .conn-color-modal-divider {
+      height: 1px;
+      background-color: #383838;
+      margin: 0 -12px;
+    }
+
+    .conn-color-presets-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 2px 0;
+    }
+
+    .conn-color-presets-row {
+      display: flex;
+      gap: 7px;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    .conn-preset-card {
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.15s ease;
+      outline: none;
+      position: relative;
+    }
+
+    /* 흰색 계열 칩은 배경 구분을 위한 미세 내부 경계선 */
+    .conn-preset-card[data-color="#ffffff"] {
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 선택되지 않은 칩 호버 시: 상하좌우 1px씩만 섬세하게 확대 (28px -> 30px: scale 1.071) */
+    .conn-preset-card:hover:not(.selected) {
+      transform: scale(1.071);
+      z-index: 4;
+    }
+    .conn-preset-card[data-color="#ffffff"]:hover:not(.selected) {
+      transform: scale(1.071);
+      z-index: 4;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 선택 시: 외곽 2px 프라이머리 보더 적용 (style 컬러 스와치와 동일한 방식) */
+    .conn-preset-card.selected {
+      box-shadow: 0 0 0 2px var(--color-primary, #8C4CF6);
+      z-index: 2;
+      transform: none;
+    }
+    .conn-preset-card[data-color="#ffffff"].selected {
+      box-shadow: 0 0 0 2px var(--color-primary, #8C4CF6);
+      z-index: 2;
+      transform: none;
+    }
+
+    /* 선택된 칩은 호버되어도 애니메이션 없이 2px 보더 유지 */
+    .conn-preset-card.selected:hover {
+      transform: none !important;
+      box-shadow: 0 0 0 2px var(--color-primary, #8C4CF6);
+      z-index: 2;
+    }
+    .conn-preset-card[data-color="#ffffff"].selected:hover {
+      transform: none !important;
+      box-shadow: 0 0 0 2px var(--color-primary, #8C4CF6);
+      z-index: 2;
+    }
+
+    .conn-color-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .conn-modal-hex-box {
+      flex: 1 1 auto;
+      min-width: 0;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      background-color: #2c2c2c;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 0 8px;
+      gap: 6px;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .conn-modal-hex-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .conn-modal-hex-box:focus-within {
+      background-color: #222222;
+      border-color: var(--color-border-selected, #0d99ff);
+    }
+
+    .conn-modal-hex-chip {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.1));
+      box-sizing: border-box;
+    }
+
+    .conn-modal-hex-input {
+      flex: 1 1 auto;
+      width: 100%;
+      min-width: 0;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0 !important;
+      text-transform: uppercase;
+      padding: 0;
+    }
+
+    /* 사용자 첨부 이미지 완벽 일치: 모달 Hex 입력필드 우측 도넛 무지개 컬러 휠 토글 버튼 */
+    .conn-modal-wheel-donut-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      flex-shrink: 0;
+      outline: none;
+      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .conn-modal-wheel-donut-btn:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 토글이 켜진(셀렉트) 상태: 프라이머리 컬러(#8C4CF6) 보더 표시 */
+    .conn-modal-wheel-donut-btn.selected,
+    .conn-modal-wheel-donut-btn:active,
+    .conn-modal-wheel-donut-btn:focus-visible {
+      background-color: var(--color-primary-subtle, rgba(140, 76, 246, 0.15));
+      border-color: var(--color-border-selected, #8C4CF6);
+    }
+
+    .conn-modal-wheel-donut-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        #EA2039 0%,
+        #FF6D00 15%,
+        #FFD600 30%,
+        #00E676 45%,
+        #00B0FF 60%,
+        #2979FF 75%,
+        #8638E5 90%,
+        #EA2039 100%
+      );
+      display: inline-block;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      pointer-events: none;
+      -webkit-mask: radial-gradient(circle at center, transparent 4px, #000 4.5px);
+      mask: radial-gradient(circle at center, transparent 4px, #000 4.5px);
+    }
+
+    .conn-color-wheel-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px 0 2px;
+    }
+
+    .conn-color-wheel-ring {
+      position: relative;
+      width: 168px;
+      height: 168px;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        #ff0000 0%,
+        #ffff00 16.66%,
+        #00ff00 33.33%,
+        #00ffff 50%,
+        #0000ff 66.66%,
+        #ff00ff 83.33%,
+        #ff0000 100%
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: crosshair;
+      user-select: none;
+    }
+
+    .conn-color-wheel-gap {
+      position: absolute;
+      width: 128px;
+      height: 128px;
+      border-radius: 50%;
+      background-color: #1e1e1e;
+      pointer-events: none;
+    }
+
+    .conn-color-inner-disc {
+      position: relative;
+      width: 108px;
+      height: 108px;
+      border-radius: 50%;
+      cursor: crosshair;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+    }
+
+    .conn-disc-tint-layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: linear-gradient(to right, #ffffff, rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+
+    .conn-disc-shade-layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000);
+      pointer-events: none;
+    }
+
+    .conn-disc-handle {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.8), inset 0 0 1px rgba(0, 0, 0, 0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+      z-index: 5;
+    }
+
+    .conn-wheel-hue-knob {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    .conn-color-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .conn-btn-cancel {
+      height: 28px;
+      padding: 0 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: transparent;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0 !important;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .conn-btn-cancel:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+
+    .conn-btn-save {
+      height: 28px;
+      padding: 0 14px;
+      border-radius: 6px;
+      border: none;
+      background: var(--color-primary, #0d99ff);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0 !important;
+      cursor: pointer;
+      transition: background-color 0.15s ease, opacity 0.15s ease;
+    }
+
+    .conn-btn-save:hover {
+      background: var(--color-primary-hover, #008ae6);
     }

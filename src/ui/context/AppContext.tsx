@@ -135,12 +135,13 @@ export interface UIState {
   targetMagnet: string;
   selectedPhase: string;
   selectedNodeType: string;
+  selectedConnectorColor?: string;
 }
 
 import { DesignFrameItem } from '../../types';
 
 // 모달 타입
-export type ModalType = 'none' | 'phase' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'confirmation' | 'delete';
+export type ModalType = 'none' | 'phase' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'confirmation' | 'delete' | 'connector-color';
 
 export interface AppContextValue {
   // 선택 상태
@@ -275,6 +276,7 @@ const DEFAULT_UI_STATE: UIState = {
   targetMagnet: 'LEFT',
   selectedPhase: 'none',
   selectedNodeType: 'Screen',
+  selectedConnectorColor: '#000000',
 };
 
 // ============================================================

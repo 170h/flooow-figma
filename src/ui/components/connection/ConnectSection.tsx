@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ConnectorTerminalType } from '../../types';
+import { ConnectorTerminalType } from '../../../types';
+import { IcPalette } from '../shared/icons';
 
 // ============================================================
 // Figma UI3 공식 킷 기반 커넥터 터미널 옵션 및 SVG
@@ -62,8 +63,14 @@ const TERMINAL_SVGS_SHORT: Record<'start' | 'end', Record<TerminalOption, string
 const LINE_COLOR_OPTIONS = [
   { value: '#000000', label: '#000000' },
   { value: '#EA2039', label: '#EA2039' },
-  { value: '#8638E5', label: '#8638E5' },
+  { value: '#EB5757', label: '#EB5757' },
+  { value: '#FF7300', label: '#FF7300' },
+  { value: '#F2C94C', label: '#F2C94C' },
+  { value: '#27AE60', label: '#27AE60' },
   { value: '#5F92F3', label: '#5F92F3' },
+  { value: '#8638E5', label: '#8638E5' },
+  { value: '#777777', label: '#777777' },
+  { value: '#FFFFFF', label: '#FFFFFF' },
 ];
 
 // 피그마 UI3 표준 체크마크 SVG
@@ -93,8 +100,27 @@ const CHEVRON_SVG = (
  * - 드롭다운 버튼: -short가 빠진 기본(52x16) 아이콘 사용
  */
 export function ConnectSection() {
-  const { uiState, setUIState, applyCurrentConnectorState, selectedNodes } = useApp();
-  const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiState;
+  const {
+    uiState,
+    setUIState,
+    setActiveModal,
+    applyCurrentConnectorState,
+    selectedNodes,
+    stylePresets,
+    selectedStylePresetId,
+    setSelectedStylePresetId,
+  } = useApp();
+  const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
+
+  // 현재 활성화된 스타일 프리셋 탐색 (배경색 및 보더 동기화용)
+  const activeStylePreset = stylePresets.find((p) => {
+    if (selectedStylePresetId && p.id === selectedStylePresetId) return true;
+    const matchFill = p.fillColor.toLowerCase() === (uiState.selectedColor || '').toLowerCase();
+    const matchStroke = uiState.selectedStrokeWeight !== undefined
+      ? p.strokeWeight === uiState.selectedStrokeWeight
+      : true;
+    return matchFill && matchStroke;
+  }) || stylePresets.find((p) => p.fillColor.toLowerCase() === (uiState.selectedColor || '').toLowerCase());
 
   // 드롭다운 열림 상태
   const [startTermPopupOpen, setStartTermPopupOpen] = useState(false);
@@ -104,7 +130,42 @@ export function ConnectSection() {
   // 드롭다운 선택 값 상태
   const [startTermVal, setStartTermVal] = useState<ConnectorTerminalType>('NONE');
   const [endTermVal, setEndTermVal] = useState<ConnectorTerminalType>('ARROW');
-  const [selectedColor, setSelectedColor] = useState<string>('#000000');
+  const [selectedColor, setSelectedColor] = useState<string>(() => {
+    if (selectedConnectorColor) return selectedConnectorColor.toUpperCase();
+    if (activeStylePreset) {
+      return (activeStylePreset.fillColor.toLowerCase() === '#ffffff' && activeStylePreset.strokeWeight > 0
+        ? activeStylePreset.strokeColor
+        : activeStylePreset.fillColor).toUpperCase();
+    }
+    return '#000000';
+  });
+  const [hexInput, setHexInput] = useState<string>(() => {
+    if (selectedConnectorColor) return selectedConnectorColor.replace('#', '').toUpperCase();
+    if (activeStylePreset) {
+      const c = activeStylePreset.fillColor.toLowerCase() === '#ffffff' && activeStylePreset.strokeWeight > 0
+        ? activeStylePreset.strokeColor
+        : activeStylePreset.fillColor;
+      return c.replace('#', '').toUpperCase();
+    }
+    return '000000';
+  });
+
+  const hexInputRef = useRef<HTMLInputElement>(null);
+  const nativeColorInputRef = useRef<HTMLInputElement>(null);
+
+  // 스타일 섹션의 컬러 및 프리셋 변경 시 커넥터 컬러 동기화
+  useEffect(() => {
+    if (activeStylePreset) {
+      const connectorColor = activeStylePreset.fillColor.toLowerCase() === '#ffffff' && activeStylePreset.strokeWeight > 0
+        ? activeStylePreset.strokeColor
+        : activeStylePreset.fillColor;
+      const formatted = connectorColor.toUpperCase();
+      setSelectedColor(formatted);
+      setHexInput(formatted.replace('#', ''));
+      const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+      if (colSel) colSel.value = formatted;
+    }
+  }, [uiState.selectedColor, uiState.selectedStrokeWeight, uiState.selectedStrokeColor, selectedStylePresetId]);
 
   // 외부 클릭 시 모든 커넥션 드롭다운 닫기
   useEffect(() => {
@@ -160,12 +221,26 @@ export function ConnectSection() {
         if (sel) sel.value = node.connectorEndTerminal;
       }
       if (node.connectorColorHex) {
-        setSelectedColor(node.connectorColorHex);
-        const colSel = document.getElementById('conn-line-color') as HTMLSelectElement | null;
-        if (colSel) colSel.value = node.connectorColorHex;
+        const hex = node.connectorColorHex.toUpperCase();
+        setSelectedColor(hex);
+        setHexInput(hex.replace('#', ''));
+        const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+        if (colSel) colSel.value = hex;
       }
     }
   }, [selectedNodes]);
+
+  // AppContext의 selectedConnectorColor가 변경되면(모달에서 Save 등) 동기화
+  useEffect(() => {
+    if (selectedConnectorColor) {
+      const formatted = selectedConnectorColor.toUpperCase();
+      setSelectedColor(formatted);
+      setHexInput(formatted.replace('#', ''));
+      const selectEl = document.getElementById('conn-line-color') as HTMLInputElement | null;
+      if (selectEl) selectEl.value = formatted;
+      setTimeout(() => applyCurrentConnectorState(), 0);
+    }
+  }, [selectedConnectorColor]);
 
   function selectLinePattern(pattern: string, el: HTMLElement | null = null) {
     setUIState({ selectedLinePattern: pattern });
@@ -208,11 +283,63 @@ export function ConnectSection() {
     if (value !== 'MIXED') setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
+  function handleHexChange(e: React.ChangeEvent<HTMLInputElement>) {
+    let val = e.target.value.replace('#', '').toUpperCase().replace(/[^0-9A-F]/g, '');
+    if (val.length > 6) val = val.slice(0, 6);
+    setHexInput(val);
+
+    if (val.length === 6) {
+      const fullHex = `#${val}`;
+      setSelectedColor(fullHex);
+      const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+      if (colSel) colSel.value = fullHex;
+      setTimeout(() => applyCurrentConnectorState(), 0);
+    }
+  }
+
+  function handleHexBlur() {
+    let clean = hexInput.replace('#', '').trim();
+    if (clean.length === 3) {
+      clean = clean.split('').map((c) => c + c).join('').toUpperCase();
+    }
+    if (clean.length === 6 && /^[0-9A-F]{6}$/i.test(clean)) {
+      const fullHex = `#${clean.toUpperCase()}`;
+      setSelectedColor(fullHex);
+      setHexInput(clean.toUpperCase());
+      const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+      if (colSel) colSel.value = fullHex;
+      setTimeout(() => applyCurrentConnectorState(), 0);
+    } else {
+      setHexInput(selectedColor.replace('#', '').toUpperCase());
+    }
+  }
+
   function selectColor(colorHex: string) {
-    setSelectedColor(colorHex);
+    const formatted = colorHex.toUpperCase();
+    setSelectedColor(formatted);
+    setHexInput(formatted.replace('#', ''));
     setColorDropdownOpen(false);
-    const selectEl = document.getElementById('conn-line-color') as HTMLSelectElement | null;
-    if (selectEl) selectEl.value = colorHex;
+    setUIState({ selectedConnectorColor: formatted });
+
+    // 일치하는 스타일 프리셋이 있다면 스타일 프리셋도 동기화
+    const matchedPreset = stylePresets.find(
+      (p) =>
+        p.fillColor.toUpperCase() === formatted ||
+        (p.strokeWeight > 0 && p.strokeColor.toUpperCase() === formatted)
+    );
+    if (matchedPreset) {
+      setSelectedStylePresetId(matchedPreset.id);
+      setUIState({
+        selectedColor: matchedPreset.fillColor,
+        selectedStrokeWeight: matchedPreset.strokeWeight,
+        selectedStrokeColor: matchedPreset.strokeColor,
+        selectedStylePresetId: matchedPreset.id,
+        selectedConnectorColor: formatted,
+      });
+    }
+
+    const selectEl = document.getElementById('conn-line-color') as HTMLInputElement | null;
+    if (selectEl) selectEl.value = formatted;
     setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
@@ -257,67 +384,91 @@ export function ConnectSection() {
         <span className="section-title">Connect</span>
       </div>
       <div className="section-body">
-        {/* 색상 + 선 패턴 */}
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {/* 표준 피그마 컬러 드롭다운 */}
-          <div className="figma-dropdown-wrapper" id="wrap-conn-color" style={{ width: '110px', flexShrink: 0 }}>
-            <button
-              type="button"
-              id="btn-conn-line-color"
-              className={`figma-dropdown-btn${colorDropdownOpen ? ' active' : ''}`}
-              title="Line color"
-              onClick={(e) => {
-                e.stopPropagation();
-                setColorDropdownOpen(!colorDropdownOpen);
-                setStartTermPopupOpen(false);
-                setEndTermPopupOpen(false);
-              }}
+        {/* 색상 + 선 패턴 (Figma UI3 1027385:6998) */}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          {/* 표준 피그마 컬러 컨트롤 (입력 필드 + 컬러 아이콘 + 드롭다운) */}
+          <div className="conn-color-input-wrapper" id="wrap-conn-color">
+            <div
+              className={`conn-color-input-box${colorDropdownOpen ? ' active' : ''}`}
+              onClick={() => hexInputRef.current?.focus()}
             >
-              <div className="figma-dropdown-btn-content">
-                <span
-                  style={{
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '3px',
-                    backgroundColor: selectedColor,
-                    border: '1px solid rgba(0, 0, 0, 0.15)',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                    marginLeft: '4px',
-                    marginRight: '2px',
-                  }}
-                />
-                <span className="figma-dropdown-current-text" style={{ fontSize: '11px', fontWeight: 500 }}>
-                  {selectedColor}
-                </span>
-              </div>
+              {/* 컬러 칩 (스타일 컬러칩과 동일한 배경/보더 설정값 동기화 반영) */}
               <span
+                className="conn-color-chip"
                 style={{
-                  transform: colorDropdownOpen ? 'rotate(180deg)' : 'none',
-                  transition: 'transform 0.15s ease',
-                  display: 'flex',
-                  alignItems: 'center',
+                  backgroundColor: activeStylePreset ? activeStylePreset.fillColor : selectedColor,
+                  border: activeStylePreset && activeStylePreset.strokeWeight > 0
+                    ? `${activeStylePreset.strokeWeight}px solid ${activeStylePreset.strokeColor}`
+                    : '1px solid rgba(255, 255, 255, 0.15)',
+                  boxSizing: 'border-box',
+                }}
+                title="색상 선택 메뉴 열기"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setColorDropdownOpen(!colorDropdownOpen);
+                  setStartTermPopupOpen(false);
+                  setEndTermPopupOpen(false);
+                }}
+              />
+
+              {/* Hex 입력 필드 (예: EA2039) */}
+              <input
+                ref={hexInputRef}
+                type="text"
+                id="input-conn-color-hex"
+                className="conn-color-hex-input"
+                value={hexInput}
+                maxLength={7}
+                placeholder="000000"
+                onChange={handleHexChange}
+                onFocus={(e) => e.currentTarget.select()}
+                onBlur={handleHexBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                  }
+                }}
+                spellCheck={false}
+                autoComplete="off"
+              />
+
+              {/* 네이티브 컬러 피커 (숨김) */}
+              <input
+                ref={nativeColorInputRef}
+                type="color"
+                style={{ display: 'none' }}
+                value={selectedColor.length === 7 ? selectedColor : '#000000'}
+                onChange={(e) => selectColor(e.target.value)}
+              />
+
+              {/* 피그마 UI3 컬러 팔레트 아이콘 버튼 (클릭 시 피그마 공식 원형 컬러 휠 모달 열기) */}
+              <button
+                type="button"
+                id="btn-conn-color-palette"
+                className="conn-color-palette-btn"
+                title="Color wheel modal"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setColorDropdownOpen(false);
+                  setStartTermPopupOpen(false);
+                  setEndTermPopupOpen(false);
+                  setUIState({ selectedConnectorColor: selectedColor });
+                  setActiveModal('connector-color');
                 }}
               >
-                {CHEVRON_SVG}
-              </span>
-            </button>
+                <IcPalette />
+              </button>
+            </div>
 
-            {/* 외부 스크립트 호환용 숨겨진 select */}
-            <select
+            {/* 외부 스크립트 및 AppContext.applyCurrentConnectorState 호환용 숨겨진 input */}
+            <input
+              type="hidden"
               id="conn-line-color"
-              style={{ display: 'none' }}
               value={selectedColor}
-              onChange={(e) => selectColor(e.target.value)}
-            >
-              {LINE_COLOR_OPTIONS.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.value}
-                </option>
-              ))}
-            </select>
+              onChange={() => {}}
+            />
 
-            {/* 표준 피그마 드롭다운 메뉴 */}
+            {/* 피그마 UI3 표준 컬러 드롭다운 메뉴 */}
             {colorDropdownOpen && (
               <div
                 className="figma-dropdown-menu active"
@@ -327,13 +478,47 @@ export function ConnectSection() {
                   top: 'calc(100% + 4px)',
                   left: 0,
                   right: 'auto',
-                  width: '130px',
+                  width: '140px',
+                  maxHeight: '260px',
+                  overflowY: 'auto',
                   padding: '6px',
                   zIndex: 1050,
                 }}
               >
+                {/* 만약 selectedColor가 프리셋 목록에 없는 커스텀 컬러라면 맨 위에 표시 */}
+                {!LINE_COLOR_OPTIONS.some((c) => c.value.toUpperCase() === selectedColor.toUpperCase()) && (
+                  <div
+                    className="figma-dropdown-item selected"
+                    style={{ width: '100%' }}
+                    onClick={() => selectColor(selectedColor)}
+                  >
+                    <span className="figma-dropdown-check-slot" style={{ width: '18px' }}>
+                      {CHECK_SVG}
+                    </span>
+                    <span
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '3px',
+                        backgroundColor: selectedColor,
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        display: 'inline-block',
+                        marginRight: '6px',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span className="figma-dropdown-label">{selectedColor}</span>
+                  </div>
+                )}
+
                 {LINE_COLOR_OPTIONS.map((c) => {
                   const isSelected = selectedColor.toUpperCase() === c.value.toUpperCase();
+                  const matchedPreset = stylePresets.find(
+                    (p) =>
+                      p.fillColor.toUpperCase() === c.value.toUpperCase() ||
+                      (p.strokeWeight > 0 && p.strokeColor.toUpperCase() === c.value.toUpperCase())
+                  );
+                  const hasBorder = matchedPreset && matchedPreset.strokeWeight > 0;
                   return (
                     <div
                       key={c.value}
@@ -350,16 +535,52 @@ export function ConnectSection() {
                           height: '12px',
                           borderRadius: '3px',
                           backgroundColor: c.value,
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          border: hasBorder
+                            ? `${matchedPreset.strokeWeight}px solid ${matchedPreset.strokeColor}`
+                            : '1px solid rgba(255, 255, 255, 0.2)',
                           display: 'inline-block',
                           marginRight: '6px',
                           flexShrink: 0,
+                          boxSizing: 'border-box',
                         }}
                       />
                       <span className="figma-dropdown-label">{c.label}</span>
                     </div>
                   );
                 })}
+
+                {/* 피그마 UI3 원형 컬러 휠 모달 열기 옵션 */}
+                <div
+                  className="figma-dropdown-item"
+                  style={{
+                    width: '100%',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                    marginTop: '4px',
+                    paddingTop: '6px',
+                  }}
+                  onClick={() => {
+                    setColorDropdownOpen(false);
+                    setUIState({ selectedConnectorColor: selectedColor });
+                    setActiveModal('connector-color');
+                  }}
+                >
+                  <span className="figma-dropdown-check-slot" style={{ width: '18px' }} />
+                  <span
+                    style={{
+                      width: '14px',
+                      height: '14px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: '6px',
+                    }}
+                  >
+                    <IcPalette />
+                  </span>
+                  <span className="figma-dropdown-label" style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.85)' }}>
+                    Color Wheel...
+                  </span>
+                </div>
               </div>
             )}
           </div>

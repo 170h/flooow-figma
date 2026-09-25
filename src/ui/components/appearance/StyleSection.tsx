@@ -48,11 +48,15 @@ export function StyleSection() {
 
   function selectStylePreset(preset: StylePreset) {
     setSelectedStylePresetId(preset.id);
+    const connectorColor = preset.fillColor.toLowerCase() === '#ffffff' && preset.strokeWeight > 0
+      ? preset.strokeColor
+      : preset.fillColor;
     setUIState({
       selectedColor: preset.fillColor,
       selectedStrokeWeight: preset.strokeWeight,
       selectedStrokeColor: preset.strokeColor,
       selectedStylePresetId: preset.id,
+      selectedConnectorColor: connectorColor,
     });
     setLastNodeConfig({
       color: preset.fillColor,

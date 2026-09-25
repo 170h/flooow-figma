@@ -13,6 +13,7 @@ import { PhaseModal, PhaseData } from './components/modals/PhaseModal';
 import { SizeModal } from './components/modals/SizeModal';
 import { FigmaDesignPickerModal } from './components/modals/FigmaDesignPickerModal';
 import { StyleModal } from './components/modals/StyleModal';
+import { ConnectorColorModal } from './components/modals/ConnectorColorModal';
 
 // ============================================================
 // 탭 버튼 목록
@@ -65,6 +66,8 @@ export function App() {
     setLastNodeConfig,
     showToast,
     autoResizeWindow,
+    stylePresets,
+    setSelectedStylePresetId,
   } = useApp();
 
   // Phase 관리 (로컬 상태)
@@ -345,6 +348,46 @@ export function App() {
       {activeModal === 'add-style' && (
         <StyleModal
           initialColor={uiState.selectedColor}
+          onClose={() => setActiveModal('none')}
+        />
+      )}
+      {activeModal === 'connector-color' && (
+        <ConnectorColorModal
+          initialColor={uiState.selectedConnectorColor || '#000000'}
+          onSave={(colorHex) => {
+            const formatted = colorHex.toUpperCase();
+            setUIState({ selectedConnectorColor: formatted });
+
+            // 스타일 프리셋과 동기화
+            const matched = stylePresets.find(
+              (p) =>
+                p.fillColor.toUpperCase() === formatted ||
+                (p.strokeWeight > 0 && p.strokeColor.toUpperCase() === formatted)
+            );
+            if (matched) {
+              setSelectedStylePresetId(matched.id);
+              setUIState({
+                selectedColor: matched.fillColor,
+                selectedStrokeWeight: matched.strokeWeight,
+                selectedStrokeColor: matched.strokeColor,
+                selectedStylePresetId: matched.id,
+                selectedConnectorColor: formatted,
+              });
+            }
+
+            // 선택된 커넥터가 있는 경우 바로 색상 변경 메시지 전송
+            if (isConnSel && selectedNodes.length > 0) {
+              parent.postMessage(
+                {
+                  pluginMessage: {
+                    type: 'UPDATE_CONNECTOR_STYLE',
+                    connectorColor: formatted,
+                  },
+                },
+                '*'
+              );
+            }
+          }}
           onClose={() => setActiveModal('none')}
         />
       )}

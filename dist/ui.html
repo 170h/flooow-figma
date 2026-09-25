@@ -23,6 +23,12 @@
       --color-brand-cta-hover: #8636ee;
       --color-brand-subtle: rgba(134, 56, 229, 0.12);
 
+      /* 피그잼 공식 프라이머리 및 셀렉트 토큰 (FigJam Purple #8C4CF6) */
+      --color-primary: #8C4CF6;
+      --color-primary-hover: #7B3CE3;
+      --color-primary-subtle: rgba(140, 76, 246, 0.15);
+      --color-border-selected: var(--color-primary);
+
       /* 텍스트 색상 */
       --color-text-primary: #000000;
       --color-text-secondary: rgba(0, 0, 0, 0.6);
@@ -37,6 +43,8 @@
       --color-border-strong: var(--figma-color-border-strong, rgba(0, 0, 0, 0.16));
       --color-border-focus: var(--figma-color-border-brand, #8638e5);
       --color-border-dark: rgba(255, 255, 255, 0.12);
+      /* 피그마 UI3 공식 컬러칩 투명 보더 토큰 (Figma 노드 2327:86762 Light) */
+      --color-chip-border: rgba(0, 0, 0, 0.1);
 
       /* 고도 및 그림자 */
       --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -63,7 +71,18 @@
         --color-text-secondary: rgba(255, 255, 255, 0.65);
         --color-text-tertiary: rgba(255, 255, 255, 0.4);
         --color-border: rgba(255, 255, 255, 0.12);
+        /* 피그마 UI3 공식 컬러칩 투명 보더 토큰 (Figma 노드 2327:86775 Dark) */
+        --color-chip-border: rgba(255, 255, 255, 0.1);
       }
+    }
+
+    body.figma-dark,
+    .figma-dark,
+    [data-theme="dark"],
+    .size-modal-card,
+    .style-modal-card,
+    .conn-color-modal-card {
+      --color-chip-border: rgba(255, 255, 255, 0.1);
     }
 
     /* ============================================================ */
@@ -1467,6 +1486,100 @@
       top: calc(50% - 4.5px);
     }
 
+    /* ============================================================ */
+    /* Connect 색상 입력 컨트롤 (Figma UI3 1027385:6998)           */
+    /* ============================================================ */
+    .conn-color-input-wrapper {
+      position: relative;
+      width: 110px;
+      flex-shrink: 0;
+    }
+
+    .conn-color-input-box {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 28px;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 2px 0 6px;
+      gap: 4px;
+      box-sizing: border-box;
+      color: var(--color-text-primary);
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .conn-color-input-box:hover {
+      border-color: var(--color-border);
+    }
+
+    .conn-color-input-box:focus-within,
+    .conn-color-input-box.active {
+      background-color: var(--color-bg);
+      border-color: var(--color-brand);
+    }
+
+    .conn-color-chip {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: none;
+      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(0, 0, 0, 0.1));
+      flex-shrink: 0;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: transform 0.12s ease;
+    }
+
+    .conn-color-chip:hover {
+      transform: scale(1.1);
+    }
+
+    .conn-color-hex-input {
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      text-transform: uppercase;
+      padding: 0;
+      margin: 0;
+      letter-spacing: 0 !important;
+    }
+
+    .conn-color-palette-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .conn-color-palette-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .conn-color-palette-btn:hover,
+    .conn-color-palette-btn.active {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-hover);
+    }
+
     .line-style-segment {
       display: flex;
       background: var(--color-bg-secondary);
@@ -2398,7 +2511,8 @@
       height: 14px;
       border-radius: 2px;
       background: #EA2039;
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      border: none;
+      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.1));
       flex-shrink: 0;
       box-sizing: border-box;
     }
@@ -2561,10 +2675,16 @@
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
+      transition: background-color 0.15s ease, opacity 0.15s ease;
     }
 
-    .btn-phase-modal-save:hover {
+    .btn-phase-modal-save:hover:not(:disabled) {
       background: #7A39E3;
+    }
+
+    .btn-phase-modal-save:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
 
     .btn-phase-modal-delete {
@@ -2813,7 +2933,8 @@
       height: 16px;
       border-radius: 3px;
       background: #EA2039;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: none;
+      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.1));
       flex-shrink: 0;
       box-sizing: border-box;
     }
@@ -2845,18 +2966,18 @@
     }
 
     .stroke-width-box {
-      width: 60px;
+      width: 56px;
       height: 28px;
-      background: #383838;
+      background: #2c2c2c;
       border: 1px solid transparent;
-      border-radius: 5px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 0 8px;
+      gap: 0;
+      padding: 0 6px 0 0;
       box-sizing: border-box;
       flex-shrink: 0;
-      transition: border-color 0.15s ease;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
     }
 
     .stroke-width-box:hover {
@@ -2864,7 +2985,8 @@
     }
 
     .stroke-width-box:focus-within {
-      border-color: #8C4CF6;
+      background-color: #222222;
+      border-color: var(--color-border-selected, #8C4CF6);
     }
 
     .style-divider {
@@ -3006,6 +3128,352 @@
 
     .picker-search-box:focus-within {
       border-color: #8C4CF6;
+    }
+
+    /* ============================================================ */
+    /* Connector Color 모달 (Figma UI3 1027394:7443 공식 디자인)    */
+    /* ============================================================ */
+    .conn-color-modal-card {
+      width: 200px;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-sizing: border-box;
+      user-select: none;
+      animation: modalFadeIn 0.15s ease-out;
+    }
+
+    .conn-color-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 24px;
+    }
+
+    .conn-color-modal-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0 !important;
+    }
+
+    .conn-color-modal-divider {
+      height: 1px;
+      background-color: #383838;
+      margin: 0 -12px;
+    }
+
+    .conn-color-presets-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 2px 0;
+    }
+
+    .conn-color-presets-row {
+      display: flex;
+      gap: 7px;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    .conn-preset-card {
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.15s ease;
+      outline: none;
+      position: relative;
+    }
+
+    /* 흰색 계열 칩은 배경 구분을 위한 미세 내부 경계선 */
+    .conn-preset-card[data-color="#ffffff"] {
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 선택되지 않은 칩 호버 시: 상하좌우 1px씩만 섬세하게 확대 (28px -> 30px: scale 1.071) */
+    .conn-preset-card:hover:not(.selected) {
+      transform: scale(1.071);
+      z-index: 4;
+    }
+    .conn-preset-card[data-color="#ffffff"]:hover:not(.selected) {
+      transform: scale(1.071);
+      z-index: 4;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 선택 시: 외곽 2px 프라이머리 보더 적용 (style 컬러 스와치와 동일한 방식) */
+    .conn-preset-card.selected {
+      box-shadow: 0 0 0 2px var(--color-primary, #8C4CF6);
+      z-index: 2;
+      transform: none;
+    }
+    .conn-preset-card[data-color="#ffffff"].selected {
+      box-shadow: 0 0 0 2px var(--color-primary, #8C4CF6);
+      z-index: 2;
+      transform: none;
+    }
+
+    /* 선택된 칩은 호버되어도 애니메이션 없이 2px 보더 유지 */
+    .conn-preset-card.selected:hover {
+      transform: none !important;
+      box-shadow: 0 0 0 2px var(--color-primary, #8C4CF6);
+      z-index: 2;
+    }
+    .conn-preset-card[data-color="#ffffff"].selected:hover {
+      transform: none !important;
+      box-shadow: 0 0 0 2px var(--color-primary, #8C4CF6);
+      z-index: 2;
+    }
+
+    .conn-color-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .conn-modal-hex-box {
+      flex: 1 1 auto;
+      min-width: 0;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      background-color: #2c2c2c;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 0 8px;
+      gap: 6px;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .conn-modal-hex-box:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .conn-modal-hex-box:focus-within {
+      background-color: #222222;
+      border-color: var(--color-border-selected, #0d99ff);
+    }
+
+    .conn-modal-hex-chip {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.1));
+      box-sizing: border-box;
+    }
+
+    .conn-modal-hex-input {
+      flex: 1 1 auto;
+      width: 100%;
+      min-width: 0;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0 !important;
+      text-transform: uppercase;
+      padding: 0;
+    }
+
+    /* 사용자 첨부 이미지 완벽 일치: 모달 Hex 입력필드 우측 도넛 무지개 컬러 휠 토글 버튼 */
+    .conn-modal-wheel-donut-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      flex-shrink: 0;
+      outline: none;
+      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .conn-modal-wheel-donut-btn:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 토글이 켜진(셀렉트) 상태: 프라이머리 컬러(#8C4CF6) 보더 표시 */
+    .conn-modal-wheel-donut-btn.selected,
+    .conn-modal-wheel-donut-btn:active,
+    .conn-modal-wheel-donut-btn:focus-visible {
+      background-color: var(--color-primary-subtle, rgba(140, 76, 246, 0.15));
+      border-color: var(--color-border-selected, #8C4CF6);
+    }
+
+    .conn-modal-wheel-donut-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        #EA2039 0%,
+        #FF6D00 15%,
+        #FFD600 30%,
+        #00E676 45%,
+        #00B0FF 60%,
+        #2979FF 75%,
+        #8638E5 90%,
+        #EA2039 100%
+      );
+      display: inline-block;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      pointer-events: none;
+      -webkit-mask: radial-gradient(circle at center, transparent 4px, #000 4.5px);
+      mask: radial-gradient(circle at center, transparent 4px, #000 4.5px);
+    }
+
+    .conn-color-wheel-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px 0 2px;
+    }
+
+    .conn-color-wheel-ring {
+      position: relative;
+      width: 168px;
+      height: 168px;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        #ff0000 0%,
+        #ffff00 16.66%,
+        #00ff00 33.33%,
+        #00ffff 50%,
+        #0000ff 66.66%,
+        #ff00ff 83.33%,
+        #ff0000 100%
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: crosshair;
+      user-select: none;
+    }
+
+    .conn-color-wheel-gap {
+      position: absolute;
+      width: 128px;
+      height: 128px;
+      border-radius: 50%;
+      background-color: #1e1e1e;
+      pointer-events: none;
+    }
+
+    .conn-color-inner-disc {
+      position: relative;
+      width: 108px;
+      height: 108px;
+      border-radius: 50%;
+      cursor: crosshair;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+    }
+
+    .conn-disc-tint-layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: linear-gradient(to right, #ffffff, rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+
+    .conn-disc-shade-layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000);
+      pointer-events: none;
+    }
+
+    .conn-disc-handle {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.8), inset 0 0 1px rgba(0, 0, 0, 0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+      z-index: 5;
+    }
+
+    .conn-wheel-hue-knob {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    .conn-color-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .conn-btn-cancel {
+      height: 28px;
+      padding: 0 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: transparent;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0 !important;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .conn-btn-cancel:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+
+    .conn-btn-save {
+      height: 28px;
+      padding: 0 14px;
+      border-radius: 6px;
+      border: none;
+      background: var(--color-primary, #0d99ff);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0 !important;
+      cursor: pointer;
+      transition: background-color 0.15s ease, opacity 0.15s ease;
+    }
+
+    .conn-btn-save:hover {
+      background: var(--color-primary-hover, #008ae6);
     }
   </style>
 </head>
@@ -4099,7 +4567,7 @@
             }
             return dispatcher.useContext(Context);
           }
-          function useState14(initialState) {
+          function useState16(initialState) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useState(initialState);
           }
@@ -4107,11 +4575,11 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useReducer(reducer, initialArg, init);
           }
-          function useRef13(initialValue) {
+          function useRef14(initialValue) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useRef(initialValue);
           }
-          function useEffect13(create, deps) {
+          function useEffect14(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useEffect(create, deps);
           }
@@ -4894,15 +5362,15 @@
           exports.useContext = useContext2;
           exports.useDebugValue = useDebugValue;
           exports.useDeferredValue = useDeferredValue;
-          exports.useEffect = useEffect13;
+          exports.useEffect = useEffect14;
           exports.useId = useId;
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
           exports.useLayoutEffect = useLayoutEffect;
           exports.useMemo = useMemo2;
           exports.useReducer = useReducer;
-          exports.useRef = useRef13;
-          exports.useState = useState14;
+          exports.useRef = useRef14;
+          exports.useState = useState16;
           exports.useSyncExternalStore = useSyncExternalStore;
           exports.useTransition = useTransition;
           exports.version = ReactVersion;
@@ -5398,9 +5866,9 @@
           if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function") {
             __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
           }
-          var React18 = require_react();
+          var React20 = require_react();
           var Scheduler = require_scheduler();
-          var ReactSharedInternals = React18.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React20.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           var suppressWarning = false;
           function setSuppressWarning(newSuppressWarning) {
             {
@@ -7007,7 +7475,7 @@
             {
               if (props.value == null) {
                 if (typeof props.children === "object" && props.children !== null) {
-                  React18.Children.forEach(props.children, function(child) {
+                  React20.Children.forEach(props.children, function(child) {
                     if (child == null) {
                       return;
                     }
@@ -26603,7 +27071,7 @@
       if (true) {
         (function() {
           "use strict";
-          var React18 = require_react();
+          var React20 = require_react();
           var REACT_ELEMENT_TYPE = Symbol.for("react.element");
           var REACT_PORTAL_TYPE = Symbol.for("react.portal");
           var REACT_FRAGMENT_TYPE = Symbol.for("react.fragment");
@@ -26629,7 +27097,7 @@
             }
             return null;
           }
-          var ReactSharedInternals = React18.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React20.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           function error(format) {
             {
               {
@@ -27479,11 +27947,11 @@
               return jsxWithValidation(type, props, key, false);
             }
           }
-          var jsx26 = jsxWithValidationDynamic;
-          var jsxs23 = jsxWithValidationStatic;
+          var jsx28 = jsxWithValidationDynamic;
+          var jsxs25 = jsxWithValidationStatic;
           exports.Fragment = REACT_FRAGMENT_TYPE;
-          exports.jsx = jsx26;
-          exports.jsxs = jsxs23;
+          exports.jsx = jsx28;
+          exports.jsxs = jsxs25;
         })();
       }
     }
@@ -27564,7 +28032,8 @@
     sourceMagnet: "RIGHT",
     targetMagnet: "LEFT",
     selectedPhase: "none",
-    selectedNodeType: "Screen"
+    selectedNodeType: "Screen",
+    selectedConnectorColor: "#000000"
   };
   var AppContext = (0, import_react.createContext)(null);
   function useApp() {
@@ -28142,7 +28611,7 @@
   }
 
   // src/ui/App.tsx
-  var import_react19 = __toESM(require_react());
+  var import_react21 = __toESM(require_react());
 
   // src/ui/hooks/useFigmaMessage.ts
   var import_react2 = __toESM(require_react());
@@ -28477,6 +28946,13 @@
   var import_jsx_runtime4 = __toESM(require_jsx_runtime());
   var IcCopy = () => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M13.5 6C14.3284 6 15 6.67157 15 7.5V9H16.5C17.3284 9 18 9.67157 18 10.5V16.5C18 17.3284 17.3284 18 16.5 18H10.5C9.67157 18 9 17.3284 9 16.5V15H7.5C6.67157 15 6 14.3284 6 13.5V7.5C6 6.67157 6.67157 6 7.5 6H13.5ZM15 13.5C15 14.3284 14.3284 15 13.5 15H10V16.5C10 16.7761 10.2239 17 10.5 17H16.5C16.7761 17 17 16.7761 17 16.5V10.5C17 10.2239 16.7761 10 16.5 10H15V13.5ZM7.5 7C7.22386 7 7 7.22386 7 7.5V13.5C7 13.7761 7.22386 14 7.5 14H13.5C13.7761 14 14 13.7761 14 13.5V7.5C14 7.22386 13.7761 7 13.5 7H7.5Z", fill: "currentColor" }) });
   var IcCheckLarge = () => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M6 12.5L10 16.5L18 8", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }) });
+  var IcPalette = () => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("g", { transform: "translate(4, 4)", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+    "path",
+    {
+      d: "M8 1.5C4.41 1.5 1.5 4.41 1.5 8C1.5 11.59 4.41 14.5 8 14.5C8.69 14.5 9.25 13.94 9.25 13.25C9.25 12.93 9.12 12.64 8.91 12.43C8.7 12.22 8.57 11.93 8.57 11.61C8.57 10.92 9.13 10.36 9.82 10.36H11.25C13.04 10.36 14.5 8.9 14.5 7.11C14.5 4.02 11.59 1.5 8 1.5ZM4.25 8C3.7 8 3.25 7.55 3.25 7C3.25 6.45 3.7 6 4.25 6C4.8 6 5.25 6.45 5.25 7C5.25 7.55 4.8 8 4.25 8ZM6.25 5C5.7 5 5.25 4.55 5.25 4C5.25 3.45 5.7 3 6.25 3C6.8 3 7.25 3.45 7.25 4C7.25 4.55 6.8 5 6.25 5ZM9.75 5C9.2 5 8.75 4.55 8.75 4C8.75 3.45 9.2 3 9.75 3C10.3 3 10.75 3.45 10.75 4C10.75 4.55 10.3 5 9.75 5ZM11.75 8C11.2 8 10.75 7.55 10.75 7C10.75 6.45 11.2 6 11.75 6C12.3 6 12.75 6.45 12.75 7C12.75 7.55 12.3 8 11.75 8Z",
+      fill: "currentColor"
+    }
+  ) }) });
 
   // src/ui/components/node/DescriptionSection.tsx
   var import_jsx_runtime5 = __toESM(require_jsx_runtime());
@@ -29093,11 +29569,13 @@
     const isMoreDisabled = !activeStylePreset || Boolean(activeStylePreset.isDefault) || DEFAULT_STYLE_PRESET_IDS.has(activeStylePreset.id);
     function selectStylePreset(preset) {
       setSelectedStylePresetId(preset.id);
+      const connectorColor = preset.fillColor.toLowerCase() === "#ffffff" && preset.strokeWeight > 0 ? preset.strokeColor : preset.fillColor;
       setUIState({
         selectedColor: preset.fillColor,
         selectedStrokeWeight: preset.strokeWeight,
         selectedStrokeColor: preset.strokeColor,
-        selectedStylePresetId: preset.id
+        selectedStylePresetId: preset.id,
+        selectedConnectorColor: connectorColor
       });
       setLastNodeConfig({
         color: preset.fillColor,
@@ -29939,8 +30417,14 @@
   var LINE_COLOR_OPTIONS = [
     { value: "#000000", label: "#000000" },
     { value: "#EA2039", label: "#EA2039" },
+    { value: "#EB5757", label: "#EB5757" },
+    { value: "#FF7300", label: "#FF7300" },
+    { value: "#F2C94C", label: "#F2C94C" },
+    { value: "#27AE60", label: "#27AE60" },
+    { value: "#5F92F3", label: "#5F92F3" },
     { value: "#8638E5", label: "#8638E5" },
-    { value: "#5F92F3", label: "#5F92F3" }
+    { value: "#777777", label: "#777777" },
+    { value: "#FFFFFF", label: "#FFFFFF" }
   ];
   var CHECK_SVG = /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
     "path",
@@ -29957,14 +30441,55 @@
     }
   ) });
   function ConnectSection() {
-    const { uiState, setUIState, applyCurrentConnectorState, selectedNodes } = useApp();
-    const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiState;
+    const {
+      uiState,
+      setUIState,
+      setActiveModal,
+      applyCurrentConnectorState,
+      selectedNodes,
+      stylePresets,
+      selectedStylePresetId,
+      setSelectedStylePresetId
+    } = useApp();
+    const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
+    const activeStylePreset = stylePresets.find((p) => {
+      if (selectedStylePresetId && p.id === selectedStylePresetId) return true;
+      const matchFill = p.fillColor.toLowerCase() === (uiState.selectedColor || "").toLowerCase();
+      const matchStroke = uiState.selectedStrokeWeight !== void 0 ? p.strokeWeight === uiState.selectedStrokeWeight : true;
+      return matchFill && matchStroke;
+    }) || stylePresets.find((p) => p.fillColor.toLowerCase() === (uiState.selectedColor || "").toLowerCase());
     const [startTermPopupOpen, setStartTermPopupOpen] = (0, import_react11.useState)(false);
     const [endTermPopupOpen, setEndTermPopupOpen] = (0, import_react11.useState)(false);
     const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react11.useState)(false);
     const [startTermVal, setStartTermVal] = (0, import_react11.useState)("NONE");
     const [endTermVal, setEndTermVal] = (0, import_react11.useState)("ARROW");
-    const [selectedColor, setSelectedColor] = (0, import_react11.useState)("#000000");
+    const [selectedColor, setSelectedColor] = (0, import_react11.useState)(() => {
+      if (selectedConnectorColor) return selectedConnectorColor.toUpperCase();
+      if (activeStylePreset) {
+        return (activeStylePreset.fillColor.toLowerCase() === "#ffffff" && activeStylePreset.strokeWeight > 0 ? activeStylePreset.strokeColor : activeStylePreset.fillColor).toUpperCase();
+      }
+      return "#000000";
+    });
+    const [hexInput, setHexInput] = (0, import_react11.useState)(() => {
+      if (selectedConnectorColor) return selectedConnectorColor.replace("#", "").toUpperCase();
+      if (activeStylePreset) {
+        const c = activeStylePreset.fillColor.toLowerCase() === "#ffffff" && activeStylePreset.strokeWeight > 0 ? activeStylePreset.strokeColor : activeStylePreset.fillColor;
+        return c.replace("#", "").toUpperCase();
+      }
+      return "000000";
+    });
+    const hexInputRef = (0, import_react11.useRef)(null);
+    const nativeColorInputRef = (0, import_react11.useRef)(null);
+    (0, import_react11.useEffect)(() => {
+      if (activeStylePreset) {
+        const connectorColor = activeStylePreset.fillColor.toLowerCase() === "#ffffff" && activeStylePreset.strokeWeight > 0 ? activeStylePreset.strokeColor : activeStylePreset.fillColor;
+        const formatted = connectorColor.toUpperCase();
+        setSelectedColor(formatted);
+        setHexInput(formatted.replace("#", ""));
+        const colSel = document.getElementById("conn-line-color");
+        if (colSel) colSel.value = formatted;
+      }
+    }, [uiState.selectedColor, uiState.selectedStrokeWeight, uiState.selectedStrokeColor, selectedStylePresetId]);
     (0, import_react11.useEffect)(() => {
       function handleDocClick(e) {
         const target = e.target;
@@ -30015,12 +30540,24 @@
           if (sel) sel.value = node.connectorEndTerminal;
         }
         if (node.connectorColorHex) {
-          setSelectedColor(node.connectorColorHex);
+          const hex = node.connectorColorHex.toUpperCase();
+          setSelectedColor(hex);
+          setHexInput(hex.replace("#", ""));
           const colSel = document.getElementById("conn-line-color");
-          if (colSel) colSel.value = node.connectorColorHex;
+          if (colSel) colSel.value = hex;
         }
       }
     }, [selectedNodes]);
+    (0, import_react11.useEffect)(() => {
+      if (selectedConnectorColor) {
+        const formatted = selectedConnectorColor.toUpperCase();
+        setSelectedColor(formatted);
+        setHexInput(formatted.replace("#", ""));
+        const selectEl = document.getElementById("conn-line-color");
+        if (selectEl) selectEl.value = formatted;
+        setTimeout(() => applyCurrentConnectorState(), 0);
+      }
+    }, [selectedConnectorColor]);
     function selectLinePattern(pattern, el = null) {
       setUIState({ selectedLinePattern: pattern });
       document.querySelectorAll(".line-style-btn").forEach((b) => b.classList.remove("active"));
@@ -30057,11 +30594,55 @@
       }
       if (value !== "MIXED") setTimeout(() => applyCurrentConnectorState(), 0);
     }
+    function handleHexChange(e) {
+      let val = e.target.value.replace("#", "").toUpperCase().replace(/[^0-9A-F]/g, "");
+      if (val.length > 6) val = val.slice(0, 6);
+      setHexInput(val);
+      if (val.length === 6) {
+        const fullHex = `#${val}`;
+        setSelectedColor(fullHex);
+        const colSel = document.getElementById("conn-line-color");
+        if (colSel) colSel.value = fullHex;
+        setTimeout(() => applyCurrentConnectorState(), 0);
+      }
+    }
+    function handleHexBlur() {
+      let clean = hexInput.replace("#", "").trim();
+      if (clean.length === 3) {
+        clean = clean.split("").map((c) => c + c).join("").toUpperCase();
+      }
+      if (clean.length === 6 && /^[0-9A-F]{6}$/i.test(clean)) {
+        const fullHex = `#${clean.toUpperCase()}`;
+        setSelectedColor(fullHex);
+        setHexInput(clean.toUpperCase());
+        const colSel = document.getElementById("conn-line-color");
+        if (colSel) colSel.value = fullHex;
+        setTimeout(() => applyCurrentConnectorState(), 0);
+      } else {
+        setHexInput(selectedColor.replace("#", "").toUpperCase());
+      }
+    }
     function selectColor(colorHex) {
-      setSelectedColor(colorHex);
+      const formatted = colorHex.toUpperCase();
+      setSelectedColor(formatted);
+      setHexInput(formatted.replace("#", ""));
       setColorDropdownOpen(false);
+      setUIState({ selectedConnectorColor: formatted });
+      const matchedPreset = stylePresets.find(
+        (p) => p.fillColor.toUpperCase() === formatted || p.strokeWeight > 0 && p.strokeColor.toUpperCase() === formatted
+      );
+      if (matchedPreset) {
+        setSelectedStylePresetId(matchedPreset.id);
+        setUIState({
+          selectedColor: matchedPreset.fillColor,
+          selectedStrokeWeight: matchedPreset.strokeWeight,
+          selectedStrokeColor: matchedPreset.strokeColor,
+          selectedStylePresetId: matchedPreset.id,
+          selectedConnectorColor: formatted
+        });
+      }
       const selectEl = document.getElementById("conn-line-color");
-      if (selectEl) selectEl.value = colorHex;
+      if (selectEl) selectEl.value = formatted;
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
     function renderTerminalButtonGraphic(side, val) {
@@ -30099,67 +30680,96 @@
     return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "section-title", children: "Connect" }) }),
       /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "section-body", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { style: { display: "flex", gap: "6px" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "figma-dropdown-wrapper", id: "wrap-conn-color", style: { width: "110px", flexShrink: 0 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { style: { display: "flex", gap: "6px", alignItems: "center" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "conn-color-input-wrapper", id: "wrap-conn-color", children: [
             /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
-              "button",
+              "div",
               {
-                type: "button",
-                id: "btn-conn-line-color",
-                className: `figma-dropdown-btn${colorDropdownOpen ? " active" : ""}`,
-                title: "Line color",
-                onClick: (e) => {
-                  e.stopPropagation();
-                  setColorDropdownOpen(!colorDropdownOpen);
-                  setStartTermPopupOpen(false);
-                  setEndTermPopupOpen(false);
-                },
+                className: `conn-color-input-box${colorDropdownOpen ? " active" : ""}`,
+                onClick: () => hexInputRef.current?.focus(),
                 children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "figma-dropdown-btn-content", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-                      "span",
-                      {
-                        style: {
-                          width: "12px",
-                          height: "12px",
-                          borderRadius: "3px",
-                          backgroundColor: selectedColor,
-                          border: "1px solid rgba(0, 0, 0, 0.15)",
-                          display: "inline-block",
-                          flexShrink: 0,
-                          marginLeft: "4px",
-                          marginRight: "2px"
-                        }
-                      }
-                    ),
-                    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-current-text", style: { fontSize: "11px", fontWeight: 500 }, children: selectedColor })
-                  ] }),
                   /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
                     "span",
                     {
+                      className: "conn-color-chip",
                       style: {
-                        transform: colorDropdownOpen ? "rotate(180deg)" : "none",
-                        transition: "transform 0.15s ease",
-                        display: "flex",
-                        alignItems: "center"
+                        backgroundColor: activeStylePreset ? activeStylePreset.fillColor : selectedColor,
+                        border: activeStylePreset && activeStylePreset.strokeWeight > 0 ? `${activeStylePreset.strokeWeight}px solid ${activeStylePreset.strokeColor}` : "1px solid rgba(255, 255, 255, 0.15)",
+                        boxSizing: "border-box"
                       },
-                      children: CHEVRON_SVG3
+                      title: "\uC0C9\uC0C1 \uC120\uD0DD \uBA54\uB274 \uC5F4\uAE30",
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        setColorDropdownOpen(!colorDropdownOpen);
+                        setStartTermPopupOpen(false);
+                        setEndTermPopupOpen(false);
+                      }
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                    "input",
+                    {
+                      ref: hexInputRef,
+                      type: "text",
+                      id: "input-conn-color-hex",
+                      className: "conn-color-hex-input",
+                      value: hexInput,
+                      maxLength: 7,
+                      placeholder: "000000",
+                      onChange: handleHexChange,
+                      onFocus: (e) => e.currentTarget.select(),
+                      onBlur: handleHexBlur,
+                      onKeyDown: (e) => {
+                        if (e.key === "Enter") {
+                          e.currentTarget.blur();
+                        }
+                      },
+                      spellCheck: false,
+                      autoComplete: "off"
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                    "input",
+                    {
+                      ref: nativeColorInputRef,
+                      type: "color",
+                      style: { display: "none" },
+                      value: selectedColor.length === 7 ? selectedColor : "#000000",
+                      onChange: (e) => selectColor(e.target.value)
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                    "button",
+                    {
+                      type: "button",
+                      id: "btn-conn-color-palette",
+                      className: "conn-color-palette-btn",
+                      title: "Color wheel modal",
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        setColorDropdownOpen(false);
+                        setStartTermPopupOpen(false);
+                        setEndTermPopupOpen(false);
+                        setUIState({ selectedConnectorColor: selectedColor });
+                        setActiveModal("connector-color");
+                      },
+                      children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(IcPalette, {})
                     }
                   )
                 ]
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-              "select",
+              "input",
               {
+                type: "hidden",
                 id: "conn-line-color",
-                style: { display: "none" },
                 value: selectedColor,
-                onChange: (e) => selectColor(e.target.value),
-                children: LINE_COLOR_OPTIONS.map((c) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("option", { value: c.value, children: c.value }, c.value))
+                onChange: () => {
+                }
               }
             ),
-            colorDropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+            colorDropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
               "div",
               {
                 className: "figma-dropdown-menu active",
@@ -30169,20 +30779,21 @@
                   top: "calc(100% + 4px)",
                   left: 0,
                   right: "auto",
-                  width: "130px",
+                  width: "140px",
+                  maxHeight: "260px",
+                  overflowY: "auto",
                   padding: "6px",
                   zIndex: 1050
                 },
-                children: LINE_COLOR_OPTIONS.map((c) => {
-                  const isSelected = selectedColor.toUpperCase() === c.value.toUpperCase();
-                  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+                children: [
+                  !LINE_COLOR_OPTIONS.some((c) => c.value.toUpperCase() === selectedColor.toUpperCase()) && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
                     "div",
                     {
-                      className: `figma-dropdown-item${isSelected ? " selected" : ""}`,
+                      className: "figma-dropdown-item selected",
                       style: { width: "100%" },
-                      onClick: () => selectColor(c.value),
+                      onClick: () => selectColor(selectedColor),
                       children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-check-slot", style: { width: "18px" }, children: isSelected && CHECK_SVG }),
+                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-check-slot", style: { width: "18px" }, children: CHECK_SVG }),
                         /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
                           "span",
                           {
@@ -30190,7 +30801,7 @@
                               width: "12px",
                               height: "12px",
                               borderRadius: "3px",
-                              backgroundColor: c.value,
+                              backgroundColor: selectedColor,
                               border: "1px solid rgba(255, 255, 255, 0.2)",
                               display: "inline-block",
                               marginRight: "6px",
@@ -30198,12 +30809,82 @@
                             }
                           }
                         ),
-                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-label", children: c.label })
+                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-label", children: selectedColor })
                       ]
-                    },
-                    c.value
-                  );
-                })
+                    }
+                  ),
+                  LINE_COLOR_OPTIONS.map((c) => {
+                    const isSelected = selectedColor.toUpperCase() === c.value.toUpperCase();
+                    const matchedPreset = stylePresets.find(
+                      (p) => p.fillColor.toUpperCase() === c.value.toUpperCase() || p.strokeWeight > 0 && p.strokeColor.toUpperCase() === c.value.toUpperCase()
+                    );
+                    const hasBorder = matchedPreset && matchedPreset.strokeWeight > 0;
+                    return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+                      "div",
+                      {
+                        className: `figma-dropdown-item${isSelected ? " selected" : ""}`,
+                        style: { width: "100%" },
+                        onClick: () => selectColor(c.value),
+                        children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-check-slot", style: { width: "18px" }, children: isSelected && CHECK_SVG }),
+                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                            "span",
+                            {
+                              style: {
+                                width: "12px",
+                                height: "12px",
+                                borderRadius: "3px",
+                                backgroundColor: c.value,
+                                border: hasBorder ? `${matchedPreset.strokeWeight}px solid ${matchedPreset.strokeColor}` : "1px solid rgba(255, 255, 255, 0.2)",
+                                display: "inline-block",
+                                marginRight: "6px",
+                                flexShrink: 0,
+                                boxSizing: "border-box"
+                              }
+                            }
+                          ),
+                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-label", children: c.label })
+                        ]
+                      },
+                      c.value
+                    );
+                  }),
+                  /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+                    "div",
+                    {
+                      className: "figma-dropdown-item",
+                      style: {
+                        width: "100%",
+                        borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                        marginTop: "4px",
+                        paddingTop: "6px"
+                      },
+                      onClick: () => {
+                        setColorDropdownOpen(false);
+                        setUIState({ selectedConnectorColor: selectedColor });
+                        setActiveModal("connector-color");
+                      },
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-check-slot", style: { width: "18px" } }),
+                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                          "span",
+                          {
+                            style: {
+                              width: "14px",
+                              height: "14px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginRight: "6px"
+                            },
+                            children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(IcPalette, {})
+                          }
+                        ),
+                        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "figma-dropdown-label", style: { fontSize: "11px", color: "rgba(255, 255, 255, 0.85)" }, children: "Color Wheel..." })
+                      ]
+                    }
+                  )
+                ]
               }
             )
           ] }),
@@ -30844,23 +31525,12 @@
   }
 
   // src/ui/components/modals/PhaseModal.tsx
+  var import_react16 = __toESM(require_react());
+
+  // src/ui/components/shared/ColorWheelField.tsx
   var import_react15 = __toESM(require_react());
   var import_jsx_runtime20 = __toESM(require_jsx_runtime());
-  var CLOSE_SVG = /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-    "path",
-    {
-      d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
-      fill: "currentColor"
-    }
-  ) });
-  var PALETTE_SVG = /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-    "path",
-    {
-      d: "M8 1.5C4.41 1.5 1.5 4.41 1.5 8C1.5 11.59 4.41 14.5 8 14.5C8.69 14.5 9.25 13.94 9.25 13.25C9.25 12.93 9.12 12.64 8.91 12.43C8.7 12.22 8.57 11.93 8.57 11.61C8.57 10.92 9.13 10.36 9.82 10.36H11.25C13.04 10.36 14.5 8.9 14.5 7.11C14.5 4.02 11.59 1.5 8 1.5ZM4.25 8C3.7 8 3.25 7.55 3.25 7C3.25 6.45 3.7 6 4.25 6C4.8 6 5.25 6.45 5.25 7C5.25 7.55 4.8 8 4.25 8ZM6.25 5C5.7 5 5.25 4.55 5.25 4C5.25 3.45 5.7 3 6.25 3C6.8 3 7.25 3.45 7.25 4C7.25 4.55 6.8 5 6.25 5ZM9.75 5C9.2 5 8.75 4.55 8.75 4C8.75 3.45 9.2 3 9.75 3C10.3 3 10.75 3.45 10.75 4C10.75 4.55 10.3 5 9.75 5ZM11.75 8C11.2 8 10.75 7.55 10.75 7C10.75 6.45 11.2 6 11.75 6C12.3 6 12.75 6.45 12.75 7C12.75 7.55 12.3 8 11.75 8Z",
-      fill: "currentColor"
-    }
-  ) });
-  function hexToHsv(hex) {
+  function hexToHsv(hex, fallbackHue = 0) {
     let clean = hex.replace("#", "").trim();
     if (clean.length === 3) {
       clean = clean.split("").map((c) => c + c).join("");
@@ -30871,23 +31541,28 @@
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
     const d = max - min;
-    let h = 0;
-    const s = max === 0 ? 0 : d / max;
-    const v = max;
-    if (max !== min) {
-      switch (max) {
-        case r:
-          h = (g - b) / d + (g < b ? 6 : 0);
-          break;
-        case g:
-          h = (b - r) / d + 2;
-          break;
-        case b:
-          h = (r - g) / d + 4;
-          break;
-      }
-      h /= 6;
+    if (d === 0 || max === 0) {
+      return {
+        h: fallbackHue,
+        s: 0,
+        v: Math.round(max * 100)
+      };
     }
+    let h = 0;
+    const s = d / max;
+    const v = max;
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
     return {
       h: Math.round(h * 360),
       s: Math.round(s * 100),
@@ -30931,77 +31606,267 @@
     const bHex = Math.round((b + m) * 255).toString(16).padStart(2, "0");
     return `${rHex}${gHex}${bHex}`.toUpperCase();
   }
-  function getHueSliderPercent(h) {
-    if (h >= 350 || h <= 5) return 0;
-    return h / 360 * 100;
-  }
-  function PhaseModal({ editingPhase, onSave, onClose }) {
-    const { activeModal } = useApp();
-    const isOpen = activeModal === "phase";
-    const [name, setName] = (0, import_react15.useState)(editingPhase?.name || "");
-    const initialColor = (editingPhase?.color || "#EA2039").replace("#", "").trim().toUpperCase();
-    const validHex = initialColor.length === 6 ? initialColor : "EA2039";
-    const [colorHex, setColorHex] = (0, import_react15.useState)(validHex);
-    const [colorHsv, setColorHsv] = (0, import_react15.useState)(() => hexToHsv(validHex));
-    const [pickerOpen, setPickerOpen] = (0, import_react15.useState)(false);
-    const hueBarRef = (0, import_react15.useRef)(null);
-    const satValRef = (0, import_react15.useRef)(null);
-    function handleHexChange(value) {
-      const clean = value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6).toUpperCase();
-      setColorHex(clean);
-      if (clean.length === 6) {
-        setColorHsv(hexToHsv(clean));
+  function ColorWheelField({
+    value,
+    onChange,
+    onEnter,
+    isOpen,
+    onToggleOpen,
+    extraControl,
+    extraControlPosition = "right"
+  }) {
+    const cleanHex = value.replace("#", "").toUpperCase();
+    const [colorHex, setColorHex] = (0, import_react15.useState)(cleanHex);
+    const [colorHsv, setColorHsv] = (0, import_react15.useState)(() => hexToHsv(cleanHex));
+    const [internalOpen, setInternalOpen] = (0, import_react15.useState)(false);
+    const wheelRef = (0, import_react15.useRef)(null);
+    const innerDiscRef = (0, import_react15.useRef)(null);
+    const isInteractingRef = (0, import_react15.useRef)(false);
+    const isWheelOpen = isOpen !== void 0 ? isOpen : internalOpen;
+    const toggleWheel = () => {
+      const next = !isWheelOpen;
+      if (onToggleOpen) {
+        onToggleOpen(next);
+      } else {
+        setInternalOpen(next);
+      }
+    };
+    (0, import_react15.useEffect)(() => {
+      if (isInteractingRef.current) return;
+      const nextClean = value.replace("#", "").toUpperCase();
+      if (nextClean === colorHex) return;
+      setColorHex(nextClean);
+      setColorHsv((prev) => hexToHsv(nextClean, prev.h));
+    }, [value, colorHex]);
+    function handleHexChange(e) {
+      let val = e.target.value.replace("#", "").toUpperCase().replace(/[^0-9A-F]/g, "");
+      if (val.length > 6) val = val.slice(0, 6);
+      setColorHex(val);
+      if (val.length === 6) {
+        setColorHsv((prev) => hexToHsv(val, prev.h));
+        onChange(val);
       }
     }
-    const handleHueDrag = (0, import_react15.useCallback)(
-      (e) => {
-        if (!hueBarRef.current) return;
-        const rect = hueBarRef.current.getBoundingClientRect();
-        const clientX = "clientX" in e ? e.clientX : e.clientX;
-        const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        const h = Math.round(percent * 360);
-        const nextHsv = { ...colorHsv, h };
-        setColorHsv(nextHsv);
-        setColorHex(hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v));
+    function handleHexBlur() {
+      let clean = colorHex.trim();
+      if (clean.length === 3) {
+        clean = clean.split("").map((c) => c + c).join("").toUpperCase();
+      }
+      if (clean.length === 6 && /^[0-9A-F]{6}$/i.test(clean)) {
+        setColorHex(clean.toUpperCase());
+        setColorHsv((prev) => hexToHsv(clean.toUpperCase(), prev.h));
+        onChange(clean.toUpperCase());
+      } else {
+        const fallback = hsvToHex(colorHsv.h, colorHsv.s, colorHsv.v);
+        setColorHex(fallback);
+        onChange(fallback);
+      }
+    }
+    const updateHueFromPoint = (0, import_react15.useCallback)(
+      (clientX, clientY) => {
+        if (!wheelRef.current) return;
+        const rect = wheelRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const dx = clientX - centerX;
+        const dy = clientY - centerY;
+        const rad = Math.atan2(dy, dx);
+        let deg = Math.round(rad * 180 / Math.PI + 90);
+        if (deg < 0) deg += 360;
+        if (deg >= 360) deg -= 360;
+        setColorHsv((prev) => {
+          const nextHsv = { ...prev, h: deg };
+          const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
+          setColorHex(nextHex);
+          onChange(nextHex);
+          return nextHsv;
+        });
       },
-      [colorHsv]
+      [onChange]
     );
     const startHueDrag = (e) => {
       e.preventDefault();
-      handleHueDrag(e);
-      const onMove = (ev) => handleHueDrag(ev);
+      isInteractingRef.current = true;
+      updateHueFromPoint(e.clientX, e.clientY);
+      const onMove = (ev) => updateHueFromPoint(ev.clientX, ev.clientY);
       const onUp = () => {
+        isInteractingRef.current = false;
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
       };
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     };
-    const handleSatValDrag = (0, import_react15.useCallback)(
-      (e) => {
-        if (!satValRef.current) return;
-        const rect = satValRef.current.getBoundingClientRect();
-        const clientX = "clientX" in e ? e.clientX : e.clientX;
-        const clientY = "clientY" in e ? e.clientY : e.clientY;
-        const s = Math.round(Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * 100);
-        const v = Math.round(Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height)) * 100);
-        const nextHsv = { ...colorHsv, s, v };
-        setColorHsv(nextHsv);
-        setColorHex(hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v));
+    const updateSatValFromPoint = (0, import_react15.useCallback)(
+      (clientX, clientY) => {
+        if (!innerDiscRef.current) return;
+        const rect = innerDiscRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const radius = rect.width / 2;
+        let dx = clientX - centerX;
+        let dy = clientY - centerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > radius) {
+          dx = dx / dist * radius;
+          dy = dy / dist * radius;
+        }
+        const nx = radius > 0 ? dx / radius : 0;
+        const ny = radius > 0 ? dy / radius : 0;
+        const maxCoord = Math.max(Math.abs(nx), Math.abs(ny));
+        const factor = maxCoord > 0 ? Math.sqrt(nx * nx + ny * ny) / maxCoord : 1;
+        const u = Math.max(-1, Math.min(1, nx * factor));
+        const v = Math.max(-1, Math.min(1, ny * factor));
+        const s = Math.round(Math.max(0, Math.min(100, (u + 1) / 2 * 100)));
+        const vVal = Math.round(Math.max(0, Math.min(100, (1 - v) / 2 * 100)));
+        setColorHsv((prev) => {
+          const nextHsv = { ...prev, s, v: vVal };
+          const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
+          setColorHex(nextHex);
+          onChange(nextHex);
+          return nextHsv;
+        });
       },
-      [colorHsv]
+      [onChange]
     );
     const startSatValDrag = (e) => {
       e.preventDefault();
-      handleSatValDrag(e);
-      const onMove = (ev) => handleSatValDrag(ev);
+      isInteractingRef.current = true;
+      updateSatValFromPoint(e.clientX, e.clientY);
+      const onMove = (ev) => updateSatValFromPoint(ev.clientX, ev.clientY);
       const onUp = () => {
+        isInteractingRef.current = false;
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
       };
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     };
+    const hueAngleRad = colorHsv.h * Math.PI / 180;
+    const hueKnobRadius = 74;
+    const wheelCenter = 84;
+    const hueKnobX = wheelCenter + hueKnobRadius * Math.sin(hueAngleRad);
+    const hueKnobY = wheelCenter - hueKnobRadius * Math.cos(hueAngleRad);
+    const discRadius = 54;
+    const discCenter = 54;
+    const normU = colorHsv.s / 100 * 2 - 1;
+    const normV = 1 - colorHsv.v / 100 * 2;
+    const maxSquare = Math.max(Math.abs(normU), Math.abs(normV));
+    const distSquare = Math.sqrt(normU * normU + normV * normV);
+    const invFactor = distSquare > 0 ? maxSquare / distSquare : 1;
+    const satValX = discCenter + normU * invFactor * discRadius;
+    const satValY = discCenter + normV * invFactor * discRadius;
+    const currentFormattedHex = `#${colorHex.padStart(6, "0")}`;
+    return /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { style: { display: "flex", flexDirection: "column", width: "100%" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "conn-color-input-row", children: [
+        extraControlPosition === "left" && extraControl,
+        /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "conn-modal-hex-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+            "span",
+            {
+              className: "conn-modal-hex-chip",
+              style: { backgroundColor: currentFormattedHex }
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+            "input",
+            {
+              type: "text",
+              size: 1,
+              className: "conn-modal-hex-input",
+              value: colorHex,
+              maxLength: 6,
+              onChange: handleHexChange,
+              onBlur: handleHexBlur,
+              onKeyDown: (e) => e.key === "Enter" && onEnter && onEnter(),
+              spellCheck: false,
+              autoComplete: "off"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+          "button",
+          {
+            type: "button",
+            className: `conn-modal-wheel-donut-btn${isWheelOpen ? " selected" : ""}`,
+            title: isWheelOpen ? "Hide color wheel" : "Show color wheel",
+            onClick: toggleWheel,
+            children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("span", { className: "conn-modal-wheel-donut-icon" })
+          }
+        ),
+        extraControlPosition === "right" && extraControl
+      ] }),
+      isWheelOpen && /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: "conn-color-wheel-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(
+        "div",
+        {
+          ref: wheelRef,
+          className: "conn-color-wheel-ring",
+          onMouseDown: startHueDrag,
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: "conn-color-wheel-gap" }),
+            /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(
+              "div",
+              {
+                ref: innerDiscRef,
+                className: "conn-color-inner-disc",
+                style: {
+                  backgroundColor: `hsl(${colorHsv.h}, 100%, 50%)`
+                },
+                onMouseDown: (e) => {
+                  e.stopPropagation();
+                  startSatValDrag(e);
+                },
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: "conn-disc-tint-layer" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: "conn-disc-shade-layer" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+                    "div",
+                    {
+                      className: "conn-disc-handle",
+                      style: {
+                        left: `${satValX}px`,
+                        top: `${satValY}px`,
+                        backgroundColor: currentFormattedHex
+                      }
+                    }
+                  )
+                ]
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+              "div",
+              {
+                className: "conn-wheel-hue-knob",
+                style: {
+                  left: `${hueKnobX}px`,
+                  top: `${hueKnobY}px`,
+                  backgroundColor: `hsl(${colorHsv.h}, 100%, 50%)`
+                }
+              }
+            )
+          ]
+        }
+      ) })
+    ] });
+  }
+
+  // src/ui/components/modals/PhaseModal.tsx
+  var import_jsx_runtime21 = __toESM(require_jsx_runtime());
+  var CLOSE_SVG = /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+    "path",
+    {
+      d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
+      fill: "currentColor"
+    }
+  ) });
+  function PhaseModal({ editingPhase, onSave, onClose }) {
+    const { activeModal } = useApp();
+    const isOpen = activeModal === "phase";
+    const [name, setName] = (0, import_react16.useState)(editingPhase?.name || "");
+    const initialColor = (editingPhase?.color || "#EA2039").replace("#", "").trim().toUpperCase();
+    const validHex = initialColor.length === 6 ? initialColor : "EA2039";
+    const [colorHex, setColorHex] = (0, import_react16.useState)(validHex);
+    const [pickerOpen, setPickerOpen] = (0, import_react16.useState)(false);
     function handleSave() {
       if (!name.trim()) return;
       const finalColor = `#${colorHex.padStart(6, "0")}`;
@@ -31013,7 +31878,7 @@
       onClose();
     }
     if (!isOpen) return null;
-    return /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
       "div",
       {
         id: "modal-backdrop",
@@ -31022,16 +31887,16 @@
         onClick: (e) => {
           if (e.target === e.currentTarget) onClose();
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
           "div",
           {
             id: "modal-phase",
             className: "style-modal-card",
             style: { display: "flex" },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "style-modal-header", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("span", { className: "style-modal-title", children: editingPhase ? "Edit Phase" : "Add Phase" }),
-                /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "style-modal-title", children: editingPhase ? "Edit Phase" : "Add Phase" }),
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
                   "button",
                   {
                     type: "button",
@@ -31042,9 +31907,9 @@
                   }
                 )
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
                     "div",
                     {
                       className: "style-section-header",
@@ -31055,10 +31920,10 @@
                         height: 24,
                         marginBottom: 6
                       },
-                      children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Name" })
+                      children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Name" })
                     }
                   ),
-                  /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
                     "input",
                     {
                       type: "text",
@@ -31076,129 +31941,35 @@
                     }
                   )
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: "style-divider", style: { margin: "12px 0" } }),
-                /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "style-divider", style: { margin: "12px 0" } }),
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
                     "div",
                     {
                       className: "style-section-header",
                       style: {
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "space-between",
                         height: 24,
                         marginBottom: 6
                       },
-                      children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Background Color" }),
-                        /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-                          "button",
-                          {
-                            type: "button",
-                            className: `style-palette-btn${pickerOpen ? " active" : ""}`,
-                            onClick: () => setPickerOpen(!pickerOpen),
-                            title: "Toggle color picker",
-                            style: {
-                              background: "transparent",
-                              border: "none",
-                              color: pickerOpen ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)",
-                              cursor: "pointer",
-                              padding: 2,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              borderRadius: 4,
-                              transition: "color 0.15s ease, background 0.15s ease"
-                            },
-                            children: PALETTE_SVG
-                          }
-                        )
-                      ]
+                      children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Background Color" })
                     }
                   ),
-                  /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(
-                    "div",
+                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                    ColorWheelField,
                     {
-                      className: `style-color-box${pickerOpen ? " active" : ""}`,
-                      onClick: () => setPickerOpen(true),
-                      children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-                          "div",
-                          {
-                            className: "style-color-chip",
-                            style: { background: `#${colorHex.padStart(6, "0")}` },
-                            onClick: (e) => {
-                              e.stopPropagation();
-                              setPickerOpen(!pickerOpen);
-                            }
-                          }
-                        ),
-                        /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-                          "input",
-                          {
-                            type: "text",
-                            className: "style-color-hex-text",
-                            value: colorHex,
-                            maxLength: 6,
-                            onFocus: (e) => {
-                              setPickerOpen(true);
-                              e.currentTarget.select();
-                            },
-                            onChange: (e) => handleHexChange(e.target.value),
-                            autoComplete: "off",
-                            spellCheck: false
-                          }
-                        )
-                      ]
+                      value: colorHex,
+                      onChange: (hex) => setColorHex(hex),
+                      onEnter: handleSave,
+                      isOpen: pickerOpen,
+                      onToggleOpen: setPickerOpen
                     }
-                  ),
-                  pickerOpen && /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { style: { marginTop: 10, animation: "modalFadeIn 0.12s ease-out" }, children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-                      "div",
-                      {
-                        ref: satValRef,
-                        className: "style-sat-val-picker",
-                        onMouseDown: startSatValDrag,
-                        style: {
-                          backgroundColor: `hsl(${colorHsv.h}, 100%, 50%)`,
-                          marginBottom: 12
-                        },
-                        children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-                          "div",
-                          {
-                            className: "style-sat-val-thumb",
-                            style: {
-                              left: `${colorHsv.s}%`,
-                              top: `${100 - colorHsv.v}%`
-                            }
-                          }
-                        )
-                      }
-                    ),
-                    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-                      "div",
-                      {
-                        ref: hueBarRef,
-                        className: "style-hue-slider",
-                        style: { margin: 0 },
-                        onMouseDown: startHueDrag,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
-                          "div",
-                          {
-                            className: "style-hue-thumb",
-                            style: {
-                              left: `${getHueSliderPercent(colorHsv.h)}%`,
-                              background: `hsl(${colorHsv.h}, 100%, 50%)`
-                            }
-                          }
-                        )
-                      }
-                    )
-                  ] })
+                  )
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "style-modal-footer", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "style-modal-footer", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
                   "button",
                   {
                     type: "button",
@@ -31207,7 +31978,7 @@
                     children: "Cancel"
                   }
                 ),
-                /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
                   "button",
                   {
                     type: "button",
@@ -31227,30 +31998,30 @@
   }
 
   // src/ui/components/modals/SizeModal.tsx
-  var import_react16 = __toESM(require_react());
-  var import_jsx_runtime21 = __toESM(require_jsx_runtime());
-  var FIXED_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+  var import_react17 = __toESM(require_react());
+  var import_jsx_runtime22 = __toESM(require_jsx_runtime());
+  var FIXED_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
     "path",
     {
       d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z",
       fill: "currentColor"
     }
   ) });
-  var HUG_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+  var HUG_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
     "path",
     {
       d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z",
       fill: "currentColor"
     }
   ) });
-  var RADIUS_SVG = /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+  var RADIUS_SVG = /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
     "path",
     {
       d: "M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z",
       fill: "currentColor"
     }
   ) });
-  var CHECK_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+  var CHECK_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
     "path",
     {
       d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z",
@@ -31271,14 +32042,14 @@
     } = useApp();
     const isOpen = mode === "add" ? activeModal === "add-size" : activeModal === "edit-size";
     const currentPreset = editingPreset || sizePresets.find((p) => p.id === selectedSizePresetId) || sizePresets[0];
-    const [name, setName] = (0, import_react16.useState)("");
-    const [w, setW] = (0, import_react16.useState)(375);
-    const [h, setH] = (0, import_react16.useState)(812);
-    const [radius, setRadius] = (0, import_react16.useState)(0);
-    const [sizeMode, setSizeMode] = (0, import_react16.useState)("fixed");
-    const [dropdownOpen, setDropdownOpen] = (0, import_react16.useState)(false);
-    const dropdownRef = (0, import_react16.useRef)(null);
-    (0, import_react16.useEffect)(() => {
+    const [name, setName] = (0, import_react17.useState)("");
+    const [w, setW] = (0, import_react17.useState)(375);
+    const [h, setH] = (0, import_react17.useState)(812);
+    const [radius, setRadius] = (0, import_react17.useState)(0);
+    const [sizeMode, setSizeMode] = (0, import_react17.useState)("fixed");
+    const [dropdownOpen, setDropdownOpen] = (0, import_react17.useState)(false);
+    const dropdownRef = (0, import_react17.useRef)(null);
+    (0, import_react17.useEffect)(() => {
       if (!isOpen) return;
       setDropdownOpen(false);
       if (mode === "add") {
@@ -31297,7 +32068,7 @@
         }
       }
     }, [isOpen, mode, currentPreset, lastNodeConfig]);
-    (0, import_react16.useEffect)(() => {
+    (0, import_react17.useEffect)(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
           setDropdownOpen(false);
@@ -31368,7 +32139,7 @@
       onClose();
     }
     const title = mode === "add" ? "Add Size" : "Edit Size";
-    return /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
       "div",
       {
         id: "modal-backdrop",
@@ -31377,16 +32148,16 @@
         onClick: (e) => {
           if (e.target === e.currentTarget) onClose();
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
           "div",
           {
             id: `modal-${mode}-size`,
             className: "size-modal-card",
             style: { display: "flex", overflow: "visible", position: "relative" },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "size-modal-header", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "size-modal-title", children: title }),
-                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("button", { className: "size-modal-close-btn", onClick: onClose, title: "Close", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "size-modal-title", children: title }),
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("button", { className: "size-modal-close-btn", onClick: onClose, title: "Close", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
                   "path",
                   {
                     d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
@@ -31394,10 +32165,10 @@
                   }
                 ) }) })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "size-modal-body", style: { overflow: "visible" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "phase-field-group", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "phase-field-label", children: "Name" }) }),
-                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-modal-body", style: { overflow: "visible" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "phase-field-group", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "phase-field-label", children: "Name" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
                     "input",
                     {
                       type: "text",
@@ -31411,12 +32182,12 @@
                     }
                   ) })
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "phase-field-group", style: { paddingBottom: 12, overflow: "visible" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "phase-field-label", children: "Size" }) }),
-                  /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "phase-input-row-wrapper", style: { gap: "6px" }, children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "prefix-input-box", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "prefix-label", children: "W" }),
-                      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "phase-field-group", style: { paddingBottom: 12, overflow: "visible" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-field-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "phase-field-label", children: "Size" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "phase-input-row-wrapper", style: { gap: "6px" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "prefix-input-box", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "prefix-label", children: "W" }),
+                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
                         "input",
                         {
                           type: "number",
@@ -31429,9 +32200,9 @@
                         }
                       )
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "prefix-input-box", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "prefix-label", children: "H" }),
-                      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "prefix-input-box", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "prefix-label", children: "H" }),
+                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
                         "input",
                         {
                           type: "number",
@@ -31445,9 +32216,9 @@
                       )
                     ] })
                   ] }),
-                  /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "icon-input-box", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { className: "icon-input-slot", style: { width: 24, height: 24 }, children: RADIUS_SVG }),
-                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { className: "phase-input-row-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "icon-input-box", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "icon-input-slot", style: { width: 24, height: 24 }, children: RADIUS_SVG }),
+                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
                       "input",
                       {
                         type: "number",
@@ -31461,14 +32232,14 @@
                       }
                     )
                   ] }) }),
-                  /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
+                  /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
                     "div",
                     {
                       className: "phase-input-row-wrapper",
                       ref: dropdownRef,
                       style: { position: "relative" },
                       children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
+                        /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
                           "div",
                           {
                             className: `size-dropdown-box${dropdownOpen ? " active" : ""}`,
@@ -31479,11 +32250,11 @@
                               cursor: "pointer"
                             },
                             children: [
-                              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "size-dropdown-left", style: { display: "flex", alignItems: "center", gap: 6 }, children: [
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }, children: sizeMode === "hug" ? HUG_SVG2 : FIXED_SVG2 }),
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { id: `text-${mode}-size-mode`, style: { fontSize: 11, color: "#ffffff" }, children: sizeMode === "fixed" ? "Fixed height" : "Hug contents" })
+                              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-dropdown-left", style: { display: "flex", alignItems: "center", gap: 6 }, children: [
+                                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }, children: sizeMode === "hug" ? HUG_SVG2 : FIXED_SVG2 }),
+                                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { id: `text-${mode}-size-mode`, style: { fontSize: 11, color: "#ffffff" }, children: sizeMode === "fixed" ? "Fixed height" : "Hug contents" })
                               ] }),
-                              /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                              /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
                                 "svg",
                                 {
                                   width: "16",
@@ -31495,7 +32266,7 @@
                                     transition: "transform 0.15s ease",
                                     flexShrink: 0
                                   },
-                                  children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
+                                  children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
                                     "path",
                                     {
                                       d: "M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z",
@@ -31507,7 +32278,7 @@
                             ]
                           }
                         ),
-                        dropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
+                        dropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
                           "div",
                           {
                             style: {
@@ -31528,7 +32299,7 @@
                               animation: "modalFadeIn 0.12s ease-out"
                             },
                             children: [
-                              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
+                              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
                                 "div",
                                 {
                                   onClick: () => {
@@ -31555,13 +32326,13 @@
                                     e.currentTarget.style.background = "transparent";
                                   },
                                   children: [
-                                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "fixed" && CHECK_SVG2 }),
-                                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: FIXED_SVG2 }),
-                                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap", letterSpacing: 0 }, children: "Fixed height" })
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "fixed" && CHECK_SVG2 }),
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: FIXED_SVG2 }),
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap", letterSpacing: 0 }, children: "Fixed height" })
                                   ]
                                 }
                               ),
-                              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
+                              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
                                 "div",
                                 {
                                   onClick: () => {
@@ -31588,9 +32359,9 @@
                                     e.currentTarget.style.background = "transparent";
                                   },
                                   children: [
-                                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "hug" && CHECK_SVG2 }),
-                                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: HUG_SVG2 }),
-                                    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap", letterSpacing: 0 }, children: "Hug contents" })
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "hug" && CHECK_SVG2 }),
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: HUG_SVG2 }),
+                                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap", letterSpacing: 0 }, children: "Hug contents" })
                                   ]
                                 }
                               )
@@ -31602,9 +32373,9 @@
                   )
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "size-modal-footer", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("button", { type: "button", className: "btn-phase-modal-cancel", onClick: onClose, children: "Cancel" }),
-                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("button", { type: "button", className: "btn-phase-modal-save", onClick: handleSave, children: "Save" })
+              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "size-modal-footer", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("button", { type: "button", className: "btn-phase-modal-cancel", onClick: onClose, children: "Cancel" }),
+                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("button", { type: "button", className: "btn-phase-modal-save", onClick: handleSave, children: "Save" })
               ] })
             ]
           }
@@ -31614,8 +32385,8 @@
   }
 
   // src/ui/components/modals/FigmaDesignPickerModal.tsx
-  var import_react17 = __toESM(require_react());
-  var import_jsx_runtime22 = __toESM(require_jsx_runtime());
+  var import_react18 = __toESM(require_react());
+  var import_jsx_runtime23 = __toESM(require_jsx_runtime());
   function FigmaDesignPickerModal({ onClose }) {
     const {
       designFrames,
@@ -31625,24 +32396,24 @@
       sizePresets,
       applyCurrentNodeState
     } = useApp();
-    const [searchQuery, setSearchQuery] = (0, import_react17.useState)("");
-    const [selectedFrameId, setSelectedFrameId] = (0, import_react17.useState)(null);
-    const [saveAsPreset, setSaveAsPreset] = (0, import_react17.useState)(true);
-    const [linkToFrame, setLinkToFrame] = (0, import_react17.useState)(true);
-    (0, import_react17.useEffect)(() => {
+    const [searchQuery, setSearchQuery] = (0, import_react18.useState)("");
+    const [selectedFrameId, setSelectedFrameId] = (0, import_react18.useState)(null);
+    const [saveAsPreset, setSaveAsPreset] = (0, import_react18.useState)(true);
+    const [linkToFrame, setLinkToFrame] = (0, import_react18.useState)(true);
+    (0, import_react18.useEffect)(() => {
       loadDesignFrames();
     }, [loadDesignFrames]);
-    (0, import_react17.useEffect)(() => {
+    (0, import_react18.useEffect)(() => {
       if (designFrames.length > 0 && !selectedFrameId) {
         setSelectedFrameId(designFrames[0].id);
       }
     }, [designFrames, selectedFrameId]);
-    const filteredFrames = (0, import_react17.useMemo)(() => {
+    const filteredFrames = (0, import_react18.useMemo)(() => {
       const q = searchQuery.trim().toLowerCase();
       if (!q) return designFrames;
       return designFrames.filter((f) => f.name.toLowerCase().includes(q));
     }, [designFrames, searchQuery]);
-    const selectedFrame = (0, import_react17.useMemo)(() => {
+    const selectedFrame = (0, import_react18.useMemo)(() => {
       return designFrames.find((f) => f.id === selectedFrameId) || null;
     }, [designFrames, selectedFrameId]);
     function handleApply() {
@@ -31686,7 +32457,7 @@
       applyCurrentNodeState("fixed");
       onClose();
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
       "div",
       {
         className: "popover-backdrop",
@@ -31694,7 +32465,7 @@
         onClick: (e) => {
           if (e.target === e.currentTarget) onClose();
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
           "div",
           {
             className: "size-modal-card",
@@ -31711,7 +32482,7 @@
               boxShadow: "0 16px 32px rgba(0, 0, 0, 0.45)"
             },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                 "div",
                 {
                   style: {
@@ -31722,8 +32493,8 @@
                     borderBottom: "1px solid rgba(255, 255, 255, 0.08)"
                   },
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 6 }, children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 6 }, children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                         "path",
                         {
                           d: "M5 2V14M11 2V14M2 5H14M2 11H14",
@@ -31732,7 +32503,7 @@
                           strokeLinecap: "round"
                         }
                       ) }),
-                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                         "span",
                         {
                           style: {
@@ -31745,7 +32516,7 @@
                         }
                       )
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                       "button",
                       {
                         type: "button",
@@ -31764,7 +32535,7 @@
                           height: 24,
                           borderRadius: 4
                         },
-                        children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                           "path",
                           {
                             d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
@@ -31776,7 +32547,7 @@
                   ]
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                 "div",
                 {
                   style: {
@@ -31788,9 +32559,9 @@
                     background: "rgba(0, 0, 0, 0.15)"
                   },
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "picker-search-box", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", style: { opacity: 0.6 }, children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "picker-search-box", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", style: { opacity: 0.6 }, children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                           "path",
                           {
                             d: "M7 12C9.76142 12 12 9.76142 12 7C12 4.23858 9.76142 2 7 2C4.23858 2 2 4.23858 2 7C2 9.76142 4.23858 12 7 12Z",
@@ -31798,9 +32569,9 @@
                             strokeWidth: "1.3"
                           }
                         ),
-                        /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("path", { d: "M11 11L14 14", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" })
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("path", { d: "M11 11L14 14", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" })
                       ] }),
-                      /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                         "input",
                         {
                           type: "text",
@@ -31818,7 +32589,7 @@
                           }
                         }
                       ),
-                      searchQuery && /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                      searchQuery && /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                         "button",
                         {
                           type: "button",
@@ -31835,7 +32606,7 @@
                         }
                       )
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                       "button",
                       {
                         type: "button",
@@ -31853,7 +32624,7 @@
                           color: "#bbb",
                           cursor: "pointer"
                         },
-                        children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                           "path",
                           {
                             d: "M13.65 2.35A7.95 7.95 0 0 0 8 0C3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 8 14c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z",
@@ -31865,7 +32636,7 @@
                   ]
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                 "div",
                 {
                   style: {
@@ -31874,7 +32645,7 @@
                     overflowY: "auto",
                     padding: "6px 8px"
                   },
-                  children: filteredFrames.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                  children: filteredFrames.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                     "div",
                     {
                       style: {
@@ -31888,17 +32659,17 @@
                         gap: 8
                       },
                       children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", style: { opacity: 0.4 }, children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2", stroke: "currentColor", strokeWidth: "1.5" }),
-                          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("path", { d: "M3 9H21", stroke: "currentColor", strokeWidth: "1.5" })
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", style: { opacity: 0.4 }, children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2", stroke: "currentColor", strokeWidth: "1.5" }),
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("path", { d: "M3 9H21", stroke: "currentColor", strokeWidth: "1.5" })
                         ] }),
-                        /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { fontSize: 11, color: "#aaa", letterSpacing: 0 }, children: searchQuery ? "\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4." : "\uD604\uC7AC \uD398\uC774\uC9C0\uC5D0 \uB514\uC790\uC778 \uD504\uB808\uC784\uC774 \uC5C6\uC2B5\uB2C8\uB2E4." }),
-                        /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { style: { fontSize: 10, color: "#666", letterSpacing: 0 }, children: "\uD53C\uADF8\uB9C8 \uCE94\uBC84\uC2A4\uC5D0 \uD504\uB808\uC784(Screen)\uC744 \uCD94\uAC00\uD55C \uD6C4 \uC0C8\uB85C\uACE0\uCE68\uD574 \uC8FC\uC138\uC694." })
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { style: { fontSize: 11, color: "#aaa", letterSpacing: 0 }, children: searchQuery ? "\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4." : "\uD604\uC7AC \uD398\uC774\uC9C0\uC5D0 \uB514\uC790\uC778 \uD504\uB808\uC784\uC774 \uC5C6\uC2B5\uB2C8\uB2E4." }),
+                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { style: { fontSize: 10, color: "#666", letterSpacing: 0 }, children: "\uD53C\uADF8\uB9C8 \uCE94\uBC84\uC2A4\uC5D0 \uD504\uB808\uC784(Screen)\uC744 \uCD94\uAC00\uD55C \uD6C4 \uC0C8\uB85C\uACE0\uCE68\uD574 \uC8FC\uC138\uC694." })
                       ]
                     }
-                  ) : /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("div", { style: { display: "flex", flexDirection: "column", gap: 2 }, children: filteredFrames.map((frame) => {
+                  ) : /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("div", { style: { display: "flex", flexDirection: "column", gap: 2 }, children: filteredFrames.map((frame) => {
                     const isSelected = frame.id === selectedFrameId;
-                    return /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                    return /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                       "div",
                       {
                         onClick: () => setSelectedFrameId(frame.id),
@@ -31915,7 +32686,7 @@
                           transition: "background 0.12s ease"
                         },
                         children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                             "div",
                             {
                               style: {
@@ -31926,7 +32697,7 @@
                                 flex: 1
                               },
                               children: [
-                                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                                /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                                   "svg",
                                   {
                                     width: "14",
@@ -31937,7 +32708,7 @@
                                       flexShrink: 0,
                                       color: isSelected ? "#0D99FF" : "#888"
                                     },
-                                    children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                                    children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                                       "path",
                                       {
                                         d: "M5 2V14M11 2V14M2 5H14M2 11H14",
@@ -31948,7 +32719,7 @@
                                     )
                                   }
                                 ),
-                                /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                                /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                                   "span",
                                   {
                                     style: {
@@ -31967,7 +32738,7 @@
                               ]
                             }
                           ),
-                          /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                             "div",
                             {
                               style: {
@@ -31977,7 +32748,7 @@
                                 flexShrink: 0
                               },
                               children: [
-                                /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                                /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                                   "span",
                                   {
                                     style: {
@@ -31995,7 +32766,7 @@
                                     ]
                                   }
                                 ),
-                                Boolean(frame.cornerRadius) && /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                                Boolean(frame.cornerRadius) && /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                                   "span",
                                   {
                                     style: {
@@ -32019,7 +32790,7 @@
                   }) })
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                 "div",
                 {
                   style: {
@@ -32031,7 +32802,7 @@
                     gap: 6
                   },
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                       "label",
                       {
                         style: {
@@ -32045,7 +32816,7 @@
                           letterSpacing: 0
                         },
                         children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                             "input",
                             {
                               type: "checkbox",
@@ -32057,11 +32828,11 @@
                               }
                             }
                           ),
-                          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { children: "\uC0AC\uC774\uC988 \uD504\uB9AC\uC14B\uC73C\uB85C \uC800\uC7A5 (Save to presets)" })
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { children: "\uC0AC\uC774\uC988 \uD504\uB9AC\uC14B\uC73C\uB85C \uC800\uC7A5 (Save to presets)" })
                         ]
                       }
                     ),
-                    /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                       "label",
                       {
                         style: {
@@ -32075,7 +32846,7 @@
                           letterSpacing: 0
                         },
                         children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                             "input",
                             {
                               type: "checkbox",
@@ -32087,14 +32858,14 @@
                               }
                             }
                           ),
-                          /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { children: "\uD53C\uADF8\uB9C8 \uB9C1\uD06C \uC5F0\uB3D9 (Link to frame)" })
+                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { children: "\uD53C\uADF8\uB9C8 \uB9C1\uD06C \uC5F0\uB3D9 (Link to frame)" })
                         ]
                       }
                     )
                   ]
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
                 "div",
                 {
                   style: {
@@ -32106,7 +32877,7 @@
                     borderTop: "1px solid rgba(255, 255, 255, 0.08)"
                   },
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                       "button",
                       {
                         type: "button",
@@ -32121,7 +32892,7 @@
                         children: "Cancel"
                       }
                     ),
-                    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                       "button",
                       {
                         type: "button",
@@ -32154,106 +32925,22 @@
   }
 
   // src/ui/components/modals/StyleModal.tsx
-  var import_react18 = __toESM(require_react());
-  var import_jsx_runtime23 = __toESM(require_jsx_runtime());
-  var CLOSE_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+  var import_react19 = __toESM(require_react());
+  var import_jsx_runtime24 = __toESM(require_jsx_runtime());
+  var CLOSE_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
     "path",
     {
       d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
       fill: "currentColor"
     }
   ) });
-  var PALETTE_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+  var STROKE_ICON_SVG = /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
     "path",
     {
-      d: "M8 1.5C4.41 1.5 1.5 4.41 1.5 8C1.5 11.59 4.41 14.5 8 14.5C8.69 14.5 9.25 13.94 9.25 13.25C9.25 12.93 9.12 12.64 8.91 12.43C8.7 12.22 8.57 11.93 8.57 11.61C8.57 10.92 9.13 10.36 9.82 10.36H11.25C13.04 10.36 14.5 8.9 14.5 7.11C14.5 4.02 11.59 1.5 8 1.5ZM4.25 8C3.7 8 3.25 7.55 3.25 7C3.25 6.45 3.7 6 4.25 6C4.8 6 5.25 6.45 5.25 7C5.25 7.55 4.8 8 4.25 8ZM6.25 5C5.7 5 5.25 4.55 5.25 4C5.25 3.45 5.7 3 6.25 3C6.8 3 7.25 3.45 7.25 4C7.25 4.55 6.8 5 6.25 5ZM9.75 5C9.2 5 8.75 4.55 8.75 4C8.75 3.45 9.2 3 9.75 3C10.3 3 10.75 3.45 10.75 4C10.75 4.55 10.3 5 9.75 5ZM11.75 8C11.2 8 10.75 7.55 10.75 7C10.75 6.45 11.2 6 11.75 6C12.3 6 12.75 6.45 12.75 7C12.75 7.55 12.3 8 11.75 8Z",
+      d: "M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z",
       fill: "currentColor"
     }
   ) });
-  var STROKE_ICON_SVG = /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-    "path",
-    {
-      d: "M2.5 4.5H13.5M2.5 8H13.5M2.5 11.5H13.5",
-      stroke: "currentColor",
-      strokeWidth: "1.2",
-      strokeLinecap: "round"
-    }
-  ) });
-  function hexToHsv2(hex) {
-    let clean = hex.replace("#", "").trim();
-    if (clean.length === 3) {
-      clean = clean.split("").map((c) => c + c).join("");
-    }
-    const r = (parseInt(clean.substring(0, 2), 16) || 0) / 255;
-    const g = (parseInt(clean.substring(2, 4), 16) || 0) / 255;
-    const b = (parseInt(clean.substring(4, 6), 16) || 0) / 255;
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const d = max - min;
-    let h = 0;
-    const s = max === 0 ? 0 : d / max;
-    const v = max;
-    if (max !== min) {
-      switch (max) {
-        case r:
-          h = (g - b) / d + (g < b ? 6 : 0);
-          break;
-        case g:
-          h = (b - r) / d + 2;
-          break;
-        case b:
-          h = (r - g) / d + 4;
-          break;
-      }
-      h /= 6;
-    }
-    return {
-      h: Math.round(h * 360),
-      s: Math.round(s * 100),
-      v: Math.round(v * 100)
-    };
-  }
-  function hsvToHex2(h, s, v) {
-    const sNorm = Math.max(0, Math.min(100, s)) / 100;
-    const vNorm = Math.max(0, Math.min(100, v)) / 100;
-    const c = vNorm * sNorm;
-    const x = c * (1 - Math.abs(h / 60 % 2 - 1));
-    const m = vNorm - c;
-    let r = 0, g = 0, b = 0;
-    if (h >= 0 && h < 60) {
-      r = c;
-      g = x;
-      b = 0;
-    } else if (h >= 60 && h < 120) {
-      r = x;
-      g = c;
-      b = 0;
-    } else if (h >= 120 && h < 180) {
-      r = 0;
-      g = c;
-      b = x;
-    } else if (h >= 180 && h < 240) {
-      r = 0;
-      g = x;
-      b = c;
-    } else if (h >= 240 && h < 300) {
-      r = x;
-      g = 0;
-      b = c;
-    } else if (h >= 300 && h <= 360) {
-      r = c;
-      g = 0;
-      b = x;
-    }
-    const rHex = Math.round((r + m) * 255).toString(16).padStart(2, "0");
-    const gHex = Math.round((g + m) * 255).toString(16).padStart(2, "0");
-    const bHex = Math.round((b + m) * 255).toString(16).padStart(2, "0");
-    return `${rHex}${gHex}${bHex}`.toUpperCase();
-  }
-  function getHueSliderPercent2(h) {
-    if (h >= 350 || h <= 5) return 0;
-    return h / 360 * 100;
-  }
   function StyleModal({ onClose, initialColor }) {
     const {
       uiState,
@@ -32266,139 +32953,59 @@
     } = useApp();
     const resolvedColor = (initialColor || uiState.selectedColor || "#EA2039").replace("#", "").trim().toUpperCase();
     const validFill = resolvedColor.length === 6 ? resolvedColor : "EA2039";
-    const [fillHex, setFillHex] = (0, import_react18.useState)(validFill);
-    const [fillHsv, setFillHsv] = (0, import_react18.useState)(() => hexToHsv2(validFill));
-    const [strokeHex, setStrokeHex] = (0, import_react18.useState)(validFill);
-    const [strokeHsv, setStrokeHsv] = (0, import_react18.useState)(() => hexToHsv2(validFill));
-    const [strokeWeight, setStrokeWeight] = (0, import_react18.useState)(0);
-    const [activePicker, setActivePicker] = (0, import_react18.useState)("fill");
-    const hueBarRef = (0, import_react18.useRef)(null);
-    const satValRef = (0, import_react18.useRef)(null);
-    function handleHexChange(type, value) {
-      const clean = value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6).toUpperCase();
-      if (type === "fill") {
-        setFillHex(clean);
-        if (clean.length === 6) {
-          setFillHsv(hexToHsv2(clean));
-        }
-      } else {
-        setStrokeHex(clean);
-        if (clean.length === 6) {
-          setStrokeHsv(hexToHsv2(clean));
-        }
-      }
-    }
-    const handleHueDrag = (0, import_react18.useCallback)(
-      (e) => {
-        if (!hueBarRef.current || !activePicker) return;
-        const rect = hueBarRef.current.getBoundingClientRect();
-        const clientX = "clientX" in e ? e.clientX : e.clientX;
-        const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        const h = Math.round(percent * 360);
-        if (activePicker === "fill") {
-          const nextHsv = { ...fillHsv, h };
-          setFillHsv(nextHsv);
-          setFillHex(hsvToHex2(nextHsv.h, nextHsv.s, nextHsv.v));
-        } else {
-          const nextHsv = { ...strokeHsv, h };
-          setStrokeHsv(nextHsv);
-          setStrokeHex(hsvToHex2(nextHsv.h, nextHsv.s, nextHsv.v));
-        }
-      },
-      [activePicker, fillHsv, strokeHsv]
-    );
-    const startHueDrag = (e) => {
-      e.preventDefault();
-      handleHueDrag(e);
-      const onMove = (ev) => handleHueDrag(ev);
-      const onUp = () => {
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-      };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-    };
-    const handleSatValDrag = (0, import_react18.useCallback)(
-      (e) => {
-        if (!satValRef.current || !activePicker) return;
-        const rect = satValRef.current.getBoundingClientRect();
-        const clientX = "clientX" in e ? e.clientX : e.clientX;
-        const clientY = "clientY" in e ? e.clientY : e.clientY;
-        const s = Math.round(Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * 100);
-        const v = Math.round(Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height)) * 100);
-        if (activePicker === "fill") {
-          const nextHsv = { ...fillHsv, s, v };
-          setFillHsv(nextHsv);
-          setFillHex(hsvToHex2(nextHsv.h, nextHsv.s, nextHsv.v));
-        } else {
-          const nextHsv = { ...strokeHsv, s, v };
-          setStrokeHsv(nextHsv);
-          setStrokeHex(hsvToHex2(nextHsv.h, nextHsv.s, nextHsv.v));
-        }
-      },
-      [activePicker, fillHsv, strokeHsv]
-    );
-    const startSatValDrag = (e) => {
-      e.preventDefault();
-      handleSatValDrag(e);
-      const onMove = (ev) => handleSatValDrag(ev);
-      const onUp = () => {
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-      };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-    };
+    const [fillHex, setFillHex] = (0, import_react19.useState)(validFill);
+    const [strokeHex, setStrokeHex] = (0, import_react19.useState)(validFill);
+    const [strokeWeight, setStrokeWeight] = (0, import_react19.useState)(0);
+    const [activePicker, setActivePicker] = (0, import_react19.useState)("fill");
     function handleSave() {
       const finalFillColor = `#${fillHex.padStart(6, "0")}`;
       const finalStrokeColor = `#${strokeHex.padStart(6, "0")}`;
       const finalStrokeWeight = Math.max(0, strokeWeight);
       addStylePreset({
+        name: `Custom ${finalFillColor}`,
         fillColor: finalFillColor,
         strokeWeight: finalStrokeWeight,
         strokeColor: finalStrokeColor
       });
-      if (selectedNodes && selectedNodes.length > 0) {
-        selectedNodes.forEach((node) => {
-          parent.postMessage(
-            {
-              pluginMessage: {
-                type: "UPDATE_FLOW_NODE",
-                payload: {
-                  nodeId: node.id,
-                  colorHex: finalFillColor,
-                  strokeColor: finalStrokeColor,
-                  strokeWeight: finalStrokeWeight
-                }
-              }
-            },
-            "*"
-          );
+      setUIState({
+        selectedColor: finalFillColor,
+        selectedStrokeWeight: finalStrokeWeight,
+        selectedStrokeColor: finalStrokeColor
+      });
+      setLastNodeConfig({
+        color: finalFillColor,
+        strokeWeight: finalStrokeWeight,
+        strokeColor: finalStrokeColor
+      });
+      if (selectedNodes.length > 0) {
+        applyCurrentNodeState(void 0, {
+          colorHex: finalFillColor,
+          strokeWeight: finalStrokeWeight,
+          strokeColor: finalStrokeColor
         });
       }
+      showToast("\uC0C8 \uC2A4\uD0C0\uC77C\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
       onClose();
     }
-    const currentHsv = activePicker === "stroke" ? strokeHsv : fillHsv;
-    const currentHex = activePicker === "stroke" ? strokeHex : fillHex;
-    return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
       "div",
       {
-        id: "modal-backdrop",
+        id: "modal-style-backdrop",
         className: "popover-backdrop",
-        style: { display: "flex" },
+        style: { display: "flex", alignItems: "center", justifyContent: "center" },
         onClick: (e) => {
           if (e.target === e.currentTarget) onClose();
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)(
           "div",
           {
-            id: "modal-add-style",
+            id: "modal-style",
             className: "style-modal-card",
-            style: { display: "flex" },
+            onClick: (e) => e.stopPropagation(),
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "style-modal-header", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { className: "style-modal-title", children: "Add Style" }),
-                /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { className: "style-modal-title", children: "Style" }),
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
                   "button",
                   {
                     type: "button",
@@ -32409,286 +33016,96 @@
                   }
                 )
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
                     "div",
                     {
                       className: "style-section-header",
                       style: {
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "space-between",
                         height: 24,
                         marginBottom: 6
                       },
-                      children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Fill" }),
-                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                          "button",
+                      children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Fill" })
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                    ColorWheelField,
+                    {
+                      value: fillHex,
+                      onChange: (hex) => setFillHex(hex),
+                      onEnter: handleSave,
+                      isOpen: activePicker === "fill",
+                      onToggleOpen: (open) => setActivePicker(open ? "fill" : null)
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("div", { className: "style-divider", style: { margin: "12px 0" } }),
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                    "div",
+                    {
+                      className: "style-section-header",
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        height: 24,
+                        marginBottom: 6
+                      },
+                      children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Stroke" })
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                    ColorWheelField,
+                    {
+                      value: strokeHex,
+                      onChange: (hex) => setStrokeHex(hex),
+                      onEnter: handleSave,
+                      isOpen: activePicker === "stroke",
+                      onToggleOpen: (open) => setActivePicker(open ? "stroke" : null),
+                      extraControlPosition: "left",
+                      extraControl: /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "stroke-width-box", children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+                          "span",
                           {
-                            type: "button",
-                            className: `style-palette-btn${activePicker === "fill" ? " active" : ""}`,
-                            onClick: () => setActivePicker(activePicker === "fill" ? null : "fill"),
-                            title: "Toggle color picker",
                             style: {
-                              background: "transparent",
-                              border: "none",
-                              color: activePicker === "fill" ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)",
-                              cursor: "pointer",
-                              padding: 2,
+                              width: 24,
+                              height: 24,
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              borderRadius: 4,
-                              transition: "color 0.15s ease, background 0.15s ease"
+                              color: "rgba(255, 255, 255, 0.6)",
+                              flexShrink: 0
                             },
-                            children: PALETTE_SVG2
-                          }
-                        )
-                      ]
-                    }
-                  ),
-                  /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
-                    "div",
-                    {
-                      className: `style-color-box${activePicker === "fill" ? " active" : ""}`,
-                      onClick: () => setActivePicker("fill"),
-                      children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                          "div",
-                          {
-                            className: "style-color-chip",
-                            style: { background: `#${fillHex.padStart(6, "0")}` },
-                            onClick: (e) => {
-                              e.stopPropagation();
-                              setActivePicker(activePicker === "fill" ? null : "fill");
-                            }
+                            children: STROKE_ICON_SVG
                           }
                         ),
-                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
                           "input",
                           {
-                            type: "text",
-                            className: "style-color-hex-text",
-                            value: fillHex,
-                            maxLength: 6,
-                            onFocus: (e) => {
-                              setActivePicker("fill");
-                              e.currentTarget.select();
-                            },
-                            onChange: (e) => handleHexChange("fill", e.target.value),
-                            autoComplete: "off",
-                            spellCheck: false
+                            type: "number",
+                            className: "prefix-input",
+                            min: 0,
+                            max: 50,
+                            value: strokeWeight,
+                            onChange: (e) => setStrokeWeight(parseInt(e.target.value, 10) || 0),
+                            onKeyDown: (e) => e.key === "Enter" && handleSave(),
+                            style: {
+                              width: "100%",
+                              textAlign: "left",
+                              letterSpacing: 0
+                            }
                           }
                         )
-                      ]
+                      ] })
                     }
-                  ),
-                  activePicker === "fill" && /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { style: { marginTop: 10, animation: "modalFadeIn 0.12s ease-out" }, children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                      "div",
-                      {
-                        ref: satValRef,
-                        className: "style-sat-val-picker",
-                        onMouseDown: startSatValDrag,
-                        style: {
-                          backgroundColor: `hsl(${fillHsv.h}, 100%, 50%)`,
-                          marginBottom: 12
-                        },
-                        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                          "div",
-                          {
-                            className: "style-sat-val-thumb",
-                            style: {
-                              left: `${fillHsv.s}%`,
-                              top: `${100 - fillHsv.v}%`
-                            }
-                          }
-                        )
-                      }
-                    ),
-                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                      "div",
-                      {
-                        ref: hueBarRef,
-                        className: "style-hue-slider",
-                        style: { margin: 0 },
-                        onMouseDown: startHueDrag,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                          "div",
-                          {
-                            className: "style-hue-thumb",
-                            style: {
-                              left: `${getHueSliderPercent2(fillHsv.h)}%`,
-                              background: `hsl(${fillHsv.h}, 100%, 50%)`
-                            }
-                          }
-                        )
-                      }
-                    )
-                  ] })
-                ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("div", { className: "style-divider", style: { margin: "12px 0" } }),
-                /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "style-section-group", style: { display: "flex", flexDirection: "column" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
-                    "div",
-                    {
-                      className: "style-section-header",
-                      style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        height: 24,
-                        marginBottom: 6
-                      },
-                      children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("span", { className: "style-section-label", style: { fontSize: 11, fontWeight: 550, color: "#FFFFFF", letterSpacing: 0 }, children: "Stroke" }),
-                        /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                          "button",
-                          {
-                            type: "button",
-                            className: `style-palette-btn${activePicker === "stroke" ? " active" : ""}`,
-                            onClick: () => setActivePicker(activePicker === "stroke" ? null : "stroke"),
-                            title: "Toggle color picker",
-                            style: {
-                              background: "transparent",
-                              border: "none",
-                              color: activePicker === "stroke" ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)",
-                              cursor: "pointer",
-                              padding: 2,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              borderRadius: 4,
-                              transition: "color 0.15s ease, background 0.15s ease"
-                            },
-                            children: PALETTE_SVG2
-                          }
-                        )
-                      ]
-                    }
-                  ),
-                  /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "style-control-row", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(
-                      "div",
-                      {
-                        className: `style-color-box${activePicker === "stroke" ? " active" : ""}`,
-                        onClick: () => setActivePicker("stroke"),
-                        children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                            "div",
-                            {
-                              className: "style-color-chip",
-                              style: { background: `#${strokeHex.padStart(6, "0")}` },
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                setActivePicker(activePicker === "stroke" ? null : "stroke");
-                              }
-                            }
-                          ),
-                          /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                            "input",
-                            {
-                              type: "text",
-                              className: "style-color-hex-text",
-                              value: strokeHex,
-                              maxLength: 6,
-                              onFocus: (e) => {
-                                setActivePicker("stroke");
-                                e.currentTarget.select();
-                              },
-                              onChange: (e) => handleHexChange("stroke", e.target.value),
-                              autoComplete: "off",
-                              spellCheck: false
-                            }
-                          )
-                        ]
-                      }
-                    ),
-                    /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "stroke-width-box", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                        "span",
-                        {
-                          style: {
-                            width: 16,
-                            height: 16,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "rgba(255, 255, 255, 0.6)",
-                            marginRight: 4,
-                            flexShrink: 0
-                          },
-                          children: STROKE_ICON_SVG
-                        }
-                      ),
-                      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                        "input",
-                        {
-                          type: "number",
-                          className: "prefix-input",
-                          min: 0,
-                          max: 50,
-                          value: strokeWeight,
-                          onChange: (e) => setStrokeWeight(parseInt(e.target.value, 10) || 0),
-                          onKeyDown: (e) => e.key === "Enter" && handleSave(),
-                          style: {
-                            width: "100%",
-                            textAlign: "left",
-                            letterSpacing: 0
-                          }
-                        }
-                      )
-                    ] })
-                  ] }),
-                  activePicker === "stroke" && /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { style: { marginTop: 10, animation: "modalFadeIn 0.12s ease-out" }, children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                      "div",
-                      {
-                        ref: satValRef,
-                        className: "style-sat-val-picker",
-                        onMouseDown: startSatValDrag,
-                        style: {
-                          backgroundColor: `hsl(${strokeHsv.h}, 100%, 50%)`,
-                          marginBottom: 12
-                        },
-                        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                          "div",
-                          {
-                            className: "style-sat-val-thumb",
-                            style: {
-                              left: `${strokeHsv.s}%`,
-                              top: `${100 - strokeHsv.v}%`
-                            }
-                          }
-                        )
-                      }
-                    ),
-                    /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                      "div",
-                      {
-                        ref: hueBarRef,
-                        className: "style-hue-slider",
-                        style: { margin: 0 },
-                        onMouseDown: startHueDrag,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
-                          "div",
-                          {
-                            className: "style-hue-thumb",
-                            style: {
-                              left: `${getHueSliderPercent2(strokeHsv.h)}%`,
-                              background: `hsl(${strokeHsv.h}, 100%, 50%)`
-                            }
-                          }
-                        )
-                      }
-                    )
-                  ] })
+                  )
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "style-modal-footer", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "style-modal-footer", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
                   "button",
                   {
                     type: "button",
@@ -32697,7 +33114,7 @@
                     children: "Cancel"
                   }
                 ),
-                /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
                   "button",
                   {
                     type: "button",
@@ -32714,8 +33131,153 @@
     );
   }
 
+  // src/ui/components/modals/ConnectorColorModal.tsx
+  var import_react20 = __toESM(require_react());
+  var import_jsx_runtime25 = __toESM(require_jsx_runtime());
+  var CLOSE_SVG3 = /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+    "path",
+    {
+      d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
+      fill: "currentColor"
+    }
+  ) });
+  function ConnectorColorModal({
+    initialColor,
+    onSave,
+    onClose
+  }) {
+    const { stylePresets } = useApp();
+    const [colorHex, setColorHex] = (0, import_react20.useState)(() => initialColor.replace("#", "").toUpperCase());
+    const [showWheel, setShowWheel] = (0, import_react20.useState)(false);
+    const presetsRow1 = stylePresets.slice(0, 5);
+    const presetsRow2 = stylePresets.slice(5);
+    (0, import_react20.useEffect)(() => {
+      setColorHex(initialColor.replace("#", "").toUpperCase());
+    }, [initialColor]);
+    function handleSelectPreset(hex) {
+      setColorHex(hex.replace("#", "").toUpperCase());
+    }
+    function handleSave() {
+      const finalHex = `#${colorHex.padStart(6, "0")}`;
+      onSave(finalHex);
+      onClose();
+    }
+    const currentFormattedHex = `#${colorHex.padStart(6, "0")}`;
+    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+      "div",
+      {
+        id: "modal-connector-color-backdrop",
+        className: "popover-backdrop",
+        style: { display: "flex", alignItems: "center", justifyContent: "center" },
+        onClick: (e) => {
+          if (e.target === e.currentTarget) onClose();
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)(
+          "div",
+          {
+            id: "modal-connector-color",
+            className: "conn-color-modal-card",
+            onClick: (e) => e.stopPropagation(),
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { className: "conn-color-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("span", { className: "conn-color-modal-title", children: "Connector Color" }),
+                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "style-modal-close-btn",
+                    onClick: onClose,
+                    title: "Close",
+                    children: CLOSE_SVG3
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-modal-divider" }),
+              /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { className: "conn-color-presets-wrapper", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-row", children: presetsRow1.map((preset) => {
+                  const isSelected = currentFormattedHex.toUpperCase() === preset.fillColor.toUpperCase();
+                  const hasBorder = (preset.strokeWeight ?? 0) > 0;
+                  return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+                    "button",
+                    {
+                      type: "button",
+                      className: `conn-preset-card${isSelected ? " selected" : ""}`,
+                      style: {
+                        backgroundColor: preset.fillColor,
+                        border: hasBorder ? `${preset.strokeWeight}px solid ${preset.strokeColor}` : "none",
+                        boxSizing: "border-box",
+                        boxShadow: hasBorder && !isSelected ? "none" : void 0
+                      },
+                      "data-color": preset.fillColor.toLowerCase(),
+                      onClick: () => handleSelectPreset(preset.fillColor),
+                      title: preset.name || preset.fillColor
+                    },
+                    preset.id
+                  );
+                }) }),
+                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-row", children: presetsRow2.map((preset) => {
+                  const isSelected = currentFormattedHex.toUpperCase() === preset.fillColor.toUpperCase();
+                  const hasBorder = (preset.strokeWeight ?? 0) > 0;
+                  return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+                    "button",
+                    {
+                      type: "button",
+                      className: `conn-preset-card${isSelected ? " selected" : ""}`,
+                      style: {
+                        backgroundColor: preset.fillColor,
+                        border: hasBorder ? `${preset.strokeWeight}px solid ${preset.strokeColor}` : "none",
+                        boxSizing: "border-box",
+                        boxShadow: hasBorder && !isSelected ? "none" : void 0
+                      },
+                      "data-color": preset.fillColor.toLowerCase(),
+                      onClick: () => handleSelectPreset(preset.fillColor),
+                      title: preset.name || preset.fillColor
+                    },
+                    preset.id
+                  );
+                }) })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-modal-divider" }),
+              /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+                ColorWheelField,
+                {
+                  value: colorHex,
+                  onChange: (newHex) => setColorHex(newHex),
+                  onEnter: handleSave,
+                  isOpen: showWheel,
+                  onToggleOpen: setShowWheel
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-modal-divider" }),
+              /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { className: "conn-color-modal-footer", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "conn-btn-cancel",
+                    onClick: onClose,
+                    children: "Cancel"
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "conn-btn-save",
+                    onClick: handleSave,
+                    children: "Save"
+                  }
+                )
+              ] })
+            ]
+          }
+        )
+      }
+    );
+  }
+
   // src/ui/App.tsx
-  var import_jsx_runtime24 = __toESM(require_jsx_runtime());
+  var import_jsx_runtime26 = __toESM(require_jsx_runtime());
   var TABS = [
     { id: "node", label: "Node" },
     { id: "appearance", label: "Appearance" },
@@ -32755,20 +33317,22 @@
       applyCurrentNodeState,
       setLastNodeConfig,
       showToast,
-      autoResizeWindow
+      autoResizeWindow,
+      stylePresets,
+      setSelectedStylePresetId
     } = useApp();
-    const [phases, setPhases] = (0, import_react19.useState)([
+    const [phases, setPhases] = (0, import_react21.useState)([
       { id: "phase-1", name: "Phase 1", color: "#EA2039" },
       { id: "phase-2", name: "Phase 2", color: "#8638E5" }
     ]);
-    const [editingPhase, setEditingPhase] = (0, import_react19.useState)(null);
+    const [editingPhase, setEditingPhase] = (0, import_react21.useState)(null);
     const nodeCount = selectedNodes.length;
     const allConnectors = nodeCount > 0 && selectedNodes.every((n) => n && n.isConnector);
     const isSingleConn = nodeCount === 1 && allConnectors;
     const isMultiConn = nodeCount >= 2 && allConnectors;
     const isConnSel = isSingleConn || isMultiConn;
     const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
-    (0, import_react19.useEffect)(() => {
+    (0, import_react21.useEffect)(() => {
       const tabNode = document.getElementById("tab-btn-node");
       const tabAppearance = document.getElementById("tab-btn-appearance");
       const tabConnection = document.getElementById("tab-btn-connection");
@@ -32788,7 +33352,7 @@
         tabConnection?.classList.remove("disabled");
       }
     }, [isConnSel, nodeCount, currentTab, setCurrentTab]);
-    (0, import_react19.useEffect)(() => {
+    (0, import_react21.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
     function switchTab(tabId) {
@@ -32847,7 +33411,7 @@
     }
     function renderTitleBanner() {
       if (isSingleConn) {
-        return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
           "input",
           {
             type: "text",
@@ -32871,9 +33435,9 @@
         } else {
           selText = `${nodeCount} objects selected`;
         }
-        return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { id: "multi-selection-text", children: selText }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("span", { id: "multi-selection-text", children: selText }) });
       }
-      return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         "input",
         {
           type: "text",
@@ -32888,9 +33452,9 @@
         }
       ) });
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("div", { className: "title-banner", children: renderTitleBanner() }),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "title-banner", children: renderTitleBanner() }),
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         "button",
         {
           id: `tab-btn-${tab.id}`,
@@ -32901,37 +33465,37 @@
         },
         tab.id
       )) }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("hr", { className: "section-divider" }),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("main", { className: "tab-panels", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("hr", { className: "section-divider" }),
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("main", { className: "tab-panels", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
           "section",
           {
             id: "panel-node",
             className: "tab-panel",
             style: { display: currentTab === "node" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(NodePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(NodePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
           "section",
           {
             id: "panel-appearance",
             className: "tab-panel",
             style: { display: currentTab === "appearance" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(AppearancePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(AppearancePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
           "section",
           {
             id: "panel-connection",
             className: "tab-panel",
             style: { display: currentTab === "connection" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(ConnectionPanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(ConnectionPanel, {})
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         "button",
         {
           id: "btn-main-cta",
@@ -32941,9 +33505,9 @@
           children: ctaLabel
         }
       ) }),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(PhasePopover, { phases, onSelectPhase: handleSelectPhase }),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
-      activeModal === "phase" && /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(PhasePopover, { phases, onSelectPhase: handleSelectPhase }),
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
+      activeModal === "phase" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         PhaseModal,
         {
           editingPhase,
@@ -32954,44 +33518,79 @@
           }
         }
       ),
-      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         SizeModal,
         {
           mode: "add",
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         SizeModal,
         {
           mode: "edit",
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "figma-design-picker" && /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+      activeModal === "figma-design-picker" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         FigmaDesignPickerModal,
         {
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "add-style" && /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
+      activeModal === "add-style" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
         StyleModal,
         {
           initialColor: uiState.selectedColor,
           onClose: () => setActiveModal("none")
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(FigmaTooltip, {})
+      activeModal === "connector-color" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+        ConnectorColorModal,
+        {
+          initialColor: uiState.selectedConnectorColor || "#000000",
+          onSave: (colorHex) => {
+            const formatted = colorHex.toUpperCase();
+            setUIState({ selectedConnectorColor: formatted });
+            const matched = stylePresets.find(
+              (p) => p.fillColor.toUpperCase() === formatted || p.strokeWeight > 0 && p.strokeColor.toUpperCase() === formatted
+            );
+            if (matched) {
+              setSelectedStylePresetId(matched.id);
+              setUIState({
+                selectedColor: matched.fillColor,
+                selectedStrokeWeight: matched.strokeWeight,
+                selectedStrokeColor: matched.strokeColor,
+                selectedStylePresetId: matched.id,
+                selectedConnectorColor: formatted
+              });
+            }
+            if (isConnSel && selectedNodes.length > 0) {
+              parent.postMessage(
+                {
+                  pluginMessage: {
+                    type: "UPDATE_CONNECTOR_STYLE",
+                    connectorColor: formatted
+                  }
+                },
+                "*"
+              );
+            }
+          },
+          onClose: () => setActiveModal("none")
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(FigmaTooltip, {})
     ] });
   }
 
   // src/ui/index.tsx
-  var import_jsx_runtime25 = __toESM(require_jsx_runtime());
+  var import_jsx_runtime27 = __toESM(require_jsx_runtime());
   var container = document.getElementById("root");
   if (!container) throw new Error("#root not found");
   var root = (0, import_client.createRoot)(container);
   root.render(
-    /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(App, {}) })
+    /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(App, {}) })
   );
 })();
 /*! Bundled license information:
