@@ -114,8 +114,16 @@
       appearance: textfield !important;
     }
 
-    html {
-      height: auto;
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      max-height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden !important;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none;
     }
 
     body {
@@ -123,36 +131,47 @@
       color: var(--color-text-primary);
       font-size: 11px;
       line-height: 1.45;
+      position: relative;
+    }
+
+    /* 최상위 윈도우 스크롤바 100% 원천 차단 (iframe 네이티브 스크롤바 방지) */
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    #root::-webkit-scrollbar,
+    #plugin-root::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+
+    #root {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 0 !important;
+      max-height: 100% !important;
       margin: 0;
       padding: 0;
-      height: auto;
-      min-height: 0;
-      overflow: hidden;
-      position: relative;
+      overflow: hidden !important;
+      display: flex;
+      flex-direction: column;
     }
 
     #plugin-root {
       width: 100%;
-      height: auto;
-      min-height: 0;
+      height: 100%;
+      min-height: 0 !important;
+      max-height: 100% !important;
+      flex: 1 1 0% !important;
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
-    }
-
-    /* 슬림 커스텀 스크롤바 */
-    ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.15);
-      border-radius: var(--radius-full);
+      overflow: hidden !important;
+      position: relative;
     }
 
 
@@ -253,25 +272,48 @@
     }
 
     /* ============================================================ */
-    /* 탭 본문 스크롤 영역                                          */
+    /* 탭 본문 스크롤 영역 (상단 탭과 하단 푸터 사이 유연한 스크롤)   */
     /* ============================================================ */
     .tab-panels {
-      flex: none;
-      overflow: visible;
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+      max-height: 100% !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
       padding: 0 16px;
       display: flex;
       flex-direction: column;
       gap: 0;
+      box-sizing: border-box;
+    }
+
+    /* 슬림 커스텀 스크롤바 (오직 .tab-panels에만 적용) */
+    .tab-panels::-webkit-scrollbar {
+      width: 4px;
+    }
+    .tab-panels::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .tab-panels::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: var(--radius-full);
+    }
+    .tab-panels::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.3);
     }
 
     .tab-panel {
       display: none;
       flex-direction: column;
       gap: 0;
+      min-height: 0;
+      width: 100%;
+      box-sizing: border-box;
     }
 
+    .tab-panel[style*="display: block"],
     .tab-panel.active {
-      display: flex;
+      display: flex !important;
     }
 
     /* 구분선 */
@@ -1405,79 +1447,112 @@
     }
 
     /* ============================================================ */
-    /* 3. [ Connection ] 탭 세부 스타일 (18:4622, 18:4656, 18:4748)   */
+    /* ============================================================ */
+    /* 3. [ Connection ] 탭 기즈모 스타일 (Figma 공식 UI3 1027248:5061) */
     /* ============================================================ */
     .connect-canvas-box {
-      background: var(--color-bg-secondary);
-      border-radius: var(--radius-md);
-      padding: 14px;
+      width: 100%;
+      height: 128px;
+      background: var(--color-bg-secondary, #f5f5f5);
+      border-radius: 5px;
       display: flex;
       align-items: center;
-      justify-content: space-around;
+      justify-content: center;
+      gap: 40px;
       position: relative;
-      min-height: 120px;
+      box-sizing: border-box;
+      user-select: none;
     }
 
     .node-preview-card {
-      width: 120px;
-      height: 74px;
+      width: 116px;
+      height: 72px;
       background: #ffffff;
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-xs);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 0px;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 6px;
-      font-size: 10px;
-      font-weight: 500;
-      color: var(--color-text-primary);
-      text-align: center;
-      word-break: break-all;
-      box-shadow: var(--shadow-sm);
+      padding: 8px 12px;
+      box-sizing: border-box;
+      box-shadow: none;
     }
 
+    .node-preview-card span {
+      font-size: 11px;
+      font-weight: 400;
+      color: rgba(0, 0, 0, 0.5);
+      text-align: center;
+      word-break: break-all;
+      overflow: hidden;
+      line-height: 1.35;
+      max-height: 54px;
+    }
+
+    /* 11x11 앵커 마그넷 기즈모 핸들 (상하좌우 1px씩 확대) */
     .anchor-handle {
       position: absolute;
-      width: 9px;
-      height: 9px;
+      width: 11px;
+      height: 11px;
       background: #ffffff;
-      border: 1.5px solid #b0b0b0;
-      border-radius: 2px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 0px;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: border-color 0.15s ease, background 0.15s ease;
       z-index: 2;
+      box-sizing: border-box;
     }
 
     .anchor-handle:hover {
-      border-color: var(--color-brand);
-      transform: scale(1.2);
+      border-color: var(--color-brand, #8638e5);
     }
 
     .anchor-handle.active {
-      background: var(--color-brand) !important;
-      border-color: var(--color-brand) !important;
-      box-shadow: 0 0 0 2px #ffffff;
+      background: var(--color-brand, #8638e5) !important;
+      border: 1px solid var(--color-brand, #8638e5) !important;
+      box-shadow: none !important;
     }
 
     .anchor-top {
-      top: -5px;
-      left: calc(50% - 4.5px);
+      top: -5.5px;
+      left: calc(50% - 5.5px);
     }
 
     .anchor-bottom {
-      bottom: -5px;
-      left: calc(50% - 4.5px);
+      bottom: -5.5px;
+      left: calc(50% - 5.5px);
     }
 
     .anchor-left {
-      left: -5px;
-      top: calc(50% - 4.5px);
+      left: -5.5px;
+      top: calc(50% - 5.5px);
     }
 
     .anchor-right {
-      right: -5px;
-      top: calc(50% - 4.5px);
+      right: -5.5px;
+      top: calc(50% - 5.5px);
+    }
+
+    /* 다크 모드 기즈모 대응 */
+    body.figma-dark .node-preview-card,
+    .figma-dark .node-preview-card,
+    [data-theme="dark"] .node-preview-card {
+      background: #2c2c2c;
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    body.figma-dark .node-preview-card span,
+    .figma-dark .node-preview-card span,
+    [data-theme="dark"] .node-preview-card span {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    body.figma-dark .anchor-handle:not(.active),
+    .figma-dark .anchor-handle:not(.active),
+    [data-theme="dark"] .anchor-handle:not(.active) {
+      background: #2c2c2c;
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     /* ============================================================ */
@@ -1550,8 +1625,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       padding: 0;
       background: transparent;
       border: none;
@@ -1563,8 +1638,8 @@
     }
 
     .conn-color-palette-btn svg {
-      width: 24px;
-      height: 24px;
+      width: 16px;
+      height: 16px;
       display: block;
     }
 
@@ -1656,6 +1731,21 @@
     .terminal-offset-row .input-scrubber-box {
       width: 70px;
       box-sizing: border-box;
+    }
+
+    .terminal-offset-row .input-scrubber-box.offset-start-box {
+      padding: 0 4px 0 0;
+      gap: 0;
+    }
+
+    .terminal-offset-row .input-scrubber-box.offset-end-box {
+      padding: 0 0 0 6px;
+      gap: 0;
+    }
+
+    .terminal-offset-row .input-scrubber-box.offset-end-box input {
+      text-align: right;
+      padding-right: 2px;
     }
 
     /* 커스텀 터미널 드롭다운 */

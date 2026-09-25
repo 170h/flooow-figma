@@ -916,6 +916,80 @@ async function updateDescTextTruncation(card: FrameNode, descText: TextNode, cur
   }
 }
 
+// ----------------------------------------------------
+// 노드 2D 공간 배치 기반 중심 좌표 및 좌상단 좌표 추출
+// ----------------------------------------------------
+function getNodeCenter(node: SceneNode): { x: number; y: number } {
+  if ('absoluteBoundingBox' in node && node.absoluteBoundingBox) {
+    return {
+      x: node.absoluteBoundingBox.x + node.absoluteBoundingBox.width / 2,
+      y: node.absoluteBoundingBox.y + node.absoluteBoundingBox.height / 2,
+    };
+  }
+  const x = 'x' in node ? (node as any).x : 0;
+  const y = 'y' in node ? (node as any).y : 0;
+  const w = 'width' in node ? (node as any).width : 0;
+  const h = 'height' in node ? (node as any).height : 0;
+  return { x: x + w / 2, y: y + h / 2 };
+}
+
+function getNodeTopLeft(node: SceneNode): { x: number; y: number } {
+  if ('absoluteBoundingBox' in node && node.absoluteBoundingBox) {
+    return {
+      x: node.absoluteBoundingBox.x,
+      y: node.absoluteBoundingBox.y,
+    };
+  }
+  const x = 'x' in node ? (node as any).x : 0;
+  const y = 'y' in node ? (node as any).y : 0;
+  return { x, y };
+}
+
+// ----------------------------------------------------
+// 복수 노드 선택 시 상대적으로 위쪽 혹은 왼쪽에 위치한 노드를 우선 정렬
+// (가로 흐름: 왼쪽 노드 우선 / 세로 흐름: 위쪽 노드 우선)
+// ----------------------------------------------------
+function sortNodesBySpatialPosition(nodes: SceneNode[]): SceneNode[] {
+  if (nodes.length <= 1) return nodes;
+
+  const centers = new Map<string, { x: number; y: number }>();
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  for (const node of nodes) {
+    const center = getNodeCenter(node);
+    centers.set(node.id, center);
+    if (center.x < minX) minX = center.x;
+    if (center.x > maxX) maxX = center.x;
+    if (center.y < minY) minY = center.y;
+    if (center.y > maxY) maxY = center.y;
+  }
+
+  const spanX = maxX - minX;
+  const spanY = maxY - minY;
+
+  return [...nodes].sort((a, b) => {
+    const posA = centers.get(a.id) || { x: 0, y: 0 };
+    const posB = centers.get(b.id) || { x: 0, y: 0 };
+
+    if (spanX >= spanY) {
+      // 주로 가로(수평) 흐름: 상대적으로 왼쪽(x 작음) 우선, 같으면 위쪽(y 작음) 우선
+      if (Math.abs(posA.x - posB.x) > 1) {
+        return posA.x - posB.x;
+      }
+      return posA.y - posB.y;
+    } else {
+      // 주로 세로(수직) 흐름: 상대적으로 위쪽(y 작음) 우선, 같으면 왼쪽(x 작음) 우선
+      if (Math.abs(posA.y - posB.y) > 1) {
+        return posA.y - posB.y;
+      }
+      return posA.x - posB.x;
+    }
+  });
+}
+
 // 선택 영역 변경 감지 시 UI 갱신 (바탕화면 클릭 ➔ 빈 폼 / 노드 클릭 ➔ 상세 수정 폼)
 async function handleSelectionChange() {
   await loadRequiredFonts();
@@ -964,6 +1038,11 @@ async function handleSelectionChange() {
     uniqueNodes = connNodes;
   } else {
     uniqueNodes = otherObjects;
+  }
+
+  // 복수 노드 선택 시 캔버스 상의 2D 공간 배치에 따라 상대적으로 위쪽 혹은 왼쪽 노드가 앞(기즈모 왼쪽)에 오도록 정렬
+  if (uniqueNodes.length > 1 && connectorCount === 0) {
+    uniqueNodes = sortNodesBySpatialPosition(uniqueNodes);
   }
 
   const nodes: SelectedNodeInfo[] = await Promise.all(uniqueNodes.map(async (node) => {
@@ -1195,6 +1274,8 @@ async function handleSelectionChange() {
       cornerRadius = Math.round((node as any).cornerRadius);
     }
 
+    const pos = getNodeTopLeft(node);
+
     return {
       id: node.id,
       name: node.name,
@@ -1235,6 +1316,8 @@ async function handleSelectionChange() {
       fillColorHex: nodeFillColor,
       strokeColorHex: nodeStrokeColor,
       strokeWeight: nodeStrokeWeight,
+      x: Math.round(pos.x),
+      y: Math.round(pos.y),
     };
   }));
 
@@ -2398,15 +2481,18 @@ async function autoConnectSelected(label?: string) {
       const flow = findFlowNode(n) || n;
       nodesMap.set(flow.id, flow);
     }
-    const nodes = Array.from(nodesMap.values());
+    let nodes = Array.from(nodesMap.values());
     if (nodes.length < 2) {
       notify('서로 다른 노드를 2개 이상 선택해 주세요.', 'warning');
       return;
     }
 
+    // 캔버스 배치 위치에 따라 상대적으로 위/왼쪽 노드 우선 정렬
+    nodes = sortNodesBySpatialPosition(nodes);
+
     await loadRequiredFonts();
 
-    // 1. 2개 선택인 경우: 기존과 동일하게 최단 방향으로 직각 연결
+    // 1. 2개 선택인 경우: 정렬된 순서(출발: 위/왼쪽 -> 도착: 아래/오른쪽)로 최단 방향 직각 연결
     if (nodes.length === 2) {
       const sourceNode = nodes[0];
       const targetNode = nodes[1];
@@ -2442,25 +2528,7 @@ async function autoConnectSelected(label?: string) {
       return;
     }
 
-    // 2. 3개 이상 선택인 경우: 캔버스 배치 좌표(가로 흐름 vs 세로 흐름)에 따라 순차 정렬 후 연속 체인 연결 (1->2->3...)
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const n of nodes) {
-      if (n.x < minX) minX = n.x;
-      if (n.x > maxX) maxX = n.x;
-      if (n.y < minY) minY = n.y;
-      if (n.y > maxY) maxY = n.y;
-    }
-
-    const spanX = maxX - minX;
-    const spanY = maxY - minY;
-
-    if (spanX >= spanY) {
-      // 주로 가로 방향 배치: 좌->우 X좌표 오름차순 정렬
-      nodes.sort((a, b) => a.x - b.x);
-    } else {
-      // 주로 세로 방향 배치: 상->하 Y좌표 오름차순 정렬
-      nodes.sort((a, b) => a.y - b.y);
-    }
+    // 2. 3개 이상 선택인 경우: 정렬된 순차 체인 연결 (1->2->3...)
 
     const createdConnectors: SceneNode[] = [];
     for (let i = 0; i < nodes.length - 1; i++) {

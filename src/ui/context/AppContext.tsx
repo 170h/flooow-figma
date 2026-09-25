@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useEffect,
 } from 'react';
+import { getPluginIdealHeight } from '../hooks/useAutoResize';
 
 // ============================================================
 // 타입 정의
@@ -396,10 +397,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     requestAnimationFrame(() => {
       const root = document.getElementById('plugin-root');
       if (!root) return;
-      const totalHeight = Math.ceil(root.offsetHeight || root.getBoundingClientRect().height);
-      if (totalHeight > 100) {
+      const idealHeight = getPluginIdealHeight(root);
+      if (idealHeight > 100) {
         parent.postMessage({
-          pluginMessage: { type: 'RESIZE_WINDOW', width: 360, height: totalHeight }
+          pluginMessage: { type: 'RESIZE_WINDOW', width: 360, height: idealHeight }
         }, '*');
       }
     });

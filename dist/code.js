@@ -1222,6 +1222,63 @@
       console.warn("updateDescTextTruncation failed:", err);
     }
   }
+  function getNodeCenter(node) {
+    if ("absoluteBoundingBox" in node && node.absoluteBoundingBox) {
+      return {
+        x: node.absoluteBoundingBox.x + node.absoluteBoundingBox.width / 2,
+        y: node.absoluteBoundingBox.y + node.absoluteBoundingBox.height / 2
+      };
+    }
+    const x = "x" in node ? node.x : 0;
+    const y = "y" in node ? node.y : 0;
+    const w = "width" in node ? node.width : 0;
+    const h = "height" in node ? node.height : 0;
+    return { x: x + w / 2, y: y + h / 2 };
+  }
+  function getNodeTopLeft(node) {
+    if ("absoluteBoundingBox" in node && node.absoluteBoundingBox) {
+      return {
+        x: node.absoluteBoundingBox.x,
+        y: node.absoluteBoundingBox.y
+      };
+    }
+    const x = "x" in node ? node.x : 0;
+    const y = "y" in node ? node.y : 0;
+    return { x, y };
+  }
+  function sortNodesBySpatialPosition(nodes) {
+    if (nodes.length <= 1) return nodes;
+    const centers = /* @__PURE__ */ new Map();
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const node of nodes) {
+      const center = getNodeCenter(node);
+      centers.set(node.id, center);
+      if (center.x < minX) minX = center.x;
+      if (center.x > maxX) maxX = center.x;
+      if (center.y < minY) minY = center.y;
+      if (center.y > maxY) maxY = center.y;
+    }
+    const spanX = maxX - minX;
+    const spanY = maxY - minY;
+    return [...nodes].sort((a, b) => {
+      const posA = centers.get(a.id) || { x: 0, y: 0 };
+      const posB = centers.get(b.id) || { x: 0, y: 0 };
+      if (spanX >= spanY) {
+        if (Math.abs(posA.x - posB.x) > 1) {
+          return posA.x - posB.x;
+        }
+        return posA.y - posB.y;
+      } else {
+        if (Math.abs(posA.y - posB.y) > 1) {
+          return posA.y - posB.y;
+        }
+        return posA.x - posB.x;
+      }
+    });
+  }
   async function handleSelectionChange() {
     await loadRequiredFonts();
     const rawSelection = figma.currentPage.selection;
@@ -1254,6 +1311,9 @@
       uniqueNodes = connNodes;
     } else {
       uniqueNodes = otherObjects;
+    }
+    if (uniqueNodes.length > 1 && connectorCount === 0) {
+      uniqueNodes = sortNodesBySpatialPosition(uniqueNodes);
     }
     const nodes = await Promise.all(uniqueNodes.map(async (node) => {
       const isFlowNode = node.getPluginData("is_flow_node") === "true";
@@ -1449,6 +1509,7 @@
       if ("cornerRadius" in node && typeof node.cornerRadius === "number") {
         cornerRadius = Math.round(node.cornerRadius);
       }
+      const pos = getNodeTopLeft(node);
       return {
         id: node.id,
         name: node.name,
@@ -1488,7 +1549,9 @@
         elevation: node.getPluginData("node_elevation") !== "" ? parseInt(node.getPluginData("node_elevation"), 10) : void 0,
         fillColorHex: nodeFillColor,
         strokeColorHex: nodeStrokeColor,
-        strokeWeight: nodeStrokeWeight
+        strokeWeight: nodeStrokeWeight,
+        x: Math.round(pos.x),
+        y: Math.round(pos.y)
       };
     }));
     let currentStatus;
@@ -2507,11 +2570,12 @@
         const flow = findFlowNode(n) || n;
         nodesMap.set(flow.id, flow);
       }
-      const nodes = Array.from(nodesMap.values());
+      let nodes = Array.from(nodesMap.values());
       if (nodes.length < 2) {
         notify("\uC11C\uB85C \uB2E4\uB978 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
         return;
       }
+      nodes = sortNodesBySpatialPosition(nodes);
       await loadRequiredFonts();
       if (nodes.length === 2) {
         const sourceNode = nodes[0];
@@ -2542,20 +2606,6 @@
         handleSelectionChange();
         notify(`\uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC${label ? ` (\uB77C\uBCA8: "${label}")` : ""}`, "success");
         return;
-      }
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      for (const n of nodes) {
-        if (n.x < minX) minX = n.x;
-        if (n.x > maxX) maxX = n.x;
-        if (n.y < minY) minY = n.y;
-        if (n.y > maxY) maxY = n.y;
-      }
-      const spanX = maxX - minX;
-      const spanY = maxY - minY;
-      if (spanX >= spanY) {
-        nodes.sort((a, b) => a.x - b.x);
-      } else {
-        nodes.sort((a, b) => a.y - b.y);
       }
       const createdConnectors = [];
       for (let i = 0; i < nodes.length - 1; i++) {

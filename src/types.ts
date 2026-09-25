@@ -263,6 +263,8 @@ export interface SelectedNodeInfo {
   connectorColorHex?: string;
   connectorStrokeWeight?: number;
   connectorStrokePattern?: ConnectorStrokePattern;
+  x?: number;
+  y?: number;
   connectorRoutingType?: ConnectorRoutingType;
   connectorStartTerminal?: ConnectorTerminalType;
   connectorEndTerminal?: ConnectorTerminalType;

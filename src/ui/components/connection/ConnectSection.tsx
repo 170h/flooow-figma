@@ -430,7 +430,7 @@ export function ConnectSection() {
                 onChange={(e) => selectColor(e.target.value)}
               />
 
-              {/* 피그마 UI3 컬러 팔레트 아이콘 버튼 (클릭 시 피그마 공식 원형 컬러 휠 모달 열기) */}
+              {/* 피그마 UI3 드롭다운 셰브론 아이콘 버튼 (클릭 시 피그마 공식 컬러 휠 모달 열기) */}
               <button
                 type="button"
                 id="btn-conn-color-palette"
@@ -444,7 +444,7 @@ export function ConnectSection() {
                   setActiveModal('connector-color');
                 }}
               >
-                <IcPalette />
+                {CHEVRON_SVG}
               </button>
             </div>
 
@@ -457,6 +457,55 @@ export function ConnectSection() {
             />
           </div>
 
+          {/* 컬러 드롭박스 우측: 커넥터 모양 (ROUTING_TYPES 4개) */}
+          <div className="routing-types-grid" style={{ flex: 1 }}>
+            {ROUTING_TYPES.map(r => (
+              <button key={r.type}
+                className={`routing-btn${selectedRoutingType === r.type ? ' active' : ''}`}
+                title={r.title}
+                onClick={() => selectRoutingType(r.type)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" dangerouslySetInnerHTML={{ __html: r.svg }} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 앵커 연결 캔버스 (Figma 공식 UI3 1027248:5061) */}
+        <div className="connect-canvas-box" id="conn-anchor-preview-box">
+          <div className="node-preview-card" id="preview-node-1">
+            {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => (
+              <div key={pos}
+                className={`anchor-handle anchor-${pos.toLowerCase()}${sourceMagnet === pos ? ' active' : ''}`}
+                data-node="1" data-pos={pos}
+                title={`Source ${pos}`}
+                onClick={() => selectAnchor(1, pos)} />
+            ))}
+            <span id="preview-node-1-text">
+              {selectedNodes[0]?.title || selectedNodes[0]?.name || 'Node 1'}
+            </span>
+          </div>
+          <div className="node-preview-card" id="preview-node-2">
+            {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => (
+              <div key={pos}
+                className={`anchor-handle anchor-${pos.toLowerCase()}${targetMagnet === pos ? ' active' : ''}`}
+                data-node="2" data-pos={pos}
+                title={`Target ${pos}`}
+                onClick={() => selectAnchor(2, pos)} />
+            ))}
+            <span id="preview-node-2-text">
+              {selectedNodes[1]?.title || selectedNodes[1]?.name || 'Node 2'}
+            </span>
+          </div>
+        </div>
+
+        {/* 두께 + 선 모양 */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <div className="input-scrubber-box" style={{ width: '70px' }}>
+            <svg data-tooltip="Stroke width" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z" fill="currentColor"/></svg>
+            <input type="number" id="input-stroke-weight" defaultValue={1.5} step={0.5} min={1} max={10}
+              onBlur={() => applyCurrentConnectorState()}
+              onKeyDown={e => e.key === 'Enter' && applyCurrentConnectorState()} />
+          </div>
           <div className="line-style-segment" style={{ flex: 1 }}>
             {[
               { pattern: 'SOLID', title: 'Solid', path: 'M18.5 11C18.7761 11 19 11.2239 19 11.5C19 11.7761 18.7761 12 18.5 12H5.5C5.22386 12 5 11.7761 5 11.5C5 11.2239 5.22386 11 5.5 11H18.5Z' },
@@ -474,61 +523,24 @@ export function ConnectSection() {
               title="Dotted"
               onClick={e => selectLinePattern('DOTTED', e.currentTarget)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="6" cy="12" r="1.2" fill="currentColor"/>
-                <circle cx="9" cy="12" r="1.2" fill="currentColor"/>
-                <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
-                <circle cx="15" cy="12" r="1.2" fill="currentColor"/>
-                <circle cx="18" cy="12" r="1.2" fill="currentColor"/>
+                <g transform="translate(5, 11.3)">
+                  <path d="M0.7 0C0.31 0 0 0.31 0 0.7C0 1.09 0.31 1.4 0.7 1.4C1.09 1.4 1.4 1.09 1.4 0.7C1.4 0.31 1.09 0 0.7 0Z" fill="currentColor"/>
+                  <path d="M3.8499 0C3.4599 0 3.1499 0.31 3.1499 0.7C3.1499 1.09 3.4599 1.4 3.8499 1.4C4.2399 1.4 4.5499 1.09 4.5499 0.7C4.5499 0.31 4.2399 0 3.8499 0Z" fill="currentColor"/>
+                  <path d="M7.00005 0C6.61005 0 6.30005 0.31 6.30005 0.7C6.30005 1.09 6.61005 1.4 7.00005 1.4C7.39005 1.4 7.70005 1.09 7.70005 0.7C7.70005 0.31 7.39005 0 7.00005 0Z" fill="currentColor"/>
+                  <path d="M10.15 0C9.75995 0 9.44995 0.31 9.44995 0.7C9.44995 1.09 9.75995 1.4 10.15 1.4C10.54 1.4 10.85 1.09 10.85 0.7C10.85 0.31 10.54 0 10.15 0Z" fill="currentColor"/>
+                  <path d="M13.3001 0C12.9101 0 12.6001 0.31 12.6001 0.7C12.6001 1.09 12.9101 1.4 13.3001 1.4C13.6901 1.4 14.0001 1.09 14.0001 0.7C14.0001 0.31 13.6901 0 13.3001 0Z" fill="currentColor"/>
+                </g>
               </svg>
             </button>
           </div>
         </div>
 
-        {/* 앵커 연결 캔버스 */}
-        <div className="connect-canvas-box" id="conn-anchor-preview-box">
-          <div className="node-preview-card" id="preview-node-1">
-            {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => (
-              <div key={pos}
-                className={`anchor-handle anchor-${pos.toLowerCase()}${sourceMagnet === pos ? ' active' : ''}`}
-                data-node="1" data-pos={pos}
-                onClick={() => selectAnchor(1, pos)} />
-            ))}
-            <span id="preview-node-1-text">Node 1</span>
-          </div>
-          <div className="node-preview-card" id="preview-node-2">
-            {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => (
-              <div key={pos}
-                className={`anchor-handle anchor-${pos.toLowerCase()}${targetMagnet === pos ? ' active' : ''}`}
-                data-node="2" data-pos={pos}
-                onClick={() => selectAnchor(2, pos)} />
-            ))}
-            <span id="preview-node-2-text">Node 2</span>
-          </div>
-        </div>
-
-        {/* 두께 + 라우팅 */}
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <div className="input-scrubber-box" style={{ width: '70px' }}>
-            <svg data-tooltip="Stroke width" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z" fill="currentColor"/></svg>
-            <input type="number" id="input-stroke-weight" defaultValue={1.5} step={0.5} min={1} max={10}
-              onBlur={() => applyCurrentConnectorState()}
-              onKeyDown={e => e.key === 'Enter' && applyCurrentConnectorState()} />
-          </div>
-          <div className="routing-types-grid" style={{ flex: 1 }}>
-            {ROUTING_TYPES.map(r => (
-              <button key={r.type}
-                className={`routing-btn${selectedRoutingType === r.type ? ' active' : ''}`}
-                title={r.title}
-                onClick={() => selectRoutingType(r.type)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" dangerouslySetInnerHTML={{ __html: r.svg }} />
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* 단자 + 오프셋 */}
         <div className="terminal-offset-row">
-          <div className="input-scrubber-box" style={{ width: '70px' }}>
+          <div className="input-scrubber-box offset-start-box" style={{ width: '70px' }}>
+            <svg data-tooltip="Start offset" width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 18V6M17.7333 9.63637L20.0001 11.8182L17.7333 14M20.0001 11.8182H14.4045" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
             <input type="number" id="input-start-offset" placeholder="Offset" defaultValue={0} />
           </div>
 
@@ -801,8 +813,13 @@ export function ConnectSection() {
           </div>
 
           {/* 끝 오프셋 */}
-          <div className="input-scrubber-box" style={{ width: '70px' }}>
+          <div className="input-scrubber-box offset-end-box" style={{ width: '70px' }}>
             <input type="number" id="input-end-offset" placeholder="Offset" defaultValue={0} />
+            <svg data-tooltip="End offset" width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <g transform="translate(3.5, 5.5)">
+                <path d="M8.49992 12.5V0.5M2.76672 8.5L0.5 6.31817L2.76672 4.13637M0.5 6.31817H6.09557" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+              </g>
+            </svg>
           </div>
         </div>
 

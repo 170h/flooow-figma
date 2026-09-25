@@ -786,5 +786,21 @@ UI3의 모든 컴포넌트 내부 패딩 및 외부 마진은 8px 기본 배수�
 | **Hover 배경** | 라이트 그레이 | `background: #F5F5F5;` |
 | **Active 배경** | 피그잼 퍼플 | `background: #8C4CF6; color: #FFFFFF;` (bold 없음) |
 
+---
 
+## 21. Connector Gizmo (커넥터 기즈모 및 앵커 프리뷰 캔버스)
+> **Figma Node ID**: `1027248:5061`
 
+### 21.1 개요 및 구조
+* Connection 탭에서 두 노드 간 연결선이 출발/도착할 앵커 포트(Top, Right, Bottom, Left)를 선택하는 인터랙티브 프리뷰 캔버스 컴포넌트입니다.
+* 부드러운 배경 캔버스 위에 두 개의 노드 카드가 가로로 나란히 배치되고, 각 카드의 4면에 11×11px 크기의 사각형 마그넷 기즈모 핸들이 배치됩니다.
+
+### 21.2 레이아웃 및 세부 규격 (Figma 1027248:5061 1:1 매핑)
+| 구성 요소 | 공식 피그마 규격 | CSS 스펙 | 비고 |
+| :--- | :--- | :--- | :--- |
+| **캔버스 컨테이너** | 너비 `328px`, 높이 `128px`, 반경 `5px` | `width: 100%; height: 128px; border-radius: 5px; background: #F5F5F5; display: flex; align-items: center; justify-content: center; gap: 40px;` | 두 카드 사이 간격 정확히 `40px` |
+| **노드 프리뷰 카드** | 너비 `116px`, 높이 `72px`, 반경 `0px` | `width: 116px; height: 72px; background: #FFFFFF; border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 0px; box-shadow: none;` | 직각 플랫 카드 |
+| **카드 내부 텍스트** | 텍스트 영역 `90×54px`, 중앙 정렬 | `font-size: 11px; font-weight: 400; color: rgba(0, 0, 0, 0.5); text-align: center; word-break: break-all;` | 선택된 노드 타이틀 표시 |
+| **미선택 기즈모 핸들** | `11×11px`, 반경 `0px`, 흰색 채움, 1px 보더 | `width: 11px; height: 11px; background: #FFFFFF; border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 0px;` | 사각형 미세 테두리 |
+| **선택(Active) 기즈모 핸들** | `11×11px`, 반경 `0px`, 솔리드 바이올렛 채움 | `width: 11px; height: 11px; background: #8638E5 !important; border: 1px solid #8638E5 !important; box-shadow: none;` | 완전한 보라색 사각형 |
+| **기즈모 배치 오프셋** | 상하좌우 중심축 -5.5px 돌출 | `top/bottom: -5.5px; left: calc(50% - 5.5px);` / `left/right: -5.5px; top: calc(50% - 5.5px);` | 카드 테두리에 반쯤 걸침 |

@@ -120,8 +120,16 @@
       appearance: textfield !important;
     }
 
-    html {
-      height: auto;
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      max-height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden !important;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none;
     }
 
     body {
@@ -129,36 +137,47 @@
       color: var(--color-text-primary);
       font-size: 11px;
       line-height: 1.45;
+      position: relative;
+    }
+
+    /* 최상위 윈도우 스크롤바 100% 원천 차단 (iframe 네이티브 스크롤바 방지) */
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    #root::-webkit-scrollbar,
+    #plugin-root::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+
+    #root {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 0 !important;
+      max-height: 100% !important;
       margin: 0;
       padding: 0;
-      height: auto;
-      min-height: 0;
-      overflow: hidden;
-      position: relative;
+      overflow: hidden !important;
+      display: flex;
+      flex-direction: column;
     }
 
     #plugin-root {
       width: 100%;
-      height: auto;
-      min-height: 0;
+      height: 100%;
+      min-height: 0 !important;
+      max-height: 100% !important;
+      flex: 1 1 0% !important;
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
-    }
-
-    /* 슬림 커스텀 스크롤바 */
-    ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.15);
-      border-radius: var(--radius-full);
+      overflow: hidden !important;
+      position: relative;
     }
 
 
@@ -259,25 +278,48 @@
     }
 
     /* ============================================================ */
-    /* 탭 본문 스크롤 영역                                          */
+    /* 탭 본문 스크롤 영역 (상단 탭과 하단 푸터 사이 유연한 스크롤)   */
     /* ============================================================ */
     .tab-panels {
-      flex: none;
-      overflow: visible;
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+      max-height: 100% !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
       padding: 0 16px;
       display: flex;
       flex-direction: column;
       gap: 0;
+      box-sizing: border-box;
+    }
+
+    /* 슬림 커스텀 스크롤바 (오직 .tab-panels에만 적용) */
+    .tab-panels::-webkit-scrollbar {
+      width: 4px;
+    }
+    .tab-panels::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .tab-panels::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: var(--radius-full);
+    }
+    .tab-panels::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.3);
     }
 
     .tab-panel {
       display: none;
       flex-direction: column;
       gap: 0;
+      min-height: 0;
+      width: 100%;
+      box-sizing: border-box;
     }
 
+    .tab-panel[style*="display: block"],
     .tab-panel.active {
-      display: flex;
+      display: flex !important;
     }
 
     /* 구분선 */
@@ -1411,79 +1453,112 @@
     }
 
     /* ============================================================ */
-    /* 3. [ Connection ] 탭 세부 스타일 (18:4622, 18:4656, 18:4748)   */
+    /* ============================================================ */
+    /* 3. [ Connection ] 탭 기즈모 스타일 (Figma 공식 UI3 1027248:5061) */
     /* ============================================================ */
     .connect-canvas-box {
-      background: var(--color-bg-secondary);
-      border-radius: var(--radius-md);
-      padding: 14px;
+      width: 100%;
+      height: 128px;
+      background: var(--color-bg-secondary, #f5f5f5);
+      border-radius: 5px;
       display: flex;
       align-items: center;
-      justify-content: space-around;
+      justify-content: center;
+      gap: 40px;
       position: relative;
-      min-height: 120px;
+      box-sizing: border-box;
+      user-select: none;
     }
 
     .node-preview-card {
-      width: 120px;
-      height: 74px;
+      width: 116px;
+      height: 72px;
       background: #ffffff;
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-xs);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 0px;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 6px;
-      font-size: 10px;
-      font-weight: 500;
-      color: var(--color-text-primary);
-      text-align: center;
-      word-break: break-all;
-      box-shadow: var(--shadow-sm);
+      padding: 8px 12px;
+      box-sizing: border-box;
+      box-shadow: none;
     }
 
+    .node-preview-card span {
+      font-size: 11px;
+      font-weight: 400;
+      color: rgba(0, 0, 0, 0.5);
+      text-align: center;
+      word-break: break-all;
+      overflow: hidden;
+      line-height: 1.35;
+      max-height: 54px;
+    }
+
+    /* 11x11 앵커 마그넷 기즈모 핸들 (상하좌우 1px씩 확대) */
     .anchor-handle {
       position: absolute;
-      width: 9px;
-      height: 9px;
+      width: 11px;
+      height: 11px;
       background: #ffffff;
-      border: 1.5px solid #b0b0b0;
-      border-radius: 2px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 0px;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: border-color 0.15s ease, background 0.15s ease;
       z-index: 2;
+      box-sizing: border-box;
     }
 
     .anchor-handle:hover {
-      border-color: var(--color-brand);
-      transform: scale(1.2);
+      border-color: var(--color-brand, #8638e5);
     }
 
     .anchor-handle.active {
-      background: var(--color-brand) !important;
-      border-color: var(--color-brand) !important;
-      box-shadow: 0 0 0 2px #ffffff;
+      background: var(--color-brand, #8638e5) !important;
+      border: 1px solid var(--color-brand, #8638e5) !important;
+      box-shadow: none !important;
     }
 
     .anchor-top {
-      top: -5px;
-      left: calc(50% - 4.5px);
+      top: -5.5px;
+      left: calc(50% - 5.5px);
     }
 
     .anchor-bottom {
-      bottom: -5px;
-      left: calc(50% - 4.5px);
+      bottom: -5.5px;
+      left: calc(50% - 5.5px);
     }
 
     .anchor-left {
-      left: -5px;
-      top: calc(50% - 4.5px);
+      left: -5.5px;
+      top: calc(50% - 5.5px);
     }
 
     .anchor-right {
-      right: -5px;
-      top: calc(50% - 4.5px);
+      right: -5.5px;
+      top: calc(50% - 5.5px);
+    }
+
+    /* 다크 모드 기즈모 대응 */
+    body.figma-dark .node-preview-card,
+    .figma-dark .node-preview-card,
+    [data-theme="dark"] .node-preview-card {
+      background: #2c2c2c;
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    body.figma-dark .node-preview-card span,
+    .figma-dark .node-preview-card span,
+    [data-theme="dark"] .node-preview-card span {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    body.figma-dark .anchor-handle:not(.active),
+    .figma-dark .anchor-handle:not(.active),
+    [data-theme="dark"] .anchor-handle:not(.active) {
+      background: #2c2c2c;
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     /* ============================================================ */
@@ -1556,8 +1631,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       padding: 0;
       background: transparent;
       border: none;
@@ -1569,8 +1644,8 @@
     }
 
     .conn-color-palette-btn svg {
-      width: 24px;
-      height: 24px;
+      width: 16px;
+      height: 16px;
       display: block;
     }
 
@@ -1662,6 +1737,21 @@
     .terminal-offset-row .input-scrubber-box {
       width: 70px;
       box-sizing: border-box;
+    }
+
+    .terminal-offset-row .input-scrubber-box.offset-start-box {
+      padding: 0 4px 0 0;
+      gap: 0;
+    }
+
+    .terminal-offset-row .input-scrubber-box.offset-end-box {
+      padding: 0 0 0 6px;
+      gap: 0;
+    }
+
+    .terminal-offset-row .input-scrubber-box.offset-end-box input {
+      text-align: right;
+      padding-right: 2px;
     }
 
     /* 커스텀 터미널 드롭다운 */
@@ -27984,7 +28074,72 @@
   var import_client = __toESM(require_client());
 
   // src/ui/context/AppContext.tsx
+  var import_react2 = __toESM(require_react());
+
+  // src/ui/hooks/useAutoResize.ts
   var import_react = __toESM(require_react());
+  function getPluginIdealHeight(root2) {
+    const titleBanner = root2.querySelector(".title-banner");
+    const tabsWrapper = root2.querySelector(".main-tabs-wrapper");
+    const divider = root2.querySelector(".section-divider");
+    const footer = root2.querySelector(".app-footer");
+    const activePanel = root2.querySelector('.tab-panel[style*="display: block"]') || root2.querySelector(".tab-panel.active");
+    let contentH = 0;
+    if (activePanel) {
+      contentH = activePanel.scrollHeight;
+    } else {
+      const panels = root2.querySelector(".tab-panels");
+      contentH = panels ? panels.scrollHeight : 0;
+    }
+    const titleH = titleBanner ? titleBanner.offsetHeight : 40;
+    const tabsH = tabsWrapper ? tabsWrapper.offsetHeight : 36;
+    const dividerH = divider ? divider.offsetHeight : 1;
+    const footerH = footer && footer.offsetParent !== null ? footer.offsetHeight : 0;
+    return Math.ceil(titleH + tabsH + dividerH + contentH + footerH + 12);
+  }
+  function useAutoResize() {
+    const lastHeightRef = (0, import_react.useRef)(0);
+    const timerRef = (0, import_react.useRef)(null);
+    const autoResizeWindow = (0, import_react.useCallback)(() => {
+      if (timerRef.current !== null) {
+        cancelAnimationFrame(timerRef.current);
+      }
+      timerRef.current = requestAnimationFrame(() => {
+        const root2 = document.getElementById("plugin-root");
+        if (!root2) return;
+        const idealHeight = getPluginIdealHeight(root2);
+        if (idealHeight > 100 && Math.abs(idealHeight - lastHeightRef.current) >= 2) {
+          lastHeightRef.current = idealHeight;
+          parent.postMessage({
+            pluginMessage: { type: "RESIZE_WINDOW", width: 360, height: idealHeight }
+          }, "*");
+        }
+      });
+    }, []);
+    (0, import_react.useEffect)(() => {
+      const root2 = document.getElementById("plugin-root");
+      const t1 = setTimeout(() => autoResizeWindow(), 50);
+      const t2 = setTimeout(() => autoResizeWindow(), 200);
+      if (window.ResizeObserver && root2) {
+        const ro = new ResizeObserver(() => autoResizeWindow());
+        ro.observe(root2);
+        const panels = root2.querySelectorAll(".tab-panel");
+        panels.forEach((p) => ro.observe(p));
+        return () => {
+          clearTimeout(t1);
+          clearTimeout(t2);
+          ro.disconnect();
+        };
+      }
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }, [autoResizeWindow]);
+    return { autoResizeWindow };
+  }
+
+  // src/ui/context/AppContext.tsx
   var import_jsx_runtime = __toESM(require_jsx_runtime());
   var DEFAULT_SIZE_PRESETS = [
     { id: "default", name: "Default", w: 250, h: 90, radius: 0, sizeMode: "fixed", isDefault: true },
@@ -28047,34 +28202,34 @@
     selectedNodeType: "Screen",
     selectedConnectorColor: "#000000"
   };
-  var AppContext = (0, import_react.createContext)(null);
+  var AppContext = (0, import_react2.createContext)(null);
   function useApp() {
-    const ctx = (0, import_react.useContext)(AppContext);
+    const ctx = (0, import_react2.useContext)(AppContext);
     if (!ctx) throw new Error("useApp must be used within AppProvider");
     return ctx;
   }
   function AppProvider({ children }) {
-    const [selectedNodes, setSelectedNodes] = (0, import_react.useState)([]);
-    const [isConnectorSelected, setIsConnectorSelected] = (0, import_react.useState)(false);
-    const [currentTab, setCurrentTabState] = (0, import_react.useState)("node");
-    const [uiState, setUIStateRaw] = (0, import_react.useState)(DEFAULT_UI_STATE);
-    const [lastNodeConfig, setLastNodeConfigRaw] = (0, import_react.useState)(DEFAULT_LAST_NODE_CONFIG);
-    const [lastConnectorConfig, setLastConnectorConfigRaw] = (0, import_react.useState)(DEFAULT_LAST_CONNECTOR_CONFIG);
-    const [activeModal, setActiveModal] = (0, import_react.useState)("none");
-    const [phasePopoverOpen, setPhasePopoverOpen] = (0, import_react.useState)(false);
-    const [contextMenuOpen, setContextMenuOpen] = (0, import_react.useState)(false);
-    const [sizeModeDropdownOpen, setSizeModeDropdownOpen] = (0, import_react.useState)(false);
-    const [phasePopoverPos, setPhasePopoverPos] = (0, import_react.useState)({ top: 0, left: 0 });
-    const [contextMenuPos, setContextMenuPos] = (0, import_react.useState)({ top: 0, left: 0 });
-    const [contextMenuTarget, setContextMenuTarget] = (0, import_react.useState)(null);
-    const [selectedSizePresetId, setSelectedSizePresetId] = (0, import_react.useState)("default");
-    const [selectedStylePresetId, setSelectedStylePresetId] = (0, import_react.useState)("style-white");
-    const [phaseModalEditingId, setPhaseModalEditingId] = (0, import_react.useState)(null);
-    const [designFrames, setDesignFrames] = (0, import_react.useState)([]);
-    const loadDesignFrames = (0, import_react.useCallback)(() => {
+    const [selectedNodes, setSelectedNodes] = (0, import_react2.useState)([]);
+    const [isConnectorSelected, setIsConnectorSelected] = (0, import_react2.useState)(false);
+    const [currentTab, setCurrentTabState] = (0, import_react2.useState)("node");
+    const [uiState, setUIStateRaw] = (0, import_react2.useState)(DEFAULT_UI_STATE);
+    const [lastNodeConfig, setLastNodeConfigRaw] = (0, import_react2.useState)(DEFAULT_LAST_NODE_CONFIG);
+    const [lastConnectorConfig, setLastConnectorConfigRaw] = (0, import_react2.useState)(DEFAULT_LAST_CONNECTOR_CONFIG);
+    const [activeModal, setActiveModal] = (0, import_react2.useState)("none");
+    const [phasePopoverOpen, setPhasePopoverOpen] = (0, import_react2.useState)(false);
+    const [contextMenuOpen, setContextMenuOpen] = (0, import_react2.useState)(false);
+    const [sizeModeDropdownOpen, setSizeModeDropdownOpen] = (0, import_react2.useState)(false);
+    const [phasePopoverPos, setPhasePopoverPos] = (0, import_react2.useState)({ top: 0, left: 0 });
+    const [contextMenuPos, setContextMenuPos] = (0, import_react2.useState)({ top: 0, left: 0 });
+    const [contextMenuTarget, setContextMenuTarget] = (0, import_react2.useState)(null);
+    const [selectedSizePresetId, setSelectedSizePresetId] = (0, import_react2.useState)("default");
+    const [selectedStylePresetId, setSelectedStylePresetId] = (0, import_react2.useState)("style-white");
+    const [phaseModalEditingId, setPhaseModalEditingId] = (0, import_react2.useState)(null);
+    const [designFrames, setDesignFrames] = (0, import_react2.useState)([]);
+    const loadDesignFrames = (0, import_react2.useCallback)(() => {
       parent.postMessage({ pluginMessage: { type: "GET_DESIGN_FRAMES" } }, "*");
     }, []);
-    const [sizePresets, setSizePresets] = (0, import_react.useState)(() => {
+    const [sizePresets, setSizePresets] = (0, import_react2.useState)(() => {
       try {
         const saved = localStorage.getItem("ui_flow_size_presets");
         if (saved) {
@@ -28085,14 +28240,14 @@
       }
       return DEFAULT_SIZE_PRESETS;
     });
-    const savePresets = (0, import_react.useCallback)((next) => {
+    const savePresets = (0, import_react2.useCallback)((next) => {
       setSizePresets(next);
       try {
         localStorage.setItem("ui_flow_size_presets", JSON.stringify(next));
       } catch (_) {
       }
     }, []);
-    const [stylePresets, setStylePresets] = (0, import_react.useState)(() => {
+    const [stylePresets, setStylePresets] = (0, import_react2.useState)(() => {
       try {
         const saved = localStorage.getItem("ui_flow_style_presets");
         if (saved) {
@@ -28103,71 +28258,71 @@
       }
       return DEFAULT_STYLE_PRESETS;
     });
-    const saveStylePresets = (0, import_react.useCallback)((next) => {
+    const saveStylePresets = (0, import_react2.useCallback)((next) => {
       setStylePresets(next);
       try {
         localStorage.setItem("ui_flow_style_presets", JSON.stringify(next));
       } catch (_) {
       }
     }, []);
-    const selectedNodesRef = (0, import_react.useRef)(selectedNodes);
-    const isConnectorSelectedRef = (0, import_react.useRef)(isConnectorSelected);
-    const currentTabRef = (0, import_react.useRef)(currentTab);
-    const uiStateRef = (0, import_react.useRef)(uiState);
-    const lastNodeConfigRef = (0, import_react.useRef)(lastNodeConfig);
-    const lastConnectorConfigRef = (0, import_react.useRef)(lastConnectorConfig);
-    (0, import_react.useEffect)(() => {
+    const selectedNodesRef = (0, import_react2.useRef)(selectedNodes);
+    const isConnectorSelectedRef = (0, import_react2.useRef)(isConnectorSelected);
+    const currentTabRef = (0, import_react2.useRef)(currentTab);
+    const uiStateRef = (0, import_react2.useRef)(uiState);
+    const lastNodeConfigRef = (0, import_react2.useRef)(lastNodeConfig);
+    const lastConnectorConfigRef = (0, import_react2.useRef)(lastConnectorConfig);
+    (0, import_react2.useEffect)(() => {
       selectedNodesRef.current = selectedNodes;
     }, [selectedNodes]);
-    (0, import_react.useEffect)(() => {
+    (0, import_react2.useEffect)(() => {
       isConnectorSelectedRef.current = isConnectorSelected;
     }, [isConnectorSelected]);
-    (0, import_react.useEffect)(() => {
+    (0, import_react2.useEffect)(() => {
       currentTabRef.current = currentTab;
     }, [currentTab]);
-    (0, import_react.useEffect)(() => {
+    (0, import_react2.useEffect)(() => {
       uiStateRef.current = uiState;
     }, [uiState]);
-    (0, import_react.useEffect)(() => {
+    (0, import_react2.useEffect)(() => {
       lastNodeConfigRef.current = lastNodeConfig;
     }, [lastNodeConfig]);
-    (0, import_react.useEffect)(() => {
+    (0, import_react2.useEffect)(() => {
       lastConnectorConfigRef.current = lastConnectorConfig;
     }, [lastConnectorConfig]);
-    const setUIState = (0, import_react.useCallback)((partial) => {
+    const setUIState = (0, import_react2.useCallback)((partial) => {
       setUIStateRaw((prev) => ({ ...prev, ...partial }));
     }, []);
-    const setLastNodeConfig = (0, import_react.useCallback)((partial) => {
+    const setLastNodeConfig = (0, import_react2.useCallback)((partial) => {
       lastNodeConfigRef.current = { ...lastNodeConfigRef.current, ...partial };
       setLastNodeConfigRaw((prev) => ({ ...prev, ...partial }));
     }, []);
-    const setLastConnectorConfig = (0, import_react.useCallback)((partial) => {
+    const setLastConnectorConfig = (0, import_react2.useCallback)((partial) => {
       lastConnectorConfigRef.current = { ...lastConnectorConfigRef.current, ...partial };
       setLastConnectorConfigRaw((prev) => ({ ...prev, ...partial }));
     }, []);
-    const showToast = (0, import_react.useCallback)((msg, level = "info") => {
+    const showToast = (0, import_react2.useCallback)((msg, level = "info") => {
       if (!msg) return;
       parent.postMessage({ pluginMessage: { type: "NOTIFY", message: msg, level } }, "*");
     }, []);
-    const autoResizeWindow = (0, import_react.useCallback)(() => {
+    const autoResizeWindow = (0, import_react2.useCallback)(() => {
       requestAnimationFrame(() => {
         const root2 = document.getElementById("plugin-root");
         if (!root2) return;
-        const totalHeight = Math.ceil(root2.offsetHeight || root2.getBoundingClientRect().height);
-        if (totalHeight > 100) {
+        const idealHeight = getPluginIdealHeight(root2);
+        if (idealHeight > 100) {
           parent.postMessage({
-            pluginMessage: { type: "RESIZE_WINDOW", width: 360, height: totalHeight }
+            pluginMessage: { type: "RESIZE_WINDOW", width: 360, height: idealHeight }
           }, "*");
         }
       });
     }, []);
-    const closeAllPopovers = (0, import_react.useCallback)(() => {
+    const closeAllPopovers = (0, import_react2.useCallback)(() => {
       setPhasePopoverOpen(false);
       setContextMenuOpen(false);
       setSizeModeDropdownOpen(false);
     }, []);
-    const lastNodeTabRef = (0, import_react.useRef)("node");
-    const setCurrentTab = (0, import_react.useCallback)((tab) => {
+    const lastNodeTabRef = (0, import_react2.useRef)("node");
+    const setCurrentTab = (0, import_react2.useCallback)((tab) => {
       closeAllPopovers();
       setCurrentTabState(tab);
       currentTabRef.current = tab;
@@ -28175,7 +28330,7 @@
         lastNodeTabRef.current = tab;
       }
     }, [closeAllPopovers]);
-    const applyCurrentNodeState = (0, import_react.useCallback)((overrideSizeMode, styleOverrides, linkOverrides) => {
+    const applyCurrentNodeState = (0, import_react2.useCallback)((overrideSizeMode, styleOverrides, linkOverrides) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
       const titleEl = document.getElementById("node-title-input");
@@ -28227,7 +28382,7 @@
         }, "*");
       });
     }, [setLastNodeConfig]);
-    const addSizePreset = (0, import_react.useCallback)((preset) => {
+    const addSizePreset = (0, import_react2.useCallback)((preset) => {
       const newId = `size-${Date.now()}`;
       const newPreset = {
         ...preset,
@@ -28250,7 +28405,7 @@
       applyCurrentNodeState(preset.sizeMode);
       showToast(`"${preset.name}" \uC0AC\uC774\uC988\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
     }, [sizePresets, savePresets, setLastNodeConfig, applyCurrentNodeState, showToast]);
-    const updateSizePreset = (0, import_react.useCallback)((id, partial) => {
+    const updateSizePreset = (0, import_react2.useCallback)((id, partial) => {
       const next = sizePresets.map((p) => p.id === id ? { ...p, ...partial } : p);
       savePresets(next);
       if (partial.w !== void 0 || partial.h !== void 0) {
@@ -28268,13 +28423,13 @@
       }
       showToast("\uC0AC\uC774\uC988\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
     }, [sizePresets, savePresets, setLastNodeConfig, applyCurrentNodeState, showToast]);
-    const deleteSizePreset = (0, import_react.useCallback)((id) => {
+    const deleteSizePreset = (0, import_react2.useCallback)((id) => {
       const target = sizePresets.find((p) => p.id === id);
       const next = sizePresets.filter((p) => p.id !== id);
       savePresets(next);
       showToast(`"${target?.name || "\uC0AC\uC774\uC988"}" \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
     }, [sizePresets, savePresets, showToast]);
-    const addStylePreset = (0, import_react.useCallback)((preset) => {
+    const addStylePreset = (0, import_react2.useCallback)((preset) => {
       const newId = `style-${Date.now()}`;
       const newPreset = {
         ...preset,
@@ -28301,12 +28456,12 @@
       });
       showToast(`\uC2A4\uD0C0\uC77C\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
     }, [stylePresets, saveStylePresets, setUIState, setLastNodeConfig, applyCurrentNodeState, showToast]);
-    const updateStylePreset = (0, import_react.useCallback)((id, partial) => {
+    const updateStylePreset = (0, import_react2.useCallback)((id, partial) => {
       const next = stylePresets.map((p) => p.id === id ? { ...p, ...partial } : p);
       saveStylePresets(next);
       showToast("\uC2A4\uD0C0\uC77C\uC774 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
     }, [stylePresets, saveStylePresets, showToast]);
-    const deleteStylePreset = (0, import_react.useCallback)((id) => {
+    const deleteStylePreset = (0, import_react2.useCallback)((id) => {
       const target = stylePresets.find((p) => p.id === id);
       if (target?.isDefault || target?.id === "style-white" || target?.id === "style-black") {
         showToast("\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
@@ -28316,12 +28471,12 @@
       saveStylePresets(next);
       showToast("\uC2A4\uD0C0\uC77C\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
     }, [stylePresets, saveStylePresets, showToast]);
-    const applyStatusToNode = (0, import_react.useCallback)((status) => {
+    const applyStatusToNode = (0, import_react2.useCallback)((status) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
       parent.postMessage({ pluginMessage: { type: "SET_STATUS", status: status || "" } }, "*");
     }, []);
-    const applyElevationToNodes = (0, import_react.useCallback)((level) => {
+    const applyElevationToNodes = (0, import_react2.useCallback)((level) => {
       setLastNodeConfig({
         elevationOn: level !== null,
         elevation: level ?? 0
@@ -28336,7 +28491,7 @@
         }
       }, "*");
     }, [setLastNodeConfig, setUIState]);
-    const applyStepBadges = (0, import_react.useCallback)((startNumber = 1, corner, shape, colorMode) => {
+    const applyStepBadges = (0, import_react2.useCallback)((startNumber = 1, corner, shape, colorMode) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
       parent.postMessage({
@@ -28349,7 +28504,7 @@
         }
       }, "*");
     }, []);
-    const removeStepBadgesFromNodes = (0, import_react.useCallback)(() => {
+    const removeStepBadgesFromNodes = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
       parent.postMessage({
@@ -28358,7 +28513,7 @@
         }
       }, "*");
     }, []);
-    const applyCurrentConnectorState = (0, import_react.useCallback)(() => {
+    const applyCurrentConnectorState = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       if (!isConnectorSelectedRef.current || !nodes || nodes.length !== 1) return;
       const labelToggleEl = document.getElementById("toggle-conn-label");
@@ -28393,7 +28548,7 @@
         }
       }, "*");
     }, []);
-    const handleMainAction = (0, import_react.useCallback)(() => {
+    const handleMainAction = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       const isConn = isConnectorSelectedRef.current || nodes.length === 1 && nodes[0]?.isConnector;
       if (isConn || currentTabRef.current === "connection") {
@@ -28521,7 +28676,7 @@
         }, "*");
       }
     }, [applyCurrentConnectorState, setLastNodeConfig, showToast]);
-    const handleSelectionChange = (0, import_react.useCallback)((count, nodes, meta) => {
+    const handleSelectionChange = (0, import_react2.useCallback)((count, nodes, meta) => {
       closeAllPopovers();
       setSelectedNodes(nodes);
       selectedNodesRef.current = nodes;
@@ -28644,7 +28799,7 @@
   var import_react21 = __toESM(require_react());
 
   // src/ui/hooks/useFigmaMessage.ts
-  var import_react2 = __toESM(require_react());
+  var import_react3 = __toESM(require_react());
   function useFigmaMessage() {
     const {
       handleSelectionChange,
@@ -28654,9 +28809,9 @@
       setDesignFrames,
       showToast
     } = useApp();
-    const handlerRef = (0, import_react2.useRef)(null);
-    const prevNodeIdRef = (0, import_react2.useRef)(void 0);
-    (0, import_react2.useEffect)(() => {
+    const handlerRef = (0, import_react3.useRef)(null);
+    const prevNodeIdRef = (0, import_react3.useRef)(void 0);
+    (0, import_react3.useEffect)(() => {
       const handler = (event) => {
         const msg = event.data?.pluginMessage;
         if (!msg) return;
@@ -28777,45 +28932,6 @@
         window.removeEventListener("message", handler);
       };
     }, [handleSelectionChange, setCurrentTab, setUIState, setLastNodeConfig, showToast]);
-  }
-
-  // src/ui/hooks/useAutoResize.ts
-  var import_react3 = __toESM(require_react());
-  function useAutoResize() {
-    const lastHeightRef = (0, import_react3.useRef)(0);
-    const timerRef = (0, import_react3.useRef)(null);
-    const autoResizeWindow = (0, import_react3.useCallback)(() => {
-      if (timerRef.current !== null) {
-        cancelAnimationFrame(timerRef.current);
-      }
-      timerRef.current = requestAnimationFrame(() => {
-        const root2 = document.getElementById("plugin-root");
-        if (!root2) return;
-        const totalHeight = Math.ceil(root2.offsetHeight || root2.getBoundingClientRect().height);
-        if (totalHeight > 100 && Math.abs(totalHeight - lastHeightRef.current) >= 2) {
-          lastHeightRef.current = totalHeight;
-          parent.postMessage({
-            pluginMessage: { type: "RESIZE_WINDOW", width: 360, height: totalHeight }
-          }, "*");
-        }
-      });
-    }, []);
-    (0, import_react3.useEffect)(() => {
-      const initTimer = setTimeout(() => autoResizeWindow(), 50);
-      if (window.ResizeObserver) {
-        const root2 = document.getElementById("plugin-root");
-        if (root2) {
-          const ro = new ResizeObserver(() => autoResizeWindow());
-          ro.observe(root2);
-          return () => {
-            clearTimeout(initTimer);
-            ro.disconnect();
-          };
-        }
-      }
-      return () => clearTimeout(initTimer);
-    }, [autoResizeWindow]);
-    return { autoResizeWindow };
   }
 
   // src/ui/components/node/PhaseSection.tsx
@@ -29002,13 +29118,6 @@
   var import_jsx_runtime4 = __toESM(require_jsx_runtime());
   var IcCopy = () => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M13.5 6C14.3284 6 15 6.67157 15 7.5V9H16.5C17.3284 9 18 9.67157 18 10.5V16.5C18 17.3284 17.3284 18 16.5 18H10.5C9.67157 18 9 17.3284 9 16.5V15H7.5C6.67157 15 6 14.3284 6 13.5V7.5C6 6.67157 6.67157 6 7.5 6H13.5ZM15 13.5C15 14.3284 14.3284 15 13.5 15H10V16.5C10 16.7761 10.2239 17 10.5 17H16.5C16.7761 17 17 16.7761 17 16.5V10.5C17 10.2239 16.7761 10 16.5 10H15V13.5ZM7.5 7C7.22386 7 7 7.22386 7 7.5V13.5C7 13.7761 7.22386 14 7.5 14H13.5C13.7761 14 14 13.7761 14 13.5V7.5C14 7.22386 13.7761 7 13.5 7H7.5Z", fill: "currentColor" }) });
   var IcCheckLarge = () => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M6 12.5L10 16.5L18 8", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }) });
-  var IcPalette = () => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("g", { transform: "translate(4, 4)", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-    "path",
-    {
-      d: "M8 1.5C4.41 1.5 1.5 4.41 1.5 8C1.5 11.59 4.41 14.5 8 14.5C8.69 14.5 9.25 13.94 9.25 13.25C9.25 12.93 9.12 12.64 8.91 12.43C8.7 12.22 8.57 11.93 8.57 11.61C8.57 10.92 9.13 10.36 9.82 10.36H11.25C13.04 10.36 14.5 8.9 14.5 7.11C14.5 4.02 11.59 1.5 8 1.5ZM4.25 8C3.7 8 3.25 7.55 3.25 7C3.25 6.45 3.7 6 4.25 6C4.8 6 5.25 6.45 5.25 7C5.25 7.55 4.8 8 4.25 8ZM6.25 5C5.7 5 5.25 4.55 5.25 4C5.25 3.45 5.7 3 6.25 3C6.8 3 7.25 3.45 7.25 4C7.25 4.55 6.8 5 6.25 5ZM9.75 5C9.2 5 8.75 4.55 8.75 4C8.75 3.45 9.2 3 9.75 3C10.3 3 10.75 3.45 10.75 4C10.75 4.55 10.3 5 9.75 5ZM11.75 8C11.2 8 10.75 7.55 10.75 7C10.75 6.45 11.2 6 11.75 6C12.3 6 12.75 6.45 12.75 7C12.75 7.55 12.3 8 11.75 8Z",
-      fill: "currentColor"
-    }
-  ) }) });
 
   // src/ui/components/node/DescriptionSection.tsx
   var import_jsx_runtime5 = __toESM(require_jsx_runtime());
@@ -30887,7 +30996,7 @@
                         setUIState({ selectedConnectorColor: selectedColor });
                         setActiveModal("connector-color");
                       },
-                      children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(IcPalette, {})
+                      children: CHEVRON_SVG3
                     }
                   )
                 ]
@@ -30901,6 +31010,64 @@
                 value: selectedColor,
                 onChange: () => {
                 }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "routing-types-grid", style: { flex: 1 }, children: ROUTING_TYPES.map((r) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+            "button",
+            {
+              className: `routing-btn${selectedRoutingType === r.type ? " active" : ""}`,
+              title: r.title,
+              onClick: () => selectRoutingType(r.type),
+              children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", dangerouslySetInnerHTML: { __html: r.svg } })
+            },
+            r.type
+          )) })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "connect-canvas-box", id: "conn-anchor-preview-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "node-preview-card", id: "preview-node-1", children: [
+            ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              "div",
+              {
+                className: `anchor-handle anchor-${pos.toLowerCase()}${sourceMagnet === pos ? " active" : ""}`,
+                "data-node": "1",
+                "data-pos": pos,
+                title: `Source ${pos}`,
+                onClick: () => selectAnchor(1, pos)
+              },
+              pos
+            )),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-1-text", children: selectedNodes[0]?.title || selectedNodes[0]?.name || "Node 1" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "node-preview-card", id: "preview-node-2", children: [
+            ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              "div",
+              {
+                className: `anchor-handle anchor-${pos.toLowerCase()}${targetMagnet === pos ? " active" : ""}`,
+                "data-node": "2",
+                "data-pos": pos,
+                title: `Target ${pos}`,
+                onClick: () => selectAnchor(2, pos)
+              },
+              pos
+            )),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-2-text", children: selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2" })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { style: { display: "flex", gap: "6px" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "input-scrubber-box", style: { width: "70px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { "data-tooltip": "Stroke width", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z", fill: "currentColor" }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              "input",
+              {
+                type: "number",
+                id: "input-stroke-weight",
+                defaultValue: 1.5,
+                step: 0.5,
+                min: 1,
+                max: 10,
+                onBlur: () => applyCurrentConnectorState(),
+                onKeyDown: (e) => e.key === "Enter" && applyCurrentConnectorState()
               }
             )
           ] }),
@@ -30924,75 +31091,22 @@
                 className: `line-style-btn${selectedLinePattern === "DOTTED" ? " active" : ""}`,
                 title: "Dotted",
                 onClick: (e) => selectLinePattern("DOTTED", e.currentTarget),
-                children: /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("circle", { cx: "6", cy: "12", r: "1.2", fill: "currentColor" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("circle", { cx: "9", cy: "12", r: "1.2", fill: "currentColor" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("circle", { cx: "12", cy: "12", r: "1.2", fill: "currentColor" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("circle", { cx: "15", cy: "12", r: "1.2", fill: "currentColor" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("circle", { cx: "18", cy: "12", r: "1.2", fill: "currentColor" })
-                ] })
+                children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("g", { transform: "translate(5, 11.3)", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M0.7 0C0.31 0 0 0.31 0 0.7C0 1.09 0.31 1.4 0.7 1.4C1.09 1.4 1.4 1.09 1.4 0.7C1.4 0.31 1.09 0 0.7 0Z", fill: "currentColor" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M3.8499 0C3.4599 0 3.1499 0.31 3.1499 0.7C3.1499 1.09 3.4599 1.4 3.8499 1.4C4.2399 1.4 4.5499 1.09 4.5499 0.7C4.5499 0.31 4.2399 0 3.8499 0Z", fill: "currentColor" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M7.00005 0C6.61005 0 6.30005 0.31 6.30005 0.7C6.30005 1.09 6.61005 1.4 7.00005 1.4C7.39005 1.4 7.70005 1.09 7.70005 0.7C7.70005 0.31 7.39005 0 7.00005 0Z", fill: "currentColor" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M10.15 0C9.75995 0 9.44995 0.31 9.44995 0.7C9.44995 1.09 9.75995 1.4 10.15 1.4C10.54 1.4 10.85 1.09 10.85 0.7C10.85 0.31 10.54 0 10.15 0Z", fill: "currentColor" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M13.3001 0C12.9101 0 12.6001 0.31 12.6001 0.7C12.6001 1.09 12.9101 1.4 13.3001 1.4C13.6901 1.4 14.0001 1.09 14.0001 0.7C14.0001 0.31 13.6901 0 13.3001 0Z", fill: "currentColor" })
+                ] }) })
               }
             )
           ] })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "connect-canvas-box", id: "conn-anchor-preview-box", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "node-preview-card", id: "preview-node-1", children: [
-            ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-              "div",
-              {
-                className: `anchor-handle anchor-${pos.toLowerCase()}${sourceMagnet === pos ? " active" : ""}`,
-                "data-node": "1",
-                "data-pos": pos,
-                onClick: () => selectAnchor(1, pos)
-              },
-              pos
-            )),
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-1-text", children: "Node 1" })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "node-preview-card", id: "preview-node-2", children: [
-            ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-              "div",
-              {
-                className: `anchor-handle anchor-${pos.toLowerCase()}${targetMagnet === pos ? " active" : ""}`,
-                "data-node": "2",
-                "data-pos": pos,
-                onClick: () => selectAnchor(2, pos)
-              },
-              pos
-            )),
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-2-text", children: "Node 2" })
-          ] })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { style: { display: "flex", gap: "6px" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "input-scrubber-box", style: { width: "70px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { "data-tooltip": "Stroke width", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z", fill: "currentColor" }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-              "input",
-              {
-                type: "number",
-                id: "input-stroke-weight",
-                defaultValue: 1.5,
-                step: 0.5,
-                min: 1,
-                max: 10,
-                onBlur: () => applyCurrentConnectorState(),
-                onKeyDown: (e) => e.key === "Enter" && applyCurrentConnectorState()
-              }
-            )
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "routing-types-grid", style: { flex: 1 }, children: ROUTING_TYPES.map((r) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-            "button",
-            {
-              className: `routing-btn${selectedRoutingType === r.type ? " active" : ""}`,
-              title: r.title,
-              onClick: () => selectRoutingType(r.type),
-              children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", dangerouslySetInnerHTML: { __html: r.svg } })
-            },
-            r.type
-          )) })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "terminal-offset-row", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "input-scrubber-box", style: { width: "70px" }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { type: "number", id: "input-start-offset", placeholder: "Offset", defaultValue: 0 }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "input-scrubber-box offset-start-box", style: { width: "70px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { "data-tooltip": "Start offset", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M12 18V6M17.7333 9.63637L20.0001 11.8182L17.7333 14M20.0001 11.8182H14.4045", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round" }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { type: "number", id: "input-start-offset", placeholder: "Offset", defaultValue: 0 })
+          ] }),
           /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "figma-dropdown-wrapper", id: "wrap-start-terminal", style: { width: "100%" }, children: [
             /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
               "button",
@@ -31241,7 +31355,10 @@
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "input-scrubber-box", style: { width: "70px" }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { type: "number", id: "input-end-offset", placeholder: "Offset", defaultValue: 0 }) })
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "input-scrubber-box offset-end-box", style: { width: "70px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { type: "number", id: "input-end-offset", placeholder: "Offset", defaultValue: 0 }),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { "data-tooltip": "End offset", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("g", { transform: "translate(3.5, 5.5)", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M8.49992 12.5V0.5M2.76672 8.5L0.5 6.31817L2.76672 4.13637M0.5 6.31817H6.09557", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round" }) }) })
+          ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
           "div",

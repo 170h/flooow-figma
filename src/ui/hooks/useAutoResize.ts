@@ -1,8 +1,38 @@
 import { useEffect, useRef, useCallback } from 'react';
 
 /**
+ * 플러그인의 자연스러운 전체 높이(스크롤 없이 표시하기 위해 필요한 높이)를 계산한다.
+ */
+export function getPluginIdealHeight(root: HTMLElement): number {
+  const titleBanner = root.querySelector('.title-banner') as HTMLElement | null;
+  const tabsWrapper = root.querySelector('.main-tabs-wrapper') as HTMLElement | null;
+  const divider = root.querySelector('.section-divider') as HTMLElement | null;
+  const footer = root.querySelector('.app-footer') as HTMLElement | null;
+
+  // 현재 활성화된 패널 탐색 (style="display: block" 또는 .active)
+  const activePanel = (root.querySelector('.tab-panel[style*="display: block"]') as HTMLElement | null)
+    || (root.querySelector('.tab-panel.active') as HTMLElement | null);
+
+  let contentH = 0;
+  if (activePanel) {
+    contentH = activePanel.scrollHeight;
+  } else {
+    const panels = root.querySelector('.tab-panels') as HTMLElement | null;
+    contentH = panels ? panels.scrollHeight : 0;
+  }
+
+  const titleH = titleBanner ? titleBanner.offsetHeight : 40;
+  const tabsH = tabsWrapper ? tabsWrapper.offsetHeight : 36;
+  const dividerH = divider ? divider.offsetHeight : 1;
+  const footerH = (footer && footer.offsetParent !== null) ? footer.offsetHeight : 0;
+
+  // 서브픽셀 및 하단 여백을 감안한 12px 여유 버퍼 추가 (여유 공간일 때 스크롤바 미표시 보장)
+  return Math.ceil(titleH + tabsH + dividerH + contentH + footerH + 12);
+}
+
+/**
  * 플러그인 창 높이 자동 조절 훅
- * ResizeObserver로 #plugin-root 크기 변화를 감지하여 Figma에 RESIZE_WINDOW 메시지를 전송한다.
+ * ResizeObserver로 내부 패널 크기 변화를 감지하여 Figma에 RESIZE_WINDOW 메시지를 전송한다.
  */
 export function useAutoResize() {
   const lastHeightRef = useRef(0);
@@ -15,34 +45,41 @@ export function useAutoResize() {
     timerRef.current = requestAnimationFrame(() => {
       const root = document.getElementById('plugin-root');
       if (!root) return;
-      const totalHeight = Math.ceil(root.offsetHeight || root.getBoundingClientRect().height);
-      if (totalHeight > 100 && Math.abs(totalHeight - lastHeightRef.current) >= 2) {
-        lastHeightRef.current = totalHeight;
+
+      const idealHeight = getPluginIdealHeight(root);
+      if (idealHeight > 100 && Math.abs(idealHeight - lastHeightRef.current) >= 2) {
+        lastHeightRef.current = idealHeight;
         parent.postMessage({
-          pluginMessage: { type: 'RESIZE_WINDOW', width: 360, height: totalHeight }
+          pluginMessage: { type: 'RESIZE_WINDOW', width: 360, height: idealHeight }
         }, '*');
       }
     });
   }, []);
 
   useEffect(() => {
-    // 초기 리사이즈
-    const initTimer = setTimeout(() => autoResizeWindow(), 50);
+    const root = document.getElementById('plugin-root');
 
-    // ResizeObserver로 DOM 변화 감지
-    if (window.ResizeObserver) {
-      const root = document.getElementById('plugin-root');
-      if (root) {
-        const ro = new ResizeObserver(() => autoResizeWindow());
-        ro.observe(root);
-        return () => {
-          clearTimeout(initTimer);
-          ro.disconnect();
-        };
-      }
+    // 초기 및 지연 리사이즈
+    const t1 = setTimeout(() => autoResizeWindow(), 50);
+    const t2 = setTimeout(() => autoResizeWindow(), 200);
+
+    // ResizeObserver로 탭 패널 내부 크기 변화 감지
+    if (window.ResizeObserver && root) {
+      const ro = new ResizeObserver(() => autoResizeWindow());
+      ro.observe(root);
+      const panels = root.querySelectorAll('.tab-panel');
+      panels.forEach((p) => ro.observe(p));
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        ro.disconnect();
+      };
     }
 
-    return () => clearTimeout(initTimer);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [autoResizeWindow]);
 
   return { autoResizeWindow };
