@@ -146,6 +146,7 @@ export function ConnectSection() {
   // 다중 선택 시 Mixed 상태
   const [isColorMixed, setIsColorMixed] = useState(false);
   const [isWeightMixed, setIsWeightMixed] = useState(false);
+  const [weightInput, setWeightInput] = useState<string>('1.5');
 
   // 라우팅 및 선 스타일 Mixed 상태
   const isRoutingMixed = summary.isMultiConnector && summary.connectorRoutingType.isMixed;
@@ -239,9 +240,19 @@ export function ConnectSection() {
         if (colSel) colSel.value = hex;
       }
       const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-      if (weightEl && typeof node?.connectorStrokeWeight === 'number') {
-        weightEl.value = String(node.connectorStrokeWeight);
-        weightEl.placeholder = '';
+      if (typeof node?.connectorStrokeWeight === 'number') {
+        const wStr = String(node.connectorStrokeWeight);
+        setWeightInput(wStr);
+        if (weightEl) {
+          weightEl.value = wStr;
+          weightEl.placeholder = '';
+        }
+      } else {
+        setWeightInput('1.5');
+        if (weightEl) {
+          weightEl.value = '1.5';
+          weightEl.placeholder = '';
+        }
       }
       if (node?.connectorRoutingType) {
         setUIState({ selectedRoutingType: node.connectorRoutingType });
@@ -279,14 +290,21 @@ export function ConnectSection() {
       }
 
       // 3. 선 굵기
-      setIsWeightMixed(summary.connectorStrokeWeight.isMixed);
+      const isConnWeightMixed = Boolean(summary.connectorStrokeWeight.isMixed || summary.strokeWeight.isMixed);
+      const connWeightVal = summary.connectorStrokeWeight.value ?? summary.strokeWeight.value;
+      setIsWeightMixed(isConnWeightMixed);
       const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-      if (weightEl) {
-        if (summary.connectorStrokeWeight.isMixed) {
+      if (isConnWeightMixed) {
+        setWeightInput('');
+        if (weightEl) {
           weightEl.value = '';
           weightEl.placeholder = 'Mixed';
-        } else if (summary.connectorStrokeWeight.value !== undefined) {
-          weightEl.value = String(summary.connectorStrokeWeight.value);
+        }
+      } else if (connWeightVal !== undefined) {
+        const wVal = String(connWeightVal);
+        setWeightInput(wVal);
+        if (weightEl) {
+          weightEl.value = wVal;
           weightEl.placeholder = '';
         }
       }
@@ -310,7 +328,26 @@ export function ConnectSection() {
       } else {
         setHexInput('');
       }
-      setIsWeightMixed(false);
+
+      // 일반 노드 복수 선택: 노드들의 테두리/선 두께가 다르면 두께 Mixed 적용!
+      const isNodeWeightMixed = Boolean(summary.strokeWeight.isMixed || summary.connectorStrokeWeight.isMixed);
+      const nodeWeightVal = summary.strokeWeight.value ?? summary.connectorStrokeWeight.value;
+      setIsWeightMixed(isNodeWeightMixed);
+      const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+      if (isNodeWeightMixed) {
+        setWeightInput('');
+        if (weightEl) {
+          weightEl.value = '';
+          weightEl.placeholder = 'Mixed';
+        }
+      } else if (nodeWeightVal !== undefined) {
+        const wVal = String(nodeWeightVal);
+        setWeightInput(wVal);
+        if (weightEl) {
+          weightEl.value = wVal;
+          weightEl.placeholder = '';
+        }
+      }
     } else {
       setIsColorMixed(false);
       setIsWeightMixed(false);
@@ -323,6 +360,8 @@ export function ConnectSection() {
     summary.connectorColor.value,
     summary.connectorStrokeWeight.isMixed,
     summary.connectorStrokeWeight.value,
+    summary.strokeWeight.isMixed,
+    summary.strokeWeight.value,
     summary.connectorRoutingType.isMixed,
     summary.connectorRoutingType.value,
     summary.connectorStrokePattern.isMixed,
@@ -446,9 +485,11 @@ export function ConnectSection() {
   // 두께 기본값(1.5) 리셋 핸들러
   const handleResetStrokeWeight = () => {
     setIsWeightMixed(false);
+    setWeightInput('1.5');
     const input = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
     if (input) {
       input.value = '1.5';
+      input.placeholder = '';
       applyCurrentConnectorState();
       input.focus();
       input.select();
@@ -517,7 +558,7 @@ export function ConnectSection() {
       <div className="section-header">
         <span className="section-title">
           Connect
-          {summary.isMultiConnector && (
+          {summary.isMulti && (
             isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed
           ) && (
             <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
@@ -676,13 +717,47 @@ export function ConnectSection() {
             >
               <path d="M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z" fill="currentColor"/>
             </svg>
-            <input type="number" id="input-stroke-weight" defaultValue={1.5} step={0.5} min={1} max={10}
-              placeholder={isWeightMixed ? 'Mixed' : undefined}
-              onChange={() => setIsWeightMixed(false)}
-              onFocus={e => e.currentTarget.select()}
-              onClick={e => e.currentTarget.select()}
-              onBlur={() => applyCurrentConnectorState()}
-              onKeyDown={e => e.key === 'Enter' && applyCurrentConnectorState()} />
+            <input
+              type="text"
+              inputMode="decimal"
+              id="input-stroke-weight"
+              value={isWeightMixed ? '' : weightInput}
+              placeholder={isWeightMixed ? 'Mixed' : '1.5'}
+              onChange={(e) => {
+                setIsWeightMixed(false);
+                setWeightInput(e.target.value);
+                const inputEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+                if (inputEl) inputEl.value = e.target.value;
+              }}
+              onFocus={(e) => e.currentTarget.select()}
+              onClick={(e) => e.currentTarget.select()}
+              onBlur={() => {
+                if (!isWeightMixed && weightInput.trim() !== '') {
+                  const parsed = parseFloat(weightInput);
+                  if (!isNaN(parsed)) {
+                    const clamped = Math.max(0.5, Math.min(10, parsed));
+                    setWeightInput(String(clamped));
+                    const inputEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+                    if (inputEl) inputEl.value = String(clamped);
+                  }
+                }
+                applyCurrentConnectorState();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (!isWeightMixed && weightInput.trim() !== '') {
+                    const parsed = parseFloat(weightInput);
+                    if (!isNaN(parsed)) {
+                      const clamped = Math.max(0.5, Math.min(10, parsed));
+                      setWeightInput(String(clamped));
+                      const inputEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+                      if (inputEl) inputEl.value = String(clamped);
+                    }
+                  }
+                  applyCurrentConnectorState();
+                }
+              }}
+            />
           </div>
           <div className="line-style-segment" style={{ flex: 1 }}>
             {[

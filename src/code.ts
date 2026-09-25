@@ -1310,6 +1310,9 @@ async function handleSelectionChange() {
     if ('strokeWeight' in node && typeof (node as any).strokeWeight === 'number') {
       nodeStrokeWeight = (node as any).strokeWeight;
     }
+    if (isConnector && typeof connectorStrokeWeight === 'number') {
+      nodeStrokeWeight = connectorStrokeWeight;
+    }
     let cornerRadius = 0;
     if ('cornerRadius' in node && typeof (node as any).cornerRadius === 'number') {
       cornerRadius = Math.round((node as any).cornerRadius);

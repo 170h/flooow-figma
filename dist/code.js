@@ -1538,6 +1538,9 @@
       if ("strokeWeight" in node && typeof node.strokeWeight === "number") {
         nodeStrokeWeight = node.strokeWeight;
       }
+      if (isConnector && typeof connectorStrokeWeight === "number") {
+        nodeStrokeWeight = connectorStrokeWeight;
+      }
       let cornerRadius = 0;
       if ("cornerRadius" in node && typeof node.cornerRadius === "number") {
         cornerRadius = Math.round(node.cornerRadius);

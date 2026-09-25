@@ -980,6 +980,18 @@
       appearance: textfield !important;
     }
 
+    .input-scrubber-box input::placeholder {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 1 !important;
+    }
+
+    body.figma-dark .input-scrubber-box input::placeholder,
+    .figma-dark .input-scrubber-box input::placeholder,
+    [data-theme="dark"] .input-scrubber-box input::placeholder {
+      color: var(--color-text-tertiary, rgba(255, 255, 255, 0.4)) !important;
+      opacity: 1 !important;
+    }
+
     .select-dropdown-box {
       background-color: var(--color-bg-secondary);
       border: 1px solid transparent;

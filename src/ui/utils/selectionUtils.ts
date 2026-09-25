@@ -133,8 +133,12 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     hasFigmaLink: getCommonProperty(flowNodes, (n) => Boolean(n.figmaLink && n.figmaLink.trim().length > 0)),
 
     // 커넥터 노드 속성 요약
-    connectorColor: getCommonProperty(connectorNodes, (n) => n.connectorColorHex, caseInsensitiveEqual),
-    connectorStrokeWeight: getCommonProperty(connectorNodes, (n) => n.connectorStrokeWeight),
+    connectorColor: getCommonProperty(connectorNodes, (n) => n.connectorColorHex || n.strokeColorHex, caseInsensitiveEqual),
+    connectorStrokeWeight: getCommonProperty(connectorNodes, (n) => {
+      if (typeof n.connectorStrokeWeight === 'number') return n.connectorStrokeWeight;
+      if (typeof n.strokeWeight === 'number') return n.strokeWeight;
+      return undefined;
+    }),
     connectorStrokePattern: getCommonProperty(connectorNodes, (n) => n.connectorStrokePattern),
     connectorRoutingType: getCommonProperty(connectorNodes, (n) => n.connectorRoutingType),
     connectorStartTerminal: getCommonProperty(connectorNodes, (n) => n.connectorStartTerminal),
