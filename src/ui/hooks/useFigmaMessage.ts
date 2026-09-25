@@ -25,8 +25,16 @@ export function useFigmaMessage() {
 
       switch (msg.type) {
         case 'SELECTION_CHANGED': {
-          const { count, nodes, meta } = msg;
+          const { count, nodes, meta, suggestedSourceMagnet, suggestedTargetMagnet } = msg;
           handleSelectionChange(count || 0, nodes || [], meta || {});
+
+          // 노드 이동 또는 커넥터 선택에 따른 최적 마그넷(연결 포인트) 기즈모 실시간 업데이트
+          if (suggestedSourceMagnet && suggestedTargetMagnet) {
+            setUIState({
+              sourceMagnet: suggestedSourceMagnet,
+              targetMagnet: suggestedTargetMagnet,
+            });
+          }
 
           const currentNodeId = (nodes && nodes.length === 1 && nodes[0]?.id)
             ? nodes[0].id

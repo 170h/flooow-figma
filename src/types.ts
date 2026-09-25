@@ -300,6 +300,8 @@ export type CoreToUIMessage =
       flowNodeCount?: number;
       otherObjectCount?: number;
       connectorCount?: number;
+      suggestedSourceMagnet?: MagnetPosition;
+      suggestedTargetMagnet?: MagnetPosition;
     }
   | {
       type: 'STATUS_LIST_UPDATED';

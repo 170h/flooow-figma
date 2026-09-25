@@ -108,8 +108,14 @@ export function App() {
       tabAppearance?.classList.add('disabled');
       tabConnection?.classList.add('disabled');
       if (currentTab !== 'node') setCurrentTab('node');
+    } else if (nodeCount === 1) {
+      // 노드 단 1개 선택: Node/Appearance 활성, Connection 비활성화!
+      tabNode?.classList.remove('disabled');
+      tabAppearance?.classList.remove('disabled');
+      tabConnection?.classList.add('disabled');
+      if (currentTab === 'connection') setCurrentTab('node');
     } else {
-      // 일반 노드 선택: 전체 활성
+      // 일반 노드 2개 이상 복수 선택: 전체 활성
       tabNode?.classList.remove('disabled');
       tabAppearance?.classList.remove('disabled');
       tabConnection?.classList.remove('disabled');
@@ -171,6 +177,11 @@ export function App() {
 
   // 탭 전환
   function switchTab(tabId: string) {
+    // 노드 1개 이하일 때 Connection 탭 클릭 차단
+    if (tabId === 'connection' && !isConnSel && nodeCount < 2) return;
+    if (tabId === 'appearance' && (nodeCount === 0 || isConnSel)) return;
+    if (tabId === 'node' && isConnSel) return;
+
     // disabled 탭은 클릭 차단
     const btn = document.getElementById(`tab-btn-${tabId}`);
     if (btn?.classList.contains('disabled')) return;
@@ -333,17 +344,25 @@ export function App() {
       {/* 2. 메인 탭 세그먼트 컨트롤 */}
       <nav className="main-tabs-wrapper">
         <div className="segmented-control" role="tablist">
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              id={`tab-btn-${tab.id}`}
-              className={`tab-btn${currentTab === tab.id ? ' active' : ''}`}
-              role="tab"
-              onClick={() => switchTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
+          {TABS.map(tab => {
+            const isConnectionDisabled = tab.id === 'connection' && (!isConnSel && nodeCount < 2);
+            const isAppearanceDisabled = tab.id === 'appearance' && (nodeCount === 0 || isConnSel);
+            const isNodeDisabled = tab.id === 'node' && isConnSel;
+            const isDisabled = isConnectionDisabled || isAppearanceDisabled || isNodeDisabled;
+
+            return (
+              <button
+                key={tab.id}
+                id={`tab-btn-${tab.id}`}
+                className={`tab-btn${currentTab === tab.id ? ' active' : ''}${isDisabled ? ' disabled' : ''}`}
+                disabled={isDisabled}
+                role="tab"
+                onClick={() => switchTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </nav>
 

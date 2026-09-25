@@ -260,6 +260,12 @@ export function ConnectSection() {
       if (node?.connectorStrokePattern) {
         setUIState({ selectedLinePattern: node.connectorStrokePattern });
       }
+      if (node?.connectorSourceMagnet && node?.connectorTargetMagnet) {
+        setUIState({
+          sourceMagnet: node.connectorSourceMagnet,
+          targetMagnet: node.connectorTargetMagnet,
+        });
+      }
     } else if (summary.isMultiConnector) {
       // 커넥터 복수 선택
       // 1. 단자

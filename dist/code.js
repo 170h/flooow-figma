@@ -130,8 +130,11 @@
         }
       } else {
         const detourY = tgtPoint.y >= srcPoint.y ? Math.max(srcBox.y + srcBox.height, tgtBox.y + tgtBox.height) + margin : Math.min(srcBox.y, tgtBox.y) - margin;
-        const exitX = isRightward ? srcPoint.x + margin : srcPoint.x - margin;
+        let exitX = isRightward ? srcPoint.x + margin : srcPoint.x - margin;
         const enterX = isRightward ? tgtPoint.x - margin : tgtPoint.x + margin;
+        if (exitX >= tgtBox.x - margin && exitX <= tgtBox.x + tgtBox.width + margin) {
+          exitX = isRightward ? Math.max(srcBox.x + srcBox.width, tgtBox.x + tgtBox.width) + margin : Math.min(srcBox.x, tgtBox.x) - margin;
+        }
         points.push({ x: exitX, y: srcPoint.y });
         points.push({ x: exitX, y: detourY });
         points.push({ x: enterX, y: detourY });
@@ -180,6 +183,42 @@
       }
     }
     return simplifyOrthogonalPoints(points);
+  }
+  function lineSegmentIntersectsBox(p1, p2, box, padding = 2) {
+    const minX = Math.min(p1.x, p2.x);
+    const maxX = Math.max(p1.x, p2.x);
+    const minY = Math.min(p1.y, p2.y);
+    const maxY = Math.max(p1.y, p2.y);
+    const bLeft = box.x + padding;
+    const bRight = box.x + box.width - padding;
+    const bTop = box.y + padding;
+    const bBottom = box.y + box.height - padding;
+    if (bRight <= bLeft || bBottom <= bTop) return false;
+    if (Math.abs(p1.y - p2.y) < 0.5) {
+      const y = p1.y;
+      if (y > bTop && y < bBottom) {
+        if (Math.max(minX, bLeft) < Math.min(maxX, bRight)) {
+          return true;
+        }
+      }
+    } else if (Math.abs(p1.x - p2.x) < 0.5) {
+      const x = p1.x;
+      if (x > bLeft && x < bRight) {
+        if (Math.max(minY, bTop) < Math.min(maxY, bBottom)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  function doesPathCrossBoxes(points, srcBox, tgtBox) {
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      if (lineSegmentIntersectsBox(p1, p2, srcBox)) return true;
+      if (lineSegmentIntersectsBox(p1, p2, tgtBox)) return true;
+    }
+    return false;
   }
   async function createOrthogonalVectorConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, options = {}) {
     const srcBox = {
@@ -316,6 +355,24 @@
   var nodeToConnectorsMap = /* @__PURE__ */ new Map();
   var isUpdatingConnectors = false;
   function registerConnectorInRegistry(connectorNode) {
+    if (connectorNode.type === "CONNECTOR") {
+      const conn = connectorNode;
+      const start = conn.connectorStart;
+      const end = conn.connectorEnd;
+      if ("endpointNodeId" in start && start.endpointNodeId) {
+        if (!nodeToConnectorsMap.has(start.endpointNodeId)) {
+          nodeToConnectorsMap.set(start.endpointNodeId, /* @__PURE__ */ new Set());
+        }
+        nodeToConnectorsMap.get(start.endpointNodeId).add(connectorNode.id);
+      }
+      if ("endpointNodeId" in end && end.endpointNodeId) {
+        if (!nodeToConnectorsMap.has(end.endpointNodeId)) {
+          nodeToConnectorsMap.set(end.endpointNodeId, /* @__PURE__ */ new Set());
+        }
+        nodeToConnectorsMap.get(end.endpointNodeId).add(connectorNode.id);
+      }
+      return;
+    }
     const srcId = connectorNode.getPluginData("source_node_id");
     const tgtId = connectorNode.getPluginData("target_node_id");
     if (srcId) {
@@ -330,34 +387,92 @@
   function refreshConnectorRegistry() {
     nodeToConnectorsMap.clear();
     const connectors = figma.currentPage.findAll(
-      (n) => n.getPluginData("is_custom_connector") === "true"
+      (n) => n.getPluginData("is_custom_connector") === "true" || n.type === "CONNECTOR"
     );
     for (const conn of connectors) {
       registerConnectorInRegistry(conn);
     }
   }
   function getOptimalMagnetPair(srcBox, tgtBox) {
-    const isRight = tgtBox.x >= srcBox.x + srcBox.width;
-    const isLeft = tgtBox.x + tgtBox.width <= srcBox.x;
-    const isBelow = tgtBox.y >= srcBox.y + srcBox.height;
-    const isAbove = tgtBox.y + tgtBox.height <= srcBox.y;
-    if (isRight && !isBelow && !isAbove) return { sourceMagnet: "RIGHT", targetMagnet: "LEFT" };
-    if (isLeft && !isBelow && !isAbove) return { sourceMagnet: "LEFT", targetMagnet: "RIGHT" };
-    if (isBelow && !isRight && !isLeft) return { sourceMagnet: "BOTTOM", targetMagnet: "TOP" };
-    if (isAbove && !isRight && !isLeft) return { sourceMagnet: "TOP", targetMagnet: "BOTTOM" };
+    const MAGNETS = ["TOP", "BOTTOM", "LEFT", "RIGHT"];
     const centerSrcX = srcBox.x + srcBox.width / 2;
     const centerSrcY = srcBox.y + srcBox.height / 2;
     const centerTgtX = tgtBox.x + tgtBox.width / 2;
     const centerTgtY = tgtBox.y + tgtBox.height / 2;
     const dx = centerTgtX - centerSrcX;
     const dy = centerTgtY - centerSrcY;
-    if (Math.abs(dx) >= Math.abs(dy)) {
-      return dx >= 0 ? { sourceMagnet: "RIGHT", targetMagnet: "LEFT" } : { sourceMagnet: "LEFT", targetMagnet: "RIGHT" };
-    } else {
-      return dy >= 0 ? { sourceMagnet: "BOTTOM", targetMagnet: "TOP" } : { sourceMagnet: "TOP", targetMagnet: "BOTTOM" };
+    const candidates = [];
+    for (const srcMag of MAGNETS) {
+      for (const tgtMag of MAGNETS) {
+        const pStart = getMagnetPoint(srcBox, srcMag);
+        const pEnd = getMagnetPoint(tgtBox, tgtMag);
+        const points = calculateOrthogonalPoints(pStart, srcMag, pEnd, tgtMag, srcBox, tgtBox);
+        const crosses = doesPathCrossBoxes(points, srcBox, tgtBox);
+        let length = 0;
+        for (let i = 0; i < points.length - 1; i++) {
+          length += Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+        }
+        let cost = length + points.length * 15;
+        if (srcMag === "RIGHT" && dx > 0) cost -= 25;
+        if (srcMag === "LEFT" && dx < 0) cost -= 25;
+        if (srcMag === "BOTTOM" && dy > 0) cost -= 25;
+        if (srcMag === "TOP" && dy < 0) cost -= 25;
+        if (tgtMag === "LEFT" && dx > 0) cost -= 25;
+        if (tgtMag === "RIGHT" && dx < 0) cost -= 25;
+        if (tgtMag === "TOP" && dy > 0) cost -= 25;
+        if (tgtMag === "BOTTOM" && dy < 0) cost -= 25;
+        candidates.push({ srcMag, tgtMag, cost, crosses });
+      }
+    }
+    const nonCrossingCandidates = candidates.filter((c) => !c.crosses);
+    if (nonCrossingCandidates.length > 0) {
+      nonCrossingCandidates.sort((a, b) => a.cost - b.cost);
+      return {
+        sourceMagnet: nonCrossingCandidates[0].srcMag,
+        targetMagnet: nonCrossingCandidates[0].tgtMag
+      };
+    }
+    candidates.sort((a, b) => a.cost - b.cost);
+    return {
+      sourceMagnet: candidates[0].srcMag,
+      targetMagnet: candidates[0].tgtMag
+    };
+  }
+  function optimizeNativeConnector(conn) {
+    try {
+      const start = conn.connectorStart;
+      const end = conn.connectorEnd;
+      if (!("endpointNodeId" in start) || !("endpointNodeId" in end)) return;
+      if (!start.endpointNodeId || !end.endpointNodeId) return;
+      const sourceNode = figma.getNodeById(start.endpointNodeId);
+      const targetNode = figma.getNodeById(end.endpointNodeId);
+      if (!sourceNode || !targetNode) return;
+      const srcBox = {
+        x: sourceNode.x,
+        y: sourceNode.y,
+        width: sourceNode.width,
+        height: sourceNode.height
+      };
+      const tgtBox = {
+        x: targetNode.x,
+        y: targetNode.y,
+        width: targetNode.width,
+        height: targetNode.height
+      };
+      const optimal = getOptimalMagnetPair(srcBox, tgtBox);
+      conn.connectorStart = {
+        endpointNodeId: start.endpointNodeId,
+        magnet: optimal.sourceMagnet
+      };
+      conn.connectorEnd = {
+        endpointNodeId: end.endpointNodeId,
+        magnet: optimal.targetMagnet
+      };
+    } catch (err) {
+      console.error("\uB124\uC774\uD2F0\uBE0C \uCEE4\uB125\uD130 \uCD5C\uC801\uD654 \uC2E4\uD328:", err);
     }
   }
-  async function updateOrthogonalVectorConnector(connectorNode, explicitSourceMagnet, explicitTargetMagnet) {
+  async function updateOrthogonalVectorConnector(connectorNode, explicitSourceMagnet, explicitTargetMagnet, forceOptimal = false) {
     const srcId = connectorNode.getPluginData("source_node_id");
     const tgtId = connectorNode.getPluginData("target_node_id");
     if (!srcId || !tgtId) return;
@@ -388,9 +503,9 @@
       width: targetNode.width,
       height: targetNode.height
     };
-    let sourceMagnet = explicitSourceMagnet || connectorNode.getPluginData("source_magnet");
-    let targetMagnet = explicitTargetMagnet || connectorNode.getPluginData("target_magnet");
-    if (!sourceMagnet || !targetMagnet) {
+    let sourceMagnet = explicitSourceMagnet;
+    let targetMagnet = explicitTargetMagnet;
+    if (!sourceMagnet || !targetMagnet || forceOptimal) {
       const optimal = getOptimalMagnetPair(srcBox, tgtBox);
       if (!sourceMagnet) sourceMagnet = optimal.sourceMagnet;
       if (!targetMagnet) targetMagnet = optimal.targetMagnet;
@@ -478,8 +593,11 @@
       }
       for (const connId of connIdsToUpdate) {
         const connNode = figma.getNodeById(connId);
-        if (connNode) {
-          await updateOrthogonalVectorConnector(connNode);
+        if (!connNode) continue;
+        if (connNode.type === "CONNECTOR") {
+          optimizeNativeConnector(connNode);
+        } else {
+          await updateOrthogonalVectorConnector(connNode, void 0, void 0, true);
         }
       }
     } catch (err) {
@@ -1596,6 +1714,28 @@
       const saved = uniqueNodes[0].getPluginData("workflow_status");
       if (saved) currentStatus = saved;
     }
+    let suggestedSourceMagnet;
+    let suggestedTargetMagnet;
+    if (connectorCount === 1 && nodes.length > 0) {
+      suggestedSourceMagnet = nodes[0].connectorSourceMagnet;
+      suggestedTargetMagnet = nodes[0].connectorTargetMagnet;
+    } else if (uniqueNodes.length >= 2 && connectorCount === 0) {
+      const box1 = {
+        x: uniqueNodes[0].x,
+        y: uniqueNodes[0].y,
+        width: uniqueNodes[0].width,
+        height: uniqueNodes[0].height
+      };
+      const box2 = {
+        x: uniqueNodes[1].x,
+        y: uniqueNodes[1].y,
+        width: uniqueNodes[1].width,
+        height: uniqueNodes[1].height
+      };
+      const optimal = getOptimalMagnetPair(box1, box2);
+      suggestedSourceMagnet = optimal.sourceMagnet;
+      suggestedTargetMagnet = optimal.targetMagnet;
+    }
     postToUI({
       type: "SELECTION_CHANGED",
       count: flowNodeCount + otherObjectCount + connectorCount,
@@ -1604,7 +1744,9 @@
       nextSuggestedTag: getNextFlowTag(),
       flowNodeCount,
       otherObjectCount,
-      connectorCount
+      connectorCount,
+      suggestedSourceMagnet,
+      suggestedTargetMagnet
     });
   }
   figma.on("selectionchange", handleSelectionChange);
@@ -3568,9 +3710,22 @@
     const movedNodeIds = /* @__PURE__ */ new Set();
     let connectorSelectionChanged = false;
     for (const change of event.documentChanges) {
+      if (change.type === "CREATE") {
+        const createdNode = figma.getNodeById(change.id);
+        if (createdNode && (createdNode.type === "CONNECTOR" || createdNode.getPluginData("is_custom_connector") === "true")) {
+          registerConnectorInRegistry(createdNode);
+        }
+      }
       if (change.type === "PROPERTY_CHANGE") {
         if (change.properties.includes("x") || change.properties.includes("y") || change.properties.includes("width") || change.properties.includes("height")) {
           movedNodeIds.add(change.id);
+          const changedNode = figma.getNodeById(change.id);
+          if (changedNode) {
+            const flowNode = findFlowNode(changedNode);
+            if (flowNode) {
+              movedNodeIds.add(flowNode.id);
+            }
+          }
         }
         if (change.properties.includes("width") || change.properties.includes("height")) {
           const node = figma.getNodeById(change.id);
@@ -3670,8 +3825,8 @@
     }
     if (movedNodeIds.size > 0) {
       await syncConnectorsForMovedNodes(movedNodeIds);
-    }
-    if (connectorSelectionChanged) {
+      handleSelectionChange();
+    } else if (connectorSelectionChanged) {
       handleSelectionChange();
     }
   });

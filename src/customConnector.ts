@@ -144,14 +144,21 @@ export function calculateOrthogonalPoints(
         points.push(tgtPoint);
       }
     } else {
-      // 역방향 우회
+      // 역방향 우회: 타겟 박스를 안전하게 둘러서 우회
       const detourY =
         tgtPoint.y >= srcPoint.y
           ? Math.max(srcBox.y + srcBox.height, tgtBox.y + tgtBox.height) + margin
           : Math.min(srcBox.y, tgtBox.y) - margin;
 
-      const exitX = isRightward ? srcPoint.x + margin : srcPoint.x - margin;
+      let exitX = isRightward ? srcPoint.x + margin : srcPoint.x - margin;
       const enterX = isRightward ? tgtPoint.x - margin : tgtPoint.x + margin;
+
+      // 만약 exitX가 tgtBox의 X 범위 내에 있으면 관통하므로 안전한 바깥으로 보정
+      if (exitX >= tgtBox.x - margin && exitX <= tgtBox.x + tgtBox.width + margin) {
+        exitX = isRightward
+          ? Math.max(srcBox.x + srcBox.width, tgtBox.x + tgtBox.width) + margin
+          : Math.min(srcBox.x, tgtBox.x) - margin;
+      }
 
       points.push({ x: exitX, y: srcPoint.y });
       points.push({ x: exitX, y: detourY });
@@ -220,6 +227,62 @@ export function calculateOrthogonalPoints(
   }
 
   return simplifyOrthogonalPoints(points);
+}
+
+// 선분이 박스 내부와 교차(관통)하는지 검사
+export function lineSegmentIntersectsBox(
+  p1: Point,
+  p2: Point,
+  box: Box,
+  padding: number = 2
+): boolean {
+  const minX = Math.min(p1.x, p2.x);
+  const maxX = Math.max(p1.x, p2.x);
+  const minY = Math.min(p1.y, p2.y);
+  const maxY = Math.max(p1.y, p2.y);
+
+  const bLeft = box.x + padding;
+  const bRight = box.x + box.width - padding;
+  const bTop = box.y + padding;
+  const bBottom = box.y + box.height - padding;
+
+  if (bRight <= bLeft || bBottom <= bTop) return false;
+
+  // 수평 선분 (y가 일정)
+  if (Math.abs(p1.y - p2.y) < 0.5) {
+    const y = p1.y;
+    if (y > bTop && y < bBottom) {
+      if (Math.max(minX, bLeft) < Math.min(maxX, bRight)) {
+        return true;
+      }
+    }
+  }
+  // 수직 선분 (x가 일정)
+  else if (Math.abs(p1.x - p2.x) < 0.5) {
+    const x = p1.x;
+    if (x > bLeft && x < bRight) {
+      if (Math.max(minY, bTop) < Math.min(maxY, bBottom)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+// 경로가 소스 노드나 타겟 노드의 내부를 가로지르는지(관통하는지) 검사
+export function doesPathCrossBoxes(
+  points: Point[],
+  srcBox: Box,
+  tgtBox: Box
+): boolean {
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    if (lineSegmentIntersectsBox(p1, p2, srcBox)) return true;
+    if (lineSegmentIntersectsBox(p1, p2, tgtBox)) return true;
+  }
+  return false;
 }
 
 // 4. 피그마 VectorNode로 90도 칼각 직각 커넥터 렌더링
@@ -407,6 +470,25 @@ let isUpdatingConnectors = false;
 
 // 커넥터 등록
 export function registerConnectorInRegistry(connectorNode: SceneNode) {
+  if (connectorNode.type === 'CONNECTOR') {
+    const conn = connectorNode as ConnectorNode;
+    const start = conn.connectorStart;
+    const end = conn.connectorEnd;
+    if ('endpointNodeId' in start && start.endpointNodeId) {
+      if (!nodeToConnectorsMap.has(start.endpointNodeId)) {
+        nodeToConnectorsMap.set(start.endpointNodeId, new Set());
+      }
+      nodeToConnectorsMap.get(start.endpointNodeId)!.add(connectorNode.id);
+    }
+    if ('endpointNodeId' in end && end.endpointNodeId) {
+      if (!nodeToConnectorsMap.has(end.endpointNodeId)) {
+        nodeToConnectorsMap.set(end.endpointNodeId, new Set());
+      }
+      nodeToConnectorsMap.get(end.endpointNodeId)!.add(connectorNode.id);
+    }
+    return;
+  }
+
   const srcId = connectorNode.getPluginData('source_node_id');
   const tgtId = connectorNode.getPluginData('target_node_id');
   if (srcId) {
@@ -419,52 +501,127 @@ export function registerConnectorInRegistry(connectorNode: SceneNode) {
   }
 }
 
-// 캔버스 내 모든 커스텀 커넥터 스캔 및 레지스트리 초기화
+// 캔버스 내 모든 커넥터(커스텀 및 네이티브) 스캔 및 레지스트리 초기화
 export function refreshConnectorRegistry() {
   nodeToConnectorsMap.clear();
   const connectors = figma.currentPage.findAll(
-    (n) => n.getPluginData('is_custom_connector') === 'true'
+    (n) => n.getPluginData('is_custom_connector') === 'true' || n.type === 'CONNECTOR'
   );
   for (const conn of connectors) {
     registerConnectorInRegistry(conn);
   }
 }
 
-// 두 노드의 상대적 위치에 따라 최단거리 마그넷 포트 쌍을 실시간 동적 판별
+// 두 노드의 상대적 위치 및 노드 관통(가로지름) 배제 조건을 적용한 최단거리 최적 마그넷 포트 쌍 계산
 export function getOptimalMagnetPair(
   srcBox: Box,
   tgtBox: Box
 ): { sourceMagnet: MagnetPosition; targetMagnet: MagnetPosition } {
-  // A. 완전히 분리된 구역 판별
-  const isRight = tgtBox.x >= srcBox.x + srcBox.width;
-  const isLeft = tgtBox.x + tgtBox.width <= srcBox.x;
-  const isBelow = tgtBox.y >= srcBox.y + srcBox.height;
-  const isAbove = tgtBox.y + tgtBox.height <= srcBox.y;
+  const MAGNETS: MagnetPosition[] = ['TOP', 'BOTTOM', 'LEFT', 'RIGHT'];
 
-  // 순수 가로 분리
-  if (isRight && !isBelow && !isAbove) return { sourceMagnet: 'RIGHT', targetMagnet: 'LEFT' };
-  if (isLeft && !isBelow && !isAbove) return { sourceMagnet: 'LEFT', targetMagnet: 'RIGHT' };
-  // 순수 세로 분리
-  if (isBelow && !isRight && !isLeft) return { sourceMagnet: 'BOTTOM', targetMagnet: 'TOP' };
-  if (isAbove && !isRight && !isLeft) return { sourceMagnet: 'TOP', targetMagnet: 'BOTTOM' };
-
-  // B. 대각선 영역 또는 겹치는 경우: 중심점 벡터(dx, dy) 비교
+  // 두 노드의 중심점 간의 상대적 방향 벡터
   const centerSrcX = srcBox.x + srcBox.width / 2;
   const centerSrcY = srcBox.y + srcBox.height / 2;
   const centerTgtX = tgtBox.x + tgtBox.width / 2;
   const centerTgtY = tgtBox.y + tgtBox.height / 2;
-
   const dx = centerTgtX - centerSrcX;
   const dy = centerTgtY - centerSrcY;
 
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    return dx >= 0
-      ? { sourceMagnet: 'RIGHT', targetMagnet: 'LEFT' }
-      : { sourceMagnet: 'LEFT', targetMagnet: 'RIGHT' };
-  } else {
-    return dy >= 0
-      ? { sourceMagnet: 'BOTTOM', targetMagnet: 'TOP' }
-      : { sourceMagnet: 'TOP', targetMagnet: 'BOTTOM' };
+  interface Candidate {
+    srcMag: MagnetPosition;
+    tgtMag: MagnetPosition;
+    cost: number;
+    crosses: boolean;
+  }
+
+  const candidates: Candidate[] = [];
+
+  for (const srcMag of MAGNETS) {
+    for (const tgtMag of MAGNETS) {
+      const pStart = getMagnetPoint(srcBox, srcMag);
+      const pEnd = getMagnetPoint(tgtBox, tgtMag);
+      const points = calculateOrthogonalPoints(pStart, srcMag, pEnd, tgtMag, srcBox, tgtBox);
+      const crosses = doesPathCrossBoxes(points, srcBox, tgtBox);
+
+      // 경로 총 길이(유클리드 거리 합)
+      let length = 0;
+      for (let i = 0; i < points.length - 1; i++) {
+        length += Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+      }
+
+      // 기본 비용 = 길이 + 세그먼트 수 페널티(꺾임 횟수 최소화)
+      let cost = length + points.length * 15;
+
+      // 상대 방향과의 자연스러운 진행 방향 보너스
+      if (srcMag === 'RIGHT' && dx > 0) cost -= 25;
+      if (srcMag === 'LEFT' && dx < 0) cost -= 25;
+      if (srcMag === 'BOTTOM' && dy > 0) cost -= 25;
+      if (srcMag === 'TOP' && dy < 0) cost -= 25;
+
+      if (tgtMag === 'LEFT' && dx > 0) cost -= 25;
+      if (tgtMag === 'RIGHT' && dx < 0) cost -= 25;
+      if (tgtMag === 'TOP' && dy > 0) cost -= 25;
+      if (tgtMag === 'BOTTOM' && dy < 0) cost -= 25;
+
+      candidates.push({ srcMag, tgtMag, cost, crosses });
+    }
+  }
+
+  // 1. 노드를 가로지르지 않는(crosses === false) 후보들만 우선 선별 (노드 관통 원천 배제)
+  const nonCrossingCandidates = candidates.filter((c) => !c.crosses);
+
+  if (nonCrossingCandidates.length > 0) {
+    nonCrossingCandidates.sort((a, b) => a.cost - b.cost);
+    return {
+      sourceMagnet: nonCrossingCandidates[0].srcMag,
+      targetMagnet: nonCrossingCandidates[0].tgtMag,
+    };
+  }
+
+  // 만약 모든 경로가 교차하는 불가피한 극단적 경우(두 노드가 완전히 포개진 경우): 최소 비용 후보 선택
+  candidates.sort((a, b) => a.cost - b.cost);
+  return {
+    sourceMagnet: candidates[0].srcMag,
+    targetMagnet: candidates[0].tgtMag,
+  };
+}
+
+// 피그마 네이티브 ConnectorNode의 최적 마그넷 자동 최적화
+export function optimizeNativeConnector(conn: ConnectorNode) {
+  try {
+    const start = conn.connectorStart;
+    const end = conn.connectorEnd;
+    if (!('endpointNodeId' in start) || !('endpointNodeId' in end)) return;
+    if (!start.endpointNodeId || !end.endpointNodeId) return;
+
+    const sourceNode = figma.getNodeById(start.endpointNodeId) as SceneNode | null;
+    const targetNode = figma.getNodeById(end.endpointNodeId) as SceneNode | null;
+    if (!sourceNode || !targetNode) return;
+
+    const srcBox: Box = {
+      x: sourceNode.x,
+      y: sourceNode.y,
+      width: sourceNode.width,
+      height: sourceNode.height,
+    };
+    const tgtBox: Box = {
+      x: targetNode.x,
+      y: targetNode.y,
+      width: targetNode.width,
+      height: targetNode.height,
+    };
+
+    const optimal = getOptimalMagnetPair(srcBox, tgtBox);
+    conn.connectorStart = {
+      endpointNodeId: start.endpointNodeId,
+      magnet: optimal.sourceMagnet,
+    };
+    conn.connectorEnd = {
+      endpointNodeId: end.endpointNodeId,
+      magnet: optimal.targetMagnet,
+    };
+  } catch (err) {
+    console.error('네이티브 커넥터 최적화 실패:', err);
   }
 }
 
@@ -472,7 +629,8 @@ export function getOptimalMagnetPair(
 export async function updateOrthogonalVectorConnector(
   connectorNode: SceneNode,
   explicitSourceMagnet?: MagnetPosition,
-  explicitTargetMagnet?: MagnetPosition
+  explicitTargetMagnet?: MagnetPosition,
+  forceOptimal: boolean = false
 ) {
   const srcId = connectorNode.getPluginData('source_node_id');
   const tgtId = connectorNode.getPluginData('target_node_id');
@@ -515,11 +673,12 @@ export async function updateOrthogonalVectorConnector(
     height: targetNode.height,
   };
 
-  // 수동 지정 마그넷이 있으면 우선 사용, 없으면 기존 저장값 또는 최적 마그넷 자동 판별
-  let sourceMagnet = explicitSourceMagnet || (connectorNode.getPluginData('source_magnet') as MagnetPosition);
-  let targetMagnet = explicitTargetMagnet || (connectorNode.getPluginData('target_magnet') as MagnetPosition);
+  // 수동 지정 마그넷이 있으면 우선 사용
+  // forceOptimal이거나 마그넷 정보가 없는 경우 노드 상대 위치 기반 최적 마그넷 자동 판별
+  let sourceMagnet = explicitSourceMagnet;
+  let targetMagnet = explicitTargetMagnet;
 
-  if (!sourceMagnet || !targetMagnet) {
+  if (!sourceMagnet || !targetMagnet || forceOptimal) {
     const optimal = getOptimalMagnetPair(srcBox, tgtBox);
     if (!sourceMagnet) sourceMagnet = optimal.sourceMagnet;
     if (!targetMagnet) targetMagnet = optimal.targetMagnet;
@@ -609,7 +768,7 @@ export async function updateOrthogonalVectorConnector(
   }
 }
 
-// 특정 노드들이 드래그 이동되었을 때 연결된 커넥터 일괄 갱신
+// 특정 노드들이 드래그 이동되었을 때 연결된 커넥터 일괄 갱신 (자동 최적화 라인 연결 적용)
 export async function syncConnectorsForMovedNodes(nodeIds: Set<string>) {
   if (isUpdatingConnectors || nodeIds.size === 0) return;
   isUpdatingConnectors = true;
@@ -627,8 +786,12 @@ export async function syncConnectorsForMovedNodes(nodeIds: Set<string>) {
 
     for (const connId of connIdsToUpdate) {
       const connNode = figma.getNodeById(connId) as SceneNode | null;
-      if (connNode) {
-        await updateOrthogonalVectorConnector(connNode);
+      if (!connNode) continue;
+
+      if (connNode.type === 'CONNECTOR') {
+        optimizeNativeConnector(connNode as ConnectorNode);
+      } else {
+        await updateOrthogonalVectorConnector(connNode, undefined, undefined, true);
       }
     }
   } catch (err) {

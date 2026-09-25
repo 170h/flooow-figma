@@ -28894,8 +28894,14 @@
         if (!msg) return;
         switch (msg.type) {
           case "SELECTION_CHANGED": {
-            const { count, nodes, meta } = msg;
+            const { count, nodes, meta, suggestedSourceMagnet, suggestedTargetMagnet } = msg;
             handleSelectionChange(count || 0, nodes || [], meta || {});
+            if (suggestedSourceMagnet && suggestedTargetMagnet) {
+              setUIState({
+                sourceMagnet: suggestedSourceMagnet,
+                targetMagnet: suggestedTargetMagnet
+              });
+            }
             const currentNodeId = nodes && nodes.length === 1 && nodes[0]?.id ? nodes[0].id : nodes && nodes.length > 1 ? "MULTI" : null;
             const isDifferentNode = currentNodeId !== prevNodeIdRef.current;
             prevNodeIdRef.current = currentNodeId;
@@ -31083,6 +31089,12 @@
         }
         if (node?.connectorStrokePattern) {
           setUIState({ selectedLinePattern: node.connectorStrokePattern });
+        }
+        if (node?.connectorSourceMagnet && node?.connectorTargetMagnet) {
+          setUIState({
+            sourceMagnet: node.connectorSourceMagnet,
+            targetMagnet: node.connectorTargetMagnet
+          });
         }
       } else if (summary.isMultiConnector) {
         const startVal = summary.connectorStartTerminal.isMixed ? "MIXED" : summary.connectorStartTerminal.value || "NONE";
@@ -34170,6 +34182,11 @@
         tabAppearance?.classList.add("disabled");
         tabConnection?.classList.add("disabled");
         if (currentTab !== "node") setCurrentTab("node");
+      } else if (nodeCount === 1) {
+        tabNode?.classList.remove("disabled");
+        tabAppearance?.classList.remove("disabled");
+        tabConnection?.classList.add("disabled");
+        if (currentTab === "connection") setCurrentTab("node");
       } else {
         tabNode?.classList.remove("disabled");
         tabAppearance?.classList.remove("disabled");
@@ -34209,6 +34226,9 @@
       };
     }, []);
     function switchTab(tabId) {
+      if (tabId === "connection" && !isConnSel && nodeCount < 2) return;
+      if (tabId === "appearance" && (nodeCount === 0 || isConnSel)) return;
+      if (tabId === "node" && isConnSel) return;
       const btn = document.getElementById(`tab-btn-${tabId}`);
       if (btn?.classList.contains("disabled")) return;
       setCurrentTab(tabId);
@@ -34331,17 +34351,24 @@
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
-        "button",
-        {
-          id: `tab-btn-${tab.id}`,
-          className: `tab-btn${currentTab === tab.id ? " active" : ""}`,
-          role: "tab",
-          onClick: () => switchTab(tab.id),
-          children: tab.label
-        },
-        tab.id
-      )) }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
+        const isConnectionDisabled = tab.id === "connection" && (!isConnSel && nodeCount < 2);
+        const isAppearanceDisabled = tab.id === "appearance" && (nodeCount === 0 || isConnSel);
+        const isNodeDisabled = tab.id === "node" && isConnSel;
+        const isDisabled = isConnectionDisabled || isAppearanceDisabled || isNodeDisabled;
+        return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+          "button",
+          {
+            id: `tab-btn-${tab.id}`,
+            className: `tab-btn${currentTab === tab.id ? " active" : ""}${isDisabled ? " disabled" : ""}`,
+            disabled: isDisabled,
+            role: "tab",
+            onClick: () => switchTab(tab.id),
+            children: tab.label
+          },
+          tab.id
+        );
+      }) }) }),
       /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("hr", { className: "section-divider" }),
       /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("main", { className: "tab-panels", children: [
         /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(

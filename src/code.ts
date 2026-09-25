@@ -17,8 +17,11 @@ import {
 import {
   createOrthogonalVectorConnector,
   updateOrthogonalVectorConnector,
+  registerConnectorInRegistry,
   refreshConnectorRegistry,
   syncConnectorsForMovedNodes,
+  getOptimalMagnetPair,
+  Box,
 } from './customConnector';
 
 // RGB 객체를 6자리 HEX 문자열로 변환하는 헬퍼
@@ -1372,6 +1375,33 @@ async function handleSelectionChange() {
     if (saved) currentStatus = saved;
   }
 
+  // 에디터 기즈모 추천 마그넷(연결 포인트) 산출
+  let suggestedSourceMagnet: MagnetPosition | undefined;
+  let suggestedTargetMagnet: MagnetPosition | undefined;
+
+  if (connectorCount === 1 && nodes.length > 0) {
+    // 커넥터 선택 시: 해당 커넥터의 실제 연결 포인트(마그넷)를 기즈모에 연동
+    suggestedSourceMagnet = nodes[0].connectorSourceMagnet;
+    suggestedTargetMagnet = nodes[0].connectorTargetMagnet;
+  } else if (uniqueNodes.length >= 2 && connectorCount === 0) {
+    // 2개 이상의 노드 선택 시: 두 노드의 캔버스 상대 위치 기반 최적 마그넷을 기즈모에 실시간 연동
+    const box1: Box = {
+      x: uniqueNodes[0].x,
+      y: uniqueNodes[0].y,
+      width: uniqueNodes[0].width,
+      height: uniqueNodes[0].height,
+    };
+    const box2: Box = {
+      x: uniqueNodes[1].x,
+      y: uniqueNodes[1].y,
+      width: uniqueNodes[1].width,
+      height: uniqueNodes[1].height,
+    };
+    const optimal = getOptimalMagnetPair(box1, box2);
+    suggestedSourceMagnet = optimal.sourceMagnet;
+    suggestedTargetMagnet = optimal.targetMagnet;
+  }
+
   postToUI({
     type: 'SELECTION_CHANGED',
     count: flowNodeCount + otherObjectCount + connectorCount,
@@ -1381,6 +1411,8 @@ async function handleSelectionChange() {
     flowNodeCount,
     otherObjectCount,
     connectorCount,
+    suggestedSourceMagnet,
+    suggestedTargetMagnet,
   });
 }
 
@@ -3719,8 +3751,18 @@ figma.on('documentchange', async (event) => {
   let connectorSelectionChanged = false;
 
   for (const change of event.documentChanges) {
+    if (change.type === 'CREATE') {
+      const createdNode = figma.getNodeById(change.id);
+      if (
+        createdNode &&
+        (createdNode.type === 'CONNECTOR' || createdNode.getPluginData('is_custom_connector') === 'true')
+      ) {
+        registerConnectorInRegistry(createdNode);
+      }
+    }
+
     if (change.type === 'PROPERTY_CHANGE') {
-      // 1. 노드 이동(x, y) 또는 크기 변경(width, height) 감지 ➔ 연결된 커스텀 직각 커넥터 실시간 추적 갱신
+      // 1. 노드 이동(x, y) 또는 크기 변경(width, height) 감지 ➔ 연결된 커넥터 실시간 자동 최적화 추적 갱신
       if (
         change.properties.includes('x') ||
         change.properties.includes('y') ||
@@ -3728,6 +3770,13 @@ figma.on('documentchange', async (event) => {
         change.properties.includes('height')
       ) {
         movedNodeIds.add(change.id);
+        const changedNode = figma.getNodeById(change.id);
+        if (changedNode) {
+          const flowNode = findFlowNode(changedNode);
+          if (flowNode) {
+            movedNodeIds.add(flowNode.id);
+          }
+        }
       }
 
       // 2. 캔버스에서 기즈모 드래그로 사이즈 변경이 시도될 경우 고정된 규격으로 즉시 원복 (기즈모 조작 완전 차단)
@@ -3853,13 +3902,13 @@ figma.on('documentchange', async (event) => {
     }
   }
 
-  // 연결된 커스텀 직각 커넥터들 실시간 동기화
+  // 연결된 커넥터들 실시간 동기화 및 에디터 기즈모 갱신
   if (movedNodeIds.size > 0) {
     await syncConnectorsForMovedNodes(movedNodeIds);
-  }
-
-  // 피그잼 캔버스에서 변경된 커넥터 컬러/두께 등 설정값을 UI 창에 실시간 연동
-  if (connectorSelectionChanged) {
+    // 노드 이동 시 선택된 노드 또는 연결된 커넥터의 최신 마그넷 및 기즈모 위치를 UI에 실시간 연동
+    handleSelectionChange();
+  } else if (connectorSelectionChanged) {
+    // 피그잼 캔버스에서 변경된 커넥터 컬러/두께 등 설정값을 UI 창에 실시간 연동
     handleSelectionChange();
   }
 });
