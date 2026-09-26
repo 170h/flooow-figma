@@ -31,6 +31,8 @@ export interface ConnectorOptions {
   routingType?: ConnectorRoutingType;
   startTerminal?: ConnectorTerminalType;
   endTerminal?: ConnectorTerminalType;
+  startOffset?: number;
+  endOffset?: number;
   strokePattern?: ConnectorStrokePattern;
 }
 
@@ -110,7 +112,7 @@ export function calculateStraightPoints(srcPoint: Point, tgtPoint: Point): Point
   return [srcPoint, tgtPoint];
 }
 
-// 라우팅 타입별 포인트 계산 종합 헬퍼
+// 라우팅 타입별 포인트 계산 종합 헬퍼 (노드로부터 떨어지는 간격 startOffset, endOffset 지원)
 export function calculateRoutingPoints(
   srcPoint: Point,
   sourceMagnet: MagnetPosition,
@@ -118,17 +120,31 @@ export function calculateRoutingPoints(
   targetMagnet: MagnetPosition,
   srcBox: Box,
   tgtBox: Box,
-  routingType: ConnectorRoutingType = 'ORTHOGONAL'
+  routingType: ConnectorRoutingType = 'ORTHOGONAL',
+  startOffset: number = 0,
+  endOffset: number = 0
 ): Point[] {
+  // 시작점/끝점 노드 보더로부터의 마그넷 법선 방향 오프셋 적용
+  const dirSrc = getMagnetDirectionVector(sourceMagnet);
+  const dirTgt = getMagnetDirectionVector(targetMagnet);
+  const adjustedSrcPoint: Point = {
+    x: srcPoint.x + dirSrc.x * (startOffset || 0),
+    y: srcPoint.y + dirSrc.y * (startOffset || 0),
+  };
+  const adjustedTgtPoint: Point = {
+    x: tgtPoint.x + dirTgt.x * (endOffset || 0),
+    y: tgtPoint.y + dirTgt.y * (endOffset || 0),
+  };
+
   switch (routingType) {
     case 'STRAIGHT':
-      return calculateStraightPoints(srcPoint, tgtPoint);
+      return calculateStraightPoints(adjustedSrcPoint, adjustedTgtPoint);
     case 'CURVED':
-      return calculateCurvedPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet);
+      return calculateCurvedPoints(adjustedSrcPoint, sourceMagnet, adjustedTgtPoint, targetMagnet);
     case 'S_CURVE':
     case 'ORTHOGONAL':
     default:
-      return calculateOrthogonalPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet, srcBox, tgtBox);
+      return calculateOrthogonalPoints(adjustedSrcPoint, sourceMagnet, adjustedTgtPoint, targetMagnet, srcBox, tgtBox);
   }
 }
 
@@ -680,7 +696,7 @@ export async function createOrthogonalVectorConnector(
 
   const routingType: ConnectorRoutingType = options.routingType || 'ORTHOGONAL';
 
-  // 라우팅 타입별 경로 포인트 계산 (직각, 라운드니스 S_CURVE, 자유곡선 CURVED, 직선 STRAIGHT)
+  // 라우팅 타입별 경로 포인트 계산 (직각, 라운드니스 S_CURVE, 자유곡선 CURVED, 직선 STRAIGHT, 시작/끝 오프셋)
   const worldPoints = calculateRoutingPoints(
     pStart,
     sourceMagnet,
@@ -688,7 +704,9 @@ export async function createOrthogonalVectorConnector(
     targetMagnet,
     srcBox,
     tgtBox,
-    routingType
+    routingType,
+    options.startOffset || 0,
+    options.endOffset || 0
   );
 
   // Bounding Box 및 로컬 좌표계 변환
@@ -833,6 +851,8 @@ export async function createOrthogonalVectorConnector(
   vector.setPluginData('end_terminal', endTerminal);
   vector.setPluginData('connector_pattern', strokePattern);
   vector.setPluginData('connector_weight', String(strokeWeight));
+  vector.setPluginData('start_offset', String(options.startOffset || 0));
+  vector.setPluginData('end_offset', String(options.endOffset || 0));
 
   if (labelFrame) {
     const group = figma.group([vector, labelFrame], figma.currentPage);
@@ -1115,7 +1135,18 @@ export async function updateOrthogonalVectorConnector(
   const pStart = getMagnetPoint(srcBox, sourceMagnet);
   const pEnd = getMagnetPoint(tgtBox, targetMagnet);
 
-  // 라우팅 타입별 경로 재계산
+  const startOffset = parseFloat(
+    connectorNode.getPluginData('start_offset') ||
+    vector.getPluginData('start_offset') ||
+    '0'
+  ) || 0;
+  const endOffset = parseFloat(
+    connectorNode.getPluginData('end_offset') ||
+    vector.getPluginData('end_offset') ||
+    '0'
+  ) || 0;
+
+  // 라우팅 타입별 경로 재계산 (시작/끝 오프셋 반영)
   const worldPoints = calculateRoutingPoints(
     pStart,
     sourceMagnet,
@@ -1123,7 +1154,9 @@ export async function updateOrthogonalVectorConnector(
     targetMagnet,
     srcBox,
     tgtBox,
-    routingType
+    routingType,
+    startOffset,
+    endOffset
   );
 
   const allX = worldPoints.map((p) => p.x);
@@ -1232,6 +1265,8 @@ function copyConnectorData(source: SceneNode, target: SceneNode) {
     'connector_pattern',
     'connector_weight',
     'connector_color',
+    'start_offset',
+    'end_offset',
   ];
   for (const k of keys) {
     const v = source.getPluginData(k);

@@ -134,6 +134,12 @@ export function ConnectSection() {
   const [isWeightMixed, setIsWeightMixed] = useState(false);
   const [weightInput, setWeightInput] = useState<string>('1.5');
 
+  // 오프셋 상태
+  const [startOffsetInput, setStartOffsetInput] = useState<string>('0');
+  const [endOffsetInput, setEndOffsetInput] = useState<string>('0');
+  const [isStartOffsetMixed, setIsStartOffsetMixed] = useState(false);
+  const [isEndOffsetMixed, setIsEndOffsetMixed] = useState(false);
+
   // 라우팅 및 선 스타일 Mixed 상태
   const isRoutingMixed = summary.isMultiConnector && summary.connectorRoutingType.isMixed;
   const isLinePatternMixed = summary.isMultiConnector && summary.connectorStrokePattern.isMixed;
@@ -251,6 +257,25 @@ export function ConnectSection() {
           targetMagnet: node.connectorTargetMagnet,
         });
       }
+
+      // 시작/끝 오프셋 동기화
+      const startOff = typeof node?.connectorStartOffset === 'number' ? node.connectorStartOffset : 0;
+      setStartOffsetInput(String(startOff));
+      setIsStartOffsetMixed(false);
+      const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+      if (startOffEl) {
+        startOffEl.value = String(startOff);
+        startOffEl.placeholder = '';
+      }
+
+      const endOff = typeof node?.connectorEndOffset === 'number' ? node.connectorEndOffset : 0;
+      setEndOffsetInput(String(endOff));
+      setIsEndOffsetMixed(false);
+      const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+      if (endOffEl) {
+        endOffEl.value = String(endOff);
+        endOffEl.placeholder = '';
+      }
     } else if (summary.isMultiConnector) {
       // 커넥터 복수 선택
       // 1. 단자
@@ -317,11 +342,52 @@ export function ConnectSection() {
       if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
         setUIState({ targetMagnet: summary.connectorTargetMagnet.value });
       }
+
+      // 7. 시작/끝 오프셋 (커넥터 복수 선택 시)
+      const isStartOffMixed = Boolean(summary.connectorStartOffset.isMixed);
+      const startOffVal = summary.connectorStartOffset.value;
+      setIsStartOffsetMixed(isStartOffMixed);
+      const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+      if (isStartOffMixed) {
+        setStartOffsetInput('');
+        if (startOffEl) {
+          startOffEl.value = '';
+          startOffEl.placeholder = 'Mixed';
+        }
+      } else {
+        const valStr = String(startOffVal !== undefined ? startOffVal : 0);
+        setStartOffsetInput(valStr);
+        if (startOffEl) {
+          startOffEl.value = valStr;
+          startOffEl.placeholder = '';
+        }
+      }
+
+      const isEndOffMixed = Boolean(summary.connectorEndOffset.isMixed);
+      const endOffVal = summary.connectorEndOffset.value;
+      setIsEndOffsetMixed(isEndOffMixed);
+      const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+      if (isEndOffMixed) {
+        setEndOffsetInput('');
+        if (endOffEl) {
+          endOffEl.value = '';
+          endOffEl.placeholder = 'Mixed';
+        }
+      } else {
+        const valStr = String(endOffVal !== undefined ? endOffVal : 0);
+        setEndOffsetInput(valStr);
+        if (endOffEl) {
+          endOffEl.value = valStr;
+          endOffEl.placeholder = '';
+        }
+      }
     } else {
       // 커넥터가 선택되지 않은 경우 (단일/복수 플로우 노드 선택 또는 빈 캔버스):
       // 커넥터 섹션은 연결 생성을 위한 기본/현재 설정값을 유지하며 Mixed 상태를 표시하지 않습니다.
       setIsColorMixed(false);
       setIsWeightMixed(false);
+      setIsStartOffsetMixed(false);
+      setIsEndOffsetMixed(false);
 
       // 단자 드롭다운이 MIXED로 남아있지 않도록 기본값(시작: NONE, 끝: ARROW)으로 복원
       if (startTermVal === 'MIXED') {
@@ -341,6 +407,24 @@ export function ConnectSection() {
         if (!weightInput) {
           setWeightInput('1.5');
           weightEl.value = '1.5';
+        }
+      }
+
+      const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+      if (startOffEl && startOffEl.placeholder === 'Mixed') {
+        startOffEl.placeholder = '';
+        if (!startOffsetInput) {
+          setStartOffsetInput('0');
+          startOffEl.value = '0';
+        }
+      }
+
+      const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+      if (endOffEl && endOffEl.placeholder === 'Mixed') {
+        endOffEl.placeholder = '';
+        if (!endOffsetInput) {
+          setEndOffsetInput('0');
+          endOffEl.value = '0';
         }
       }
     }
@@ -490,6 +574,8 @@ export function ConnectSection() {
 
   // 시작 오프셋 기본값(0) 리셋 핸들러
   const handleResetStartOffset = () => {
+    setIsStartOffsetMixed(false);
+    setStartOffsetInput('0');
     const input = document.getElementById('input-start-offset') as HTMLInputElement | null;
     if (input) {
       input.value = '0';
@@ -501,6 +587,8 @@ export function ConnectSection() {
 
   // 끝 오프셋 기본값(0) 리셋 핸들러
   const handleResetEndOffset = () => {
+    setIsEndOffsetMixed(false);
+    setEndOffsetInput('0');
     const input = document.getElementById('input-end-offset') as HTMLInputElement | null;
     if (input) {
       input.value = '0';
@@ -841,6 +929,7 @@ export function ConnectSection() {
 
         {/* 단자 + 오프셋 */}
         <div className="terminal-offset-row">
+          {/* 시작 오프셋 */}
           <div className="input-scrubber-box offset-start-box" style={{ width: '70px' }}>
             <svg
               data-tooltip="Start offset (Reset: 0)"
@@ -853,9 +942,44 @@ export function ConnectSection() {
             >
               <path d="M12 18V6M17.7333 9.63637L20.0001 11.8182L17.7333 14M20.0001 11.8182H14.4045" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <input type="number" id="input-start-offset" placeholder="Offset" defaultValue={0}
-              onFocus={e => e.currentTarget.select()}
-              onClick={e => e.currentTarget.select()} />
+            <input
+              type="number"
+              id="input-start-offset"
+              placeholder={isStartOffsetMixed ? 'Mixed' : 'Offset'}
+              value={isStartOffsetMixed ? '' : startOffsetInput}
+              onChange={(e) => {
+                setIsStartOffsetMixed(false);
+                setStartOffsetInput(e.target.value);
+                const inputEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+                if (inputEl) inputEl.value = e.target.value;
+              }}
+              onFocus={(e) => e.currentTarget.select()}
+              onClick={(e) => e.currentTarget.select()}
+              onBlur={() => {
+                if (!isStartOffsetMixed && startOffsetInput.trim() !== '') {
+                  const parsed = parseFloat(startOffsetInput);
+                  if (!isNaN(parsed)) {
+                    setStartOffsetInput(String(parsed));
+                    const inputEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+                    if (inputEl) inputEl.value = String(parsed);
+                  }
+                }
+                applyCurrentConnectorState();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (!isStartOffsetMixed && startOffsetInput.trim() !== '') {
+                    const parsed = parseFloat(startOffsetInput);
+                    if (!isNaN(parsed)) {
+                      setStartOffsetInput(String(parsed));
+                      const inputEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+                      if (inputEl) inputEl.value = String(parsed);
+                    }
+                  }
+                  applyCurrentConnectorState();
+                }
+              }}
+            />
           </div>
 
           {/* 시작 단자 (Start Terminal) */}
@@ -1081,10 +1205,40 @@ export function ConnectSection() {
             <input
               type="number"
               id="input-end-offset"
-              placeholder="Offset"
-              defaultValue={0}
-              onFocus={e => e.currentTarget.select()}
-              onClick={e => e.currentTarget.select()}
+              placeholder={isEndOffsetMixed ? 'Mixed' : 'Offset'}
+              value={isEndOffsetMixed ? '' : endOffsetInput}
+              onChange={(e) => {
+                setIsEndOffsetMixed(false);
+                setEndOffsetInput(e.target.value);
+                const inputEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+                if (inputEl) inputEl.value = e.target.value;
+              }}
+              onFocus={(e) => e.currentTarget.select()}
+              onClick={(e) => e.currentTarget.select()}
+              onBlur={() => {
+                if (!isEndOffsetMixed && endOffsetInput.trim() !== '') {
+                  const parsed = parseFloat(endOffsetInput);
+                  if (!isNaN(parsed)) {
+                    setEndOffsetInput(String(parsed));
+                    const inputEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+                    if (inputEl) inputEl.value = String(parsed);
+                  }
+                }
+                applyCurrentConnectorState();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (!isEndOffsetMixed && endOffsetInput.trim() !== '') {
+                    const parsed = parseFloat(endOffsetInput);
+                    if (!isNaN(parsed)) {
+                      setEndOffsetInput(String(parsed));
+                      const inputEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+                      if (inputEl) inputEl.value = String(parsed);
+                    }
+                  }
+                  applyCurrentConnectorState();
+                }
+              }}
             />
             <svg
               data-tooltip="End offset (Reset: 0)"
@@ -1156,10 +1310,13 @@ export function ConnectSection() {
             }
           >
             {/* 커넥터 연결 아이콘 */}
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M3 4H7C8.10457 4 9 4.89543 9 6V10C9 11.1046 9.89543 12 11 12H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="2.5" cy="4" r="1.5" fill="currentColor" />
-              <path d="M12 9.5L14.5 12L12 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M10.6464 2.64645C10.8417 2.45118 11.1583 2.45118 11.3536 2.64645L12.8536 4.14645C13.0488 4.34171 13.0488 4.65829 12.8536 4.85355L11.3536 6.35355C11.1583 6.54882 10.8417 6.54882 10.6464 6.35355C10.4512 6.15829 10.4512 5.84171 10.6464 5.64645L11.2929 5H10.5C9.67157 5 9 5.67157 9 6.5V9.5C9 10.8807 7.88071 12 6.5 12H6C5.97174 12 5.94403 11.9977 5.91705 11.9932C5.71308 12.5793 5.15567 13 4.5 13C3.67157 13 3 12.3284 3 11.5C3 10.6716 3.67157 10 4.5 10C5.15567 10 5.71308 10.4207 5.91705 11.0068C5.94403 11.0023 5.97174 11 6 11H6.5C7.32843 11 8 10.3284 8 9.5V6.5C8 5.11929 9.11929 4 10.5 4H11.2929L10.6464 3.35355C10.4512 3.15829 10.4512 2.84171 10.6464 2.64645ZM4.5 12C4.77614 12 5 11.7761 5 11.5C5 11.2239 4.77614 11 4.5 11C4.22386 11 4 11.2239 4 11.5C4 11.7761 4.22386 12 4.5 12Z"
+                fill="currentColor"
+              />
             </svg>
             <span>
               {selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector)

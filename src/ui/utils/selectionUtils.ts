@@ -88,6 +88,8 @@ export interface SelectionSummary {
   connectorEndTerminal: PropertySummary<ConnectorTerminalType>;
   connectorSourceMagnet: PropertySummary<MagnetPosition>;
   connectorTargetMagnet: PropertySummary<MagnetPosition>;
+  connectorStartOffset: PropertySummary<number>;
+  connectorEndOffset: PropertySummary<number>;
 }
 
 /**
@@ -149,5 +151,11 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     connectorEndTerminal: getCommonProperty(connectorNodes, (n) => n.connectorEndTerminal),
     connectorSourceMagnet: getCommonProperty(connectorNodes, (n) => n.connectorSourceMagnet),
     connectorTargetMagnet: getCommonProperty(connectorNodes, (n) => n.connectorTargetMagnet),
+    connectorStartOffset: getCommonProperty(connectorNodes, (n) =>
+      typeof n.connectorStartOffset === 'number' ? n.connectorStartOffset : undefined
+    ),
+    connectorEndOffset: getCommonProperty(connectorNodes, (n) =>
+      typeof n.connectorEndOffset === 'number' ? n.connectorEndOffset : undefined
+    ),
   };
 }

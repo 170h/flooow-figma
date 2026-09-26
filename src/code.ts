@@ -1159,6 +1159,8 @@ async function handleSelectionChange() {
     let connectorRoutingType: ConnectorRoutingType | undefined;
     let connectorStartTerminal: ConnectorTerminalType | undefined;
     let connectorEndTerminal: ConnectorTerminalType | undefined;
+    let connectorStartOffset: number = 0;
+    let connectorEndOffset: number = 0;
 
     let connectorSourceNodeName: string | undefined;
     let connectorTargetNodeName: string | undefined;
@@ -1275,6 +1277,10 @@ async function handleSelectionChange() {
           const tempTerm = connectorStartTerminal;
           connectorStartTerminal = connectorEndTerminal;
           connectorEndTerminal = tempTerm;
+
+          const tempOffset = connectorStartOffset;
+          connectorStartOffset = connectorEndOffset;
+          connectorEndOffset = tempOffset;
         }
       } else {
         // 커스텀 벡터 직각 커넥터 (그룹 또는 벡터 노드)
@@ -1287,6 +1293,10 @@ async function handleSelectionChange() {
         connectorStrokePattern = (node.getPluginData('connector_pattern') as ConnectorStrokePattern) || 'SOLID';
         connectorStartTerminal = (node.getPluginData('start_terminal') as ConnectorTerminalType) || 'NONE';
         connectorEndTerminal = (node.getPluginData('end_terminal') as ConnectorTerminalType) || 'ARROW';
+        const rawStartOff = node.getPluginData('start_offset');
+        const rawEndOff = node.getPluginData('end_offset');
+        connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
+        connectorEndOffset = rawEndOff ? parseFloat(rawEndOff) : 0;
 
         // 연결된 소스 및 타깃 노드 정보 및 마그넷 위치 추출
         const srcId = node.getPluginData('source_node_id');
@@ -1325,6 +1335,12 @@ async function handleSelectionChange() {
           if (!connectorTargetMagnet) {
             connectorTargetMagnet = (vectorChild.getPluginData('target_magnet') as MagnetPosition) || 'LEFT';
           }
+          if (connectorStartOffset === 0 && vectorChild.getPluginData('start_offset')) {
+            connectorStartOffset = parseFloat(vectorChild.getPluginData('start_offset')) || 0;
+          }
+          if (connectorEndOffset === 0 && vectorChild.getPluginData('end_offset')) {
+            connectorEndOffset = parseFloat(vectorChild.getPluginData('end_offset')) || 0;
+          }
         }
 
         // 연결된 두 노드의 캔버스 상 위치를 비교하여 상대적으로 위/왼쪽 노드가 기즈모 왼쪽(우선)에 오도록 정렬
@@ -1342,6 +1358,10 @@ async function handleSelectionChange() {
             const tempTerm = connectorStartTerminal;
             connectorStartTerminal = connectorEndTerminal;
             connectorEndTerminal = tempTerm;
+
+            const tempOffset = connectorStartOffset;
+            connectorStartOffset = connectorEndOffset;
+            connectorEndOffset = tempOffset;
           }
         }
       }
@@ -1420,6 +1440,8 @@ async function handleSelectionChange() {
       connectorRoutingType,
       connectorStartTerminal,
       connectorEndTerminal,
+      connectorStartOffset,
+      connectorEndOffset,
       connectorSourceNodeName,
       connectorTargetNodeName,
       connectorSourceMagnet,
@@ -2622,7 +2644,9 @@ async function connectPoints(payload: ConnectPointsPayload) {
       payload.routingType,
       payload.startTerminal,
       payload.endTerminal,
-      payload.strokePattern
+      payload.strokePattern,
+      payload.startOffset,
+      payload.endOffset
     );
 
     figma.currentPage.selection = [connector];
@@ -2645,7 +2669,9 @@ async function createSingleConnector(
   routingType?: ConnectorRoutingType,
   startTerminal?: ConnectorTerminalType,
   endTerminal?: ConnectorTerminalType,
-  strokePattern?: ConnectorStrokePattern
+  strokePattern?: ConnectorStrokePattern,
+  startOffset?: number,
+  endOffset?: number
 ): Promise<VectorNode | GroupNode> {
   const connWeight = typeof strokeWeight === 'number' ? strokeWeight : 1.5;
   const connColor: RGB = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
@@ -2665,6 +2691,8 @@ async function createSingleConnector(
       routingType,
       startTerminal,
       endTerminal,
+      startOffset,
+      endOffset,
       strokePattern,
     }
   );
@@ -2824,6 +2852,8 @@ async function updateConnectorProperties(payload: {
   routingType?: ConnectorRoutingType;
   startTerminal?: ConnectorTerminalType;
   endTerminal?: ConnectorTerminalType;
+  startOffset?: number;
+  endOffset?: number;
   sourceMagnet?: MagnetPosition;
   targetMagnet?: MagnetPosition;
   label?: string;
@@ -2848,6 +2878,8 @@ async function updateConnectorProperties(payload: {
     const effectiveEndTerm = payload.isReversed ? payload.startTerminal : payload.endTerminal;
     const effectiveStartMagnet = payload.isReversed ? payload.targetMagnet : payload.sourceMagnet;
     const effectiveEndMagnet = payload.isReversed ? payload.sourceMagnet : payload.targetMagnet;
+    const effectiveStartOffset = payload.isReversed ? payload.endOffset : payload.startOffset;
+    const effectiveEndOffset = payload.isReversed ? payload.startOffset : payload.endOffset;
 
     if (node.type === 'CONNECTOR') {
       const conn = node as ConnectorNode;
@@ -3011,6 +3043,14 @@ async function updateConnectorProperties(payload: {
       if (effectiveEndTerm && effectiveEndTerm !== 'MIXED') {
         node.setPluginData('end_terminal', effectiveEndTerm);
         if (vectorNode) vectorNode.setPluginData('end_terminal', effectiveEndTerm);
+      }
+      if (typeof effectiveStartOffset === 'number') {
+        node.setPluginData('start_offset', String(effectiveStartOffset));
+        if (vectorNode) vectorNode.setPluginData('start_offset', String(effectiveStartOffset));
+      }
+      if (typeof effectiveEndOffset === 'number') {
+        node.setPluginData('end_offset', String(effectiveEndOffset));
+        if (vectorNode) vectorNode.setPluginData('end_offset', String(effectiveEndOffset));
       }
       if (effectiveStartMagnet) node.setPluginData('source_magnet', effectiveStartMagnet);
       if (effectiveEndMagnet) node.setPluginData('target_magnet', effectiveEndMagnet);

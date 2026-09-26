@@ -232,6 +232,8 @@ export type PluginAction =
         routingType?: ConnectorRoutingType;
         startTerminal?: ConnectorTerminalType;
         endTerminal?: ConnectorTerminalType;
+        startOffset?: number;
+        endOffset?: number;
         sourceMagnet?: MagnetPosition;
         targetMagnet?: MagnetPosition;
         label?: string;
@@ -274,6 +276,8 @@ export interface SelectedNodeInfo {
   connectorRoutingType?: ConnectorRoutingType;
   connectorStartTerminal?: ConnectorTerminalType;
   connectorEndTerminal?: ConnectorTerminalType;
+  connectorStartOffset?: number;
+  connectorEndOffset?: number;
   connectorSourceNodeName?: string;
   connectorTargetNodeName?: string;
   connectorSourceMagnet?: MagnetPosition;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { COLOR_MIXED_ICON, MixedDashChip, DASH_24_SVG } from './icons';
+import { COLOR_MIXED_ICON, MixedDashChip } from './icons';
 
 /**
  * 피그마 UI3 공식 드롭다운 선택 체크 아이콘 (16×16px)
@@ -62,7 +62,7 @@ export function DropdownMixedItem({
             <DropdownCheckIcon />
           </span>
           <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">
-            {DASH_24_SVG}
+            <MixedDashChip size={chipSize} theme="dark" />
           </span>
           <span className="size-mode-menu-item-label figma-dropdown-label">Mixed</span>
         </div>

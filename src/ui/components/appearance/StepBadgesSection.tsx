@@ -410,8 +410,8 @@ function isHexDark(hex: string): boolean {
                   background: 'transparent',
                   outline: 'none',
                   fontSize: '11px',
-                  fontWeight: 500,
-                  color: isMixed ? '#6B7280' : '#111827',
+                  fontWeight: 400,
+                  color: isMixed ? 'var(--color-text-primary, #000000)' : '#111827',
                   padding: 0,
                 }}
               />

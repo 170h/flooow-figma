@@ -115,16 +115,26 @@
   function calculateStraightPoints(srcPoint, tgtPoint) {
     return [srcPoint, tgtPoint];
   }
-  function calculateRoutingPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet, srcBox, tgtBox, routingType = "ORTHOGONAL") {
+  function calculateRoutingPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet, srcBox, tgtBox, routingType = "ORTHOGONAL", startOffset = 0, endOffset = 0) {
+    const dirSrc = getMagnetDirectionVector(sourceMagnet);
+    const dirTgt = getMagnetDirectionVector(targetMagnet);
+    const adjustedSrcPoint = {
+      x: srcPoint.x + dirSrc.x * (startOffset || 0),
+      y: srcPoint.y + dirSrc.y * (startOffset || 0)
+    };
+    const adjustedTgtPoint = {
+      x: tgtPoint.x + dirTgt.x * (endOffset || 0),
+      y: tgtPoint.y + dirTgt.y * (endOffset || 0)
+    };
     switch (routingType) {
       case "STRAIGHT":
-        return calculateStraightPoints(srcPoint, tgtPoint);
+        return calculateStraightPoints(adjustedSrcPoint, adjustedTgtPoint);
       case "CURVED":
-        return calculateCurvedPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet);
+        return calculateCurvedPoints(adjustedSrcPoint, sourceMagnet, adjustedTgtPoint, targetMagnet);
       case "S_CURVE":
       case "ORTHOGONAL":
       default:
-        return calculateOrthogonalPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet, srcBox, tgtBox);
+        return calculateOrthogonalPoints(adjustedSrcPoint, sourceMagnet, adjustedTgtPoint, targetMagnet, srcBox, tgtBox);
     }
   }
   function buildVectorNetwork(localPoints, routingType = "ORTHOGONAL", startTerminal = "NONE", endTerminal = "ARROW", strokeWeight = 1.5, strokeColor = { r: 0, g: 0, b: 0 }) {
@@ -515,7 +525,9 @@
       targetMagnet,
       srcBox,
       tgtBox,
-      routingType
+      routingType,
+      options.startOffset || 0,
+      options.endOffset || 0
     );
     const allX = worldPoints.map((p) => p.x);
     const allY = worldPoints.map((p) => p.y);
@@ -627,6 +639,8 @@
     vector.setPluginData("end_terminal", endTerminal);
     vector.setPluginData("connector_pattern", strokePattern);
     vector.setPluginData("connector_weight", String(strokeWeight));
+    vector.setPluginData("start_offset", String(options.startOffset || 0));
+    vector.setPluginData("end_offset", String(options.endOffset || 0));
     if (labelFrame) {
       const group = figma.group([vector, labelFrame], figma.currentPage);
       figma.currentPage.appendChild(group);
@@ -806,6 +820,12 @@
     const routingType = connectorNode.getPluginData("connector_routing") || vector.getPluginData("connector_routing") || "ORTHOGONAL";
     const pStart = getMagnetPoint(srcBox, sourceMagnet);
     const pEnd = getMagnetPoint(tgtBox, targetMagnet);
+    const startOffset = parseFloat(
+      connectorNode.getPluginData("start_offset") || vector.getPluginData("start_offset") || "0"
+    ) || 0;
+    const endOffset = parseFloat(
+      connectorNode.getPluginData("end_offset") || vector.getPluginData("end_offset") || "0"
+    ) || 0;
     const worldPoints = calculateRoutingPoints(
       pStart,
       sourceMagnet,
@@ -813,7 +833,9 @@
       targetMagnet,
       srcBox,
       tgtBox,
-      routingType
+      routingType,
+      startOffset,
+      endOffset
     );
     const allX = worldPoints.map((p) => p.x);
     const allY = worldPoints.map((p) => p.y);
@@ -886,7 +908,9 @@
       "end_terminal",
       "connector_pattern",
       "connector_weight",
-      "connector_color"
+      "connector_color",
+      "start_offset",
+      "end_offset"
     ];
     for (const k of keys) {
       const v = source.getPluginData(k);
@@ -1873,6 +1897,8 @@
       let connectorRoutingType;
       let connectorStartTerminal;
       let connectorEndTerminal;
+      let connectorStartOffset = 0;
+      let connectorEndOffset = 0;
       let connectorSourceNodeName;
       let connectorTargetNodeName;
       let connectorSourceMagnet;
@@ -1969,6 +1995,9 @@
             const tempTerm = connectorStartTerminal;
             connectorStartTerminal = connectorEndTerminal;
             connectorEndTerminal = tempTerm;
+            const tempOffset = connectorStartOffset;
+            connectorStartOffset = connectorEndOffset;
+            connectorEndOffset = tempOffset;
           }
         } else {
           connectorLabel = node.getPluginData("connector_label") || "";
@@ -1980,6 +2009,10 @@
           connectorStrokePattern = node.getPluginData("connector_pattern") || "SOLID";
           connectorStartTerminal = node.getPluginData("start_terminal") || "NONE";
           connectorEndTerminal = node.getPluginData("end_terminal") || "ARROW";
+          const rawStartOff = node.getPluginData("start_offset");
+          const rawEndOff = node.getPluginData("end_offset");
+          connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
+          connectorEndOffset = rawEndOff ? parseFloat(rawEndOff) : 0;
           const srcId = node.getPluginData("source_node_id");
           const tgtId = node.getPluginData("target_node_id");
           let sourceEndpointNode = null;
@@ -2014,6 +2047,12 @@
             if (!connectorTargetMagnet) {
               connectorTargetMagnet = vectorChild.getPluginData("target_magnet") || "LEFT";
             }
+            if (connectorStartOffset === 0 && vectorChild.getPluginData("start_offset")) {
+              connectorStartOffset = parseFloat(vectorChild.getPluginData("start_offset")) || 0;
+            }
+            if (connectorEndOffset === 0 && vectorChild.getPluginData("end_offset")) {
+              connectorEndOffset = parseFloat(vectorChild.getPluginData("end_offset")) || 0;
+            }
           }
           if (sourceEndpointNode && targetEndpointNode) {
             const sorted = sortNodesBySpatialPosition([sourceEndpointNode, targetEndpointNode]);
@@ -2027,6 +2066,9 @@
               const tempTerm = connectorStartTerminal;
               connectorStartTerminal = connectorEndTerminal;
               connectorEndTerminal = tempTerm;
+              const tempOffset = connectorStartOffset;
+              connectorStartOffset = connectorEndOffset;
+              connectorEndOffset = tempOffset;
             }
           }
         }
@@ -2095,6 +2137,8 @@
         connectorRoutingType,
         connectorStartTerminal,
         connectorEndTerminal,
+        connectorStartOffset,
+        connectorEndOffset,
         connectorSourceNodeName,
         connectorTargetNodeName,
         connectorSourceMagnet,
@@ -3158,7 +3202,9 @@
         payload.routingType,
         payload.startTerminal,
         payload.endTerminal,
-        payload.strokePattern
+        payload.strokePattern,
+        payload.startOffset,
+        payload.endOffset
       );
       figma.currentPage.selection = [connector];
       handleSelectionChange();
@@ -3167,7 +3213,7 @@
       notify(`\uC5F0\uACB0\uC120 \uC0DD\uC131 \uC2E4\uD328: ${String(err)}`, "error");
     }
   }
-  async function createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label, colorHex, strokeWeight, routingType, startTerminal, endTerminal, strokePattern) {
+  async function createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label, colorHex, strokeWeight, routingType, startTerminal, endTerminal, strokePattern, startOffset, endOffset) {
     const connWeight = typeof strokeWeight === "number" ? strokeWeight : 1.5;
     const connColor = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
     return await createOrthogonalVectorConnector(
@@ -3184,6 +3230,8 @@
         routingType,
         startTerminal,
         endTerminal,
+        startOffset,
+        endOffset,
         strokePattern
       }
     );
@@ -3321,6 +3369,8 @@
       const effectiveEndTerm = payload.isReversed ? payload.startTerminal : payload.endTerminal;
       const effectiveStartMagnet = payload.isReversed ? payload.targetMagnet : payload.sourceMagnet;
       const effectiveEndMagnet = payload.isReversed ? payload.sourceMagnet : payload.targetMagnet;
+      const effectiveStartOffset = payload.isReversed ? payload.endOffset : payload.startOffset;
+      const effectiveEndOffset = payload.isReversed ? payload.startOffset : payload.endOffset;
       if (node.type === "CONNECTOR") {
         const conn = node;
         if (payload.colorHex) {
@@ -3457,6 +3507,14 @@
         if (effectiveEndTerm && effectiveEndTerm !== "MIXED") {
           node.setPluginData("end_terminal", effectiveEndTerm);
           if (vectorNode) vectorNode.setPluginData("end_terminal", effectiveEndTerm);
+        }
+        if (typeof effectiveStartOffset === "number") {
+          node.setPluginData("start_offset", String(effectiveStartOffset));
+          if (vectorNode) vectorNode.setPluginData("start_offset", String(effectiveStartOffset));
+        }
+        if (typeof effectiveEndOffset === "number") {
+          node.setPluginData("end_offset", String(effectiveEndOffset));
+          if (vectorNode) vectorNode.setPluginData("end_offset", String(effectiveEndOffset));
         }
         if (effectiveStartMagnet) node.setPluginData("source_magnet", effectiveStartMagnet);
         if (effectiveEndMagnet) node.setPluginData("target_magnet", effectiveEndMagnet);

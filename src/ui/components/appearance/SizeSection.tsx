@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { useApp, SizePreset, NodeInfo } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
-import { DASH_24_SVG } from '../shared/icons';
+import { MixedDashChip } from '../shared/icons';
 
 const FIXED_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -336,7 +336,7 @@ export function SizeSection() {
             >
               <div className="size-mode-btn-content figma-dropdown-btn-content">
                 <span className="size-mode-current-icon figma-dropdown-current-icon" id="size-mode-current-icon">
-                  {currentSizeMode === 'hug' ? HUG_SVG : currentSizeMode === 'mixed' ? DASH_24_SVG : FIXED_SVG}
+                  {currentSizeMode === 'hug' ? HUG_SVG : currentSizeMode === 'mixed' ? <MixedDashChip size={16} /> : FIXED_SVG}
                 </span>
                 <span className="size-mode-current-text figma-dropdown-current-text" id="size-mode-current-text">
                   {currentSizeMode === 'hug' ? 'Hug contents' : currentSizeMode === 'mixed' ? 'Mixed' : 'Fixed height'}

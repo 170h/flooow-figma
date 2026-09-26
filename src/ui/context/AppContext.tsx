@@ -71,6 +71,8 @@ export interface NodeInfo {
   connectorRoutingType?: string;
   connectorStartTerminal?: string;
   connectorEndTerminal?: string;
+  connectorStartOffset?: number;
+  connectorEndOffset?: number;
   connectorLabel?: string;
   connectorSourceNodeName?: string;
   connectorTargetNodeName?: string;
@@ -671,6 +673,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
     const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
     const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+    const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+    const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
 
     const hasLabel = labelToggleEl?.checked || false;
     const label = hasLabel ? (labelInputEl?.value.trim() || '') : '';
@@ -682,6 +686,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const startTerm = startTermRaw && startTermRaw !== 'MIXED' ? (startTermRaw as ConnectorTerminalType) : undefined;
     const endTermRaw = endTermEl?.value;
     const endTerm = endTermRaw && endTermRaw !== 'MIXED' ? (endTermRaw as ConnectorTerminalType) : undefined;
+    const startOffStr = startOffEl?.value;
+    const startOffset = startOffStr !== undefined && startOffStr !== null && startOffStr.trim() !== '' ? parseFloat(startOffStr) : undefined;
+    const endOffStr = endOffEl?.value;
+    const endOffset = endOffStr !== undefined && endOffStr !== null && endOffStr.trim() !== '' ? parseFloat(endOffStr) : undefined;
 
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
 
@@ -697,6 +705,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             routingType: selectedRoutingType,
             startTerminal: startTerm,
             endTerminal: endTerm,
+            startOffset,
+            endOffset,
             sourceMagnet,
             targetMagnet,
             label,
