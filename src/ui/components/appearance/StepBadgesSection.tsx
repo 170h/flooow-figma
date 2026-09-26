@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
+import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 
 type BadgeColorMode = 'White' | 'Black' | 'Style';
 
@@ -474,7 +475,22 @@ function isHexDark(hex: string): boolean {
               >
                 <div className="figma-dropdown-btn-content">
                   <span className="figma-dropdown-current-icon">
-                    {selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 14) : null}
+                    {selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 14) : (
+                      <span
+                        style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: 2,
+                          background: 'rgba(0, 0, 0, 0.08)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span className="phase-dash-icon" style={{ background: 'currentColor', display: 'inline-block' }} />
+                      </span>
+                    )}
                   </span>
                   <span className="figma-dropdown-current-text">
                     {selectedBadgeColorMode || 'Mixed'}
@@ -512,6 +528,14 @@ function isHexDark(hex: string): boolean {
                     zIndex: 1050,
                   }}
                 >
+                  {/* Mixed 상태: 컬러칩이 포함된 옵션이므로 16x16 체크 + 스와치 위치의 '-' 대시 아이콘 + Mixed 라벨 */}
+                  {(isColorModeMixed || !selectedBadgeColorMode) && (
+                    <DropdownMixedItem
+                      variant="chip"
+                      chipSize={12}
+                      onClick={() => setColorDropdownOpen(false)}
+                    />
+                  )}
                   {COLOR_OPTIONS.map(opt => {
                     const active = selectedBadgeColorMode === opt.id;
                     return (
@@ -521,10 +545,10 @@ function isHexDark(hex: string): boolean {
                         style={{ width: '100%', cursor: 'pointer' }}
                         onClick={() => handleColorSelect(opt.id)}
                       >
-                        {/* 선두 체크 슬롯 (선택된 항목일 때 체크 아이콘) */}
-                        <span className="figma-dropdown-check-slot" style={{ width: '18px' }}>
+                        {/* 선두 체크 슬롯 (선택된 항목일 때 체크 아이콘 16x16) */}
+                        <span className="figma-dropdown-check-slot">
                           {active && (
-                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                               <path
                                 d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z"
                                 fill="currentColor"

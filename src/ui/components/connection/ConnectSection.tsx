@@ -3,6 +3,7 @@ import { useApp, StylePreset, NodeInfo } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { ConnectorTerminalType } from '../../../types';
 import { IcPalette } from '../shared/icons';
+import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 
 // ============================================================
 // Figma UI3 공식 킷 기반 커넥터 터미널 옵션 및 SVG
@@ -63,15 +64,12 @@ const TERMINAL_SVGS_SHORT: Record<'start' | 'end', Record<TerminalOption, string
 
 
 
-// 피그마 UI3 표준 24x24 체크마크 SVG
+// 피그마 UI3 공식 16x16 체크마크 SVG
 const CHECK_SVG = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <path
-      d="M7 12.5L10.5 16L17.5 8"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z"
+      fill="currentColor"
     />
   </svg>
 );
@@ -940,47 +938,9 @@ export function ConnectSection() {
                   boxSizing: 'border-box',
                 }}
               >
-                {/* 1027261:5984 Mixed 상태 헤더 (체크박스와 중복하지 않고 대시 인디터미닛 표시 및 라인 아이콘과 일치된 정렬) */}
+                {/* Mixed 상태: 아이콘만으로 구성된 옵션이므로 16x16 체크 아이콘 + Mixed 텍스트 표시 */}
                 {startTermVal === 'MIXED' && (
-                  <>
-                    <div
-                      className="terminal-ui3-item selected"
-                      style={{
-                        width: '100%',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0 4px',
-                        borderRadius: '6px',
-                        cursor: 'default',
-                        color: '#ffffff',
-                        userSelect: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      {/* 선택 체크마크 슬롯과 동일한 24x24 크기 */}
-                      <span style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span className="phase-dash-icon" style={{ background: 'currentColor', display: 'inline-block' }} />
-                      </span>
-                      {/* 아래 라인 아이콘 영역과 100% 동일한 flex: 1 중앙 정렬 영역 */}
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flex: 1,
-                          height: '16px',
-                          fontSize: '11px',
-                          fontWeight: 500,
-                          color: '#ffffff',
-                        }}
-                      >
-                        Mixed
-                      </span>
-                    </div>
-                    <hr style={{ margin: '3px 0', border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }} />
-                  </>
+                  <DropdownMixedItem variant="icon-only" />
                 )}
 
                 {/* 6개 단자 옵션: -short 아이콘 사용 */}
@@ -1006,8 +966,8 @@ export function ConnectSection() {
                       }}
                       onClick={() => selectTerminal('start', opt)}
                     >
-                      {/* 선택 체크마크 슬롯 (24x24 규격) */}
-                      <span style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
+                      {/* 선택 체크마크 슬롯 (20x24 규격, 16x16 체크 아이콘) */}
+                      <span style={{ width: '20px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
                         {CHECK_SVG}
                       </span>
                       {/* 중앙 단자 그래픽: -short(36x16) 아이콘 */}
@@ -1087,47 +1047,9 @@ export function ConnectSection() {
                   boxSizing: 'border-box',
                 }}
               >
-                {/* 1027261:6029 Mixed 상태 헤더 (체크박스와 중복하지 않고 대시 인디터미닛 표시 및 라인 아이콘과 일치된 정렬) */}
+                {/* Mixed 상태: 아이콘만으로 구성된 옵션이므로 16x16 체크 아이콘 + Mixed 텍스트 표시 */}
                 {endTermVal === 'MIXED' && (
-                  <>
-                    <div
-                      className="terminal-ui3-item selected"
-                      style={{
-                        width: '100%',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0 4px',
-                        borderRadius: '6px',
-                        cursor: 'default',
-                        color: '#ffffff',
-                        userSelect: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      {/* 선택 체크마크 슬롯과 동일한 24x24 크기 */}
-                      <span style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span className="phase-dash-icon" style={{ background: 'currentColor', display: 'inline-block' }} />
-                      </span>
-                      {/* 아래 라인 아이콘 영역과 100% 동일한 flex: 1 중앙 정렬 영역 */}
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flex: 1,
-                          height: '16px',
-                          fontSize: '11px',
-                          fontWeight: 500,
-                          color: '#ffffff',
-                        }}
-                      >
-                        Mixed
-                      </span>
-                    </div>
-                    <hr style={{ margin: '3px 0', border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }} />
-                  </>
+                  <DropdownMixedItem variant="icon-only" />
                 )}
 
                 {/* 6개 단자 옵션: -short 아이콘 사용 */}
@@ -1153,8 +1075,8 @@ export function ConnectSection() {
                       }}
                       onClick={() => selectTerminal('end', opt)}
                     >
-                      {/* 선택 체크마크 슬롯 (24x24 규격) */}
-                      <span style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
+                      {/* 선택 체크마크 슬롯 (20x24 규격, 16x16 체크 아이콘) */}
+                      <span style={{ width: '20px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
                         {CHECK_SVG}
                       </span>
                       {/* 중앙 단자 그래픽: -short(36x16) 아이콘 */}

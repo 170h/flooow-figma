@@ -468,11 +468,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}`
     ) : '';
 
+    const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
     const elevToggleEl = document.getElementById('toggle-elevation') as HTMLInputElement | null;
     const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
     const finalElevation = isElevOn ? selectedElevation : null;
-
-    const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
     const finalColor = styleOverrides?.colorHex ?? selectedColor;
     const finalStrokeWeight = styleOverrides?.strokeWeight;
     const finalStrokeColor = styleOverrides?.strokeColor;
