@@ -542,8 +542,8 @@ function isHexDark(hex: string): boolean {
                             </svg>
                           )}
                         </span>
-                        {/* 스와치 */}
-                        <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '6px' }}>
+                        {/* 스와치 (24x24 슬롯 내 16px 칩 중앙 정렬) */}
+                        <span className="figma-dropdown-icon-slot">
                           {renderColorSwatch(opt.id, 16)}
                         </span>
                         {/* 라벨 */}

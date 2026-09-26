@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ColorWheelField } from '../shared/ColorWheelField';
 
@@ -41,6 +41,16 @@ export function PhaseModal({ editingPhase, onSave, onClose }: PhaseModalProps) {
 
   const [colorHex, setColorHex] = useState(validHex);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // 모달 열림 또는 편집 대상 변경 시 폼 필드 동기화
+  useEffect(() => {
+    if (isOpen) {
+      setName(editingPhase?.name || '');
+      const rawColor = (editingPhase?.color || '#EA2039').replace('#', '').trim().toUpperCase();
+      setColorHex(rawColor.length === 6 ? rawColor : 'EA2039');
+      setPickerOpen(false);
+    }
+  }, [editingPhase, isOpen]);
 
   // 저장 처리
   function handleSave() {

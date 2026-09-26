@@ -90,6 +90,9 @@ export interface NodeInfo {
   cachedFigmaLink?: string;
   connectorIsReversed?: boolean;
   connectedNodeNames?: string[];
+  phaseId?: string;
+  phaseName?: string;
+  phaseColor?: string;
 }
 
 export interface LastNodeConfig {
@@ -932,6 +935,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           colorUpdates.selectedBadgeCorner = first.badgeCorner || lastNodeConfigRef.current.badgeCorner || 'TOP_LEFT';
           colorUpdates.selectedBadgeShape = first.badgeShape || lastNodeConfigRef.current.badgeShape || 'Square';
           colorUpdates.selectedBadgeColorMode = first.badgeColorMode || lastNodeConfigRef.current.badgeColorMode || 'Style';
+        }
+
+        // Phase 상태 동기화
+        if (flowNodes.length === 1) {
+          const pId = first.phaseId || 'none';
+          colorUpdates.selectedPhase = pId;
+          stepConfigUpdates.phase = pId;
+          stepConfigUpdates.phaseName = first.phaseName || 'None';
+          stepConfigUpdates.phaseColor = first.phaseColor || '#EA2039';
+        } else if (flowNodes.length > 1) {
+          const firstPhase = flowNodes[0].phaseId || 'none';
+          const isMixedPhase = flowNodes.some((n) => (n.phaseId || 'none') !== firstPhase);
+          colorUpdates.selectedPhase = isMixedPhase ? 'mixed' : firstPhase;
         }
 
         if (first.fillColorHex) {

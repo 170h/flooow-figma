@@ -38,7 +38,7 @@ export function PhasePopover({ phases, onSelectPhase }: PhasePopoverProps) {
       {selectedPhase === 'mixed' && (
         <DropdownMixedItem
           variant="chip"
-          chipSize={16}
+          chipSize={14}
           className="phase-menu-item"
           onClick={() => setPhasePopoverOpen(false)}
         />

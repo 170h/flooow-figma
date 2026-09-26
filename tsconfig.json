@@ -8,6 +8,7 @@
     "jsx": "react-jsx",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
     "module": "ESNext"
   },
   "include": ["src/**/*", "scripts/**/*"],

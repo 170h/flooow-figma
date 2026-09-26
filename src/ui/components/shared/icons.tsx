@@ -181,6 +181,16 @@ export const IcStepNumber = () => (
   </svg>
 );
 
+// 피그마 UI3 공식 24×24 대시 인디케이터 아이콘 (비색상 옵션 Mixed 표시용)
+export const DASH_24_SVG = (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
 // 피그마 UI3 공식 Mixed 인디케이터 대시 SVG (24×24 규격)
 export const COLOR_MIXED_ICON = (
   <svg
@@ -250,7 +260,7 @@ export const MixedDashChip = ({
 
 export const TERMINAL_ICONS: Record<string, Record<string, string>> = {
   start: {
-    MIXED: `<svg width="52" height="16" viewBox="0 0 24 24" fill="none"><path d="M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z" fill="currentColor"/></svg>`,
+    MIXED: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><rect x="20" y="7.25" width="12" height="1.5" rx="0.75" fill="currentColor"/></svg>`,
     NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M51.5 8.5H0.5C0.22 8.5 0 8.28 0 8C0 7.72 0.22 7.5 0.5 7.5H51.5C51.78 7.5 52 7.72 52 8C52 8.28 51.78 8.5 51.5 8.5Z" fill="currentColor"/></svg>`,
     ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M51.5 7.49999H1.71L4.6 4.59999C4.8 4.39999 4.8 4.08999 4.6 3.88999C4.4 3.68999 4.09 3.68999 3.89 3.88999L0.15 7.64999C-0.05 7.84999 -0.05 8.15999 0.15 8.35999L3.9 12.11C4 12.21 4.13 12.26 4.25 12.26C4.37 12.26 4.51 12.21 4.6 12.11C4.8 11.91 4.8 11.6 4.6 11.4L1.7 8.49999H51.5C51.78 8.49999 52 8.26999 52 7.99999C52 7.72999 51.78 7.49999 51.5 7.49999Z" fill="currentColor"/></svg>`,
     TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><g clip-path="url(#sb_ta)"><path d="M5.46814 5.10914C5.92528 4.84248 6.49939 5.17269 6.49939 5.70192V8.00758H51.5004C51.7763 8.00782 52.0004 8.23158 52.0004 8.50758C52.0001 8.78337 51.7762 9.00734 51.5004 9.00758H6.49939V11.3132C6.49913 11.8092 5.9947 12.1306 5.55506 11.949L5.46814 11.906L0.657595 9.10035C0.204355 8.83578 0.20458 8.17957 0.657595 7.91481L5.46814 5.10914ZM1.62732 8.50758L5.49939 10.7664V6.24781L1.62732 8.50758Z" fill="currentColor"/></g><defs><clipPath id="sb_ta"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
@@ -259,7 +269,7 @@ export const TERMINAL_ICONS: Record<string, Record<string, string>> = {
     DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M3.29294 4.70706C3.68345 4.31664 4.3165 4.31664 4.707 4.70706L7.49997 7.50003H51.5C51.776 7.50011 52 7.72394 52 8.00003C51.9999 8.27605 51.776 8.49995 51.5 8.50003H7.49997L4.707 11.293C4.34096 11.659 3.76185 11.6815 3.36911 11.3614L3.29294 11.293L0.707002 8.70706C0.316578 8.31656 0.316579 7.68351 0.707002 7.293L3.29294 4.70706ZM1.41403 8.00003L3.99997 10.586L6.58591 8.00003L3.99997 5.4141L1.41403 8.00003Z" fill="currentColor"/></svg>`,
   },
   end: {
-    MIXED: `<svg width="52" height="16" viewBox="0 0 24 24" fill="none"><path d="M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z" fill="currentColor"/></svg>`,
+    MIXED: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><rect x="20" y="7.25" width="12" height="1.5" rx="0.75" fill="currentColor"/></svg>`,
     NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M51.5 9H0.5C0.22 9 0 8.78 0 8.5C0 8.22 0.22 8 0.5 8H51.5C51.78 8 52 8.22 52 8.5C52 8.78 51.78 9 51.5 9Z" fill="currentColor"/></svg>`,
     ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><g clip-path="url(#eb_a)"><path d="M0.5 8.50001L50.29 8.50001L47.4 11.4C47.2 11.6 47.2 11.91 47.4 12.11C47.6 12.31 47.91 12.31 48.11 12.11L51.85 8.35001C52.05 8.15001 52.05 7.84001 51.85 7.64001L48.1 3.89001C48 3.79001 47.87 3.74001 47.75 3.74001C47.63 3.74001 47.49 3.79001 47.4 3.89001C47.2 4.09001 47.2 4.40001 47.4 4.60001L50.3 7.50001L0.5 7.50001C0.22 7.50001 0 7.73 0 8C0 8.27001 0.22 8.50001 0.5 8.50001Z" fill="currentColor"/></g><defs><clipPath id="eb_a"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,
     TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><g clip-path="url(#eb_ta)"><path d="M46.5319 11.8909C46.0747 12.1575 45.5006 11.8273 45.5006 11.2981V8.99242L0.499632 8.99242C0.223691 8.99218 -0.000368451 8.76842 -0.000368451 8.49242C-0.000126574 8.21663 0.22384 7.99266 0.499632 7.99242L45.5006 7.99242V5.68676C45.5009 5.1908 46.0053 4.86943 46.4449 5.05101L46.5319 5.09398L51.3424 7.89965C51.7956 8.16422 51.7954 8.82043 51.3424 9.08519L46.5319 11.8909ZM50.3727 8.49242L46.5006 6.23363V10.7522L50.3727 8.49242Z" fill="currentColor"/></g><defs><clipPath id="eb_ta"><rect width="52" height="16" fill="white"/></clipPath></defs></svg>`,

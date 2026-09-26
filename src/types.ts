@@ -118,6 +118,8 @@ export interface FlowNodePayload {
   cornerRadius?: number;
   nodeType?: DiagramNodeType;
   phaseId?: string;
+  phaseName?: string;
+  phaseColor?: string;
   elevation?: number | null;
   status?: WorkflowStatus;
   badgeNumber?: number;
@@ -178,6 +180,8 @@ export interface UpdateNodePayload {
   cornerRadius?: number;
   nodeType?: DiagramNodeType;
   phaseId?: string;
+  phaseName?: string;
+  phaseColor?: string;
   elevation?: number | null;
   status?: WorkflowStatus;
   badgeNumber?: number;
@@ -210,6 +214,7 @@ export type PluginAction =
   | { type: 'CREATE_CONNECTORS'; label?: string; lineStyle?: 'solid' | 'dashed' }
   | { type: 'ADD_STEP_BADGES'; startNumber?: number; corner?: string; shape?: string; colorMode?: 'White' | 'Black' | 'Style' }
   | { type: 'REMOVE_STEP_BADGES' }
+  | { type: 'SET_PHASE'; phaseId: string; phaseName: string; phaseColor: string }
   | { type: 'SET_STATUS'; status: WorkflowStatus }
   | { type: 'SET_ELEVATION'; level: number | null }
   | { type: 'GET_STATUS_LIST' }
@@ -289,6 +294,9 @@ export interface SelectedNodeInfo {
   fillColorHex?: string;
   strokeColorHex?: string;
   strokeWeight?: number;
+  phaseId?: string;
+  phaseName?: string;
+  phaseColor?: string;
 }
 
 export type CoreToUIMessage =

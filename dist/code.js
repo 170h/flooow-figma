@@ -1993,12 +1993,6 @@
         const isAuto = frame.primaryAxisSizingMode === "AUTO";
         sizeMode = isAuto ? "hug" : "fixed";
         hugHeight = calculateCardHugHeight(frame);
-        const hasStepBadge = Boolean(
-          frame.getPluginData("step_number") || frame.children.some((c) => c.getPluginData("is_step_badge") === "true" || c.name.startsWith("[Step]"))
-        );
-        if (hasStepBadge && frame.clipsContent) {
-          frame.clipsContent = false;
-        }
       }
       let nodeFillColor;
       let nodeStrokeColor;
@@ -2068,6 +2062,9 @@
         fillColorHex: nodeFillColor,
         strokeColorHex: nodeStrokeColor,
         strokeWeight: nodeStrokeWeight,
+        phaseId: node.getPluginData("phase_id") || void 0,
+        phaseName: node.getPluginData("phase_name") || void 0,
+        phaseColor: node.getPluginData("phase_color") || void 0,
         x: Math.round(pos.x),
         y: Math.round(pos.y)
       };
@@ -2714,6 +2711,11 @@
           payload.badgeColorMode || "Style"
         );
       }
+      if (payload.phaseId && payload.phaseId !== "none") {
+        card.setPluginData("phase_id", payload.phaseId);
+        card.setPluginData("phase_name", payload.phaseName || "Phase");
+        card.setPluginData("phase_color", payload.phaseColor || "#EA2039");
+      }
       const selection = figma.currentPage.selection;
       if (selection.length > 0) {
         const last = selection[selection.length - 1];
@@ -2903,6 +2905,17 @@
         if (stepText) {
           const currentMode = card.getPluginData("badge_color_mode") || "Style";
           applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
+        }
+      }
+      if (payload.phaseId !== void 0) {
+        if (!payload.phaseId || payload.phaseId === "none") {
+          card.setPluginData("phase_id", "");
+          card.setPluginData("phase_name", "");
+          card.setPluginData("phase_color", "");
+        } else {
+          card.setPluginData("phase_id", payload.phaseId);
+          if (payload.phaseName) card.setPluginData("phase_name", payload.phaseName);
+          if (payload.phaseColor) card.setPluginData("phase_color", payload.phaseColor);
         }
       }
       if (payload.width && payload.height) {
@@ -3502,6 +3515,32 @@
     const items = collectStatusItems();
     postToUI({ type: "STATUS_LIST_UPDATED", items });
   }
+  async function applyPhaseToSelected(phaseId, phaseName, phaseColor) {
+    const selection = figma.currentPage.selection;
+    if (selection.length === 0) {
+      return;
+    }
+    const isRemove = !phaseId || phaseId === "none";
+    for (const rawNode of selection) {
+      let flowNode = findFlowNode(rawNode) || rawNode;
+      if (flowNode.type === "SHAPE_WITH_TEXT") {
+        flowNode = await convertShapeToFrameNode(flowNode);
+      }
+      if (flowNode.type === "FRAME") {
+        const card = flowNode;
+        if (isRemove) {
+          card.setPluginData("phase_id", "");
+          card.setPluginData("phase_name", "");
+          card.setPluginData("phase_color", "");
+        } else {
+          card.setPluginData("phase_id", phaseId);
+          card.setPluginData("phase_name", phaseName || "Phase");
+          card.setPluginData("phase_color", phaseColor || "#EA2039");
+        }
+      }
+    }
+    handleSelectionChange();
+  }
   async function applyStatusToSelected(status) {
     const selection = figma.currentPage.selection;
     if (selection.length === 0) {
@@ -4056,6 +4095,9 @@
         break;
       case "TOGGLE_NODE_THEME":
         await toggleNodeTheme(msg.nodeId);
+        break;
+      case "SET_PHASE":
+        await applyPhaseToSelected(msg.phaseId, msg.phaseName, msg.phaseColor);
         break;
       case "SET_STATUS":
         await applyStatusToSelected(msg.status);

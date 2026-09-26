@@ -1367,15 +1367,6 @@ async function handleSelectionChange() {
 
       // Hug contents 높이: status 유무(패딩 36px vs 16px)를 항상 정확하게 반영하여 실시간 산출
       hugHeight = calculateCardHugHeight(frame);
-
-      // 스텝 배지가 있는 노드가 clipsContent=true로 인해 잘려있는 경우 즉시 false로 자동 복구
-      const hasStepBadge = Boolean(
-        frame.getPluginData('step_number') ||
-        frame.children.some((c) => c.getPluginData('is_step_badge') === 'true' || c.name.startsWith('[Step]'))
-      );
-      if (hasStepBadge && frame.clipsContent) {
-        frame.clipsContent = false;
-      }
     }
 
     let nodeFillColor: string | undefined;
@@ -1449,6 +1440,9 @@ async function handleSelectionChange() {
       fillColorHex: nodeFillColor,
       strokeColorHex: nodeStrokeColor,
       strokeWeight: nodeStrokeWeight,
+      phaseId: node.getPluginData('phase_id') || undefined,
+      phaseName: node.getPluginData('phase_name') || undefined,
+      phaseColor: node.getPluginData('phase_color') || undefined,
       x: Math.round(pos.x),
       y: Math.round(pos.y),
     };
@@ -2148,6 +2142,13 @@ async function createFlowNode(payload: FlowNodePayload) {
       );
     }
 
+    // Phase 데이터 저장
+    if (payload.phaseId && payload.phaseId !== 'none') {
+      card.setPluginData('phase_id', payload.phaseId);
+      card.setPluginData('phase_name', payload.phaseName || 'Phase');
+      card.setPluginData('phase_color', payload.phaseColor || '#EA2039');
+    }
+
     // 위치 지정
     const selection = figma.currentPage.selection;
     if (selection.length > 0) {
@@ -2375,6 +2376,19 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       if (stepText) {
         const currentMode = (card.getPluginData('badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
         applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
+      }
+    }
+
+    // Phase 데이터 저장
+    if (payload.phaseId !== undefined) {
+      if (!payload.phaseId || payload.phaseId === 'none') {
+        card.setPluginData('phase_id', '');
+        card.setPluginData('phase_name', '');
+        card.setPluginData('phase_color', '');
+      } else {
+        card.setPluginData('phase_id', payload.phaseId);
+        if (payload.phaseName) card.setPluginData('phase_name', payload.phaseName);
+        if (payload.phaseColor) card.setPluginData('phase_color', payload.phaseColor);
       }
     }
 
@@ -3133,6 +3147,39 @@ function syncStatusList() {
   postToUI({ type: 'STATUS_LIST_UPDATED', items });
 }
 
+// Phase 지정 또는 제거 (선택된 플로우 노드에 phase_id, phase_name, phase_color 저장)
+async function applyPhaseToSelected(phaseId: string, phaseName: string, phaseColor: string) {
+  const selection = figma.currentPage.selection;
+  if (selection.length === 0) {
+    return;
+  }
+
+  const isRemove = !phaseId || phaseId === 'none';
+
+  for (const rawNode of selection) {
+    let flowNode = findFlowNode(rawNode) || (rawNode as FrameNode | ShapeWithTextNode);
+
+    if (flowNode.type === 'SHAPE_WITH_TEXT') {
+      flowNode = await convertShapeToFrameNode(flowNode as ShapeWithTextNode);
+    }
+
+    if (flowNode.type === 'FRAME') {
+      const card = flowNode as FrameNode;
+      if (isRemove) {
+        card.setPluginData('phase_id', '');
+        card.setPluginData('phase_name', '');
+        card.setPluginData('phase_color', '');
+      } else {
+        card.setPluginData('phase_id', phaseId);
+        card.setPluginData('phase_name', phaseName || 'Phase');
+        card.setPluginData('phase_color', phaseColor || '#EA2039');
+      }
+    }
+  }
+
+  handleSelectionChange();
+}
+
 // 상태 뱃지 적용 또는 제거 (노드 카드 우하단에 독립된 절대 위치로 부착)
 async function applyStatusToSelected(status?: WorkflowStatus | '') {
   const selection = figma.currentPage.selection;
@@ -3834,6 +3881,9 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       break;
     case 'TOGGLE_NODE_THEME':
       await toggleNodeTheme(msg.nodeId);
+      break;
+    case 'SET_PHASE':
+      await applyPhaseToSelected(msg.phaseId, msg.phaseName, msg.phaseColor);
       break;
     case 'SET_STATUS':
       await applyStatusToSelected(msg.status);
