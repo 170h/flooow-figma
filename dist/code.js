@@ -61,6 +61,229 @@
   };
 
   // src/customConnector.ts
+  function terminalToStrokeCap(terminal) {
+    switch (terminal) {
+      case "ARROW":
+      case "TRIANGLE_ARROW":
+      case "REVERSED_TRIANGLE_ARROW":
+        return "ARROW_LINES";
+      case "CIRCLE":
+        return "CIRCLE_FILLED";
+      case "DIAMOND":
+        return "DIAMOND_FILLED";
+      case "SQUARE":
+      case "BAR":
+      case "NONE":
+      default:
+        return "NONE";
+    }
+  }
+  function getMagnetDirectionVector(magnet) {
+    switch (magnet) {
+      case "TOP":
+        return { x: 0, y: -1 };
+      case "BOTTOM":
+        return { x: 0, y: 1 };
+      case "LEFT":
+        return { x: -1, y: 0 };
+      case "RIGHT":
+        return { x: 1, y: 0 };
+    }
+  }
+  function calculateCurvedPoints(srcPoint, srcMagnet, tgtPoint, tgtMagnet, steps = 28) {
+    const dirSrc = getMagnetDirectionVector(srcMagnet);
+    const dirTgt = getMagnetDirectionVector(tgtMagnet);
+    const dist = Math.hypot(tgtPoint.x - srcPoint.x, tgtPoint.y - srcPoint.y);
+    const handleLen = Math.max(dist * 0.45, 25);
+    const cp1 = {
+      x: srcPoint.x + dirSrc.x * handleLen,
+      y: srcPoint.y + dirSrc.y * handleLen
+    };
+    const cp2 = {
+      x: tgtPoint.x + dirTgt.x * handleLen,
+      y: tgtPoint.y + dirTgt.y * handleLen
+    };
+    const points = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const invT = 1 - t;
+      const x = invT * invT * invT * srcPoint.x + 3 * invT * invT * t * cp1.x + 3 * invT * t * t * cp2.x + t * t * t * tgtPoint.x;
+      const y = invT * invT * invT * srcPoint.y + 3 * invT * invT * t * cp1.y + 3 * invT * t * t * cp2.y + t * t * t * tgtPoint.y;
+      points.push({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
+    }
+    return points;
+  }
+  function calculateStraightPoints(srcPoint, tgtPoint) {
+    return [srcPoint, tgtPoint];
+  }
+  function calculateRoutingPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet, srcBox, tgtBox, routingType = "ORTHOGONAL") {
+    switch (routingType) {
+      case "STRAIGHT":
+        return calculateStraightPoints(srcPoint, tgtPoint);
+      case "CURVED":
+        return calculateCurvedPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet);
+      case "S_CURVE":
+      case "ORTHOGONAL":
+      default:
+        return calculateOrthogonalPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet, srcBox, tgtBox);
+    }
+  }
+  function buildVectorNetwork(localPoints, routingType = "ORTHOGONAL", startTerminal = "NONE", endTerminal = "ARROW", strokeWeight = 1.5, strokeColor = { r: 0, g: 0, b: 0 }) {
+    const len = localPoints.length;
+    if (len === 0) return { vertices: [], segments: [], regions: [] };
+    const startCap = terminalToStrokeCap(startTerminal);
+    const endCap = terminalToStrokeCap(endTerminal);
+    const vertices = localPoints.map((pt, idx) => {
+      const isLast = idx === len - 1;
+      const isFirst = idx === 0;
+      let cornerRadius = 0;
+      let strokeJoin = "MITER";
+      if (routingType === "S_CURVE") {
+        strokeJoin = "ROUND";
+        if (!isFirst && !isLast) {
+          const prev = localPoints[idx - 1];
+          const next = localPoints[idx + 1];
+          const d1 = Math.hypot(pt.x - prev.x, pt.y - prev.y);
+          const d2 = Math.hypot(next.x - pt.x, next.y - pt.y);
+          const maxR = Math.min(d1, d2) / 2;
+          cornerRadius = Math.min(14, Math.max(0, maxR));
+        }
+      } else if (routingType === "CURVED") {
+        strokeJoin = "ROUND";
+        cornerRadius = 0;
+      } else if (routingType === "STRAIGHT") {
+        strokeJoin = "MITER";
+        cornerRadius = 0;
+      } else {
+        strokeJoin = "MITER";
+        cornerRadius = 0;
+      }
+      let strokeCap = "NONE";
+      if (isFirst) {
+        strokeCap = startCap;
+      } else if (isLast) {
+        strokeCap = endCap;
+      }
+      return {
+        x: pt.x,
+        y: pt.y,
+        strokeCap,
+        strokeJoin,
+        cornerRadius
+      };
+    });
+    const segments = [];
+    for (let i = 0; i < len - 1; i++) {
+      segments.push({ start: i, end: i + 1 });
+    }
+    const regions = [];
+    const barLen = Math.max(7, Math.round(strokeWeight * 4.8));
+    if (len >= 2 && startTerminal === "BAR") {
+      const p0 = localPoints[0];
+      const p1 = localPoints[1];
+      const d0 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+      if (d0 > 0.1) {
+        const ux = (p1.x - p0.x) / d0;
+        const uy = (p1.y - p0.y) / d0;
+        const nx = -uy;
+        const ny = ux;
+        const vStart = vertices.length;
+        vertices.push(
+          { x: p0.x + barLen / 2 * nx, y: p0.y + barLen / 2 * ny, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+          { x: p0.x - barLen / 2 * nx, y: p0.y - barLen / 2 * ny, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
+        );
+        segments.push({ start: vStart, end: vStart + 1 });
+      }
+    }
+    if (len >= 2 && endTerminal === "BAR") {
+      const pn = localPoints[len - 1];
+      const prev = localPoints[len - 2];
+      const dn = Math.hypot(pn.x - prev.x, pn.y - prev.y);
+      if (dn > 0.1) {
+        const ux = (pn.x - prev.x) / dn;
+        const uy = (pn.y - prev.y) / dn;
+        const nx = -uy;
+        const ny = ux;
+        const vStart = vertices.length;
+        vertices.push(
+          { x: pn.x + barLen / 2 * nx, y: pn.y + barLen / 2 * ny, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+          { x: pn.x - barLen / 2 * nx, y: pn.y - barLen / 2 * ny, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
+        );
+        segments.push({ start: vStart, end: vStart + 1 });
+      }
+    }
+    if (len >= 2 && startTerminal === "SQUARE") {
+      const p0 = localPoints[0];
+      const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
+      const half = sqSize / 2;
+      const vStart = vertices.length;
+      vertices.push(
+        { x: p0.x - half, y: p0.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: p0.x + half, y: p0.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: p0.x + half, y: p0.y + half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: p0.x - half, y: p0.y + half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
+      );
+      segments.push(
+        { start: vStart, end: vStart + 1 },
+        { start: vStart + 1, end: vStart + 2 },
+        { start: vStart + 2, end: vStart + 3 },
+        { start: vStart + 3, end: vStart },
+        { start: vStart, end: vStart + 2 },
+        { start: vStart + 1, end: vStart + 3 }
+      );
+    }
+    if (len >= 2 && endTerminal === "SQUARE") {
+      const pn = localPoints[len - 1];
+      const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
+      const half = sqSize / 2;
+      const vStart = vertices.length;
+      vertices.push(
+        { x: pn.x - half, y: pn.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: pn.x + half, y: pn.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: pn.x + half, y: pn.y + half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: pn.x - half, y: pn.y + half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
+      );
+      segments.push(
+        { start: vStart, end: vStart + 1 },
+        { start: vStart + 1, end: vStart + 2 },
+        { start: vStart + 2, end: vStart + 3 },
+        { start: vStart + 3, end: vStart },
+        { start: vStart, end: vStart + 2 },
+        { start: vStart + 1, end: vStart + 3 }
+      );
+    }
+    return { vertices, segments, regions };
+  }
+  function getLabelCenterPoint(worldPoints, routingType = "ORTHOGONAL") {
+    if (worldPoints.length <= 2) {
+      return {
+        x: (worldPoints[0].x + worldPoints[worldPoints.length - 1].x) / 2,
+        y: (worldPoints[0].y + worldPoints[worldPoints.length - 1].y) / 2
+      };
+    }
+    if (routingType === "CURVED") {
+      const midIdx = Math.floor(worldPoints.length / 2);
+      return worldPoints[midIdx];
+    }
+    let longestDist = -1;
+    let midSegmentPoint = {
+      x: (worldPoints[0].x + worldPoints[1].x) / 2,
+      y: (worldPoints[0].y + worldPoints[1].y) / 2
+    };
+    for (let i = 0; i < worldPoints.length - 1; i++) {
+      const p1 = worldPoints[i];
+      const p2 = worldPoints[i + 1];
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      if (dist > longestDist) {
+        longestDist = dist;
+        midSegmentPoint = {
+          x: (p1.x + p2.x) / 2,
+          y: (p1.y + p2.y) / 2
+        };
+      }
+    }
+    return midSegmentPoint;
+  }
   function getMagnetPoint(box, magnet) {
     switch (magnet) {
       case "TOP":
@@ -235,51 +458,63 @@
     };
     const pStart = getMagnetPoint(srcBox, sourceMagnet);
     const pEnd = getMagnetPoint(tgtBox, targetMagnet);
-    const worldPoints = calculateOrthogonalPoints(
+    const routingType = options.routingType || "ORTHOGONAL";
+    const worldPoints = calculateRoutingPoints(
       pStart,
       sourceMagnet,
       pEnd,
       targetMagnet,
       srcBox,
-      tgtBox
+      tgtBox,
+      routingType
     );
     const allX = worldPoints.map((p) => p.x);
     const allY = worldPoints.map((p) => p.y);
-    const minX = Math.min(...allX);
-    const minY = Math.min(...allY);
-    const maxX = Math.max(...allX);
-    const maxY = Math.max(...allY);
+    const strokeColor = options.strokeColor || { r: 0.18, g: 0.18, b: 0.22 };
+    const strokeWeight = options.strokeWeight || 1.5;
+    const startTerminal = options.startTerminal || "NONE";
+    const endTerminal = options.endTerminal || "ARROW";
+    const strokePattern = options.strokePattern || "SOLID";
+    const hasSquare = startTerminal === "SQUARE" || endTerminal === "SQUARE" || startTerminal === "BAR" || endTerminal === "BAR";
+    const pad = hasSquare ? Math.max(5, Math.round(strokeWeight * 3)) : 0;
+    const minX = Math.min(...allX) - pad;
+    const minY = Math.min(...allY) - pad;
+    const maxX = Math.max(...allX) + pad;
+    const maxY = Math.max(...allY) + pad;
     const width = Math.max(maxX - minX, 1);
     const height = Math.max(maxY - minY, 1);
     const localPoints = worldPoints.map((p) => ({
       x: p.x - minX,
       y: p.y - minY
     }));
-    const strokeColor = options.strokeColor || { r: 0.18, g: 0.18, b: 0.22 };
-    const strokeWeight = options.strokeWeight || 1.5;
     const vector = figma.createVector();
     vector.x = minX;
     vector.y = minY;
     vector.resize(width, height);
-    const vertices = localPoints.map((pt, idx) => ({
-      x: pt.x,
-      y: pt.y,
-      strokeCap: idx === localPoints.length - 1 ? "ARROW_EQUILATERAL" : "NONE",
-      strokeJoin: "MITER",
-      cornerRadius: 0
-      // 완전한 90도 직각 보장 (라운딩 0)
-    }));
-    const segments = [];
-    for (let i = 0; i < localPoints.length - 1; i++) {
-      segments.push({
-        start: i,
-        end: i + 1
-      });
-    }
-    await vector.setVectorNetworkAsync({ vertices, segments });
+    const { vertices, segments, regions } = buildVectorNetwork(
+      localPoints,
+      routingType,
+      startTerminal,
+      endTerminal,
+      strokeWeight,
+      strokeColor
+    );
+    await vector.setVectorNetworkAsync({ vertices, segments, regions });
     vector.strokes = [{ type: "SOLID", color: strokeColor }];
     vector.strokeWeight = strokeWeight;
-    vector.strokeJoin = "MITER";
+    if (regions.length > 0) {
+      vector.fills = [{ type: "SOLID", color: strokeColor }];
+    } else {
+      vector.fills = [];
+    }
+    if (strokePattern === "DASHED") {
+      vector.dashPattern = [4, 4];
+    } else if (strokePattern === "DOTTED") {
+      vector.dashPattern = [1.5, 3];
+    } else {
+      vector.dashPattern = [];
+    }
+    vector.strokeJoin = routingType === "S_CURVE" || routingType === "CURVED" ? "ROUND" : "MITER";
     vector.strokeMiterLimit = 4;
     vector.name = `[Connector] ${sourceNode.name} \u2192 ${targetNode.name}`;
     vector.setPluginData("is_flow_connector", "true");
@@ -288,32 +523,22 @@
     vector.setPluginData("target_node_id", targetNode.id);
     vector.setPluginData("source_magnet", sourceMagnet);
     vector.setPluginData("target_magnet", targetMagnet);
-    if (options.label && options.label.trim() !== "") {
-      const labelText = options.label.trim();
+    vector.setPluginData("connector_routing", routingType);
+    vector.setPluginData("start_terminal", startTerminal);
+    vector.setPluginData("end_terminal", endTerminal);
+    vector.setPluginData("connector_pattern", strokePattern);
+    vector.setPluginData("connector_weight", String(strokeWeight));
+    let labelFrame = null;
+    const labelText = options.label ? options.label.trim() : "";
+    if (labelText !== "") {
       vector.setPluginData("connector_label", labelText);
       try {
         await figma.loadFontAsync({ family: "Inter", style: "Medium" });
       } catch {
         await figma.loadFontAsync({ family: "Inter", style: "Regular" });
       }
-      let longestDist = -1;
-      let midSegmentPoint = {
-        x: (worldPoints[0].x + worldPoints[1].x) / 2,
-        y: (worldPoints[0].y + worldPoints[1].y) / 2
-      };
-      for (let i = 0; i < worldPoints.length - 1; i++) {
-        const p1 = worldPoints[i];
-        const p2 = worldPoints[i + 1];
-        const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-        if (dist > longestDist) {
-          longestDist = dist;
-          midSegmentPoint = {
-            x: (p1.x + p2.x) / 2,
-            y: (p1.y + p2.y) / 2
-          };
-        }
-      }
-      const labelFrame = figma.createFrame();
+      const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
+      labelFrame = figma.createFrame();
       labelFrame.name = "ConnectorLabel";
       labelFrame.layoutMode = "HORIZONTAL";
       labelFrame.primaryAxisSizingMode = "AUTO";
@@ -337,18 +562,31 @@
       labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
       labelFrame.setPluginData("is_connector_label", "true");
       labelFrame.setPluginData("is_custom_connector", "true");
+    }
+    vector.name = labelText ? `[Flow] ${sourceNode.name} \u2192 ${targetNode.name} ("${labelText}")` : `[Connector] ${sourceNode.name} \u2192 ${targetNode.name}`;
+    vector.setPluginData("is_flow_connector", "true");
+    vector.setPluginData("is_custom_connector", "true");
+    vector.setPluginData("source_node_id", sourceNode.id);
+    vector.setPluginData("target_node_id", targetNode.id);
+    vector.setPluginData("source_magnet", sourceMagnet);
+    vector.setPluginData("target_magnet", targetMagnet);
+    vector.setPluginData("connector_routing", routingType);
+    if (labelText) {
+      vector.setPluginData("connector_label", labelText);
+    }
+    vector.setPluginData("start_terminal", startTerminal);
+    vector.setPluginData("end_terminal", endTerminal);
+    vector.setPluginData("connector_pattern", strokePattern);
+    vector.setPluginData("connector_weight", String(strokeWeight));
+    if (labelFrame) {
       const group = figma.group([vector, labelFrame], figma.currentPage);
-      group.name = `[Flow] ${sourceNode.name} \u2192 ${targetNode.name} ("${labelText}")`;
-      group.setPluginData("is_flow_connector", "true");
-      group.setPluginData("is_custom_connector", "true");
-      group.setPluginData("source_node_id", sourceNode.id);
-      group.setPluginData("target_node_id", targetNode.id);
-      group.setPluginData("source_magnet", sourceMagnet);
-      group.setPluginData("target_magnet", targetMagnet);
-      group.setPluginData("connector_label", labelText);
+      figma.currentPage.appendChild(group);
+      group.name = vector.name;
+      copyConnectorData(vector, group);
       registerConnectorInRegistry(group);
       return group;
     }
+    figma.currentPage.appendChild(vector);
     registerConnectorInRegistry(vector);
     return vector;
   }
@@ -516,22 +754,33 @@
       vector.setPluginData("source_magnet", sourceMagnet);
       vector.setPluginData("target_magnet", targetMagnet);
     }
+    const routingType = connectorNode.getPluginData("connector_routing") || vector.getPluginData("connector_routing") || "ORTHOGONAL";
     const pStart = getMagnetPoint(srcBox, sourceMagnet);
     const pEnd = getMagnetPoint(tgtBox, targetMagnet);
-    const worldPoints = calculateOrthogonalPoints(
+    const worldPoints = calculateRoutingPoints(
       pStart,
       sourceMagnet,
       pEnd,
       targetMagnet,
       srcBox,
-      tgtBox
+      tgtBox,
+      routingType
     );
     const allX = worldPoints.map((p) => p.x);
     const allY = worldPoints.map((p) => p.y);
-    const minX = Math.min(...allX);
-    const minY = Math.min(...allY);
-    const maxX = Math.max(...allX);
-    const maxY = Math.max(...allY);
+    const startTerminal = connectorNode.getPluginData("start_terminal") || vector.getPluginData("start_terminal") || "NONE";
+    const endTerminal = connectorNode.getPluginData("end_terminal") || vector.getPluginData("end_terminal") || "ARROW";
+    const strokeWeight = typeof vector.strokeWeight === "number" ? vector.strokeWeight : 1.5;
+    let strokeColor = { r: 0.18, g: 0.18, b: 0.22 };
+    if (Array.isArray(vector.strokes) && vector.strokes.length > 0 && vector.strokes[0].type === "SOLID") {
+      strokeColor = vector.strokes[0].color;
+    }
+    const hasBarOrSquare = startTerminal === "BAR" || endTerminal === "BAR" || startTerminal === "SQUARE" || endTerminal === "SQUARE";
+    const pad = hasBarOrSquare ? Math.max(5, Math.round(strokeWeight * 3.5)) : 0;
+    const minX = Math.min(...allX) - pad;
+    const minY = Math.min(...allY) - pad;
+    const maxX = Math.max(...allX) + pad;
+    const maxY = Math.max(...allY) + pad;
     const width = Math.max(maxX - minX, 1);
     const height = Math.max(maxY - minY, 1);
     const localPoints = worldPoints.map((p) => ({
@@ -541,41 +790,54 @@
     vector.x = minX;
     vector.y = minY;
     vector.resize(width, height);
-    const vertices = localPoints.map((pt, idx) => ({
-      x: pt.x,
-      y: pt.y,
-      strokeCap: idx === localPoints.length - 1 ? "ARROW_EQUILATERAL" : "NONE",
-      strokeJoin: "MITER",
-      cornerRadius: 0
-    }));
-    const segments = [];
-    for (let i = 0; i < localPoints.length - 1; i++) {
-      segments.push({
-        start: i,
-        end: i + 1
-      });
-    }
-    await vector.setVectorNetworkAsync({ vertices, segments });
-    if (labelFrame) {
-      let longestDist = -1;
-      let midSegmentPoint = {
-        x: (worldPoints[0].x + worldPoints[1].x) / 2,
-        y: (worldPoints[0].y + worldPoints[1].y) / 2
-      };
-      for (let i = 0; i < worldPoints.length - 1; i++) {
-        const p1 = worldPoints[i];
-        const p2 = worldPoints[i + 1];
-        const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-        if (dist > longestDist) {
-          longestDist = dist;
-          midSegmentPoint = {
-            x: (p1.x + p2.x) / 2,
-            y: (p1.y + p2.y) / 2
-          };
-        }
+    const { vertices, segments, regions } = buildVectorNetwork(
+      localPoints,
+      routingType,
+      startTerminal,
+      endTerminal,
+      strokeWeight,
+      strokeColor
+    );
+    await vector.setVectorNetworkAsync({ vertices, segments, regions });
+    vector.fills = [];
+    vector.strokeJoin = routingType === "S_CURVE" || routingType === "CURVED" ? "ROUND" : "MITER";
+    if (connectorNode.type === "GROUP") {
+      const group = connectorNode;
+      const legacyMarkers = group.findAll(
+        (n) => n.name === "ConnectorStartTerminal" || n.name === "ConnectorEndTerminal" || n.getPluginData("is_terminal_marker") !== ""
+      );
+      for (const m of legacyMarkers) {
+        m.remove();
       }
+    }
+    if (connectorNode.parent) {
+      connectorNode.parent.appendChild(connectorNode);
+    }
+    if (labelFrame) {
+      const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
       labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
       labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
+    }
+  }
+  function copyConnectorData(source, target) {
+    const keys = [
+      "is_flow_connector",
+      "is_custom_connector",
+      "source_node_id",
+      "target_node_id",
+      "source_magnet",
+      "target_magnet",
+      "connector_routing",
+      "connector_label",
+      "start_terminal",
+      "end_terminal",
+      "connector_pattern",
+      "connector_weight",
+      "connector_color"
+    ];
+    for (const k of keys) {
+      const v = source.getPluginData(k);
+      if (v) target.setPluginData(k, v);
     }
   }
   async function syncConnectorsForMovedNodes(nodeIds) {
@@ -588,6 +850,35 @@
         if (conns) {
           for (const cid of conns) {
             connIdsToUpdate.add(cid);
+          }
+        }
+        const containerNode = figma.getNodeById(nid);
+        if (containerNode && "findAll" in containerNode) {
+          for (const [mappedNodeId, mappedConnIds] of nodeToConnectorsMap.entries()) {
+            const childNode = figma.getNodeById(mappedNodeId);
+            if (childNode) {
+              let cur = childNode.parent;
+              while (cur && cur.type !== "PAGE") {
+                if (cur.id === nid) {
+                  for (const cid of mappedConnIds) {
+                    connIdsToUpdate.add(cid);
+                  }
+                  break;
+                }
+                cur = cur.parent;
+              }
+            }
+          }
+        }
+      }
+      if (connIdsToUpdate.size === 0) {
+        refreshConnectorRegistry();
+        for (const nid of nodeIds) {
+          const conns = nodeToConnectorsMap.get(nid);
+          if (conns) {
+            for (const cid of conns) {
+              connIdsToUpdate.add(cid);
+            }
           }
         }
       }
@@ -1430,8 +1721,41 @@
     } else {
       uniqueNodes = otherObjects;
     }
-    if (uniqueNodes.length > 1 && connectorCount === 0) {
+    if (uniqueNodes.length > 1) {
       uniqueNodes = sortNodesBySpatialPosition(uniqueNodes);
+    }
+    let multiConnectorSortedNodeNames = [];
+    if (connectorCount > 0 && flowNodeCount === 0) {
+      const endpointNodeMap = /* @__PURE__ */ new Map();
+      for (const c of connNodes) {
+        if (c.type === "CONNECTOR") {
+          const conn = c;
+          if (conn.connectorStart && "endpointNodeId" in conn.connectorStart && conn.connectorStart.endpointNodeId) {
+            const srcNode = figma.getNodeById(conn.connectorStart.endpointNodeId);
+            if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
+          }
+          if (conn.connectorEnd && "endpointNodeId" in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
+            const tgtNode = figma.getNodeById(conn.connectorEnd.endpointNodeId);
+            if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
+          }
+        } else {
+          const srcId = c.getPluginData("source_node_id");
+          const tgtId = c.getPluginData("target_node_id");
+          if (srcId) {
+            const srcNode = figma.getNodeById(srcId);
+            if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
+          }
+          if (tgtId) {
+            const tgtNode = figma.getNodeById(tgtId);
+            if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
+          }
+        }
+      }
+      const endpointNodes = Array.from(endpointNodeMap.values());
+      if (endpointNodes.length > 0) {
+        const sortedEndpoints = sortNodesBySpatialPosition(endpointNodes);
+        multiConnectorSortedNodeNames = sortedEndpoints.map((n) => n.name);
+      }
     }
     const nodes = await Promise.all(uniqueNodes.map(async (node) => {
       const isFlowNode = node.getPluginData("is_flow_node") === "true";
@@ -1520,17 +1844,19 @@
             connectorStrokePattern = "SOLID";
           }
           const mapCapToTerm = (cap) => {
-            if (cap.includes("BAR") || cap.includes("EXACTLY_ONE")) return "BAR";
-            if (cap.includes("SQUARE")) return "SQUARE";
-            if (cap.includes("REVERSED_TRIANGLE")) return "REVERSED_TRIANGLE_ARROW";
-            if (cap.includes("TRIANGLE_ARROW") || cap.includes("ARROW_EQUILATERAL")) return "ARROW";
-            if (cap.includes("ARROW_LINES") || cap === "ARROW") return "ARROW";
-            if (cap.includes("DIAMOND_FILLED") || cap === "DIAMOND") return "DIAMOND";
-            if (cap.includes("CIRCLE_FILLED") || cap === "CIRCLE") return "CIRCLE";
+            const upper = String(cap || "").toUpperCase();
+            if (upper.includes("BAR") || upper.includes("EXACTLY_ONE")) return "BAR";
+            if (upper.includes("SQUARE")) return "SQUARE";
+            if (upper.includes("REVERSED_TRIANGLE")) return "REVERSED_TRIANGLE_ARROW";
+            if (upper.includes("TRIANGLE") || upper.includes("ARROW") || upper.includes("EQUILATERAL")) return "ARROW";
+            if (upper.includes("DIAMOND")) return "DIAMOND";
+            if (upper.includes("CIRCLE") || upper.includes("ROUND")) return "CIRCLE";
             return "NONE";
           };
-          connectorStartTerminal = mapCapToTerm(String(conn.connectorStartStrokeCap || "NONE"));
-          connectorEndTerminal = mapCapToTerm(String(conn.connectorEndStrokeCap || "NONE"));
+          const savedStartTerm = node.getPluginData("start_terminal");
+          const savedEndTerm = node.getPluginData("end_terminal");
+          connectorStartTerminal = savedStartTerm || mapCapToTerm(String(conn.connectorStartStrokeCap || "NONE"));
+          connectorEndTerminal = savedEndTerm || mapCapToTerm(String(conn.connectorEndStrokeCap || "NONE"));
           let sourceEndpointNode = null;
           let targetEndpointNode = null;
           if (conn.connectorStart && "endpointNodeId" in conn.connectorStart && conn.connectorStart.endpointNodeId) {
@@ -1547,19 +1873,49 @@
               connectorTargetMagnet = conn.connectorEnd.magnet;
             }
           }
+          let startPos = null;
+          let endPos = null;
+          if (sourceEndpointNode) {
+            startPos = getNodeCenter(sourceEndpointNode);
+          } else if (conn.connectorStart && "position" in conn.connectorStart && conn.connectorStart.position) {
+            startPos = conn.connectorStart.position;
+          }
+          if (targetEndpointNode) {
+            endPos = getNodeCenter(targetEndpointNode);
+          } else if (conn.connectorEnd && "position" in conn.connectorEnd && conn.connectorEnd.position) {
+            endPos = conn.connectorEnd.position;
+          }
+          let shouldReverse = false;
           if (sourceEndpointNode && targetEndpointNode) {
             const sorted = sortNodesBySpatialPosition([sourceEndpointNode, targetEndpointNode]);
             if (sorted[0].id === targetEndpointNode.id) {
-              connectorIsReversed = true;
+              shouldReverse = true;
+            }
+          } else if (startPos && endPos) {
+            const dx = Math.abs(startPos.x - endPos.x);
+            const dy = Math.abs(startPos.y - endPos.y);
+            if (dx >= dy) {
+              if (endPos.x < startPos.x) shouldReverse = true;
+            } else {
+              if (endPos.y < startPos.y) shouldReverse = true;
+            }
+          }
+          if (shouldReverse) {
+            connectorIsReversed = true;
+            if (sourceEndpointNode && targetEndpointNode) {
               connectorSourceNodeName = targetEndpointNode.name;
               connectorTargetNodeName = sourceEndpointNode.name;
-              const tempMagnet = connectorSourceMagnet;
-              connectorSourceMagnet = connectorTargetMagnet;
-              connectorTargetMagnet = tempMagnet;
-              const tempTerm = connectorStartTerminal;
-              connectorStartTerminal = connectorEndTerminal;
-              connectorEndTerminal = tempTerm;
+            } else {
+              const tempName = connectorSourceNodeName;
+              connectorSourceNodeName = connectorTargetNodeName;
+              connectorTargetNodeName = tempName;
             }
+            const tempMagnet = connectorSourceMagnet;
+            connectorSourceMagnet = connectorTargetMagnet;
+            connectorTargetMagnet = tempMagnet;
+            const tempTerm = connectorStartTerminal;
+            connectorStartTerminal = connectorEndTerminal;
+            connectorEndTerminal = tempTerm;
           }
         } else {
           connectorLabel = node.getPluginData("connector_label") || "";
@@ -1691,6 +2047,7 @@
         connectorSourceMagnet,
         connectorTargetMagnet,
         connectorIsReversed,
+        connectedNodeNames: multiConnectorSortedNodeNames.length > 0 ? multiConnectorSortedNodeNames : void 0,
         width: Math.round(node.width),
         height: Math.round(node.height),
         cornerRadius,
@@ -2338,6 +2695,18 @@
         card.setPluginData("node_elevation", `${payload.elevation}`);
         card.effects = getElevationEffects(payload.elevation, isBgDark);
         card.clipsContent = false;
+      } else {
+        card.setPluginData("node_elevation", "");
+        card.effects = [];
+      }
+      if (typeof payload.badgeNumber === "number" && payload.badgeNumber > 0) {
+        await applyStepBadgeToSingleCard(
+          card,
+          payload.badgeNumber,
+          payload.badgePosition || "TOP_LEFT",
+          payload.badgeShape || "Square",
+          payload.badgeColorMode || "Style"
+        );
       }
       const selection = figma.currentPage.selection;
       if (selection.length > 0) {
@@ -2503,7 +2872,9 @@
       if (statusBadge) {
         statusBadge.paddingLeft = 9;
         statusBadge.paddingRight = 9;
-        statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+        statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+          typeof card.cornerRadius === "number" ? card.cornerRadius : 0
+        );
         statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
         const currentStatus = payload.status || card.getPluginData("workflow_status");
         if (currentStatus && STATUS_CONFIG[currentStatus]) {
@@ -2588,7 +2959,7 @@
         card.setPluginData("node_elevation", `${payload.elevation}`);
         card.effects = getElevationEffects(payload.elevation, isBgDark);
         card.clipsContent = false;
-      } else if (payload.elevation === null) {
+      } else if (payload.elevation === null || payload.elevation === void 0) {
         card.setPluginData("node_elevation", "");
         card.effects = [];
       }
@@ -2711,7 +3082,11 @@
         payload.targetMagnet,
         payload.label,
         payload.colorHex,
-        payload.strokeWeight
+        payload.strokeWeight,
+        payload.routingType,
+        payload.startTerminal,
+        payload.endTerminal,
+        payload.strokePattern
       );
       figma.currentPage.selection = [connector];
       handleSelectionChange();
@@ -2720,7 +3095,7 @@
       notify(`\uC5F0\uACB0\uC120 \uC0DD\uC131 \uC2E4\uD328: ${String(err)}`, "error");
     }
   }
-  async function createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label, colorHex, strokeWeight) {
+  async function createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label, colorHex, strokeWeight, routingType, startTerminal, endTerminal, strokePattern) {
     const connWeight = typeof strokeWeight === "number" ? strokeWeight : 1.5;
     const connColor = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
     return await createOrthogonalVectorConnector(
@@ -2733,7 +3108,11 @@
         strokeColor: connColor,
         label,
         sourceNodeId: sourceNode.id,
-        targetNodeId: targetNode.id
+        targetNodeId: targetNode.id,
+        routingType,
+        startTerminal,
+        endTerminal,
+        strokePattern
       }
     );
   }
@@ -2909,9 +3288,11 @@
         };
         if (effectiveStartTerm && effectiveStartTerm !== "MIXED") {
           conn.connectorStartStrokeCap = mapCap(effectiveStartTerm);
+          conn.setPluginData("start_terminal", effectiveStartTerm);
         }
         if (effectiveEndTerm && effectiveEndTerm !== "MIXED") {
           conn.connectorEndStrokeCap = mapCap(effectiveEndTerm);
+          conn.setPluginData("end_terminal", effectiveEndTerm);
         }
         if (payload.hasLabel && payload.label !== void 0) {
           if (conn.text) {
@@ -2920,15 +3301,17 @@
         } else if (payload.hasLabel === false && conn.text) {
           await safeSetCharacters(conn.text, "");
         }
-        if (effectiveStartMagnet && conn.connectorStart && "endpointNodeId" in conn.connectorStart) {
+        const startEndpointNodeId = payload.isReversed ? conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0 : conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
+        const endEndpointNodeId = payload.isReversed ? conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0 : conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
+        if (effectiveStartMagnet && startEndpointNodeId) {
           conn.connectorStart = {
-            endpointNodeId: conn.connectorStart.endpointNodeId,
+            endpointNodeId: startEndpointNodeId,
             magnet: effectiveStartMagnet
           };
         }
-        if (effectiveEndMagnet && conn.connectorEnd && "endpointNodeId" in conn.connectorEnd) {
+        if (effectiveEndMagnet && endEndpointNodeId) {
           conn.connectorEnd = {
-            endpointNodeId: conn.connectorEnd.endpointNodeId,
+            endpointNodeId: endEndpointNodeId,
             magnet: effectiveEndMagnet
           };
         }
@@ -2947,17 +3330,14 @@
           if (typeof payload.strokeWeight === "number") {
             vectorNode.strokeWeight = payload.strokeWeight;
           }
-          if (payload.strokePattern === "DASHED") {
-            vectorNode.dashPattern = [4, 4];
-          } else if (payload.strokePattern === "DOTTED") {
-            vectorNode.dashPattern = [1.5, 3];
-          } else {
-            vectorNode.dashPattern = [];
-          }
-          if (effectiveEndTerm === "ARROW") {
-            vectorNode.strokeCap = "ARROW_EQUILATERAL";
-          } else {
-            vectorNode.strokeCap = "NONE";
+          if (payload.strokePattern) {
+            if (payload.strokePattern === "DASHED") {
+              vectorNode.dashPattern = [4, 4];
+            } else if (payload.strokePattern === "DOTTED") {
+              vectorNode.dashPattern = [1.5, 3];
+            } else {
+              vectorNode.dashPattern = [];
+            }
           }
         }
         let labelFrame = null;
@@ -2982,12 +3362,30 @@
             labelFrame.visible = false;
           }
         }
-        if (payload.colorHex) node.setPluginData("connector_color", payload.colorHex);
-        if (payload.strokeWeight) node.setPluginData("connector_weight", String(payload.strokeWeight));
-        if (payload.strokePattern) node.setPluginData("connector_pattern", payload.strokePattern);
-        if (payload.routingType) node.setPluginData("connector_routing", payload.routingType);
-        if (effectiveStartTerm) node.setPluginData("start_terminal", effectiveStartTerm);
-        if (effectiveEndTerm) node.setPluginData("end_terminal", effectiveEndTerm);
+        if (payload.colorHex) {
+          node.setPluginData("connector_color", payload.colorHex);
+          if (vectorNode) vectorNode.setPluginData("connector_color", payload.colorHex);
+        }
+        if (payload.strokeWeight) {
+          node.setPluginData("connector_weight", String(payload.strokeWeight));
+          if (vectorNode) vectorNode.setPluginData("connector_weight", String(payload.strokeWeight));
+        }
+        if (payload.strokePattern) {
+          node.setPluginData("connector_pattern", payload.strokePattern);
+          if (vectorNode) vectorNode.setPluginData("connector_pattern", payload.strokePattern);
+        }
+        if (payload.routingType) {
+          node.setPluginData("connector_routing", payload.routingType);
+          if (vectorNode) vectorNode.setPluginData("connector_routing", payload.routingType);
+        }
+        if (effectiveStartTerm && effectiveStartTerm !== "MIXED") {
+          node.setPluginData("start_terminal", effectiveStartTerm);
+          if (vectorNode) vectorNode.setPluginData("start_terminal", effectiveStartTerm);
+        }
+        if (effectiveEndTerm && effectiveEndTerm !== "MIXED") {
+          node.setPluginData("end_terminal", effectiveEndTerm);
+          if (vectorNode) vectorNode.setPluginData("end_terminal", effectiveEndTerm);
+        }
         if (effectiveStartMagnet) node.setPluginData("source_magnet", effectiveStartMagnet);
         if (effectiveEndMagnet) node.setPluginData("target_magnet", effectiveEndMagnet);
         await updateOrthogonalVectorConnector(node, effectiveStartMagnet, effectiveEndMagnet);
@@ -3156,7 +3554,9 @@
           statusBadge.paddingRight = 9;
           statusBadge.paddingTop = 3;
           statusBadge.paddingBottom = 3;
-          statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+          statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+            typeof card.cornerRadius === "number" ? card.cornerRadius : 0
+          );
           statusBadge.setPluginData("is_status_badge", "true");
           const badgeText = figma.createText();
           badgeText.name = "StatusText";
@@ -3176,7 +3576,9 @@
           const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, nodeBgColor, isDarkTheme);
           statusBadge.paddingLeft = 9;
           statusBadge.paddingRight = 9;
-          statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+          statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+            typeof card.cornerRadius === "number" ? card.cornerRadius : 0
+          );
           statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
           const textNode = statusBadge.children.find((c) => c.type === "TEXT");
           if (textNode) {
@@ -3307,6 +3709,92 @@
       numText.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
     }
   }
+  async function applyStepBadgeToSingleCard(card, currentNum, corner = "TOP_LEFT", shape = "Square", colorMode = "Style") {
+    await loadRequiredFonts();
+    card.clipsContent = false;
+    card.setPluginData("step_number", `${currentNum}`);
+    card.setPluginData("badge_corner", corner);
+    card.setPluginData("badge_shape", shape);
+    card.setPluginData("badge_color_mode", colorMode);
+    let stepBadge = card.children.find(
+      (c) => c.getPluginData("is_step_badge") === "true" || c.name.startsWith("[Step]")
+    );
+    let numText;
+    if (!stepBadge) {
+      stepBadge = figma.createFrame();
+      card.appendChild(stepBadge);
+      stepBadge.setPluginData("is_step_badge", "true");
+      numText = figma.createText();
+      numText.name = "NumText";
+      numText.fontName = { family: "Inter", style: "Bold" };
+      numText.fontSize = 11;
+      numText.textAutoResize = "WIDTH_AND_HEIGHT";
+      stepBadge.appendChild(numText);
+    } else {
+      card.appendChild(stepBadge);
+      let foundText = stepBadge.children.find((c) => c.type === "TEXT");
+      if (!foundText) {
+        foundText = figma.createText();
+        foundText.name = "NumText";
+        foundText.fontName = { family: "Inter", style: "Bold" };
+        foundText.fontSize = 11;
+        foundText.textAutoResize = "WIDTH_AND_HEIGHT";
+        stepBadge.appendChild(foundText);
+      }
+      numText = foundText;
+    }
+    applyStepBadgeColors(stepBadge, numText, colorMode, card);
+    if (card.layoutMode !== "NONE") {
+      stepBadge.layoutPositioning = "ABSOLUTE";
+    }
+    stepBadge.layoutMode = "HORIZONTAL";
+    stepBadge.primaryAxisAlignItems = "CENTER";
+    stepBadge.counterAxisAlignItems = "CENTER";
+    stepBadge.paddingLeft = 4;
+    stepBadge.paddingRight = 4;
+    stepBadge.paddingTop = 0;
+    stepBadge.paddingBottom = 0;
+    try {
+      stepBadge.minWidth = 24;
+      stepBadge.minHeight = 24;
+      stepBadge.maxHeight = 24;
+    } catch (e) {
+    }
+    stepBadge.counterAxisSizingMode = "FIXED";
+    stepBadge.primaryAxisSizingMode = "AUTO";
+    stepBadge.resize(Math.max(24, stepBadge.width || 24), 24);
+    if (shape === "Circle") {
+      stepBadge.cornerRadius = 999;
+    } else if (shape === "RoundBox") {
+      stepBadge.cornerRadius = 5;
+    } else {
+      stepBadge.cornerRadius = 0;
+    }
+    stepBadge.name = `[Step] ${currentNum}`;
+    stepBadge.visible = true;
+    if (numText) {
+      await safeSetCharacters(numText, `${currentNum}`);
+    }
+    const bw = Math.max(24, Math.round(stepBadge.width));
+    const bh = 24;
+    if (corner === "TOP_RIGHT") {
+      stepBadge.x = card.width - bw + 9;
+      stepBadge.y = -9;
+      stepBadge.constraints = { horizontal: "MAX", vertical: "MIN" };
+    } else if (corner === "BOTTOM_LEFT") {
+      stepBadge.x = -9;
+      stepBadge.y = card.height - bh + 9;
+      stepBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
+    } else if (corner === "BOTTOM_RIGHT") {
+      stepBadge.x = card.width - bw + 9;
+      stepBadge.y = card.height - bh + 9;
+      stepBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+    } else {
+      stepBadge.x = -9;
+      stepBadge.y = -9;
+      stepBadge.constraints = { horizontal: "MIN", vertical: "MIN" };
+    }
+  }
   async function addStepBadges(startNumber = 1, corner = "TOP_LEFT", shape = "Square", colorMode = "Style") {
     const rawSelection = [...figma.currentPage.selection];
     if (rawSelection.length === 0) {
@@ -3325,92 +3813,9 @@
     }
     const selection = Array.from(nodesMap.values());
     selection.sort((a, b) => a.x - b.x);
-    await loadRequiredFonts();
     let currentNum = startNumber;
     for (const card of selection) {
-      card.clipsContent = false;
-      card.setPluginData("step_number", `${currentNum}`);
-      card.setPluginData("badge_corner", corner);
-      card.setPluginData("badge_shape", shape);
-      card.setPluginData("badge_color_mode", colorMode);
-      let stepBadge = card.children.find(
-        (c) => c.getPluginData("is_step_badge") === "true" || c.name.startsWith("[Step]")
-      );
-      let numText;
-      if (!stepBadge) {
-        stepBadge = figma.createFrame();
-        card.appendChild(stepBadge);
-        stepBadge.setPluginData("is_step_badge", "true");
-        numText = figma.createText();
-        numText.name = "NumText";
-        numText.fontName = { family: "Inter", style: "Bold" };
-        numText.fontSize = 11;
-        numText.textAutoResize = "WIDTH_AND_HEIGHT";
-        stepBadge.appendChild(numText);
-      } else {
-        card.appendChild(stepBadge);
-        let foundText = stepBadge.children.find((c) => c.type === "TEXT");
-        if (!foundText) {
-          foundText = figma.createText();
-          foundText.name = "NumText";
-          foundText.fontName = { family: "Inter", style: "Bold" };
-          foundText.fontSize = 11;
-          foundText.textAutoResize = "WIDTH_AND_HEIGHT";
-          stepBadge.appendChild(foundText);
-        }
-        numText = foundText;
-      }
-      applyStepBadgeColors(stepBadge, numText, colorMode, card);
-      if (card.layoutMode !== "NONE") {
-        stepBadge.layoutPositioning = "ABSOLUTE";
-      }
-      stepBadge.layoutMode = "HORIZONTAL";
-      stepBadge.primaryAxisAlignItems = "CENTER";
-      stepBadge.counterAxisAlignItems = "CENTER";
-      stepBadge.paddingLeft = 4;
-      stepBadge.paddingRight = 4;
-      stepBadge.paddingTop = 0;
-      stepBadge.paddingBottom = 0;
-      try {
-        stepBadge.minWidth = 24;
-        stepBadge.minHeight = 24;
-        stepBadge.maxHeight = 24;
-      } catch (e) {
-      }
-      stepBadge.counterAxisSizingMode = "FIXED";
-      stepBadge.primaryAxisSizingMode = "AUTO";
-      stepBadge.resize(Math.max(24, stepBadge.width || 24), 24);
-      if (shape === "Circle") {
-        stepBadge.cornerRadius = 999;
-      } else if (shape === "RoundBox") {
-        stepBadge.cornerRadius = 5;
-      } else {
-        stepBadge.cornerRadius = 0;
-      }
-      stepBadge.name = `[Step] ${currentNum}`;
-      stepBadge.visible = true;
-      if (numText) {
-        await safeSetCharacters(numText, `${currentNum}`);
-      }
-      const bw = Math.max(24, Math.round(stepBadge.width));
-      const bh = 24;
-      if (corner === "TOP_RIGHT") {
-        stepBadge.x = card.width - bw + 9;
-        stepBadge.y = -9;
-        stepBadge.constraints = { horizontal: "MAX", vertical: "MIN" };
-      } else if (corner === "BOTTOM_LEFT") {
-        stepBadge.x = -9;
-        stepBadge.y = card.height - bh + 9;
-        stepBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
-      } else if (corner === "BOTTOM_RIGHT") {
-        stepBadge.x = card.width - bw + 9;
-        stepBadge.y = card.height - bh + 9;
-        stepBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-      } else {
-        stepBadge.x = -9;
-        stepBadge.y = -9;
-        stepBadge.constraints = { horizontal: "MIN", vertical: "MIN" };
-      }
+      await applyStepBadgeToSingleCard(card, currentNum, corner, shape, colorMode);
       currentNum++;
     }
     handleSelectionChange();
@@ -3724,6 +4129,11 @@
             const flowNode = findFlowNode(changedNode);
             if (flowNode) {
               movedNodeIds.add(flowNode.id);
+            }
+            let p = changedNode.parent;
+            while (p && p.type !== "PAGE") {
+              movedNodeIds.add(p.id);
+              p = p.parent;
             }
           }
         }

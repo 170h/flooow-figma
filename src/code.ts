@@ -13,6 +13,7 @@ import {
   ConnectorRoutingType,
   ConnectorTerminalType,
   DiagramNodeType,
+  DesignFrameItem,
 } from './types';
 import {
   createOrthogonalVectorConnector,
@@ -21,6 +22,7 @@ import {
   refreshConnectorRegistry,
   syncConnectorsForMovedNodes,
   getOptimalMagnetPair,
+  cleanupGhostTerminalMarkers,
   Box,
 } from './customConnector';
 
@@ -1044,8 +1046,43 @@ async function handleSelectionChange() {
   }
 
   // 복수 노드 선택 시 캔버스 상의 2D 공간 배치에 따라 상대적으로 위쪽 혹은 왼쪽 노드가 앞(기즈모 왼쪽)에 오도록 정렬
-  if (uniqueNodes.length > 1 && connectorCount === 0) {
+  if (uniqueNodes.length > 1) {
     uniqueNodes = sortNodesBySpatialPosition(uniqueNodes);
+  }
+
+  // 커넥터 선택 시 연결된 엔드포인트 노드들을 캔버스 2D 공간 배치(위/왼쪽 우선)로 정렬하여 수집
+  let multiConnectorSortedNodeNames: string[] = [];
+  if (connectorCount > 0 && flowNodeCount === 0) {
+    const endpointNodeMap = new Map<string, SceneNode>();
+    for (const c of connNodes) {
+      if (c.type === 'CONNECTOR') {
+        const conn = c as ConnectorNode;
+        if (conn.connectorStart && 'endpointNodeId' in conn.connectorStart && conn.connectorStart.endpointNodeId) {
+          const srcNode = figma.getNodeById(conn.connectorStart.endpointNodeId) as SceneNode | null;
+          if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
+        }
+        if (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
+          const tgtNode = figma.getNodeById(conn.connectorEnd.endpointNodeId) as SceneNode | null;
+          if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
+        }
+      } else {
+        const srcId = c.getPluginData('source_node_id');
+        const tgtId = c.getPluginData('target_node_id');
+        if (srcId) {
+          const srcNode = figma.getNodeById(srcId) as SceneNode | null;
+          if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
+        }
+        if (tgtId) {
+          const tgtNode = figma.getNodeById(tgtId) as SceneNode | null;
+          if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
+        }
+      }
+    }
+    const endpointNodes = Array.from(endpointNodeMap.values());
+    if (endpointNodes.length > 0) {
+      const sortedEndpoints = sortNodesBySpatialPosition(endpointNodes);
+      multiConnectorSortedNodeNames = sortedEndpoints.map((n) => n.name);
+    }
   }
 
   const nodes: SelectedNodeInfo[] = await Promise.all(uniqueNodes.map(async (node) => {
@@ -1154,17 +1191,19 @@ async function handleSelectionChange() {
         }
 
         const mapCapToTerm = (cap: string): ConnectorTerminalType => {
-          if (cap.includes('BAR') || cap.includes('EXACTLY_ONE')) return 'BAR';
-          if (cap.includes('SQUARE')) return 'SQUARE';
-          if (cap.includes('REVERSED_TRIANGLE')) return 'REVERSED_TRIANGLE_ARROW';
-          if (cap.includes('TRIANGLE_ARROW') || cap.includes('ARROW_EQUILATERAL')) return 'ARROW';
-          if (cap.includes('ARROW_LINES') || cap === 'ARROW') return 'ARROW';
-          if (cap.includes('DIAMOND_FILLED') || cap === 'DIAMOND') return 'DIAMOND';
-          if (cap.includes('CIRCLE_FILLED') || cap === 'CIRCLE') return 'CIRCLE';
+          const upper = String(cap || '').toUpperCase();
+          if (upper.includes('BAR') || upper.includes('EXACTLY_ONE')) return 'BAR';
+          if (upper.includes('SQUARE')) return 'SQUARE';
+          if (upper.includes('REVERSED_TRIANGLE')) return 'REVERSED_TRIANGLE_ARROW';
+          if (upper.includes('TRIANGLE') || upper.includes('ARROW') || upper.includes('EQUILATERAL')) return 'ARROW';
+          if (upper.includes('DIAMOND')) return 'DIAMOND';
+          if (upper.includes('CIRCLE') || upper.includes('ROUND')) return 'CIRCLE';
           return 'NONE';
         };
-        connectorStartTerminal = mapCapToTerm(String(conn.connectorStartStrokeCap || 'NONE'));
-        connectorEndTerminal = mapCapToTerm(String(conn.connectorEndStrokeCap || 'NONE'));
+        const savedStartTerm = node.getPluginData('start_terminal') as ConnectorTerminalType;
+        const savedEndTerm = node.getPluginData('end_terminal') as ConnectorTerminalType;
+        connectorStartTerminal = savedStartTerm || mapCapToTerm(String(conn.connectorStartStrokeCap || 'NONE'));
+        connectorEndTerminal = savedEndTerm || mapCapToTerm(String(conn.connectorEndStrokeCap || 'NONE'));
 
         // Figma 네이티브 커넥터의 연결 엔드포인트 노드 정보 확인
         let sourceEndpointNode: SceneNode | null = null;
@@ -1184,22 +1223,58 @@ async function handleSelectionChange() {
           }
         }
 
-        // 연결된 두 노드의 캔버스 상 위치를 비교하여 상대적으로 위/왼쪽 노드가 기즈모 왼쪽(우선)에 오도록 정렬
+        // 캔버스 2D 공간 배치(위/왼쪽 우선)로 커넥터의 시작과 끝 방향성을 일치시킴
+        let startPos: { x: number; y: number } | null = null;
+        let endPos: { x: number; y: number } | null = null;
+
+        if (sourceEndpointNode) {
+          startPos = getNodeCenter(sourceEndpointNode);
+        } else if (conn.connectorStart && 'position' in conn.connectorStart && (conn.connectorStart as any).position) {
+          startPos = (conn.connectorStart as any).position;
+        }
+
+        if (targetEndpointNode) {
+          endPos = getNodeCenter(targetEndpointNode);
+        } else if (conn.connectorEnd && 'position' in conn.connectorEnd && (conn.connectorEnd as any).position) {
+          endPos = (conn.connectorEnd as any).position;
+        }
+
+        let shouldReverse = false;
         if (sourceEndpointNode && targetEndpointNode) {
           const sorted = sortNodesBySpatialPosition([sourceEndpointNode, targetEndpointNode]);
           if (sorted[0].id === targetEndpointNode.id) {
-            connectorIsReversed = true;
+            shouldReverse = true;
+          }
+        } else if (startPos && endPos) {
+          const dx = Math.abs(startPos.x - endPos.x);
+          const dy = Math.abs(startPos.y - endPos.y);
+          if (dx >= dy) {
+            // 주로 가로 흐름: endPos가 startPos보다 왼쪽에 있으면 뒤집힘
+            if (endPos.x < startPos.x) shouldReverse = true;
+          } else {
+            // 주로 세로 흐름: endPos가 startPos보다 위쪽에 있으면 뒤집힘
+            if (endPos.y < startPos.y) shouldReverse = true;
+          }
+        }
+
+        if (shouldReverse) {
+          connectorIsReversed = true;
+          if (sourceEndpointNode && targetEndpointNode) {
             connectorSourceNodeName = targetEndpointNode.name;
             connectorTargetNodeName = sourceEndpointNode.name;
-
-            const tempMagnet = connectorSourceMagnet;
-            connectorSourceMagnet = connectorTargetMagnet;
-            connectorTargetMagnet = tempMagnet;
-
-            const tempTerm = connectorStartTerminal;
-            connectorStartTerminal = connectorEndTerminal;
-            connectorEndTerminal = tempTerm;
+          } else {
+            const tempName = connectorSourceNodeName;
+            connectorSourceNodeName = connectorTargetNodeName;
+            connectorTargetNodeName = tempName;
           }
+
+          const tempMagnet = connectorSourceMagnet;
+          connectorSourceMagnet = connectorTargetMagnet;
+          connectorTargetMagnet = tempMagnet;
+
+          const tempTerm = connectorStartTerminal;
+          connectorStartTerminal = connectorEndTerminal;
+          connectorEndTerminal = tempTerm;
         }
       } else {
         // 커스텀 벡터 직각 커넥터 (그룹 또는 벡터 노드)
@@ -1350,6 +1425,7 @@ async function handleSelectionChange() {
       connectorSourceMagnet,
       connectorTargetMagnet,
       connectorIsReversed,
+      connectedNodeNames: multiConnectorSortedNodeNames.length > 0 ? multiConnectorSortedNodeNames : undefined,
       width: Math.round(node.width),
       height: Math.round(node.height),
       cornerRadius,
@@ -2047,6 +2123,20 @@ async function createFlowNode(payload: FlowNodePayload) {
       card.setPluginData('node_elevation', `${payload.elevation}`);
       card.effects = getElevationEffects(payload.elevation, isBgDark);
       card.clipsContent = false;
+    } else {
+      card.setPluginData('node_elevation', '');
+      card.effects = [];
+    }
+
+    // 스텝 배지(Step Badge) 생성
+    if (typeof payload.badgeNumber === 'number' && payload.badgeNumber > 0) {
+      await applyStepBadgeToSingleCard(
+        card,
+        payload.badgeNumber,
+        payload.badgePosition || 'TOP_LEFT',
+        payload.badgeShape || 'Square',
+        payload.badgeColorMode || 'Style'
+      );
     }
 
     // 위치 지정
@@ -2245,7 +2335,9 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     if (statusBadge) {
       statusBadge.paddingLeft = 9;
       statusBadge.paddingRight = 9;
-      statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+      statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+        typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
+      );
       statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
 
       // 노드 배경색 변화에 따른 상태 뱃지 컬러 동기화
@@ -2346,7 +2438,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.setPluginData('node_elevation', `${payload.elevation}`);
       card.effects = getElevationEffects(payload.elevation, isBgDark);
       card.clipsContent = false;
-    } else if (payload.elevation === null) {
+    } else if (payload.elevation === null || payload.elevation === undefined) {
       card.setPluginData('node_elevation', '');
       card.effects = [];
     }
@@ -2503,7 +2595,11 @@ async function connectPoints(payload: ConnectPointsPayload) {
       payload.targetMagnet,
       payload.label,
       payload.colorHex,
-      payload.strokeWeight
+      payload.strokeWeight,
+      payload.routingType,
+      payload.startTerminal,
+      payload.endTerminal,
+      payload.strokePattern
     );
 
     figma.currentPage.selection = [connector];
@@ -2514,7 +2610,7 @@ async function connectPoints(payload: ConnectPointsPayload) {
   }
 }
 
-// 단일 커스텀 90도 칼각 직각 벡터 커넥터 생성 함수 (피그잼 기본 라운딩 제거)
+// 단일 커스텀 벡터 커넥터 생성 함수 (직각 ORTHOGONAL, 라운드니스 S_CURVE, 자유곡선 CURVED, 직선 STRAIGHT, 시작/끝 단자)
 async function createSingleConnector(
   sourceNode: SceneNode,
   sourceMagnet: MagnetPosition,
@@ -2522,12 +2618,16 @@ async function createSingleConnector(
   targetMagnet: MagnetPosition,
   label?: string,
   colorHex?: string,
-  strokeWeight?: number
+  strokeWeight?: number,
+  routingType?: ConnectorRoutingType,
+  startTerminal?: ConnectorTerminalType,
+  endTerminal?: ConnectorTerminalType,
+  strokePattern?: ConnectorStrokePattern
 ): Promise<VectorNode | GroupNode> {
   const connWeight = typeof strokeWeight === 'number' ? strokeWeight : 1.5;
   const connColor: RGB = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
 
-  // 커스텀 90도 직각 VectorNode 커넥터 생성 (라운딩 없는 완전한 칼각 직각)
+  // 커스텀 VectorNode 커넥터 생성 (선택된 라우팅 스타일 및 시작점/끝점 단자 형태에 맞춰 렌더링)
   return await createOrthogonalVectorConnector(
     sourceNode,
     sourceMagnet,
@@ -2539,6 +2639,10 @@ async function createSingleConnector(
       label,
       sourceNodeId: sourceNode.id,
       targetNodeId: targetNode.id,
+      routingType,
+      startTerminal,
+      endTerminal,
+      strokePattern,
     }
   );
 }
@@ -2701,9 +2805,10 @@ async function updateConnectorProperties(payload: {
   targetMagnet?: MagnetPosition;
   label?: string;
   hasLabel?: boolean;
+  isReversed?: boolean;
 }) {
   try {
-    let node = figma.getNodeById(payload.connectorId);
+    let node: SceneNode | null = figma.getNodeById(payload.connectorId) as SceneNode | null;
     if (!node) {
       const selection = figma.currentPage.selection;
       if (selection.length > 0) node = selection[0];
@@ -2770,9 +2875,11 @@ async function updateConnectorProperties(payload: {
       };
       if (effectiveStartTerm && effectiveStartTerm !== 'MIXED') {
         conn.connectorStartStrokeCap = mapCap(effectiveStartTerm);
+        conn.setPluginData('start_terminal', effectiveStartTerm);
       }
       if (effectiveEndTerm && effectiveEndTerm !== 'MIXED') {
         conn.connectorEndStrokeCap = mapCap(effectiveEndTerm);
+        conn.setPluginData('end_terminal', effectiveEndTerm);
       }
 
       // 6. 라벨
@@ -2785,15 +2892,22 @@ async function updateConnectorProperties(payload: {
       }
 
       // 7. Figma 네이티브 커넥터 마그넷 위치 갱신
-      if (effectiveStartMagnet && conn.connectorStart && 'endpointNodeId' in conn.connectorStart) {
+      const startEndpointNodeId = payload.isReversed
+        ? (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined)
+        : (conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined);
+      const endEndpointNodeId = payload.isReversed
+        ? (conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined)
+        : (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined);
+
+      if (effectiveStartMagnet && startEndpointNodeId) {
         conn.connectorStart = {
-          endpointNodeId: conn.connectorStart.endpointNodeId,
+          endpointNodeId: startEndpointNodeId,
           magnet: effectiveStartMagnet,
         };
       }
-      if (effectiveEndMagnet && conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd) {
+      if (effectiveEndMagnet && endEndpointNodeId) {
         conn.connectorEnd = {
-          endpointNodeId: conn.connectorEnd.endpointNodeId,
+          endpointNodeId: endEndpointNodeId,
           magnet: effectiveEndMagnet,
         };
       }
@@ -2815,17 +2929,14 @@ async function updateConnectorProperties(payload: {
         if (typeof payload.strokeWeight === 'number') {
           vectorNode.strokeWeight = payload.strokeWeight;
         }
-        if (payload.strokePattern === 'DASHED') {
-          vectorNode.dashPattern = [4, 4];
-        } else if (payload.strokePattern === 'DOTTED') {
-          vectorNode.dashPattern = [1.5, 3];
-        } else {
-          vectorNode.dashPattern = [];
-        }
-        if (effectiveEndTerm === 'ARROW') {
-          vectorNode.strokeCap = 'ARROW_EQUILATERAL';
-        } else {
-          vectorNode.strokeCap = 'NONE';
+        if (payload.strokePattern) {
+          if (payload.strokePattern === 'DASHED') {
+            vectorNode.dashPattern = [4, 4];
+          } else if (payload.strokePattern === 'DOTTED') {
+            vectorNode.dashPattern = [1.5, 3];
+          } else {
+            vectorNode.dashPattern = [];
+          }
         }
       }
 
@@ -2854,16 +2965,34 @@ async function updateConnectorProperties(payload: {
         }
       }
 
-      if (payload.colorHex) node.setPluginData('connector_color', payload.colorHex);
-      if (payload.strokeWeight) node.setPluginData('connector_weight', String(payload.strokeWeight));
-      if (payload.strokePattern) node.setPluginData('connector_pattern', payload.strokePattern);
-      if (payload.routingType) node.setPluginData('connector_routing', payload.routingType);
-      if (effectiveStartTerm) node.setPluginData('start_terminal', effectiveStartTerm);
-      if (effectiveEndTerm) node.setPluginData('end_terminal', effectiveEndTerm);
+      if (payload.colorHex) {
+        node.setPluginData('connector_color', payload.colorHex);
+        if (vectorNode) vectorNode.setPluginData('connector_color', payload.colorHex);
+      }
+      if (payload.strokeWeight) {
+        node.setPluginData('connector_weight', String(payload.strokeWeight));
+        if (vectorNode) vectorNode.setPluginData('connector_weight', String(payload.strokeWeight));
+      }
+      if (payload.strokePattern) {
+        node.setPluginData('connector_pattern', payload.strokePattern);
+        if (vectorNode) vectorNode.setPluginData('connector_pattern', payload.strokePattern);
+      }
+      if (payload.routingType) {
+        node.setPluginData('connector_routing', payload.routingType);
+        if (vectorNode) vectorNode.setPluginData('connector_routing', payload.routingType);
+      }
+      if (effectiveStartTerm && effectiveStartTerm !== 'MIXED') {
+        node.setPluginData('start_terminal', effectiveStartTerm);
+        if (vectorNode) vectorNode.setPluginData('start_terminal', effectiveStartTerm);
+      }
+      if (effectiveEndTerm && effectiveEndTerm !== 'MIXED') {
+        node.setPluginData('end_terminal', effectiveEndTerm);
+        if (vectorNode) vectorNode.setPluginData('end_terminal', effectiveEndTerm);
+      }
       if (effectiveStartMagnet) node.setPluginData('source_magnet', effectiveStartMagnet);
       if (effectiveEndMagnet) node.setPluginData('target_magnet', effectiveEndMagnet);
 
-      // 마그넷 또는 라우팅 변경 시 커스텀 벡터 직각 경로 즉시 재계산
+      // 마그넷, 라우팅 또는 단자 변경 시 커스텀 벡터 직각 경로 즉시 재계산 (새로운 시작/끝 단자 버텍스 적용)
       await updateOrthogonalVectorConnector(node, effectiveStartMagnet, effectiveEndMagnet);
     }
 
@@ -3070,7 +3199,9 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
         statusBadge.paddingRight = 9;
         statusBadge.paddingTop = 3;
         statusBadge.paddingBottom = 3;
-        statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+        statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+          typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
+        );
         statusBadge.setPluginData('is_status_badge', 'true');
 
         const badgeText = figma.createText();
@@ -3095,7 +3226,9 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
 
         statusBadge.paddingLeft = 9;
         statusBadge.paddingRight = 9;
-        statusBadge.cornerRadius = getStatusBadgeCornerRadius(card.cornerRadius);
+        statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+          typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
+        );
         statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
         const textNode = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode;
         if (textNode) {
@@ -3271,6 +3404,116 @@ function applyStepBadgeColors(
   }
 }
 
+// 단일 노드 카드 코너에 스텝 뱃지 부착 헬퍼
+async function applyStepBadgeToSingleCard(
+  card: FrameNode,
+  currentNum: number,
+  corner: string = 'TOP_LEFT',
+  shape: string = 'Square',
+  colorMode: 'White' | 'Black' | 'Style' = 'Style'
+) {
+  await loadRequiredFonts();
+  card.clipsContent = false;
+  card.setPluginData('step_number', `${currentNum}`);
+  card.setPluginData('badge_corner', corner);
+  card.setPluginData('badge_shape', shape);
+  card.setPluginData('badge_color_mode', colorMode);
+
+  let stepBadge = card.children.find(
+    (c) => c.getPluginData('is_step_badge') === 'true' || c.name.startsWith('[Step]')
+  ) as FrameNode | undefined;
+
+  let numText: TextNode;
+  if (!stepBadge) {
+    stepBadge = figma.createFrame();
+    card.appendChild(stepBadge);
+    stepBadge.setPluginData('is_step_badge', 'true');
+
+    numText = figma.createText();
+    numText.name = 'NumText';
+    numText.fontName = { family: 'Inter', style: 'Bold' };
+    numText.fontSize = 11;
+    numText.textAutoResize = 'WIDTH_AND_HEIGHT';
+    stepBadge.appendChild(numText);
+  } else {
+    card.appendChild(stepBadge);
+    let foundText = stepBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+    if (!foundText) {
+      foundText = figma.createText();
+      foundText.name = 'NumText';
+      foundText.fontName = { family: 'Inter', style: 'Bold' };
+      foundText.fontSize = 11;
+      foundText.textAutoResize = 'WIDTH_AND_HEIGHT';
+      stepBadge.appendChild(foundText);
+    }
+    numText = foundText;
+  }
+
+  applyStepBadgeColors(stepBadge, numText, colorMode, card);
+
+  if (card.layoutMode !== 'NONE') {
+    stepBadge.layoutPositioning = 'ABSOLUTE';
+  }
+
+  // 레이아웃 속성 설정 (가로 Auto/Hug, 최소 너비 24, 세로 24 고정)
+  stepBadge.layoutMode = 'HORIZONTAL';
+  stepBadge.primaryAxisAlignItems = 'CENTER';
+  stepBadge.counterAxisAlignItems = 'CENTER';
+  stepBadge.paddingLeft = 4;
+  stepBadge.paddingRight = 4;
+  stepBadge.paddingTop = 0;
+  stepBadge.paddingBottom = 0;
+  try {
+    stepBadge.minWidth = 24;
+    stepBadge.minHeight = 24;
+    stepBadge.maxHeight = 24;
+  } catch (e) {
+    // Figma 버전 호환성 예외 처리
+  }
+  stepBadge.counterAxisSizingMode = 'FIXED';
+  stepBadge.primaryAxisSizingMode = 'AUTO';
+  stepBadge.resize(Math.max(24, stepBadge.width || 24), 24);
+
+  // 코너 모양 적용 (Circle인 경우 가로로 늘어날 때 양 끝이 둥근 캡슐/알약 형태가 되도록 999 설정)
+  if (shape === 'Circle') {
+    stepBadge.cornerRadius = 999;
+  } else if (shape === 'RoundBox') {
+    stepBadge.cornerRadius = 5;
+  } else {
+    stepBadge.cornerRadius = 0; // Square
+  }
+
+  stepBadge.name = `[Step] ${currentNum}`;
+  stepBadge.visible = true;
+
+  // 텍스트 반영
+  if (numText) {
+    await safeSetCharacters(numText, `${currentNum}`);
+  }
+
+  // 텍스트 반영 후 실제 뱃지 너비(bw)를 기준으로 코너 위치 좌표 및 constraints 계산
+  const bw = Math.max(24, Math.round(stepBadge.width));
+  const bh = 24;
+  if (corner === 'TOP_RIGHT') {
+    stepBadge.x = card.width - bw + 9;
+    stepBadge.y = -9;
+    stepBadge.constraints = { horizontal: 'MAX', vertical: 'MIN' };
+  } else if (corner === 'BOTTOM_LEFT') {
+    stepBadge.x = -9;
+    stepBadge.y = card.height - bh + 9;
+    stepBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
+  } else if (corner === 'BOTTOM_RIGHT') {
+    stepBadge.x = card.width - bw + 9;
+    stepBadge.y = card.height - bh + 9;
+    stepBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+  } else {
+    // TOP_LEFT 기본값
+    stepBadge.x = -9;
+    stepBadge.y = -9;
+    stepBadge.constraints = { horizontal: 'MIN', vertical: 'MIN' };
+  }
+}
+
 // 스텝 번호 부여 (노드 카드 코너에 일체형 스텝 뱃지로 부착)
 async function addStepBadges(
   startNumber: number = 1,
@@ -3298,110 +3541,10 @@ async function addStepBadges(
 
   const selection = Array.from(nodesMap.values());
   selection.sort((a, b) => a.x - b.x);
-  await loadRequiredFonts();
 
   let currentNum = startNumber;
   for (const card of selection) {
-    card.clipsContent = false;
-    card.setPluginData('step_number', `${currentNum}`);
-    card.setPluginData('badge_corner', corner);
-    card.setPluginData('badge_shape', shape);
-    card.setPluginData('badge_color_mode', colorMode);
-
-    let stepBadge = card.children.find(
-      (c) => c.getPluginData('is_step_badge') === 'true' || c.name.startsWith('[Step]')
-    ) as FrameNode | undefined;
-
-    let numText: TextNode;
-    if (!stepBadge) {
-      stepBadge = figma.createFrame();
-      card.appendChild(stepBadge);
-      stepBadge.setPluginData('is_step_badge', 'true');
-
-      numText = figma.createText();
-      numText.name = 'NumText';
-      numText.fontName = { family: 'Inter', style: 'Bold' };
-      numText.fontSize = 11;
-      numText.textAutoResize = 'WIDTH_AND_HEIGHT';
-      stepBadge.appendChild(numText);
-    } else {
-      card.appendChild(stepBadge);
-      let foundText = stepBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
-      if (!foundText) {
-        foundText = figma.createText();
-        foundText.name = 'NumText';
-        foundText.fontName = { family: 'Inter', style: 'Bold' };
-        foundText.fontSize = 11;
-        foundText.textAutoResize = 'WIDTH_AND_HEIGHT';
-        stepBadge.appendChild(foundText);
-      }
-      numText = foundText;
-    }
-
-    applyStepBadgeColors(stepBadge, numText, colorMode, card);
-
-    if (card.layoutMode !== 'NONE') {
-      stepBadge.layoutPositioning = 'ABSOLUTE';
-    }
-
-    // 레이아웃 속성 설정 (가로 Auto/Hug, 최소 너비 24, 세로 24 고정)
-    stepBadge.layoutMode = 'HORIZONTAL';
-    stepBadge.primaryAxisAlignItems = 'CENTER';
-    stepBadge.counterAxisAlignItems = 'CENTER';
-    stepBadge.paddingLeft = 4;
-    stepBadge.paddingRight = 4;
-    stepBadge.paddingTop = 0;
-    stepBadge.paddingBottom = 0;
-    try {
-      stepBadge.minWidth = 24;
-      stepBadge.minHeight = 24;
-      stepBadge.maxHeight = 24;
-    } catch (e) {
-      // Figma 버전 호환성 예외 처리
-    }
-    stepBadge.counterAxisSizingMode = 'FIXED';
-    stepBadge.primaryAxisSizingMode = 'AUTO';
-    stepBadge.resize(Math.max(24, stepBadge.width || 24), 24);
-
-    // 코너 모양 적용 (Circle인 경우 가로로 늘어날 때 양 끝이 둥근 캡슐/알약 형태가 되도록 999 설정)
-    if (shape === 'Circle') {
-      stepBadge.cornerRadius = 999;
-    } else if (shape === 'RoundBox') {
-      stepBadge.cornerRadius = 5;
-    } else {
-      stepBadge.cornerRadius = 0; // Square
-    }
-
-    stepBadge.name = `[Step] ${currentNum}`;
-    stepBadge.visible = true;
-
-    // 텍스트 반영
-    if (numText) {
-      await safeSetCharacters(numText, `${currentNum}`);
-    }
-
-    // 텍스트 반영 후 실제 뱃지 너비(bw)를 기준으로 코너 위치 좌표 및 constraints 계산
-    const bw = Math.max(24, Math.round(stepBadge.width));
-    const bh = 24;
-    if (corner === 'TOP_RIGHT') {
-      stepBadge.x = card.width - bw + 9;
-      stepBadge.y = -9;
-      stepBadge.constraints = { horizontal: 'MAX', vertical: 'MIN' };
-    } else if (corner === 'BOTTOM_LEFT') {
-      stepBadge.x = -9;
-      stepBadge.y = card.height - bh + 9;
-      stepBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
-    } else if (corner === 'BOTTOM_RIGHT') {
-      stepBadge.x = card.width - bw + 9;
-      stepBadge.y = card.height - bh + 9;
-      stepBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-    } else {
-      // TOP_LEFT 기본값
-      stepBadge.x = -9;
-      stepBadge.y = -9;
-      stepBadge.constraints = { horizontal: 'MIN', vertical: 'MIN' };
-    }
-
+    await applyStepBadgeToSingleCard(card, currentNum, corner, shape, colorMode);
     currentNum++;
   }
 
@@ -3752,7 +3895,7 @@ figma.on('documentchange', async (event) => {
 
   for (const change of event.documentChanges) {
     if (change.type === 'CREATE') {
-      const createdNode = figma.getNodeById(change.id);
+      const createdNode = figma.getNodeById(change.id) as SceneNode | null;
       if (
         createdNode &&
         (createdNode.type === 'CONNECTOR' || createdNode.getPluginData('is_custom_connector') === 'true')
@@ -3775,6 +3918,11 @@ figma.on('documentchange', async (event) => {
           const flowNode = findFlowNode(changedNode);
           if (flowNode) {
             movedNodeIds.add(flowNode.id);
+          }
+          let p: BaseNode | null = changedNode.parent;
+          while (p && p.type !== 'PAGE') {
+            movedNodeIds.add(p.id);
+            p = p.parent;
           }
         }
       }

@@ -118,7 +118,7 @@ export interface FlowNodePayload {
   cornerRadius?: number;
   nodeType?: DiagramNodeType;
   phaseId?: string;
-  elevation?: number;
+  elevation?: number | null;
   status?: WorkflowStatus;
   badgeNumber?: number;
   badgePosition?: BadgePosition;
@@ -178,7 +178,7 @@ export interface UpdateNodePayload {
   cornerRadius?: number;
   nodeType?: DiagramNodeType;
   phaseId?: string;
-  elevation?: number;
+  elevation?: number | null;
   status?: WorkflowStatus;
   badgeNumber?: number;
   badgePosition?: BadgePosition;
@@ -274,6 +274,7 @@ export interface SelectedNodeInfo {
   connectorSourceMagnet?: MagnetPosition;
   connectorTargetMagnet?: MagnetPosition;
   connectorIsReversed?: boolean;
+  connectedNodeNames?: string[];
   width?: number;
   height?: number;
   hugHeight?: number;

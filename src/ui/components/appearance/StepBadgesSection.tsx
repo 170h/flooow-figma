@@ -70,6 +70,7 @@ export function StepBadgesSection() {
   const {
     uiState,
     setUIState,
+    lastNodeConfig,
     setLastNodeConfig,
     applyStepBadges,
     removeStepBadgesFromNodes,
@@ -173,11 +174,25 @@ function isHexDark(hex: string): boolean {
         }
       }
     } else {
-      setIsOn(false);
+      // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원 및 번호 +1 증가 적용
+      const cachedOn = Boolean(lastNodeConfig.stepBadgesOn);
+      setIsOn(cachedOn);
       setIsMixed(false);
-      setStepNumText('1');
+      const nextStepNum = (typeof lastNodeConfig.stepNumber === 'number' && lastNodeConfig.stepNumber > 0)
+        ? lastNodeConfig.stepNumber + 1
+        : 1;
+      setStepNumText(String(nextStepNum));
+      if (lastNodeConfig.badgeCorner) {
+        setUIState({ selectedBadgeCorner: lastNodeConfig.badgeCorner });
+      }
+      if (lastNodeConfig.badgeShape) {
+        setUIState({ selectedBadgeShape: lastNodeConfig.badgeShape });
+      }
+      if (lastNodeConfig.badgeColorMode) {
+        setUIState({ selectedBadgeColorMode: lastNodeConfig.badgeColorMode });
+      }
     }
-  }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, setUIState]);
+  }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, lastNodeConfig.stepBadgesOn, lastNodeConfig.stepNumber, lastNodeConfig.badgeCorner, lastNodeConfig.badgeShape, lastNodeConfig.badgeColorMode, setUIState]);
 
   // 드롭다운 외부 클릭 닫기
   useEffect(() => {

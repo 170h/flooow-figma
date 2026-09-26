@@ -1533,28 +1533,40 @@
       max-height: 54px;
     }
 
-    /* 11x11 앵커 마그넷 기즈모 핸들 (상하좌우 1px씩 확대) */
+    /* 11x11 앵커 마그넷 기즈모 핸들 (호버 시 상하좌우 확대 애니메이션) */
     .anchor-handle {
       position: absolute;
       width: 11px;
       height: 11px;
       background: #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.15);
       border-radius: 0px;
       cursor: pointer;
-      transition: border-color 0.15s ease, background 0.15s ease;
+      transform-origin: center center;
+      transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+                  border-color 0.15s ease,
+                  background 0.15s ease;
       z-index: 2;
       box-sizing: border-box;
     }
 
     .anchor-handle:hover {
-      border-color: var(--color-brand, #8638e5);
+      border-color: rgba(0, 0, 0, 0.3);
+      transform: scale(1.36);
+      z-index: 3;
+    }
+
+    .anchor-handle:active {
+      transform: scale(1.18);
     }
 
     .anchor-handle.active {
       background: var(--color-brand, #8638e5) !important;
       border: 1px solid var(--color-brand, #8638e5) !important;
-      box-shadow: none !important;
+    }
+
+    .anchor-handle.active:hover {
+      transform: scale(1.36);
     }
 
     .anchor-top {
@@ -1596,6 +1608,12 @@
     [data-theme="dark"] .anchor-handle:not(.active) {
       background: #2c2c2c;
       border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    body.figma-dark .anchor-handle:not(.active):hover,
+    .figma-dark .anchor-handle:not(.active):hover,
+    [data-theme="dark"] .anchor-handle:not(.active):hover {
+      border-color: rgba(255, 255, 255, 0.45);
     }
 
     /* ============================================================ */
@@ -1664,6 +1682,10 @@
       padding: 0;
       margin: 0;
       letter-spacing: 0 !important;
+    }
+
+    .conn-color-hex-input::placeholder {
+      text-transform: none;
     }
 
     .conn-color-palette-btn {
@@ -2664,6 +2686,10 @@
       box-sizing: border-box;
     }
 
+    .phase-color-hex-input::placeholder {
+      text-transform: none;
+    }
+
     .phase-color-chevron-wrap {
       width: 24px;
       height: 24px;
@@ -3089,6 +3115,10 @@
       letter-spacing: 0 !important;
     }
 
+    .style-color-hex-text::placeholder {
+      text-transform: none;
+    }
+
     .style-chevron-icon {
       color: rgba(255, 255, 255, 0.5);
       flex-shrink: 0;
@@ -3447,6 +3477,7 @@
 
     .conn-modal-hex-input::placeholder {
       color: var(--color-text-ondark-muted, rgba(255, 255, 255, 0.45));
+      text-transform: none;
     }
 
     /* 사용자 첨부 이미지 완벽 일치: 모달 Hex 입력필드 우측 도넛 무지개 컬러 휠 토글 버튼 */
@@ -28419,12 +28450,15 @@
       const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
       const rawFigmaUrl = linkOverrides?.figmaLink !== void 0 ? linkOverrides.figmaLink : isLinkOn && urlEl ? urlEl.value.trim() : "";
       const figmaUrl = rawFigmaUrl ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}` : "";
+      const elevToggleEl = document.getElementById("toggle-elevation");
+      const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
+      const finalElevation = isElevOn ? selectedElevation : null;
       const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
       const finalColor = styleOverrides?.colorHex ?? selectedColor;
       const finalStrokeWeight = styleOverrides?.strokeWeight;
       const finalStrokeColor = styleOverrides?.strokeColor;
       const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || "fixed";
-      setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: finalColor, elevation: selectedElevation, singleLinkUrl: figmaUrl, sizeMode });
+      setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: finalColor, elevationOn: isElevOn, elevation: selectedElevation, singleLinkUrl: figmaUrl, sizeMode });
       nodes.forEach((node) => {
         parent.postMessage({
           pluginMessage: {
@@ -28443,7 +28477,7 @@
               colorHex: finalColor,
               strokeWeight: finalStrokeWeight,
               strokeColor: finalStrokeColor,
-              elevation: selectedElevation,
+              elevation: finalElevation,
               sizeMode
             }
           }
@@ -28705,20 +28739,34 @@
       const rawFigmaUrl = singleLinkToggleEl?.checked && urlEl ? urlEl.value.trim() : "";
       const figmaUrl = rawFigmaUrl ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}` : "";
       const { selectedColor, selectedElevation, selectedNodeType, selectedStatus, selectedBadgeCorner, selectedBadgeShape } = uiStateRef.current;
+      const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
+      const finalElevation = isElevOn ? selectedElevation : null;
+      const isStepOn = stepToggleEl ? stepToggleEl.checked : Boolean(lastNodeConfigRef.current.stepBadgesOn);
+      const inputStepVal = stepNumEl ? parseInt(stepNumEl.value, 10) : NaN;
+      const prevStepNum = lastNodeConfigRef.current.stepNumber;
+      let targetStepNum;
+      if (!isNaN(inputStepVal) && inputStepVal > 0) {
+        targetStepNum = inputStepVal;
+      } else if (typeof prevStepNum === "number" && prevStepNum > 0) {
+        targetStepNum = prevStepNum + 1;
+      } else {
+        targetStepNum = 1;
+      }
       const newConfig = {
         width: w,
         height: h,
         cornerRadius: radius,
         nodeType: selectedNodeType,
         color: selectedColor,
-        elevationOn: elevToggleEl?.checked || false,
+        elevationOn: isElevOn,
         elevation: selectedElevation,
         statusOn: statusToggleEl?.checked || false,
         status: selectedStatus,
-        stepBadgesOn: stepToggleEl?.checked || false,
-        stepNumber: parseInt(stepNumEl?.value || "1", 10) || 1,
+        stepBadgesOn: isStepOn,
+        stepNumber: targetStepNum,
         badgeCorner: selectedBadgeCorner,
         badgeShape: selectedBadgeShape,
+        badgeColorMode: uiStateRef.current.selectedBadgeColorMode,
         singleLinkOn: singleLinkToggleEl?.checked || false,
         singleLinkUrl: figmaUrl,
         descriptionOn: isDescOn
@@ -28728,7 +28776,7 @@
         parent.postMessage({
           pluginMessage: {
             type: "UPDATE_FLOW_NODE",
-            payload: { nodeId: nodes[0].id, title, description: desc, width: w, height: h, cornerRadius: radius, theme: "light", figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: selectedElevation }
+            payload: { nodeId: nodes[0].id, title, description: desc, width: w, height: h, cornerRadius: radius, theme: "light", figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
           }
         }, "*");
       } else if (nodes.length >= 2) {
@@ -28736,7 +28784,7 @@
           parent.postMessage({
             pluginMessage: {
               type: "UPDATE_FLOW_NODE",
-              payload: { nodeId: node.id, title: node.title || title, description: desc, width: w, height: h, cornerRadius: radius, theme: "light", figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: selectedElevation }
+              payload: { nodeId: node.id, title: node.title || title, description: desc, width: w, height: h, cornerRadius: radius, theme: "light", figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
             }
           }, "*");
         });
@@ -28748,13 +28796,34 @@
         parent.postMessage({
           pluginMessage: {
             type: "CREATE_FLOW_NODE",
-            payload: { title, description: desc, width: w, height: h, cornerRadius: radius, theme: "light", figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: selectedElevation, status: statusToggleEl?.checked ? selectedStatus : void 0 }
+            payload: {
+              title,
+              description: desc,
+              width: w,
+              height: h,
+              cornerRadius: radius,
+              theme: "light",
+              figmaLink: figmaUrl,
+              nodeType: selectedNodeType,
+              colorHex: selectedColor,
+              elevation: isElevOn ? selectedElevation : void 0,
+              status: statusToggleEl?.checked ? selectedStatus : void 0,
+              badgeNumber: isStepOn ? targetStepNum : void 0,
+              badgePosition: isStepOn ? selectedBadgeCorner : void 0,
+              badgeShape: isStepOn ? selectedBadgeShape : void 0,
+              badgeColorMode: isStepOn ? uiStateRef.current.selectedBadgeColorMode : void 0
+            }
           }
         }, "*");
       }
     }, [applyCurrentConnectorState, setLastNodeConfig, showToast]);
     const handleSelectionChange = (0, import_react2.useCallback)((count, nodes, meta) => {
-      closeAllPopovers();
+      const prevIds = (selectedNodesRef.current || []).map((n) => n?.id).filter(Boolean);
+      const newIds = (nodes || []).map((n) => n?.id).filter(Boolean);
+      const isSelectionChanged = prevIds.length !== newIds.length || prevIds.some((id, idx) => id !== newIds[idx]);
+      if (isSelectionChanged) {
+        closeAllPopovers();
+      }
       setSelectedNodes(nodes);
       selectedNodesRef.current = nodes;
       const flowNodeCount = typeof meta?.flowNodeCount === "number" ? meta.flowNodeCount : nodes.filter((n) => n && (n.isFlowNode || !n.isConnector && n.flowNodeType)).length;
@@ -28782,6 +28851,18 @@
           const nodeRadius = typeof first.cornerRadius === "number" ? first.cornerRadius : 0;
           const rEl = document.getElementById("input-size-radius");
           if (rEl) rEl.value = String(nodeRadius);
+          const hasStep = first.stepNumber !== void 0;
+          const stepConfigUpdates = {};
+          if (hasStep && typeof first.stepNumber === "number") {
+            stepConfigUpdates.stepBadgesOn = true;
+            stepConfigUpdates.stepNumber = first.stepNumber;
+            if (first.badgeCorner) stepConfigUpdates.badgeCorner = first.badgeCorner;
+            if (first.badgeShape) stepConfigUpdates.badgeShape = first.badgeShape;
+            if (first.badgeColorMode) stepConfigUpdates.badgeColorMode = first.badgeColorMode;
+            colorUpdates.selectedBadgeCorner = first.badgeCorner || lastNodeConfigRef.current.badgeCorner || "TOP_LEFT";
+            colorUpdates.selectedBadgeShape = first.badgeShape || lastNodeConfigRef.current.badgeShape || "Square";
+            colorUpdates.selectedBadgeColorMode = first.badgeColorMode || lastNodeConfigRef.current.badgeColorMode || "Style";
+          }
           if (first.fillColorHex) {
             colorUpdates.selectedColor = first.fillColorHex;
             colorUpdates.selectedStrokeWeight = first.strokeWeight;
@@ -28805,10 +28886,16 @@
               color: first.fillColorHex,
               strokeWeight: first.strokeWeight,
               strokeColor: first.strokeColorHex,
-              cornerRadius: nodeRadius
+              cornerRadius: nodeRadius,
+              ...stepConfigUpdates
             });
           } else {
-            setLastNodeConfig({ elevationOn: eOn, elevation: eLevel, cornerRadius: nodeRadius });
+            setLastNodeConfig({
+              elevationOn: eOn,
+              elevation: eLevel,
+              cornerRadius: nodeRadius,
+              ...stepConfigUpdates
+            });
           }
           setUIState(colorUpdates);
         }
@@ -29089,7 +29176,9 @@
       connectorStrokePattern: getCommonProperty(connectorNodes, (n) => n.connectorStrokePattern),
       connectorRoutingType: getCommonProperty(connectorNodes, (n) => n.connectorRoutingType),
       connectorStartTerminal: getCommonProperty(connectorNodes, (n) => n.connectorStartTerminal),
-      connectorEndTerminal: getCommonProperty(connectorNodes, (n) => n.connectorEndTerminal)
+      connectorEndTerminal: getCommonProperty(connectorNodes, (n) => n.connectorEndTerminal),
+      connectorSourceMagnet: getCommonProperty(connectorNodes, (n) => n.connectorSourceMagnet),
+      connectorTargetMagnet: getCommonProperty(connectorNodes, (n) => n.connectorTargetMagnet)
     };
   }
 
@@ -29690,6 +29779,22 @@
     );
     const isMoreDisabled = !activePreset || Boolean(activePreset.isDefault) || DEFAULT_PRESET_IDS.has(activePreset.id);
     const summary = useSelectionSummary();
+    const dropdownRef = import_react8.default.useRef(null);
+    const [dropdownOpen, setDropdownOpen] = import_react8.default.useState(false);
+    import_react8.default.useEffect(() => {
+      function handleClickOutside(e) {
+        if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+          setDropdownOpen(false);
+          setSizeModeDropdownOpen(false);
+        }
+      }
+      if (dropdownOpen) {
+        document.addEventListener("mousedown", handleClickOutside);
+      }
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [dropdownOpen, setSizeModeDropdownOpen]);
     const currentSizeMode = (() => {
       if (summary.isMultiFlowNode) {
         if (summary.sizeMode.isMixed) return "mixed";
@@ -29823,7 +29928,8 @@
     }
     function toggleSizeModeDropdown(e) {
       e.stopPropagation();
-      if (!sizeModeDropdownOpen) {
+      const nextState = !dropdownOpen;
+      if (nextState) {
         const currentH = document.getElementById("input-size-h")?.value || String(lastNodeConfig.height || 90);
         const fixedValEl = document.getElementById("size-mode-val-fixed");
         const hugValEl = document.getElementById("size-mode-val-hug");
@@ -29834,7 +29940,8 @@
         const hugH = isCurrentlyHug ? Number(currentH) : selectedNodes[0]?.hugHeight ?? defaultHugH;
         if (hugValEl) hugValEl.textContent = String(hugH);
       }
-      setSizeModeDropdownOpen(!sizeModeDropdownOpen);
+      setDropdownOpen(nextState);
+      setSizeModeDropdownOpen(nextState);
     }
     function selectSizeMode(mode) {
       if (mode !== "mixed") {
@@ -29845,7 +29952,8 @@
         hiddenInput.value = mode;
         hiddenInput.dispatchEvent(new Event("change"));
       }
-      closeAllPopovers();
+      setDropdownOpen(false);
+      setSizeModeDropdownOpen(false);
       applyCurrentNodeState(mode);
     }
     return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "section-block", children: [
@@ -29929,59 +30037,75 @@
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "size-mode-dropdown-wrapper figma-dropdown-wrapper", id: "size-mode-dropdown-wrapper", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
-              "button",
-              {
-                type: "button",
-                id: "btn-size-mode-dropdown",
-                className: `size-mode-dropdown-btn figma-dropdown-btn${sizeModeDropdownOpen ? " active" : ""}`,
-                title: "Select height mode",
-                onClick: toggleSizeModeDropdown,
-                children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "size-mode-btn-content figma-dropdown-btn-content", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-current-icon figma-dropdown-current-icon", id: "size-mode-current-icon", children: currentSizeMode === "hug" ? HUG_SVG : currentSizeMode === "mixed" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "phase-dash-icon", style: { display: "inline-block", verticalAlign: "middle" } }) : FIXED_SVG }),
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-current-text figma-dropdown-current-text", id: "size-mode-current-text", children: currentSizeMode === "hug" ? "Hug contents" : currentSizeMode === "mixed" ? "Mixed" : "Fixed height" })
-                  ] }),
-                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                    "span",
-                    {
-                      className: "size-mode-chevron-icon figma-dropdown-chevron-icon",
-                      style: {
-                        transform: sizeModeDropdownOpen ? "rotate(180deg)" : "none",
-                        transition: "transform 0.15s ease",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      },
-                      children: CHEVRON_SVG2
-                    }
-                  )
-                ]
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `size-mode-menu-popover figma-dropdown-menu${sizeModeDropdownOpen ? " active" : ""}`, id: "popover-size-mode", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "mixed" ? " selected" : ""}`, "data-value": "mixed", onClick: () => selectSizeMode("mixed"), children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "phase-dash-icon" }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Mixed" })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("hr", { className: "phase-popover-divider", style: { margin: "4px 0" } }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "fixed" ? " selected" : ""}`, "data-value": "fixed", onClick: () => selectSizeMode("fixed"), children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Fixed height" }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-fixed", children: lastNodeConfig.height || 90 })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "hug" ? " selected" : ""}`, "data-value": "hug", onClick: () => selectSizeMode("hug"), children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z", fill: "currentColor" }) }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Hug contents" }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-hug", children: currentSizeMode === "hug" || selectedNodes[0]?.sizeMode === "hug" ? selectedNodes[0]?.height || lastNodeConfig.height || 90 : selectedNodes[0]?.hugHeight || (lastNodeConfig.statusOn || Boolean(uiState.selectedStatus) ? 110 : 90) })
-              ] })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { type: "hidden", id: "select-size-mode", defaultValue: "fixed" })
-          ] })
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+            "div",
+            {
+              ref: dropdownRef,
+              className: "size-mode-dropdown-wrapper figma-dropdown-wrapper",
+              id: "size-mode-dropdown-wrapper",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+                  "button",
+                  {
+                    type: "button",
+                    id: "btn-size-mode-dropdown",
+                    className: `size-mode-dropdown-btn figma-dropdown-btn${dropdownOpen ? " active" : ""}`,
+                    title: "Select height mode",
+                    onClick: toggleSizeModeDropdown,
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "size-mode-btn-content figma-dropdown-btn-content", children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-current-icon figma-dropdown-current-icon", id: "size-mode-current-icon", children: currentSizeMode === "hug" ? HUG_SVG : currentSizeMode === "mixed" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "phase-dash-icon", style: { display: "inline-block", verticalAlign: "middle" } }) : FIXED_SVG }),
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-current-text figma-dropdown-current-text", id: "size-mode-current-text", children: currentSizeMode === "hug" ? "Hug contents" : currentSizeMode === "mixed" ? "Mixed" : "Fixed height" })
+                      ] }),
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                        "span",
+                        {
+                          className: "size-mode-chevron-icon figma-dropdown-chevron-icon",
+                          style: {
+                            transform: dropdownOpen ? "rotate(180deg)" : "none",
+                            transition: "transform 0.15s ease",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          },
+                          children: CHEVRON_SVG2
+                        }
+                      )
+                    ]
+                  }
+                ),
+                dropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+                  "div",
+                  {
+                    className: "size-mode-menu-popover figma-dropdown-menu active",
+                    id: "popover-size-mode",
+                    style: { display: "flex" },
+                    onClick: (e) => e.stopPropagation(),
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "mixed" ? " selected" : ""}`, "data-value": "mixed", onClick: () => selectSizeMode("mixed"), children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "phase-dash-icon", style: { background: "currentColor", display: "inline-block" } }) }),
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Mixed" })
+                      ] }),
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("hr", { className: "phase-popover-divider", style: { margin: "4px 0" } }),
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "fixed" ? " selected" : ""}`, "data-value": "fixed", onClick: () => selectSizeMode("fixed"), children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) }) }),
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Fixed height" }),
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-fixed", children: lastNodeConfig.height || 90 })
+                      ] }),
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "hug" ? " selected" : ""}`, "data-value": "hug", onClick: () => selectSizeMode("hug"), children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z", fill: "currentColor" }) }) }),
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z", fill: "currentColor" }) }) }),
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Hug contents" }),
+                        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "size-mode-menu-item-value figma-dropdown-value", id: "size-mode-val-hug", children: currentSizeMode === "hug" || selectedNodes[0]?.sizeMode === "hug" ? selectedNodes[0]?.height || lastNodeConfig.height || 90 : selectedNodes[0]?.hugHeight || (lastNodeConfig.statusOn || Boolean(uiState.selectedStatus) ? 110 : 90) })
+                      ] })
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { type: "hidden", id: "select-size-mode", defaultValue: "fixed" })
+              ]
+            }
+          )
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "chip-group", style: { marginTop: "6px", flexWrap: "wrap", gap: "4px" }, children: sizePresets.map((p) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "button",
@@ -30327,6 +30451,7 @@
     const {
       uiState,
       setUIState,
+      lastNodeConfig,
       setLastNodeConfig,
       applyStepBadges,
       removeStepBadgesFromNodes,
@@ -30417,11 +30542,22 @@
           }
         }
       } else {
-        setIsOn(false);
+        const cachedOn = Boolean(lastNodeConfig.stepBadgesOn);
+        setIsOn(cachedOn);
         setIsMixed(false);
-        setStepNumText("1");
+        const nextStepNum = typeof lastNodeConfig.stepNumber === "number" && lastNodeConfig.stepNumber > 0 ? lastNodeConfig.stepNumber + 1 : 1;
+        setStepNumText(String(nextStepNum));
+        if (lastNodeConfig.badgeCorner) {
+          setUIState({ selectedBadgeCorner: lastNodeConfig.badgeCorner });
+        }
+        if (lastNodeConfig.badgeShape) {
+          setUIState({ selectedBadgeShape: lastNodeConfig.badgeShape });
+        }
+        if (lastNodeConfig.badgeColorMode) {
+          setUIState({ selectedBadgeColorMode: lastNodeConfig.badgeColorMode });
+        }
       }
-    }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, setUIState]);
+    }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, lastNodeConfig.stepBadgesOn, lastNodeConfig.stepNumber, lastNodeConfig.badgeCorner, lastNodeConfig.badgeShape, lastNodeConfig.badgeColorMode, setUIState]);
     (0, import_react11.useEffect)(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -30929,11 +31065,14 @@
       SQUARE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1.2"/><rect x="28.5" y="5.5" width="5" height="5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`
     }
   };
-  var CHECK_SVG = /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+  var CHECK_SVG = /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
     "path",
     {
-      d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z",
-      fill: "currentColor"
+      d: "M7 12.5L10.5 16L17.5 8",
+      stroke: "currentColor",
+      strokeWidth: "1.8",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
     }
   ) });
   var CHEVRON_SVG3 = /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { className: "figma-dropdown-chevron-icon", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
@@ -31052,16 +31191,14 @@
         const node = selectedNodes[0];
         setIsColorMixed(false);
         setIsWeightMixed(false);
-        if (node?.connectorStartTerminal) {
-          setStartTermVal(node.connectorStartTerminal);
-          const sel = document.getElementById("select-start-terminal");
-          if (sel) sel.value = node.connectorStartTerminal;
-        }
-        if (node?.connectorEndTerminal) {
-          setEndTermVal(node.connectorEndTerminal);
-          const sel = document.getElementById("select-end-terminal");
-          if (sel) sel.value = node.connectorEndTerminal;
-        }
+        const startT = node?.connectorStartTerminal || "NONE";
+        setStartTermVal(startT);
+        const startSel = document.getElementById("select-start-terminal");
+        if (startSel) startSel.value = startT;
+        const endT = node?.connectorEndTerminal || "ARROW";
+        setEndTermVal(endT);
+        const endSel = document.getElementById("select-end-terminal");
+        if (endSel) endSel.value = endT;
         if (node?.connectorColorHex) {
           const hex = node.connectorColorHex.toUpperCase();
           setSelectedColor(hex);
@@ -31115,8 +31252,8 @@
         } else if (summary.connectorColor.isMixed) {
           setHexInput("");
         }
-        const isConnWeightMixed = Boolean(summary.connectorStrokeWeight.isMixed || summary.strokeWeight.isMixed);
-        const connWeightVal = summary.connectorStrokeWeight.value ?? summary.strokeWeight.value;
+        const isConnWeightMixed = Boolean(summary.connectorStrokeWeight.isMixed);
+        const connWeightVal = summary.connectorStrokeWeight.value;
         setIsWeightMixed(isConnWeightMixed);
         const weightEl = document.getElementById("input-stroke-weight");
         if (isConnWeightMixed) {
@@ -31139,36 +31276,33 @@
         if (!summary.connectorStrokePattern.isMixed && summary.connectorStrokePattern.value) {
           setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
         }
-      } else if (summary.isMultiFlowNode) {
-        setIsColorMixed(summary.color.isMixed);
-        if (!summary.color.isMixed && summary.color.value) {
-          const hex = summary.color.value.toUpperCase();
-          setSelectedColor(hex);
-          setHexInput(hex.replace("#", ""));
-        } else {
-          setHexInput("");
+        if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
+          setUIState({ sourceMagnet: summary.connectorSourceMagnet.value });
         }
-        const isNodeWeightMixed = Boolean(summary.strokeWeight.isMixed || summary.connectorStrokeWeight.isMixed);
-        const nodeWeightVal = summary.strokeWeight.value ?? summary.connectorStrokeWeight.value;
-        setIsWeightMixed(isNodeWeightMixed);
-        const weightEl = document.getElementById("input-stroke-weight");
-        if (isNodeWeightMixed) {
-          setWeightInput("");
-          if (weightEl) {
-            weightEl.value = "";
-            weightEl.placeholder = "Mixed";
-          }
-        } else if (nodeWeightVal !== void 0) {
-          const wVal = String(nodeWeightVal);
-          setWeightInput(wVal);
-          if (weightEl) {
-            weightEl.value = wVal;
-            weightEl.placeholder = "";
-          }
+        if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
+          setUIState({ targetMagnet: summary.connectorTargetMagnet.value });
         }
       } else {
         setIsColorMixed(false);
         setIsWeightMixed(false);
+        if (startTermVal === "MIXED") {
+          setStartTermVal("NONE");
+          const startSel = document.getElementById("select-start-terminal");
+          if (startSel) startSel.value = "NONE";
+        }
+        if (endTermVal === "MIXED") {
+          setEndTermVal("ARROW");
+          const endSel = document.getElementById("select-end-terminal");
+          if (endSel) endSel.value = "ARROW";
+        }
+        const weightEl = document.getElementById("input-stroke-weight");
+        if (weightEl && weightEl.placeholder === "Mixed") {
+          weightEl.placeholder = "";
+          if (!weightInput) {
+            setWeightInput("1.5");
+            weightEl.value = "1.5";
+          }
+        }
       }
     }, [
       summary.isSingleConnector,
@@ -31320,8 +31454,14 @@
         return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
           "span",
           {
-            className: "phase-dash-icon",
-            style: { background: "currentColor", display: "inline-block", margin: "auto" }
+            style: {
+              fontSize: "11px",
+              fontWeight: 400,
+              color: "inherit",
+              lineHeight: "16px",
+              display: "inline-block"
+            },
+            children: "Mixed"
           }
         );
       }
@@ -31341,6 +31481,54 @@
         }
       );
     }
+    let node1DisplayName = "Node 1";
+    let node2DisplayName = "Node 2";
+    if (summary.isSingleConnector) {
+      node1DisplayName = selectedNodes[0]?.connectorSourceNodeName || "Source Node";
+      node2DisplayName = selectedNodes[0]?.connectorTargetNodeName || "Target Node";
+    } else if (summary.isMultiConnector) {
+      const connNodeNames = selectedNodes[0]?.connectedNodeNames || [];
+      if (connNodeNames.length > 0) {
+        node1DisplayName = connNodeNames[0] || "Node 1";
+        if (connNodeNames.length >= 3) {
+          const moreCount = connNodeNames.length - 1;
+          node2DisplayName = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
+        } else if (connNodeNames.length === 2) {
+          node2DisplayName = connNodeNames[1] || "Node 2";
+        } else {
+          node2DisplayName = "Node 2";
+        }
+      } else {
+        const uniqueNames = [];
+        selectedNodes.forEach((n) => {
+          if (n?.connectorSourceNodeName && !uniqueNames.includes(n.connectorSourceNodeName)) {
+            uniqueNames.push(n.connectorSourceNodeName);
+          }
+          if (n?.connectorTargetNodeName && !uniqueNames.includes(n.connectorTargetNodeName)) {
+            uniqueNames.push(n.connectorTargetNodeName);
+          }
+        });
+        if (uniqueNames.length > 0) {
+          node1DisplayName = uniqueNames[0] || "Node 1";
+          if (uniqueNames.length >= 3) {
+            const moreCount = uniqueNames.length - 1;
+            node2DisplayName = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
+          } else if (uniqueNames.length === 2) {
+            node2DisplayName = uniqueNames[1] || "Node 2";
+          } else {
+            node2DisplayName = "Node 2";
+          }
+        }
+      }
+    } else {
+      node1DisplayName = selectedNodes[0]?.title || selectedNodes[0]?.name || "Node 1";
+      if (selectedNodes.length >= 3) {
+        const moreCount = selectedNodes.length - 1;
+        node2DisplayName = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
+      } else {
+        node2DisplayName = selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2";
+      }
+    }
     const ROUTING_TYPES = [
       { type: "ORTHOGONAL", title: "\uC9C1\uAC01 (Orthogonal)", svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
       { type: "S_CURVE", title: "S\uC790 \uACE1\uC120 (S-curve)", svg: '<g clip-path="url(#clip_sc)"><path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
@@ -31350,7 +31538,7 @@
     return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("span", { className: "section-title", children: [
         "Connect",
-        summary.isMulti && (isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed) && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+        summary.isMultiConnector && (isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed) && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
       ] }) }),
       /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "section-body", children: [
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { style: { display: "flex", gap: "6px", alignItems: "center" }, children: [
@@ -31476,7 +31664,7 @@
               },
               pos
             )),
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-1-text", children: selectedNodes[0]?.title || selectedNodes[0]?.name || "Node 1" })
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-1-text", children: node1DisplayName })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "node-preview-card", id: "preview-node-2", children: [
             ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
@@ -31490,7 +31678,7 @@
               },
               pos
             )),
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-2-text", children: selectedNodes.length >= 3 ? `${selectedNodes.length - 1} more ${selectedNodes.length - 1 === 1 ? "node" : "nodes"}` : selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2" })
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { id: "preview-node-2-text", children: node2DisplayName })
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { style: { display: "flex", gap: "6px" }, children: [
@@ -31646,7 +31834,7 @@
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("select", { id: "select-start-terminal", style: { display: "none" }, value: startTermVal, onChange: () => {
-            }, children: ["MIXED", "NONE", "BAR", "ARROW", "CIRCLE", "DIAMOND", "SQUARE"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("option", { value: v, children: v }, v)) }),
+            }, children: ["MIXED", "NONE", "BAR", "ARROW", "CIRCLE", "DIAMOND", "SQUARE"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
             startTermPopupOpen && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
               "div",
               {
@@ -31681,26 +31869,39 @@
                           height: "24px",
                           display: "flex",
                           alignItems: "center",
-                          gap: "3px",
+                          justifyContent: "space-between",
                           padding: "0 4px",
                           borderRadius: "6px",
-                          cursor: "pointer",
+                          cursor: "default",
                           color: "#ffffff",
-                          fontSize: "11px",
-                          fontWeight: 500,
-                          userSelect: "none"
+                          userSelect: "none",
+                          boxSizing: "border-box"
                         },
-                        onClick: () => selectTerminal("start", "MIXED"),
                         children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { width: "12px", height: "12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: CHECK_SVG }),
-                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { fontSize: "11px", fontWeight: 500, color: "#ffffff" }, children: "Mixed" })
+                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "phase-dash-icon", style: { background: "currentColor", display: "inline-block" } }) }),
+                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                            "span",
+                            {
+                              style: {
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flex: 1,
+                                height: "16px",
+                                fontSize: "11px",
+                                fontWeight: 500,
+                                color: "#ffffff"
+                              },
+                              children: "Mixed"
+                            }
+                          )
                         ]
                       }
                     ),
                     /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("hr", { style: { margin: "3px 0", border: "none", borderTop: "1px solid rgba(255, 255, 255, 0.1)", width: "100%" } })
                   ] }),
                   TERMINAL_OPTIONS.map((opt) => {
-                    const isSelected = startTermVal === opt;
+                    const isSelected = startTermVal !== "MIXED" && startTermVal === opt;
                     return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
                       "div",
                       {
@@ -31721,7 +31922,7 @@
                         },
                         onClick: () => selectTerminal("start", opt),
                         children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { width: "12px", height: "12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: isSelected ? 1 : 0 }, children: CHECK_SVG }),
+                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: isSelected ? 1 : 0 }, children: CHECK_SVG }),
                           /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
                             "span",
                             {
@@ -31770,7 +31971,7 @@
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("select", { id: "select-end-terminal", style: { display: "none" }, value: endTermVal, onChange: () => {
-            }, children: ["MIXED", "NONE", "BAR", "ARROW", "CIRCLE", "DIAMOND", "SQUARE"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("option", { value: v, children: v }, v)) }),
+            }, children: ["MIXED", "NONE", "BAR", "ARROW", "CIRCLE", "DIAMOND", "SQUARE"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
             endTermPopupOpen && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
               "div",
               {
@@ -31805,26 +32006,39 @@
                           height: "24px",
                           display: "flex",
                           alignItems: "center",
-                          gap: "3px",
+                          justifyContent: "space-between",
                           padding: "0 4px",
                           borderRadius: "6px",
-                          cursor: "pointer",
+                          cursor: "default",
                           color: "#ffffff",
-                          fontSize: "11px",
-                          fontWeight: 500,
-                          userSelect: "none"
+                          userSelect: "none",
+                          boxSizing: "border-box"
                         },
-                        onClick: () => selectTerminal("end", "MIXED"),
                         children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { width: "12px", height: "12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: CHECK_SVG }),
-                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { fontSize: "11px", fontWeight: 500, color: "#ffffff" }, children: "Mixed" })
+                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "phase-dash-icon", style: { background: "currentColor", display: "inline-block" } }) }),
+                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                            "span",
+                            {
+                              style: {
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flex: 1,
+                                height: "16px",
+                                fontSize: "11px",
+                                fontWeight: 500,
+                                color: "#ffffff"
+                              },
+                              children: "Mixed"
+                            }
+                          )
                         ]
                       }
                     ),
                     /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("hr", { style: { margin: "3px 0", border: "none", borderTop: "1px solid rgba(255, 255, 255, 0.1)", width: "100%" } })
                   ] }),
                   TERMINAL_OPTIONS.map((opt) => {
-                    const isSelected = endTermVal === opt;
+                    const isSelected = endTermVal !== "MIXED" && endTermVal === opt;
                     return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
                       "div",
                       {
@@ -31845,7 +32059,7 @@
                         },
                         onClick: () => selectTerminal("end", opt),
                         children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { width: "12px", height: "12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: isSelected ? 1 : 0 }, children: CHECK_SVG }),
+                          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { style: { width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: isSelected ? 1 : 0 }, children: CHECK_SVG }),
                           /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
                             "span",
                             {
@@ -31911,8 +32125,8 @@
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap"
                   },
-                  title: selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector) ? "Update selected connector" : selectedNodes.length >= 2 ? `${selectedNodes.length} nodes selected to connect` : "Select 2 or more nodes to connect",
-                  children: selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector) ? "Connector selected" : selectedNodes.length >= 2 ? `${selectedNodes.length} nodes selected` : "Select 2+ nodes to connect"
+                  title: selectedNodes.length > 0 && selectedNodes.every((n) => n && n.isConnector) ? selectedNodes.length === 1 ? "Update selected connector" : `Update ${selectedNodes.length} selected connectors` : selectedNodes.length >= 2 ? `${selectedNodes.length} nodes selected to connect` : "Select 2 or more nodes to connect",
+                  children: selectedNodes.length > 0 && selectedNodes.every((n) => n && n.isConnector) ? selectedNodes.length === 1 ? "Connector selected" : `${selectedNodes.length} connectors selected` : selectedNodes.length >= 2 ? `${selectedNodes.length} nodes selected` : "Select 2+ nodes to connect"
                 }
               ),
               /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
@@ -31921,16 +32135,16 @@
                   type: "button",
                   id: "btn-section-connect",
                   className: "btn-add-step-badges",
-                  disabled: selectedNodes.length < 2 && !(selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector)),
+                  disabled: selectedNodes.length < 2 && !(selectedNodes.length >= 1 && selectedNodes.every((n) => n && n.isConnector)),
                   onClick: handleMainAction,
-                  title: selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector) ? "Update Connector" : selectedNodes.length >= 2 ? "Connect selected nodes" : "Select 2 or more nodes to connect",
+                  title: selectedNodes.length > 0 && selectedNodes.every((n) => n && n.isConnector) ? selectedNodes.length === 1 ? "Update Connector" : "Update Connectors" : selectedNodes.length >= 2 ? "Connect selected nodes" : "Select 2 or more nodes to connect",
                   children: [
                     /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", children: [
                       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M3 4H7C8.10457 4 9 4.89543 9 6V10C9 11.1046 9.89543 12 11 12H13", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }),
                       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("circle", { cx: "2.5", cy: "4", r: "1.5", fill: "currentColor" }),
                       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M12 9.5L14.5 12L12 14.5", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" })
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { children: selectedNodes.length === 1 && selectedNodes.every((n) => n && n.isConnector) ? "Update Connector" : "Connect" })
+                    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { children: selectedNodes.length > 0 && selectedNodes.every((n) => n && n.isConnector) ? selectedNodes.length === 1 ? "Update Connector" : "Update Connectors" : "Connect" })
                   ]
                 }
               )
@@ -32023,7 +32237,44 @@
         if (node1Text) node1Text.textContent = node?.connectorSourceNodeName || "Source Node";
         if (node2Text) node2Text.textContent = node?.connectorTargetNodeName || "Target Node";
       } else if (isMultiConn) {
-        if (anchorBox) anchorBox.style.display = "none";
+        if (anchorBox) anchorBox.style.display = "";
+        const node1Text = document.getElementById("preview-node-1-text");
+        const node2Text = document.getElementById("preview-node-2-text");
+        const connNodeNames = selectedNodes[0]?.connectedNodeNames || [];
+        if (connNodeNames.length > 0) {
+          if (node1Text) node1Text.textContent = connNodeNames[0] || "Node 1";
+          if (node2Text) {
+            if (connNodeNames.length >= 3) {
+              const moreCount = connNodeNames.length - 1;
+              node2Text.textContent = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
+            } else if (connNodeNames.length === 2) {
+              node2Text.textContent = connNodeNames[1] || "Node 2";
+            } else {
+              node2Text.textContent = "Node 2";
+            }
+          }
+        } else {
+          const uniqueNames = [];
+          selectedNodes.forEach((n) => {
+            if (n?.connectorSourceNodeName && !uniqueNames.includes(n.connectorSourceNodeName)) {
+              uniqueNames.push(n.connectorSourceNodeName);
+            }
+            if (n?.connectorTargetNodeName && !uniqueNames.includes(n.connectorTargetNodeName)) {
+              uniqueNames.push(n.connectorTargetNodeName);
+            }
+          });
+          if (node1Text) node1Text.textContent = uniqueNames[0] || "Node 1";
+          if (node2Text) {
+            if (uniqueNames.length >= 3) {
+              const moreCount = uniqueNames.length - 1;
+              node2Text.textContent = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
+            } else if (uniqueNames.length === 2) {
+              node2Text.textContent = uniqueNames[1] || "Node 2";
+            } else {
+              node2Text.textContent = "Node 2";
+            }
+          }
+        }
       } else {
         if (anchorBox) anchorBox.style.display = "";
         if (count >= 2) {
@@ -34451,7 +34702,7 @@
         }
       ),
       activeModal === "connector-color" && (() => {
-        const isConnectorColorMixed = summary.isMultiConnector ? summary.connectorColor.isMixed : summary.isMultiFlowNode ? summary.color.isMixed : false;
+        const isConnectorColorMixed = summary.isMultiConnector ? summary.connectorColor.isMixed : false;
         return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
           ConnectorColorModal,
           {

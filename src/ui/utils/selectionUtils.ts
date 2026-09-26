@@ -1,5 +1,5 @@
 import { NodeInfo } from '../context/AppContext';
-import { DiagramNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType } from '../../types';
+import { DiagramNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition } from '../../types';
 
 export interface PropertySummary<T> {
   value: T | undefined;
@@ -85,6 +85,8 @@ export interface SelectionSummary {
   connectorRoutingType: PropertySummary<ConnectorRoutingType>;
   connectorStartTerminal: PropertySummary<ConnectorTerminalType>;
   connectorEndTerminal: PropertySummary<ConnectorTerminalType>;
+  connectorSourceMagnet: PropertySummary<MagnetPosition>;
+  connectorTargetMagnet: PropertySummary<MagnetPosition>;
 }
 
 /**
@@ -143,5 +145,7 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     connectorRoutingType: getCommonProperty(connectorNodes, (n) => n.connectorRoutingType),
     connectorStartTerminal: getCommonProperty(connectorNodes, (n) => n.connectorStartTerminal),
     connectorEndTerminal: getCommonProperty(connectorNodes, (n) => n.connectorEndTerminal),
+    connectorSourceMagnet: getCommonProperty(connectorNodes, (n) => n.connectorSourceMagnet),
+    connectorTargetMagnet: getCommonProperty(connectorNodes, (n) => n.connectorTargetMagnet),
   };
 }

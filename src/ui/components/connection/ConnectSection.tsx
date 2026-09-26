@@ -63,12 +63,15 @@ const TERMINAL_SVGS_SHORT: Record<'start' | 'end', Record<TerminalOption, string
 
 
 
-// 피그마 UI3 표준 체크마크 SVG
+// 피그마 UI3 표준 24x24 체크마크 SVG
 const CHECK_SVG = (
-  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path
-      d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z"
-      fill="currentColor"
+      d="M7 12.5L10.5 16L17.5 8"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     />
   </svg>
 );
@@ -222,16 +225,15 @@ export function ConnectSection() {
       setIsColorMixed(false);
       setIsWeightMixed(false);
 
-      if (node?.connectorStartTerminal) {
-        setStartTermVal(node.connectorStartTerminal as ConnectorTerminalType);
-        const sel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-        if (sel) sel.value = node.connectorStartTerminal;
-      }
-      if (node?.connectorEndTerminal) {
-        setEndTermVal(node.connectorEndTerminal as ConnectorTerminalType);
-        const sel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-        if (sel) sel.value = node.connectorEndTerminal;
-      }
+      const startT = (node?.connectorStartTerminal as ConnectorTerminalType) || 'NONE';
+      setStartTermVal(startT);
+      const startSel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+      if (startSel) startSel.value = startT;
+
+      const endT = (node?.connectorEndTerminal as ConnectorTerminalType) || 'ARROW';
+      setEndTermVal(endT);
+      const endSel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+      if (endSel) endSel.value = endT;
       if (node?.connectorColorHex) {
         const hex = node.connectorColorHex.toUpperCase();
         setSelectedColor(hex);
@@ -295,9 +297,9 @@ export function ConnectSection() {
         setHexInput('');
       }
 
-      // 3. 선 굵기
-      const isConnWeightMixed = Boolean(summary.connectorStrokeWeight.isMixed || summary.strokeWeight.isMixed);
-      const connWeightVal = summary.connectorStrokeWeight.value ?? summary.strokeWeight.value;
+      // 3. 선 굵기 (커넥터 복수 선택 시)
+      const isConnWeightMixed = Boolean(summary.connectorStrokeWeight.isMixed);
+      const connWeightVal = summary.connectorStrokeWeight.value;
       setIsWeightMixed(isConnWeightMixed);
       const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
       if (isConnWeightMixed) {
@@ -324,39 +326,40 @@ export function ConnectSection() {
       if (!summary.connectorStrokePattern.isMixed && summary.connectorStrokePattern.value) {
         setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
       }
-    } else if (summary.isMultiFlowNode) {
-      // 일반 노드 복수 선택: 노드들의 fill 컬러가 다르면 컬러 Mixed 적용
-      setIsColorMixed(summary.color.isMixed);
-      if (!summary.color.isMixed && summary.color.value) {
-        const hex = summary.color.value.toUpperCase();
-        setSelectedColor(hex);
-        setHexInput(hex.replace('#', ''));
-      } else {
-        setHexInput('');
-      }
 
-      // 일반 노드 복수 선택: 노드들의 테두리/선 두께가 다르면 두께 Mixed 적용!
-      const isNodeWeightMixed = Boolean(summary.strokeWeight.isMixed || summary.connectorStrokeWeight.isMixed);
-      const nodeWeightVal = summary.strokeWeight.value ?? summary.connectorStrokeWeight.value;
-      setIsWeightMixed(isNodeWeightMixed);
-      const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-      if (isNodeWeightMixed) {
-        setWeightInput('');
-        if (weightEl) {
-          weightEl.value = '';
-          weightEl.placeholder = 'Mixed';
-        }
-      } else if (nodeWeightVal !== undefined) {
-        const wVal = String(nodeWeightVal);
-        setWeightInput(wVal);
-        if (weightEl) {
-          weightEl.value = wVal;
-          weightEl.placeholder = '';
-        }
+      // 6. 마그넷 위치
+      if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
+        setUIState({ sourceMagnet: summary.connectorSourceMagnet.value });
+      }
+      if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
+        setUIState({ targetMagnet: summary.connectorTargetMagnet.value });
       }
     } else {
+      // 커넥터가 선택되지 않은 경우 (단일/복수 플로우 노드 선택 또는 빈 캔버스):
+      // 커넥터 섹션은 연결 생성을 위한 기본/현재 설정값을 유지하며 Mixed 상태를 표시하지 않습니다.
       setIsColorMixed(false);
       setIsWeightMixed(false);
+
+      // 단자 드롭다운이 MIXED로 남아있지 않도록 기본값(시작: NONE, 끝: ARROW)으로 복원
+      if (startTermVal === 'MIXED') {
+        setStartTermVal('NONE');
+        const startSel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+        if (startSel) startSel.value = 'NONE';
+      }
+      if (endTermVal === 'MIXED') {
+        setEndTermVal('ARROW');
+        const endSel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+        if (endSel) endSel.value = 'ARROW';
+      }
+
+      const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+      if (weightEl && weightEl.placeholder === 'Mixed') {
+        weightEl.placeholder = '';
+        if (!weightInput) {
+          setWeightInput('1.5');
+          weightEl.value = '1.5';
+        }
+      }
     }
   }, [
     summary.isSingleConnector,
@@ -529,9 +532,16 @@ export function ConnectSection() {
     if (val === 'MIXED') {
       return (
         <span
-          className="phase-dash-icon"
-          style={{ background: 'currentColor', display: 'inline-block', margin: 'auto' }}
-        />
+          style={{
+            fontSize: '11px',
+            fontWeight: 400,
+            color: 'inherit',
+            lineHeight: '16px',
+            display: 'inline-block',
+          }}
+        >
+          Mixed
+        </span>
       );
     }
     const opt: TerminalOption = (val as TerminalOption) in TERMINAL_SVGS_BTN[side]
@@ -552,6 +562,57 @@ export function ConnectSection() {
     );
   }
 
+  // 앵커 기즈모 카드 1 및 카드 2에 표시할 노드 이름 산출
+  let node1DisplayName = 'Node 1';
+  let node2DisplayName = 'Node 2';
+
+  if (summary.isSingleConnector) {
+    node1DisplayName = selectedNodes[0]?.connectorSourceNodeName || 'Source Node';
+    node2DisplayName = selectedNodes[0]?.connectorTargetNodeName || 'Target Node';
+  } else if (summary.isMultiConnector) {
+    const connNodeNames = selectedNodes[0]?.connectedNodeNames || [];
+    if (connNodeNames.length > 0) {
+      node1DisplayName = connNodeNames[0] || 'Node 1';
+      if (connNodeNames.length >= 3) {
+        const moreCount = connNodeNames.length - 1;
+        node2DisplayName = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
+      } else if (connNodeNames.length === 2) {
+        node2DisplayName = connNodeNames[1] || 'Node 2';
+      } else {
+        node2DisplayName = 'Node 2';
+      }
+    } else {
+      const uniqueNames: string[] = [];
+      selectedNodes.forEach((n) => {
+        if (n?.connectorSourceNodeName && !uniqueNames.includes(n.connectorSourceNodeName)) {
+          uniqueNames.push(n.connectorSourceNodeName);
+        }
+        if (n?.connectorTargetNodeName && !uniqueNames.includes(n.connectorTargetNodeName)) {
+          uniqueNames.push(n.connectorTargetNodeName);
+        }
+      });
+      if (uniqueNames.length > 0) {
+        node1DisplayName = uniqueNames[0] || 'Node 1';
+        if (uniqueNames.length >= 3) {
+          const moreCount = uniqueNames.length - 1;
+          node2DisplayName = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
+        } else if (uniqueNames.length === 2) {
+          node2DisplayName = uniqueNames[1] || 'Node 2';
+        } else {
+          node2DisplayName = 'Node 2';
+        }
+      }
+    }
+  } else {
+    node1DisplayName = selectedNodes[0]?.title || selectedNodes[0]?.name || 'Node 1';
+    if (selectedNodes.length >= 3) {
+      const moreCount = selectedNodes.length - 1;
+      node2DisplayName = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
+    } else {
+      node2DisplayName = selectedNodes[1]?.title || selectedNodes[1]?.name || 'Node 2';
+    }
+  }
+
   const ROUTING_TYPES = [
     { type: 'ORTHOGONAL', title: '직각 (Orthogonal)', svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
     { type: 'S_CURVE', title: 'S자 곡선 (S-curve)', svg: '<g clip-path="url(#clip_sc)"><path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
@@ -564,7 +625,7 @@ export function ConnectSection() {
       <div className="section-header">
         <span className="section-title">
           Connect
-          {summary.isMulti && (
+          {summary.isMultiConnector && (
             isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed
           ) && (
             <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
@@ -690,7 +751,7 @@ export function ConnectSection() {
                 onClick={() => selectAnchor(1, pos)} />
             ))}
             <span id="preview-node-1-text">
-              {selectedNodes[0]?.title || selectedNodes[0]?.name || 'Node 1'}
+              {node1DisplayName}
             </span>
           </div>
           <div className="node-preview-card" id="preview-node-2">
@@ -702,9 +763,7 @@ export function ConnectSection() {
                 onClick={() => selectAnchor(2, pos)} />
             ))}
             <span id="preview-node-2-text">
-              {selectedNodes.length >= 3
-                ? `${selectedNodes.length - 1} more ${selectedNodes.length - 1 === 1 ? 'node' : 'nodes'}`
-                : (selectedNodes[1]?.title || selectedNodes[1]?.name || 'Node 2')}
+              {node2DisplayName}
             </span>
           </div>
         </div>
@@ -852,7 +911,7 @@ export function ConnectSection() {
             <select id="select-start-terminal" style={{ display: 'none' }} value={startTermVal} onChange={() => {}}>
               {['MIXED', 'NONE', 'BAR', 'ARROW', 'CIRCLE', 'DIAMOND', 'SQUARE'].map((v) => (
                 <option key={v} value={v}>
-                  {v}
+                  {v === 'MIXED' ? 'Mixed' : v}
                 </option>
               ))}
             </select>
@@ -881,7 +940,7 @@ export function ConnectSection() {
                   boxSizing: 'border-box',
                 }}
               >
-                {/* 1027261:5984 Mixed 상태 헤더 */}
+                {/* 1027261:5984 Mixed 상태 헤더 (체크박스와 중복하지 않고 대시 인디터미닛 표시 및 라인 아이콘과 일치된 정렬) */}
                 {startTermVal === 'MIXED' && (
                   <>
                     <div
@@ -891,21 +950,34 @@ export function ConnectSection() {
                         height: '24px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '3px',
+                        justifyContent: 'space-between',
                         padding: '0 4px',
                         borderRadius: '6px',
-                        cursor: 'pointer',
+                        cursor: 'default',
                         color: '#ffffff',
-                        fontSize: '11px',
-                        fontWeight: 500,
                         userSelect: 'none',
+                        boxSizing: 'border-box',
                       }}
-                      onClick={() => selectTerminal('start', 'MIXED')}
                     >
-                      <span style={{ width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {CHECK_SVG}
+                      {/* 선택 체크마크 슬롯과 동일한 24x24 크기 */}
+                      <span style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span className="phase-dash-icon" style={{ background: 'currentColor', display: 'inline-block' }} />
                       </span>
-                      <span style={{ fontSize: '11px', fontWeight: 500, color: '#ffffff' }}>Mixed</span>
+                      {/* 아래 라인 아이콘 영역과 100% 동일한 flex: 1 중앙 정렬 영역 */}
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flex: 1,
+                          height: '16px',
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          color: '#ffffff',
+                        }}
+                      >
+                        Mixed
+                      </span>
                     </div>
                     <hr style={{ margin: '3px 0', border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }} />
                   </>
@@ -913,7 +985,7 @@ export function ConnectSection() {
 
                 {/* 6개 단자 옵션: -short 아이콘 사용 */}
                 {TERMINAL_OPTIONS.map((opt) => {
-                  const isSelected = startTermVal === opt;
+                  const isSelected = startTermVal !== 'MIXED' && startTermVal === opt;
                   return (
                     <div
                       key={opt}
@@ -934,8 +1006,8 @@ export function ConnectSection() {
                       }}
                       onClick={() => selectTerminal('start', opt)}
                     >
-                      {/* 선택 체크마크 슬롯 */}
-                      <span style={{ width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
+                      {/* 선택 체크마크 슬롯 (24x24 규격) */}
+                      <span style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
                         {CHECK_SVG}
                       </span>
                       {/* 중앙 단자 그래픽: -short(36x16) 아이콘 */}
@@ -986,7 +1058,7 @@ export function ConnectSection() {
             <select id="select-end-terminal" style={{ display: 'none' }} value={endTermVal} onChange={() => {}}>
               {['MIXED', 'NONE', 'BAR', 'ARROW', 'CIRCLE', 'DIAMOND', 'SQUARE'].map((v) => (
                 <option key={v} value={v}>
-                  {v}
+                  {v === 'MIXED' ? 'Mixed' : v}
                 </option>
               ))}
             </select>
@@ -1015,7 +1087,7 @@ export function ConnectSection() {
                   boxSizing: 'border-box',
                 }}
               >
-                {/* 1027261:6029 Mixed 상태 헤더 */}
+                {/* 1027261:6029 Mixed 상태 헤더 (체크박스와 중복하지 않고 대시 인디터미닛 표시 및 라인 아이콘과 일치된 정렬) */}
                 {endTermVal === 'MIXED' && (
                   <>
                     <div
@@ -1025,21 +1097,34 @@ export function ConnectSection() {
                         height: '24px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '3px',
+                        justifyContent: 'space-between',
                         padding: '0 4px',
                         borderRadius: '6px',
-                        cursor: 'pointer',
+                        cursor: 'default',
                         color: '#ffffff',
-                        fontSize: '11px',
-                        fontWeight: 500,
                         userSelect: 'none',
+                        boxSizing: 'border-box',
                       }}
-                      onClick={() => selectTerminal('end', 'MIXED')}
                     >
-                      <span style={{ width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {CHECK_SVG}
+                      {/* 선택 체크마크 슬롯과 동일한 24x24 크기 */}
+                      <span style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span className="phase-dash-icon" style={{ background: 'currentColor', display: 'inline-block' }} />
                       </span>
-                      <span style={{ fontSize: '11px', fontWeight: 500, color: '#ffffff' }}>Mixed</span>
+                      {/* 아래 라인 아이콘 영역과 100% 동일한 flex: 1 중앙 정렬 영역 */}
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flex: 1,
+                          height: '16px',
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          color: '#ffffff',
+                        }}
+                      >
+                        Mixed
+                      </span>
                     </div>
                     <hr style={{ margin: '3px 0', border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }} />
                   </>
@@ -1047,7 +1132,7 @@ export function ConnectSection() {
 
                 {/* 6개 단자 옵션: -short 아이콘 사용 */}
                 {TERMINAL_OPTIONS.map((opt) => {
-                  const isSelected = endTermVal === opt;
+                  const isSelected = endTermVal !== 'MIXED' && endTermVal === opt;
                   return (
                     <div
                       key={opt}
@@ -1068,8 +1153,8 @@ export function ConnectSection() {
                       }}
                       onClick={() => selectTerminal('end', opt)}
                     >
-                      {/* 선택 체크마크 슬롯 */}
-                      <span style={{ width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
+                      {/* 선택 체크마크 슬롯 (24x24 규격) */}
+                      <span style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isSelected ? 1 : 0 }}>
                         {CHECK_SVG}
                       </span>
                       {/* 중앙 단자 그래픽: -short(36x16) 아이콘 */}
@@ -1130,15 +1215,19 @@ export function ConnectSection() {
               whiteSpace: 'nowrap',
             }}
             title={
-              selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector)
-                ? 'Update selected connector'
+              selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector)
+                ? selectedNodes.length === 1
+                  ? 'Update selected connector'
+                  : `Update ${selectedNodes.length} selected connectors`
                 : selectedNodes.length >= 2
                 ? `${selectedNodes.length} nodes selected to connect`
                 : 'Select 2 or more nodes to connect'
             }
           >
-            {selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector)
-              ? 'Connector selected'
+            {selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector)
+              ? selectedNodes.length === 1
+                ? 'Connector selected'
+                : `${selectedNodes.length} connectors selected`
               : selectedNodes.length >= 2
               ? `${selectedNodes.length} nodes selected`
               : 'Select 2+ nodes to connect'}
@@ -1147,11 +1236,13 @@ export function ConnectSection() {
             type="button"
             id="btn-section-connect"
             className="btn-add-step-badges"
-            disabled={selectedNodes.length < 2 && !(selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector))}
+            disabled={selectedNodes.length < 2 && !(selectedNodes.length >= 1 && selectedNodes.every(n => n && n.isConnector))}
             onClick={handleMainAction}
             title={
-              selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector)
-                ? 'Update Connector'
+              selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector)
+                ? selectedNodes.length === 1
+                  ? 'Update Connector'
+                  : 'Update Connectors'
                 : selectedNodes.length >= 2
                 ? 'Connect selected nodes'
                 : 'Select 2 or more nodes to connect'
@@ -1164,7 +1255,11 @@ export function ConnectSection() {
               <path d="M12 9.5L14.5 12L12 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span>
-              {selectedNodes.length === 1 && selectedNodes.every(n => n && n.isConnector) ? 'Update Connector' : 'Connect'}
+              {selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector)
+                ? selectedNodes.length === 1
+                  ? 'Update Connector'
+                  : 'Update Connectors'
+                : 'Connect'}
             </span>
           </button>
         </div>

@@ -1527,28 +1527,40 @@
       max-height: 54px;
     }
 
-    /* 11x11 앵커 마그넷 기즈모 핸들 (상하좌우 1px씩 확대) */
+    /* 11x11 앵커 마그넷 기즈모 핸들 (호버 시 상하좌우 확대 애니메이션) */
     .anchor-handle {
       position: absolute;
       width: 11px;
       height: 11px;
       background: #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.15);
       border-radius: 0px;
       cursor: pointer;
-      transition: border-color 0.15s ease, background 0.15s ease;
+      transform-origin: center center;
+      transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+                  border-color 0.15s ease,
+                  background 0.15s ease;
       z-index: 2;
       box-sizing: border-box;
     }
 
     .anchor-handle:hover {
-      border-color: var(--color-brand, #8638e5);
+      border-color: rgba(0, 0, 0, 0.3);
+      transform: scale(1.36);
+      z-index: 3;
+    }
+
+    .anchor-handle:active {
+      transform: scale(1.18);
     }
 
     .anchor-handle.active {
       background: var(--color-brand, #8638e5) !important;
       border: 1px solid var(--color-brand, #8638e5) !important;
-      box-shadow: none !important;
+    }
+
+    .anchor-handle.active:hover {
+      transform: scale(1.36);
     }
 
     .anchor-top {
@@ -1590,6 +1602,12 @@
     [data-theme="dark"] .anchor-handle:not(.active) {
       background: #2c2c2c;
       border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    body.figma-dark .anchor-handle:not(.active):hover,
+    .figma-dark .anchor-handle:not(.active):hover,
+    [data-theme="dark"] .anchor-handle:not(.active):hover {
+      border-color: rgba(255, 255, 255, 0.45);
     }
 
     /* ============================================================ */
@@ -1658,6 +1676,10 @@
       padding: 0;
       margin: 0;
       letter-spacing: 0 !important;
+    }
+
+    .conn-color-hex-input::placeholder {
+      text-transform: none;
     }
 
     .conn-color-palette-btn {
@@ -2658,6 +2680,10 @@
       box-sizing: border-box;
     }
 
+    .phase-color-hex-input::placeholder {
+      text-transform: none;
+    }
+
     .phase-color-chevron-wrap {
       width: 24px;
       height: 24px;
@@ -3083,6 +3109,10 @@
       letter-spacing: 0 !important;
     }
 
+    .style-color-hex-text::placeholder {
+      text-transform: none;
+    }
+
     .style-chevron-icon {
       color: rgba(255, 255, 255, 0.5);
       flex-shrink: 0;
@@ -3441,6 +3471,7 @@
 
     .conn-modal-hex-input::placeholder {
       color: var(--color-text-ondark-muted, rgba(255, 255, 255, 0.45));
+      text-transform: none;
     }
 
     /* 사용자 첨부 이미지 완벽 일치: 모달 Hex 입력필드 우측 도넛 무지개 컬러 휠 토글 버튼 */

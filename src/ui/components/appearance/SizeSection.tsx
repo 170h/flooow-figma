@@ -61,6 +61,24 @@ export function SizeSection() {
     DEFAULT_PRESET_IDS.has(activePreset.id);
 
   const summary = useSelectionSummary();
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
+
+  // 드롭다운 외부 클릭 시에만 안전하게 닫기 (mousedown 기준)
+  React.useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+        setSizeModeDropdownOpen(false);
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownOpen, setSizeModeDropdownOpen]);
 
   const currentSizeMode = (() => {
     if (summary.isMultiFlowNode) {
@@ -208,7 +226,8 @@ export function SizeSection() {
 
   function toggleSizeModeDropdown(e: React.MouseEvent) {
     e.stopPropagation();
-    if (!sizeModeDropdownOpen) {
+    const nextState = !dropdownOpen;
+    if (nextState) {
       const currentH = (document.getElementById('input-size-h') as HTMLInputElement | null)?.value || String(lastNodeConfig.height || 90);
       const fixedValEl = document.getElementById('size-mode-val-fixed');
       const hugValEl = document.getElementById('size-mode-val-hug');
@@ -220,7 +239,8 @@ export function SizeSection() {
       const hugH = isCurrentlyHug ? Number(currentH) : (selectedNodes[0]?.hugHeight ?? defaultHugH);
       if (hugValEl) hugValEl.textContent = String(hugH);
     }
-    setSizeModeDropdownOpen(!sizeModeDropdownOpen);
+    setDropdownOpen(nextState);
+    setSizeModeDropdownOpen(nextState);
   }
 
   function selectSizeMode(mode: string) {
@@ -232,7 +252,8 @@ export function SizeSection() {
       hiddenInput.value = mode;
       hiddenInput.dispatchEvent(new Event('change'));
     }
-    closeAllPopovers();
+    setDropdownOpen(false);
+    setSizeModeDropdownOpen(false);
     applyCurrentNodeState(mode);
   }
 
@@ -290,11 +311,15 @@ export function SizeSection() {
           </div>
 
           {/* 사이즈 모드 드롭다운 */}
-          <div className="size-mode-dropdown-wrapper figma-dropdown-wrapper" id="size-mode-dropdown-wrapper">
+          <div
+            ref={dropdownRef}
+            className="size-mode-dropdown-wrapper figma-dropdown-wrapper"
+            id="size-mode-dropdown-wrapper"
+          >
             <button
               type="button"
               id="btn-size-mode-dropdown"
-              className={`size-mode-dropdown-btn figma-dropdown-btn${sizeModeDropdownOpen ? ' active' : ''}`}
+              className={`size-mode-dropdown-btn figma-dropdown-btn${dropdownOpen ? ' active' : ''}`}
               title="Select height mode"
               onClick={toggleSizeModeDropdown}
             >
@@ -309,7 +334,7 @@ export function SizeSection() {
               <span
                 className="size-mode-chevron-icon figma-dropdown-chevron-icon"
                 style={{
-                  transform: sizeModeDropdownOpen ? 'rotate(180deg)' : 'none',
+                  transform: dropdownOpen ? 'rotate(180deg)' : 'none',
                   transition: 'transform 0.15s ease',
                   display: 'flex',
                   alignItems: 'center',
@@ -320,30 +345,38 @@ export function SizeSection() {
               </span>
             </button>
 
-            <div className={`size-mode-menu-popover figma-dropdown-menu${sizeModeDropdownOpen ? ' active' : ''}`} id="popover-size-mode">
-              <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'mixed' ? ' selected' : ''}`} data-value="mixed" onClick={() => selectSizeMode('mixed')}>
-                <span className="size-mode-menu-item-check figma-dropdown-check-slot"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg></span>
-                <span className="size-mode-menu-item-icon figma-dropdown-icon-slot"><span className="phase-dash-icon"></span></span>
-                <span className="size-mode-menu-item-label figma-dropdown-label">Mixed</span>
+            {dropdownOpen && (
+              <div
+                className="size-mode-menu-popover figma-dropdown-menu active"
+                id="popover-size-mode"
+                style={{ display: 'flex' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'mixed' ? ' selected' : ''}`} data-value="mixed" onClick={() => selectSizeMode('mixed')}>
+                  <span className="size-mode-menu-item-check figma-dropdown-check-slot">
+                    <span className="phase-dash-icon" style={{ background: 'currentColor', display: 'inline-block' }} />
+                  </span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">Mixed</span>
+                </div>
+                <hr className="phase-popover-divider" style={{ margin: '4px 0' }} />
+                <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'fixed' ? ' selected' : ''}`} data-value="fixed" onClick={() => selectSizeMode('fixed')}>
+                  <span className="size-mode-menu-item-check figma-dropdown-check-slot"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg></span>
+                  <span className="size-mode-menu-item-icon figma-dropdown-icon-slot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z" fill="currentColor"/></svg></span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">Fixed height</span>
+                  <span className="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-fixed">{lastNodeConfig.height || 90}</span>
+                </div>
+                <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'hug' ? ' selected' : ''}`} data-value="hug" onClick={() => selectSizeMode('hug')}>
+                  <span className="size-mode-menu-item-check figma-dropdown-check-slot"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg></span>
+                  <span className="size-mode-menu-item-icon figma-dropdown-icon-slot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z" fill="currentColor"/></svg></span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">Hug contents</span>
+                  <span className="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-hug">
+                    {(currentSizeMode === 'hug' || selectedNodes[0]?.sizeMode === 'hug')
+                      ? (selectedNodes[0]?.height || lastNodeConfig.height || 90)
+                      : (selectedNodes[0]?.hugHeight || ((lastNodeConfig.statusOn || Boolean(uiState.selectedStatus)) ? 110 : 90))}
+                  </span>
+                </div>
               </div>
-              <hr className="phase-popover-divider" style={{ margin: '4px 0' }} />
-              <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'fixed' ? ' selected' : ''}`} data-value="fixed" onClick={() => selectSizeMode('fixed')}>
-                <span className="size-mode-menu-item-check figma-dropdown-check-slot"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg></span>
-                <span className="size-mode-menu-item-icon figma-dropdown-icon-slot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z" fill="currentColor"/></svg></span>
-                <span className="size-mode-menu-item-label figma-dropdown-label">Fixed height</span>
-                <span className="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-fixed">{lastNodeConfig.height || 90}</span>
-              </div>
-              <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'hug' ? ' selected' : ''}`} data-value="hug" onClick={() => selectSizeMode('hug')}>
-                <span className="size-mode-menu-item-check figma-dropdown-check-slot"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg></span>
-                <span className="size-mode-menu-item-icon figma-dropdown-icon-slot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z" fill="currentColor"/></svg></span>
-                <span className="size-mode-menu-item-label figma-dropdown-label">Hug contents</span>
-                <span className="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-hug">
-                  {(currentSizeMode === 'hug' || selectedNodes[0]?.sizeMode === 'hug')
-                    ? (selectedNodes[0]?.height || lastNodeConfig.height || 90)
-                    : (selectedNodes[0]?.hugHeight || ((lastNodeConfig.statusOn || Boolean(uiState.selectedStatus)) ? 110 : 90))}
-                </span>
-              </div>
-            </div>
+            )}
             <input type="hidden" id="select-size-mode" defaultValue="fixed" />
           </div>
         </div>

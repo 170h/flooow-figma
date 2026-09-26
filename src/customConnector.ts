@@ -3,7 +3,12 @@
 // 피그잼 기본 커넥터의 라운딩 강제 문제를 해결하고 100% 순수 직각 Miter 선 생성
 // ============================================================================
 
-import { MagnetPosition } from './types';
+import {
+  MagnetPosition,
+  ConnectorRoutingType,
+  ConnectorTerminalType,
+  ConnectorStrokePattern,
+} from './types';
 
 export interface Point {
   x: number;
@@ -23,6 +28,309 @@ export interface ConnectorOptions {
   label?: string;
   sourceNodeId?: string;
   targetNodeId?: string;
+  routingType?: ConnectorRoutingType;
+  startTerminal?: ConnectorTerminalType;
+  endTerminal?: ConnectorTerminalType;
+  strokePattern?: ConnectorStrokePattern;
+}
+
+// 터미널 타입을 피그마 VectorVertex의 StrokeCap으로 매핑
+export function terminalToStrokeCap(terminal?: ConnectorTerminalType): StrokeCap {
+  switch (terminal) {
+    case 'ARROW':
+    case 'TRIANGLE_ARROW':
+    case 'REVERSED_TRIANGLE_ARROW':
+      return 'ARROW_LINES';
+    case 'CIRCLE':
+      return 'CIRCLE_FILLED';
+    case 'DIAMOND':
+      return 'DIAMOND_FILLED';
+    case 'SQUARE':
+    case 'BAR':
+    case 'NONE':
+    default:
+      return 'NONE';
+  }
+}
+
+// 마그넷 방향 벡터 반환
+export function getMagnetDirectionVector(magnet: MagnetPosition): Point {
+  switch (magnet) {
+    case 'TOP': return { x: 0, y: -1 };
+    case 'BOTTOM': return { x: 0, y: 1 };
+    case 'LEFT': return { x: -1, y: 0 };
+    case 'RIGHT': return { x: 1, y: 0 };
+  }
+}
+
+// 3차 베지어 곡선 포인트 계산 (자유곡선 CURVED)
+export function calculateCurvedPoints(
+  srcPoint: Point,
+  srcMagnet: MagnetPosition,
+  tgtPoint: Point,
+  tgtMagnet: MagnetPosition,
+  steps: number = 28
+): Point[] {
+  const dirSrc = getMagnetDirectionVector(srcMagnet);
+  const dirTgt = getMagnetDirectionVector(tgtMagnet);
+
+  const dist = Math.hypot(tgtPoint.x - srcPoint.x, tgtPoint.y - srcPoint.y);
+  const handleLen = Math.max(dist * 0.45, 25);
+
+  const cp1: Point = {
+    x: srcPoint.x + dirSrc.x * handleLen,
+    y: srcPoint.y + dirSrc.y * handleLen,
+  };
+  const cp2: Point = {
+    x: tgtPoint.x + dirTgt.x * handleLen,
+    y: tgtPoint.y + dirTgt.y * handleLen,
+  };
+
+  const points: Point[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const invT = 1 - t;
+    const x =
+      invT * invT * invT * srcPoint.x +
+      3 * invT * invT * t * cp1.x +
+      3 * invT * t * t * cp2.x +
+      t * t * t * tgtPoint.x;
+    const y =
+      invT * invT * invT * srcPoint.y +
+      3 * invT * invT * t * cp1.y +
+      3 * invT * t * t * cp2.y +
+      t * t * t * tgtPoint.y;
+    points.push({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
+  }
+
+  return points;
+}
+
+// 직선 포인트 계산 (STRAIGHT)
+export function calculateStraightPoints(srcPoint: Point, tgtPoint: Point): Point[] {
+  return [srcPoint, tgtPoint];
+}
+
+// 라우팅 타입별 포인트 계산 종합 헬퍼
+export function calculateRoutingPoints(
+  srcPoint: Point,
+  sourceMagnet: MagnetPosition,
+  tgtPoint: Point,
+  targetMagnet: MagnetPosition,
+  srcBox: Box,
+  tgtBox: Box,
+  routingType: ConnectorRoutingType = 'ORTHOGONAL'
+): Point[] {
+  switch (routingType) {
+    case 'STRAIGHT':
+      return calculateStraightPoints(srcPoint, tgtPoint);
+    case 'CURVED':
+      return calculateCurvedPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet);
+    case 'S_CURVE':
+    case 'ORTHOGONAL':
+    default:
+      return calculateOrthogonalPoints(srcPoint, sourceMagnet, tgtPoint, targetMagnet, srcBox, tgtBox);
+  }
+}
+
+// 라우팅 타입별 및 단자 형태별 버텍스와 세그먼트 생성 (SQUARE 사각형 박스, BAR 막대 커스텀 지오메트리 및 Fill 지원)
+export function buildVectorNetwork(
+  localPoints: Point[],
+  routingType: ConnectorRoutingType = 'ORTHOGONAL',
+  startTerminal: ConnectorTerminalType = 'NONE',
+  endTerminal: ConnectorTerminalType = 'ARROW',
+  strokeWeight: number = 1.5,
+  strokeColor: RGB = { r: 0, g: 0, b: 0 }
+): { vertices: VectorVertex[]; segments: VectorSegment[]; regions: VectorRegion[] } {
+  const len = localPoints.length;
+  if (len === 0) return { vertices: [], segments: [], regions: [] };
+
+  const startCap = terminalToStrokeCap(startTerminal);
+  const endCap = terminalToStrokeCap(endTerminal);
+
+  const vertices: VectorVertex[] = localPoints.map((pt, idx) => {
+    const isLast = idx === len - 1;
+    const isFirst = idx === 0;
+
+    let cornerRadius = 0;
+    let strokeJoin: StrokeJoin = 'MITER';
+
+    if (routingType === 'S_CURVE') {
+      strokeJoin = 'ROUND';
+      // 중간 꺾임점 버텍스들에 코너 라운드니스(cornerRadius) 부드럽게 적용
+      if (!isFirst && !isLast) {
+        const prev = localPoints[idx - 1];
+        const next = localPoints[idx + 1];
+        const d1 = Math.hypot(pt.x - prev.x, pt.y - prev.y);
+        const d2 = Math.hypot(next.x - pt.x, next.y - pt.y);
+        const maxR = Math.min(d1, d2) / 2;
+        cornerRadius = Math.min(14, Math.max(0, maxR));
+      }
+    } else if (routingType === 'CURVED') {
+      strokeJoin = 'ROUND';
+      cornerRadius = 0;
+    } else if (routingType === 'STRAIGHT') {
+      strokeJoin = 'MITER';
+      cornerRadius = 0;
+    } else {
+      // ORTHOGONAL (칼각 직각)
+      strokeJoin = 'MITER';
+      cornerRadius = 0;
+    }
+
+    let strokeCap: StrokeCap = 'NONE';
+    if (isFirst) {
+      strokeCap = startCap;
+    } else if (isLast) {
+      strokeCap = endCap;
+    }
+
+    return {
+      x: pt.x,
+      y: pt.y,
+      strokeCap,
+      strokeJoin,
+      cornerRadius,
+    };
+  });
+
+  const segments: VectorSegment[] = [];
+  for (let i = 0; i < len - 1; i++) {
+    segments.push({ start: i, end: i + 1 });
+  }
+
+  const regions: VectorRegion[] = [];
+  const barLen = Math.max(7, Math.round(strokeWeight * 4.8));
+
+  // 1. 시작점 BAR 막대
+  if (len >= 2 && startTerminal === 'BAR') {
+    const p0 = localPoints[0];
+    const p1 = localPoints[1];
+    const d0 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    if (d0 > 0.1) {
+      const ux = (p1.x - p0.x) / d0;
+      const uy = (p1.y - p0.y) / d0;
+      const nx = -uy;
+      const ny = ux;
+      const vStart = vertices.length;
+      vertices.push(
+        { x: p0.x + (barLen / 2) * nx, y: p0.y + (barLen / 2) * ny, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
+        { x: p0.x - (barLen / 2) * nx, y: p0.y - (barLen / 2) * ny, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
+      );
+      segments.push({ start: vStart, end: vStart + 1 });
+    }
+  }
+
+  // 2. 끝점 BAR 막대
+  if (len >= 2 && endTerminal === 'BAR') {
+    const pn = localPoints[len - 1];
+    const prev = localPoints[len - 2];
+    const dn = Math.hypot(pn.x - prev.x, pn.y - prev.y);
+    if (dn > 0.1) {
+      const ux = (pn.x - prev.x) / dn;
+      const uy = (pn.y - prev.y) / dn;
+      const nx = -uy;
+      const ny = ux;
+      const vStart = vertices.length;
+      vertices.push(
+        { x: pn.x + (barLen / 2) * nx, y: pn.y + (barLen / 2) * ny, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
+        { x: pn.x - (barLen / 2) * nx, y: pn.y - (barLen / 2) * ny, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
+      );
+      segments.push({ start: vStart, end: vStart + 1 });
+    }
+  }
+
+  // 3. 시작점 SQUARE 사각형 박스 (별도 노드 생성 없이 벡터 네트워크에 100% 통합)
+  if (len >= 2 && startTerminal === 'SQUARE') {
+    const p0 = localPoints[0];
+    const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
+    const half = sqSize / 2;
+    const vStart = vertices.length;
+    vertices.push(
+      { x: p0.x - half, y: p0.y - half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
+      { x: p0.x + half, y: p0.y - half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
+      { x: p0.x + half, y: p0.y + half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
+      { x: p0.x - half, y: p0.y + half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
+    );
+    segments.push(
+      { start: vStart, end: vStart + 1 },
+      { start: vStart + 1, end: vStart + 2 },
+      { start: vStart + 2, end: vStart + 3 },
+      { start: vStart + 3, end: vStart },
+      { start: vStart, end: vStart + 2 },
+      { start: vStart + 1, end: vStart + 3 }
+    );
+  }
+
+  // 4. 끝점 SQUARE 사각형 박스 (별도 노드 생성 없이 벡터 네트워크에 100% 통합)
+  if (len >= 2 && endTerminal === 'SQUARE') {
+    const pn = localPoints[len - 1];
+    const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
+    const half = sqSize / 2;
+    const vStart = vertices.length;
+    vertices.push(
+      { x: pn.x - half, y: pn.y - half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
+      { x: pn.x + half, y: pn.y - half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
+      { x: pn.x + half, y: pn.y + half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
+      { x: pn.x - half, y: pn.y + half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
+    );
+    segments.push(
+      { start: vStart, end: vStart + 1 },
+      { start: vStart + 1, end: vStart + 2 },
+      { start: vStart + 2, end: vStart + 3 },
+      { start: vStart + 3, end: vStart },
+      { start: vStart, end: vStart + 2 },
+      { start: vStart + 1, end: vStart + 3 }
+    );
+  }
+
+  return { vertices, segments, regions };
+}
+
+// 하위 호환용 래퍼
+export function buildVectorVertices(
+  localPoints: Point[],
+  routingType: ConnectorRoutingType = 'ORTHOGONAL',
+  startTerminal: ConnectorTerminalType = 'NONE',
+  endTerminal: ConnectorTerminalType = 'ARROW'
+): VectorVertex[] {
+  return buildVectorNetwork(localPoints, routingType, startTerminal, endTerminal).vertices;
+}
+
+// 라우팅 타입별 라벨 중심점 산출 헬퍼
+export function getLabelCenterPoint(worldPoints: Point[], routingType: ConnectorRoutingType = 'ORTHOGONAL'): Point {
+  if (worldPoints.length <= 2) {
+    return {
+      x: (worldPoints[0].x + worldPoints[worldPoints.length - 1].x) / 2,
+      y: (worldPoints[0].y + worldPoints[worldPoints.length - 1].y) / 2,
+    };
+  }
+
+  if (routingType === 'CURVED') {
+    const midIdx = Math.floor(worldPoints.length / 2);
+    return worldPoints[midIdx];
+  }
+
+  let longestDist = -1;
+  let midSegmentPoint: Point = {
+    x: (worldPoints[0].x + worldPoints[1].x) / 2,
+    y: (worldPoints[0].y + worldPoints[1].y) / 2,
+  };
+
+  for (let i = 0; i < worldPoints.length - 1; i++) {
+    const p1 = worldPoints[i];
+    const p2 = worldPoints[i + 1];
+    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    if (dist > longestDist) {
+      longestDist = dist;
+      midSegmentPoint = {
+        x: (p1.x + p2.x) / 2,
+        y: (p1.y + p2.y) / 2,
+      };
+    }
+  }
+
+  return midSegmentPoint;
 }
 
 // 1. 마그넷 위치에 따른 절대 좌표 계산
@@ -309,23 +617,37 @@ export async function createOrthogonalVectorConnector(
   const pStart = getMagnetPoint(srcBox, sourceMagnet);
   const pEnd = getMagnetPoint(tgtBox, targetMagnet);
 
-  // 90도 직각 경로 포인트 계산
-  const worldPoints = calculateOrthogonalPoints(
+  const routingType: ConnectorRoutingType = options.routingType || 'ORTHOGONAL';
+
+  // 라우팅 타입별 경로 포인트 계산 (직각, 라운드니스 S_CURVE, 자유곡선 CURVED, 직선 STRAIGHT)
+  const worldPoints = calculateRoutingPoints(
     pStart,
     sourceMagnet,
     pEnd,
     targetMagnet,
     srcBox,
-    tgtBox
+    tgtBox,
+    routingType
   );
 
   // Bounding Box 및 로컬 좌표계 변환
   const allX = worldPoints.map((p) => p.x);
   const allY = worldPoints.map((p) => p.y);
-  const minX = Math.min(...allX);
-  const minY = Math.min(...allY);
-  const maxX = Math.max(...allX);
-  const maxY = Math.max(...allY);
+  // 색상 및 두께 결정
+  const strokeColor: RGB = options.strokeColor || { r: 0.18, g: 0.18, b: 0.22 };
+  const strokeWeight: number = options.strokeWeight || 1.5;
+  const startTerminal = options.startTerminal || 'NONE';
+  const endTerminal = options.endTerminal || 'ARROW';
+  const strokePattern = options.strokePattern || 'SOLID';
+
+  // 마커가 노드 보더라인 중심에 걸치도록 Bounding Box 여백(pad) 확보
+  const hasSquare = startTerminal === 'SQUARE' || endTerminal === 'SQUARE' || startTerminal === 'BAR' || endTerminal === 'BAR';
+  const pad = hasSquare ? Math.max(5, Math.round(strokeWeight * 3)) : 0;
+
+  const minX = Math.min(...allX) - pad;
+  const minY = Math.min(...allY) - pad;
+  const maxX = Math.max(...allX) + pad;
+  const maxY = Math.max(...allY) + pad;
 
   // 최소 1px 크기 보장 (1자 직선일 때 width/height가 0이 되는 현상 방지)
   const width = Math.max(maxX - minX, 1);
@@ -336,38 +658,39 @@ export async function createOrthogonalVectorConnector(
     y: p.y - minY,
   }));
 
-  // 색상 및 두께 결정
-  const strokeColor: RGB = options.strokeColor || { r: 0.18, g: 0.18, b: 0.22 };
-  const strokeWeight: number = options.strokeWeight || 1.5;
-
   // 피그마 VectorNode 생성
   const vector = figma.createVector();
   vector.x = minX;
   vector.y = minY;
   vector.resize(width, height);
 
-  // 버텍스 및 세그먼트 구성 (마지막 버텍스에만 정확한 ARROW_EQUILATERAL 화살표 촉 부여)
-  const vertices: VectorVertex[] = localPoints.map((pt, idx) => ({
-    x: pt.x,
-    y: pt.y,
-    strokeCap: idx === localPoints.length - 1 ? 'ARROW_EQUILATERAL' : 'NONE',
-    strokeJoin: 'MITER',
-    cornerRadius: 0, // 완전한 90도 직각 보장 (라운딩 0)
-  }));
+  // 라우팅 타입 및 단자 형태별 버텍스와 세그먼트 구성 (SQUARE, BAR 등 커스텀 단자 포함)
+  const { vertices, segments, regions } = buildVectorNetwork(
+    localPoints,
+    routingType,
+    startTerminal,
+    endTerminal,
+    strokeWeight,
+    strokeColor
+  );
 
-  const segments: VectorSegment[] = [];
-  for (let i = 0; i < localPoints.length - 1; i++) {
-    segments.push({
-      start: i,
-      end: i + 1,
-    });
-  }
-
-  await vector.setVectorNetworkAsync({ vertices, segments });
+  await vector.setVectorNetworkAsync({ vertices, segments, regions });
 
   vector.strokes = [{ type: 'SOLID', color: strokeColor }];
   vector.strokeWeight = strokeWeight;
-  vector.strokeJoin = 'MITER';
+  if (regions.length > 0) {
+    vector.fills = [{ type: 'SOLID', color: strokeColor }];
+  } else {
+    vector.fills = [];
+  }
+  if (strokePattern === 'DASHED') {
+    vector.dashPattern = [4, 4];
+  } else if (strokePattern === 'DOTTED') {
+    vector.dashPattern = [1.5, 3];
+  } else {
+    vector.dashPattern = [];
+  }
+  vector.strokeJoin = routingType === 'S_CURVE' || routingType === 'CURVED' ? 'ROUND' : 'MITER';
   vector.strokeMiterLimit = 4;
   vector.name = `[Connector] ${sourceNode.name} → ${targetNode.name}`;
 
@@ -378,10 +701,16 @@ export async function createOrthogonalVectorConnector(
   vector.setPluginData('target_node_id', targetNode.id);
   vector.setPluginData('source_magnet', sourceMagnet);
   vector.setPluginData('target_magnet', targetMagnet);
+  vector.setPluginData('connector_routing', routingType);
+  vector.setPluginData('start_terminal', startTerminal);
+  vector.setPluginData('end_terminal', endTerminal);
+  vector.setPluginData('connector_pattern', strokePattern);
+  vector.setPluginData('connector_weight', String(strokeWeight));
 
   // 5. 라벨(텍스트)이 존재하는 경우 중앙 세그먼트에 단정한 태그 뱃지 생성
-  if (options.label && options.label.trim() !== '') {
-    const labelText = options.label.trim();
+  let labelFrame: FrameNode | null = null;
+  const labelText = options.label ? options.label.trim() : '';
+  if (labelText !== '') {
     vector.setPluginData('connector_label', labelText);
 
     // 폰트 로드
@@ -391,28 +720,11 @@ export async function createOrthogonalVectorConnector(
       await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
     }
 
-    // 가장 긴 세그먼트의 중심점 탐색
-    let longestDist = -1;
-    let midSegmentPoint: Point = {
-      x: (worldPoints[0].x + worldPoints[1].x) / 2,
-      y: (worldPoints[0].y + worldPoints[1].y) / 2,
-    };
-
-    for (let i = 0; i < worldPoints.length - 1; i++) {
-      const p1 = worldPoints[i];
-      const p2 = worldPoints[i + 1];
-      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      if (dist > longestDist) {
-        longestDist = dist;
-        midSegmentPoint = {
-          x: (p1.x + p2.x) / 2,
-          y: (p1.y + p2.y) / 2,
-        };
-      }
-    }
+    // 라우팅 타입별 라벨 중심점 탐색
+    const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
 
     // 라벨 태그 박스 생성 (흰색 배경 + 얇은 테두리 + 패딩)
-    const labelFrame = figma.createFrame();
+    labelFrame = figma.createFrame();
     labelFrame.name = 'ConnectorLabel';
     labelFrame.layoutMode = 'HORIZONTAL';
     labelFrame.primaryAxisSizingMode = 'AUTO';
@@ -440,22 +752,38 @@ export async function createOrthogonalVectorConnector(
 
     labelFrame.setPluginData('is_connector_label', 'true');
     labelFrame.setPluginData('is_custom_connector', 'true');
+  }
 
-    // 라인과 라벨을 단일 커넥터 그룹으로 묶음
+  // vector 자체에 기본 메타데이터 저장
+  vector.name = labelText
+    ? `[Flow] ${sourceNode.name} → ${targetNode.name} ("${labelText}")`
+    : `[Connector] ${sourceNode.name} → ${targetNode.name}`;
+  vector.setPluginData('is_flow_connector', 'true');
+  vector.setPluginData('is_custom_connector', 'true');
+  vector.setPluginData('source_node_id', sourceNode.id);
+  vector.setPluginData('target_node_id', targetNode.id);
+  vector.setPluginData('source_magnet', sourceMagnet);
+  vector.setPluginData('target_magnet', targetMagnet);
+  vector.setPluginData('connector_routing', routingType);
+  if (labelText) {
+    vector.setPluginData('connector_label', labelText);
+  }
+  vector.setPluginData('start_terminal', startTerminal);
+  vector.setPluginData('end_terminal', endTerminal);
+  vector.setPluginData('connector_pattern', strokePattern);
+  vector.setPluginData('connector_weight', String(strokeWeight));
+
+  if (labelFrame) {
     const group = figma.group([vector, labelFrame], figma.currentPage);
-    group.name = `[Flow] ${sourceNode.name} → ${targetNode.name} ("${labelText}")`;
-    group.setPluginData('is_flow_connector', 'true');
-    group.setPluginData('is_custom_connector', 'true');
-    group.setPluginData('source_node_id', sourceNode.id);
-    group.setPluginData('target_node_id', targetNode.id);
-    group.setPluginData('source_magnet', sourceMagnet);
-    group.setPluginData('target_magnet', targetMagnet);
-    group.setPluginData('connector_label', labelText);
+    figma.currentPage.appendChild(group); // 최상위 레이어로 올려 노드 뒤에 가려짐 방지
+    group.name = vector.name;
+    copyConnectorData(vector, group);
 
     registerConnectorInRegistry(group);
     return group;
   }
 
+  figma.currentPage.appendChild(vector);
   registerConnectorInRegistry(vector);
   return vector;
 }
@@ -499,6 +827,31 @@ export function registerConnectorInRegistry(connectorNode: SceneNode) {
     if (!nodeToConnectorsMap.has(tgtId)) nodeToConnectorsMap.set(tgtId, new Set());
     nodeToConnectorsMap.get(tgtId)!.add(connectorNode.id);
   }
+}
+
+// 캔버스 내 고스트 마커(기존 버그로 인해 잔상처럼 남겨진 사각형 노드들) 일괄 자동 청소
+export function cleanupGhostTerminalMarkers(): number {
+  let count = 0;
+  try {
+    const ghosts = figma.currentPage.findAll((n) => {
+      if (n.type !== 'RECTANGLE') return false;
+      const name = n.name;
+      if (name === 'ConnectorStartTerminal' || name === 'ConnectorEndTerminal') return true;
+      const isTerm = n.getPluginData('is_terminal_marker');
+      if (isTerm === 'start' || isTerm === 'end') return true;
+      return false;
+    });
+    for (const g of ghosts) {
+      g.remove();
+      count++;
+    }
+    if (count > 0) {
+      console.log(`[Flow] 잔상 고스트 마커 ${count}개를 깨끗하게 청소했습니다.`);
+    }
+  } catch (err) {
+    console.error('고스트 마커 정리 중 에러:', err);
+  }
+  return count;
 }
 
 // 캔버스 내 모든 커넥터(커스텀 및 네이티브) 스캔 및 레지스트리 초기화
@@ -692,25 +1045,56 @@ export async function updateOrthogonalVectorConnector(
     vector.setPluginData('target_magnet', targetMagnet);
   }
 
+  // 라우팅 타입 조회 (직각, 라운드니스 S_CURVE, 자유곡선 CURVED, 직선 STRAIGHT)
+  const routingType: ConnectorRoutingType =
+    (connectorNode.getPluginData('connector_routing') as ConnectorRoutingType) ||
+    (vector.getPluginData('connector_routing') as ConnectorRoutingType) ||
+    'ORTHOGONAL';
+
   const pStart = getMagnetPoint(srcBox, sourceMagnet);
   const pEnd = getMagnetPoint(tgtBox, targetMagnet);
 
-  // 새로운 최단거리 90도 직각 경로 재계산
-  const worldPoints = calculateOrthogonalPoints(
+  // 라우팅 타입별 경로 재계산
+  const worldPoints = calculateRoutingPoints(
     pStart,
     sourceMagnet,
     pEnd,
     targetMagnet,
     srcBox,
-    tgtBox
+    tgtBox,
+    routingType
   );
 
   const allX = worldPoints.map((p) => p.x);
   const allY = worldPoints.map((p) => p.y);
-  const minX = Math.min(...allX);
-  const minY = Math.min(...allY);
-  const maxX = Math.max(...allX);
-  const maxY = Math.max(...allY);
+
+  const startTerminal =
+    (connectorNode.getPluginData('start_terminal') as ConnectorTerminalType) ||
+    (vector.getPluginData('start_terminal') as ConnectorTerminalType) ||
+    'NONE';
+  const endTerminal =
+    (connectorNode.getPluginData('end_terminal') as ConnectorTerminalType) ||
+    (vector.getPluginData('end_terminal') as ConnectorTerminalType) ||
+    'ARROW';
+
+  const strokeWeight = (typeof vector.strokeWeight === 'number' ? vector.strokeWeight : 1.5);
+  let strokeColor: RGB = { r: 0.18, g: 0.18, b: 0.22 };
+  if (Array.isArray(vector.strokes) && vector.strokes.length > 0 && vector.strokes[0].type === 'SOLID') {
+    strokeColor = vector.strokes[0].color;
+  }
+
+  // 마커가 노드 보더라인 중심에 걸치도록 Bounding Box 여백(pad) 확보
+  const hasBarOrSquare =
+    startTerminal === 'BAR' ||
+    endTerminal === 'BAR' ||
+    startTerminal === 'SQUARE' ||
+    endTerminal === 'SQUARE';
+  const pad = hasBarOrSquare ? Math.max(5, Math.round(strokeWeight * 3.5)) : 0;
+
+  const minX = Math.min(...allX) - pad;
+  const minY = Math.min(...allY) - pad;
+  const maxX = Math.max(...allX) + pad;
+  const maxY = Math.max(...allY) + pad;
 
   const width = Math.max(maxX - minX, 1);
   const height = Math.max(maxY - minY, 1);
@@ -724,47 +1108,69 @@ export async function updateOrthogonalVectorConnector(
   vector.y = minY;
   vector.resize(width, height);
 
-  const vertices: VectorVertex[] = localPoints.map((pt, idx) => ({
-    x: pt.x,
-    y: pt.y,
-    strokeCap: idx === localPoints.length - 1 ? 'ARROW_EQUILATERAL' : 'NONE',
-    strokeJoin: 'MITER',
-    cornerRadius: 0,
-  }));
+  // 라우팅 타입 및 단자 형태별 버텍스와 세그먼트 구성 (SQUARE, BAR 등 커스텀 단자 모두 벡터에 직접 포함)
+  const { vertices, segments, regions } = buildVectorNetwork(
+    localPoints,
+    routingType,
+    startTerminal,
+    endTerminal,
+    strokeWeight,
+    strokeColor
+  );
 
-  const segments: VectorSegment[] = [];
-  for (let i = 0; i < localPoints.length - 1; i++) {
-    segments.push({
-      start: i,
-      end: i + 1,
-    });
+  await vector.setVectorNetworkAsync({ vertices, segments, regions });
+
+  vector.fills = [];
+  vector.strokeJoin = routingType === 'S_CURVE' || routingType === 'CURVED' ? 'ROUND' : 'MITER';
+
+  // 기존 그룹 내에 남아있던 레거시 사각형 단자 마커가 있다면 깔끔하게 제거
+  if (connectorNode.type === 'GROUP') {
+    const group = connectorNode as GroupNode;
+    const legacyMarkers = group.findAll(
+      (n) =>
+        n.name === 'ConnectorStartTerminal' ||
+        n.name === 'ConnectorEndTerminal' ||
+        n.getPluginData('is_terminal_marker') !== ''
+    );
+    for (const m of legacyMarkers) {
+      m.remove();
+    }
   }
 
-  await vector.setVectorNetworkAsync({ vertices, segments });
+  if (connectorNode.parent) {
+    // 커넥터가 노드 뒤에 깔리지 않도록 항상 상위 레이어에 유지
+    connectorNode.parent.appendChild(connectorNode);
+  }
 
   // 라벨 위치 갱신
   if (labelFrame) {
-    let longestDist = -1;
-    let midSegmentPoint: Point = {
-      x: (worldPoints[0].x + worldPoints[1].x) / 2,
-      y: (worldPoints[0].y + worldPoints[1].y) / 2,
-    };
-
-    for (let i = 0; i < worldPoints.length - 1; i++) {
-      const p1 = worldPoints[i];
-      const p2 = worldPoints[i + 1];
-      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      if (dist > longestDist) {
-        longestDist = dist;
-        midSegmentPoint = {
-          x: (p1.x + p2.x) / 2,
-          y: (p1.y + p2.y) / 2,
-        };
-      }
-    }
+    const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
 
     labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
     labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
+  }
+}
+
+// 커넥터 플러그인 메타데이터 일괄 복사 헬퍼
+function copyConnectorData(source: SceneNode, target: SceneNode) {
+  const keys = [
+    'is_flow_connector',
+    'is_custom_connector',
+    'source_node_id',
+    'target_node_id',
+    'source_magnet',
+    'target_magnet',
+    'connector_routing',
+    'connector_label',
+    'start_terminal',
+    'end_terminal',
+    'connector_pattern',
+    'connector_weight',
+    'connector_color',
+  ];
+  for (const k of keys) {
+    const v = source.getPluginData(k);
+    if (v) target.setPluginData(k, v);
   }
 }
 
@@ -775,11 +1181,46 @@ export async function syncConnectorsForMovedNodes(nodeIds: Set<string>) {
 
   try {
     const connIdsToUpdate = new Set<string>();
+
     for (const nid of nodeIds) {
+      // 1. 직접 매핑된 커넥터 ID 탐색
       const conns = nodeToConnectorsMap.get(nid);
       if (conns) {
         for (const cid of conns) {
           connIdsToUpdate.add(cid);
+        }
+      }
+
+      // 2. 이동한 노드가 부모 컨테이너(Section, Group, Frame 등)인 경우 자식들에 연결된 커넥터도 탐색
+      const containerNode = figma.getNodeById(nid);
+      if (containerNode && 'findAll' in containerNode) {
+        for (const [mappedNodeId, mappedConnIds] of nodeToConnectorsMap.entries()) {
+          const childNode = figma.getNodeById(mappedNodeId);
+          if (childNode) {
+            let cur: BaseNode | null = childNode.parent;
+            while (cur && cur.type !== 'PAGE') {
+              if (cur.id === nid) {
+                for (const cid of mappedConnIds) {
+                  connIdsToUpdate.add(cid);
+                }
+                break;
+              }
+              cur = cur.parent;
+            }
+          }
+        }
+      }
+    }
+
+    // 3. 만약 connIdsToUpdate가 비어있다면 레지스트리가 누락되었을 수 있으므로 캔버스 내 커넥터 재스캔 후 매칭
+    if (connIdsToUpdate.size === 0) {
+      refreshConnectorRegistry();
+      for (const nid of nodeIds) {
+        const conns = nodeToConnectorsMap.get(nid);
+        if (conns) {
+          for (const cid of conns) {
+            connIdsToUpdate.add(cid);
+          }
         }
       }
     }

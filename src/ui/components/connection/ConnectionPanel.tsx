@@ -28,7 +28,48 @@ export function ConnectionPanel(_props?: any) {
       if (node1Text) node1Text.textContent = node?.connectorSourceNodeName || 'Source Node';
       if (node2Text) node2Text.textContent = node?.connectorTargetNodeName || 'Target Node';
     } else if (isMultiConn) {
-      if (anchorBox) anchorBox.style.display = 'none';
+      if (anchorBox) anchorBox.style.display = '';
+
+      const node1Text = document.getElementById('preview-node-1-text');
+      const node2Text = document.getElementById('preview-node-2-text');
+
+      // code.ts에서 캔버스 2D 공간 배치(위/왼쪽 우선)로 정렬된 전체 엔드포인트 노드명 목록
+      const connNodeNames = selectedNodes[0]?.connectedNodeNames || [];
+      if (connNodeNames.length > 0) {
+        if (node1Text) node1Text.textContent = connNodeNames[0] || 'Node 1';
+        if (node2Text) {
+          if (connNodeNames.length >= 3) {
+            const moreCount = connNodeNames.length - 1;
+            node2Text.textContent = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
+          } else if (connNodeNames.length === 2) {
+            node2Text.textContent = connNodeNames[1] || 'Node 2';
+          } else {
+            node2Text.textContent = 'Node 2';
+          }
+        }
+      } else {
+        // fallback: 각 커넥터의 source/target 노드명 집합에서 시작 노드와 나머지 산출
+        const uniqueNames: string[] = [];
+        selectedNodes.forEach((n) => {
+          if (n?.connectorSourceNodeName && !uniqueNames.includes(n.connectorSourceNodeName)) {
+            uniqueNames.push(n.connectorSourceNodeName);
+          }
+          if (n?.connectorTargetNodeName && !uniqueNames.includes(n.connectorTargetNodeName)) {
+            uniqueNames.push(n.connectorTargetNodeName);
+          }
+        });
+        if (node1Text) node1Text.textContent = uniqueNames[0] || 'Node 1';
+        if (node2Text) {
+          if (uniqueNames.length >= 3) {
+            const moreCount = uniqueNames.length - 1;
+            node2Text.textContent = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
+          } else if (uniqueNames.length === 2) {
+            node2Text.textContent = uniqueNames[1] || 'Node 2';
+          } else {
+            node2Text.textContent = 'Node 2';
+          }
+        }
+      }
     } else {
       if (anchorBox) anchorBox.style.display = '';
 

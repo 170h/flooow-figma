@@ -446,7 +446,7 @@ export function App() {
       {activeModal === 'connector-color' && (() => {
         const isConnectorColorMixed = summary.isMultiConnector
           ? summary.connectorColor.isMixed
-          : (summary.isMultiFlowNode ? summary.color.isMixed : false);
+          : false;
 
         return (
           <ConnectorColorModal
