@@ -50,7 +50,7 @@ export function terminalToStrokeCap(terminal?: ConnectorTerminalType): StrokeCap
     case 'BAR':
     case 'NONE':
     default:
-      return 'NONE';
+      return 'ROUND';
   }
 }
 
@@ -231,8 +231,8 @@ export function buildVectorNetwork(
       const ny = ux;
       const vStart = vertices.length;
       vertices.push(
-        { x: p0.x + (barLen / 2) * nx, y: p0.y + (barLen / 2) * ny, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-        { x: p0.x - (barLen / 2) * nx, y: p0.y - (barLen / 2) * ny, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
+        { x: p0.x + (barLen / 2) * nx, y: p0.y + (barLen / 2) * ny, strokeCap: 'ROUND', strokeJoin: 'ROUND', cornerRadius: 0 },
+        { x: p0.x - (barLen / 2) * nx, y: p0.y - (barLen / 2) * ny, strokeCap: 'ROUND', strokeJoin: 'ROUND', cornerRadius: 0 }
       );
       segments.push({ start: vStart, end: vStart + 1 });
     }
@@ -250,8 +250,8 @@ export function buildVectorNetwork(
       const ny = ux;
       const vStart = vertices.length;
       vertices.push(
-        { x: pn.x + (barLen / 2) * nx, y: pn.y + (barLen / 2) * ny, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-        { x: pn.x - (barLen / 2) * nx, y: pn.y - (barLen / 2) * ny, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
+        { x: pn.x + (barLen / 2) * nx, y: pn.y + (barLen / 2) * ny, strokeCap: 'ROUND', strokeJoin: 'ROUND', cornerRadius: 0 },
+        { x: pn.x - (barLen / 2) * nx, y: pn.y - (barLen / 2) * ny, strokeCap: 'ROUND', strokeJoin: 'ROUND', cornerRadius: 0 }
       );
       segments.push({ start: vStart, end: vStart + 1 });
     }
@@ -770,6 +770,9 @@ export async function createOrthogonalVectorConnector(
     vector.dashPattern = [];
   }
   vector.strokeJoin = routingType === 'S_CURVE' || routingType === 'CURVED' ? 'ROUND' : 'MITER';
+  if (routingType === 'STRAIGHT') {
+    vector.strokeCap = 'ROUND';
+  }
   vector.strokeMiterLimit = 4;
   vector.name = `[Connector] ${sourceNode.name} → ${targetNode.name}`;
 
@@ -1220,6 +1223,9 @@ export async function updateOrthogonalVectorConnector(
     vector.fills = [];
   }
   vector.strokeJoin = routingType === 'S_CURVE' || routingType === 'CURVED' ? 'ROUND' : 'MITER';
+  if (routingType === 'STRAIGHT') {
+    vector.strokeCap = 'ROUND';
+  }
 
   // 기존 그룹 내에 남아있던 레거시 사각형 단자 마커가 있다면 깔끔하게 제거
   if (connectorNode.type === 'GROUP') {

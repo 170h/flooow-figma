@@ -74,7 +74,7 @@
       case "BAR":
       case "NONE":
       default:
-        return "NONE";
+        return "ROUND";
     }
   }
   function getMagnetDirectionVector(magnet) {
@@ -198,8 +198,8 @@
         const ny = ux;
         const vStart = vertices.length;
         vertices.push(
-          { x: p0.x + barLen / 2 * nx, y: p0.y + barLen / 2 * ny, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-          { x: p0.x - barLen / 2 * nx, y: p0.y - barLen / 2 * ny, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
+          { x: p0.x + barLen / 2 * nx, y: p0.y + barLen / 2 * ny, strokeCap: "ROUND", strokeJoin: "ROUND", cornerRadius: 0 },
+          { x: p0.x - barLen / 2 * nx, y: p0.y - barLen / 2 * ny, strokeCap: "ROUND", strokeJoin: "ROUND", cornerRadius: 0 }
         );
         segments.push({ start: vStart, end: vStart + 1 });
       }
@@ -215,8 +215,8 @@
         const ny = ux;
         const vStart = vertices.length;
         vertices.push(
-          { x: pn.x + barLen / 2 * nx, y: pn.y + barLen / 2 * ny, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-          { x: pn.x - barLen / 2 * nx, y: pn.y - barLen / 2 * ny, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
+          { x: pn.x + barLen / 2 * nx, y: pn.y + barLen / 2 * ny, strokeCap: "ROUND", strokeJoin: "ROUND", cornerRadius: 0 },
+          { x: pn.x - barLen / 2 * nx, y: pn.y - barLen / 2 * ny, strokeCap: "ROUND", strokeJoin: "ROUND", cornerRadius: 0 }
         );
         segments.push({ start: vStart, end: vStart + 1 });
       }
@@ -576,6 +576,9 @@
       vector.dashPattern = [];
     }
     vector.strokeJoin = routingType === "S_CURVE" || routingType === "CURVED" ? "ROUND" : "MITER";
+    if (routingType === "STRAIGHT") {
+      vector.strokeCap = "ROUND";
+    }
     vector.strokeMiterLimit = 4;
     vector.name = `[Connector] ${sourceNode.name} \u2192 ${targetNode.name}`;
     vector.setPluginData("is_flow_connector", "true");
@@ -876,6 +879,9 @@
       vector.fills = [];
     }
     vector.strokeJoin = routingType === "S_CURVE" || routingType === "CURVED" ? "ROUND" : "MITER";
+    if (routingType === "STRAIGHT") {
+      vector.strokeCap = "ROUND";
+    }
     if (connectorNode.type === "GROUP") {
       const group = connectorNode;
       const legacyMarkers = group.findAll(
