@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { MixedDashChip } from '../shared/icons';
+import { PhasePopover } from '../popovers/PhasePopover';
 
 const CHEVRON_SVG = (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -19,42 +21,45 @@ export function PhaseSection() {
     setUIState,
     setActiveModal,
     setPhasePopoverOpen,
-    setPhasePopoverPos,
     setContextMenuOpen,
     setContextMenuPos,
     contextMenuTarget,
     setContextMenuTarget,
     phasePopoverOpen,
     contextMenuOpen,
-    applyCurrentNodeState,
     setLastNodeConfig,
+    phases,
   } = useApp();
 
-  // Phase 목록 (런타임에서 추가/편집/삭제 가능)
-  const [phases, setPhases] = useState([
-    { id: 'none', name: 'None', color: null as string | null },
-  ]);
-
-  const btnPhaseRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const btnMoreRef = useRef<HTMLButtonElement>(null);
+
+  // 드롭다운 외부 클릭 시에만 안전하게 닫기 (mousedown 기준, 다른 섹션 드롭다운과 통일)
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setPhasePopoverOpen(false);
+      }
+    }
+    if (phasePopoverOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [phasePopoverOpen, setPhasePopoverOpen]);
 
   function togglePhasePopover(e: React.MouseEvent) {
     e.stopPropagation();
-    if (phasePopoverOpen) {
-      setPhasePopoverOpen(false);
-      return;
-    }
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const popoverWidth = 180;
-    const popoverHeight = 160;
-    const spaceBelow = window.innerHeight - rect.bottom;
-
-    let top = spaceBelow >= popoverHeight + 8 ? rect.bottom + 4 : Math.max(8, rect.top - popoverHeight - 4);
-    let left = Math.max(8, rect.right - popoverWidth);
-
-    setPhasePopoverPos({ top, left });
-    setPhasePopoverOpen(true);
+    setPhasePopoverOpen(!phasePopoverOpen);
     setContextMenuOpen(false);
+  }
+
+  function handleSelectPhase(id: string, name: string, color: string) {
+    setUIState({ selectedPhase: id });
+    setLastNodeConfig({ phase: id, phaseName: name, phaseColor: color });
+    parent.postMessage({ pluginMessage: { type: 'SET_PHASE', phaseId: id, phaseName: name, phaseColor: color } }, '*');
+    setPhasePopoverOpen(false);
   }
 
   function toggleContextMenu(e: React.MouseEvent) {
@@ -83,7 +88,7 @@ export function PhaseSection() {
       return <div className="phase-checkerboard-24" />;
     }
     if (selectedPhase === 'mixed') {
-      return <div className="icon-phase-mixed-24"><div className="phase-mixed-dash" /></div>;
+      return <MixedDashChip size={24} style={{ borderRadius: '5px' }} />;
     }
     const phase = phases.find(p => p.id === selectedPhase);
     return <div className="phase-chip-24" style={{ background: phase?.color || '#EA2039' }} />;
@@ -101,6 +106,7 @@ export function PhaseSection() {
         <span className="section-title">Phase</span>
         <div className="section-actions">
           <button
+            type="button"
             className="btn-action-icon"
             title="Phase 추가"
             onClick={() => setActiveModal('phase')}
@@ -108,6 +114,7 @@ export function PhaseSection() {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z" fill="currentColor"/></svg>
           </button>
           <button
+            type="button"
             id="btn-phase-more"
             ref={btnMoreRef}
             className="btn-action-icon btn-more-icon"
@@ -119,33 +126,47 @@ export function PhaseSection() {
         </div>
       </div>
       <div className="section-body">
-        <button
-          id="btn-phase-select"
-          ref={btnPhaseRef}
-          className={`phase-dropdown-btn${phasePopoverOpen ? ' active' : ''}`}
-          onClick={togglePhasePopover}
+        <div
+          ref={dropdownRef}
+          className="phase-dropdown-wrapper"
+          style={{ position: 'relative', width: '100%' }}
         >
-          <div className="phase-btn-left">
-            <div id="current-phase-icon" className="phase-btn-icon-wrap">
-              {renderPhaseIcon()}
-            </div>
-            <span id="current-phase-text" className="phase-btn-label">
-              {getCurrentPhaseName()}
-            </span>
-          </div>
-          <div
-            className="phase-btn-arrow"
-            style={{
-              transform: phasePopoverOpen ? 'rotate(180deg)' : 'none',
-              transition: 'transform 0.15s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+          <button
+            type="button"
+            id="btn-phase-select"
+            className={`phase-dropdown-btn${phasePopoverOpen ? ' active' : ''}`}
+            onClick={togglePhasePopover}
           >
-            {CHEVRON_SVG}
-          </div>
-        </button>
+            <div className="phase-btn-left">
+              <div id="current-phase-icon" className="phase-btn-icon-wrap">
+                {renderPhaseIcon()}
+              </div>
+              <span id="current-phase-text" className="phase-btn-label">
+                {getCurrentPhaseName()}
+              </span>
+            </div>
+            <div
+              className="phase-btn-arrow"
+              style={{
+                transform: phasePopoverOpen ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {CHEVRON_SVG}
+            </div>
+          </button>
+
+          {/* Phase 팝오버 메뉴 (인라인 absolute 배치로 뷰포트 계산 오류 및 깜빡임 원천 차단) */}
+          {phasePopoverOpen && (
+            <PhasePopover
+              phases={phases}
+              onSelectPhase={handleSelectPhase}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

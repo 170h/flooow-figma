@@ -1993,6 +1993,12 @@
         const isAuto = frame.primaryAxisSizingMode === "AUTO";
         sizeMode = isAuto ? "hug" : "fixed";
         hugHeight = calculateCardHugHeight(frame);
+        const hasStepBadge = Boolean(
+          frame.getPluginData("step_number") || frame.children.some((c) => c.getPluginData("is_step_badge") === "true" || c.name.startsWith("[Step]"))
+        );
+        if (hasStepBadge && frame.clipsContent) {
+          frame.clipsContent = false;
+        }
       }
       let nodeFillColor;
       let nodeStrokeColor;
@@ -2377,7 +2383,7 @@
     card.strokeWeight = 1.5;
     card.strokes = [{ type: "SOLID", color: borderColor }];
     card.fills = [{ type: "SOLID", color: bgColor }];
-    card.clipsContent = true;
+    card.clipsContent = false;
     card.layoutMode = "VERTICAL";
     card.primaryAxisSizingMode = "FIXED";
     card.counterAxisSizingMode = "FIXED";
@@ -2584,7 +2590,7 @@
         card.strokes = [{ type: "SOLID", color: borderColor }];
       }
       card.fills = [{ type: "SOLID", color: bgColor }];
-      card.clipsContent = true;
+      card.clipsContent = false;
       card.layoutMode = "VERTICAL";
       card.primaryAxisSizingMode = "FIXED";
       card.counterAxisSizingMode = "FIXED";
@@ -2762,7 +2768,7 @@
       if (typeof payload.cornerRadius === "number") {
         card.cornerRadius = Math.min(20, Math.max(0, payload.cornerRadius));
       }
-      card.clipsContent = true;
+      card.clipsContent = false;
       card.fills = [{ type: "SOLID", color: bgColor }];
       if (typeof payload.strokeWeight === "number") {
         card.strokeWeight = payload.strokeWeight;
@@ -3001,7 +3007,7 @@
       frame.resize(w, h);
       frame.primaryAxisSizingMode = "FIXED";
       frame.counterAxisSizingMode = "FIXED";
-      frame.clipsContent = true;
+      frame.clipsContent = false;
       frame.minWidth = w;
       frame.maxWidth = w;
       frame.minHeight = h;

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
+import { COLOR_MIXED_ICON, MixedDashChip } from '../shared/icons';
 
 type BadgeColorMode = 'White' | 'Black' | 'Style';
 
@@ -284,7 +285,7 @@ function isHexDark(hex: string): boolean {
   }
 
   // 컬러 스와치 렌더러 (컬러 입력필드 컬러칩 스타일과 동일한 투명 보더 반영)
-  function renderColorSwatch(mode: BadgeColorMode, size = 14) {
+  function renderColorSwatch(mode: BadgeColorMode, size = 16) {
     if (mode === 'White') {
       return (
         <span
@@ -475,22 +476,7 @@ function isHexDark(hex: string): boolean {
               >
                 <div className="figma-dropdown-btn-content">
                   <span className="figma-dropdown-current-icon">
-                    {selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 14) : (
-                      <span
-                        style={{
-                          width: 14,
-                          height: 14,
-                          borderRadius: 2,
-                          background: 'rgba(0, 0, 0, 0.08)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <span className="phase-dash-icon" style={{ background: 'currentColor', display: 'inline-block' }} />
-                      </span>
-                    )}
+                    {selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 16) : <MixedDashChip size={16} />}
                   </span>
                   <span className="figma-dropdown-current-text">
                     {selectedBadgeColorMode || 'Mixed'}
@@ -532,7 +518,7 @@ function isHexDark(hex: string): boolean {
                   {(isColorModeMixed || !selectedBadgeColorMode) && (
                     <DropdownMixedItem
                       variant="chip"
-                      chipSize={12}
+                      chipSize={16}
                       onClick={() => setColorDropdownOpen(false)}
                     />
                   )}
@@ -558,7 +544,7 @@ function isHexDark(hex: string): boolean {
                         </span>
                         {/* 스와치 */}
                         <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '6px' }}>
-                          {renderColorSwatch(opt.id, 12)}
+                          {renderColorSwatch(opt.id, 16)}
                         </span>
                         {/* 라벨 */}
                         <span className="figma-dropdown-label" style={{ fontSize: '11px', fontWeight: active ? 600 : 500 }}>

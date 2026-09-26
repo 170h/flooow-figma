@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
 import type { ConnectorTerminalType } from '../../types';
+import type { PhaseData } from '../components/modals/PhaseModal';
 
 // ============================================================
 // 타입 정의
@@ -188,7 +189,11 @@ export interface AppContextValue {
   selectedStylePresetId: string | null;
   setSelectedStylePresetId: (id: string | null) => void;
 
-  // Phase 편집 상태
+  // Phase 목록 및 편집 상태
+  phases: PhaseData[];
+  setPhases: React.Dispatch<React.SetStateAction<PhaseData[]>>;
+  editingPhase: PhaseData | null;
+  setEditingPhase: (phase: PhaseData | null) => void;
   phaseModalEditingId: string | null;
   setPhaseModalEditingId: (id: string | null) => void;
 
@@ -318,6 +323,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedSizePresetId, setSelectedSizePresetId] = useState<string | null>('default');
   const [selectedStylePresetId, setSelectedStylePresetId] = useState<string | null>('style-white');
   const [phaseModalEditingId, setPhaseModalEditingId] = useState<string | null>(null);
+  const [phases, setPhases] = useState<PhaseData[]>([
+    { id: 'phase-1', name: 'Phase 1', color: '#EA2039' },
+    { id: 'phase-2', name: 'Phase 2', color: '#8638E5' },
+  ]);
+  const [editingPhase, setEditingPhase] = useState<PhaseData | null>(null);
   const [designFrames, setDesignFrames] = useState<DesignFrameItem[]>([]);
 
   const loadDesignFrames = useCallback(() => {
@@ -998,6 +1008,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSelectedStylePresetId,
     phaseModalEditingId,
     setPhaseModalEditingId,
+    phases,
+    setPhases,
+    editingPhase,
+    setEditingPhase,
     designFrames,
     setDesignFrames,
     loadDesignFrames,

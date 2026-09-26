@@ -1367,6 +1367,15 @@ async function handleSelectionChange() {
 
       // Hug contents 높이: status 유무(패딩 36px vs 16px)를 항상 정확하게 반영하여 실시간 산출
       hugHeight = calculateCardHugHeight(frame);
+
+      // 스텝 배지가 있는 노드가 clipsContent=true로 인해 잘려있는 경우 즉시 false로 자동 복구
+      const hasStepBadge = Boolean(
+        frame.getPluginData('step_number') ||
+        frame.children.some((c) => c.getPluginData('is_step_badge') === 'true' || c.name.startsWith('[Step]'))
+      );
+      if (hasStepBadge && frame.clipsContent) {
+        frame.clipsContent = false;
+      }
     }
 
     let nodeFillColor: string | undefined;
@@ -1748,7 +1757,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.strokeWeight = 1.5;
   card.strokes = [{ type: 'SOLID', color: borderColor }];
   card.fills = [{ type: 'SOLID', color: bgColor }];
-  card.clipsContent = true;
+  card.clipsContent = false; // 스텝 배지(-9px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
 
   card.layoutMode = 'VERTICAL';
   card.primaryAxisSizingMode = 'FIXED';
@@ -1989,7 +1998,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       card.strokes = [{ type: 'SOLID', color: borderColor }];
     }
     card.fills = [{ type: 'SOLID', color: bgColor }];
-    card.clipsContent = true;
+    card.clipsContent = false; // 스텝 배지(-9px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
 
     card.layoutMode = 'VERTICAL';
     card.primaryAxisSizingMode = 'FIXED';
@@ -2207,7 +2216,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     if (typeof payload.cornerRadius === 'number') {
       card.cornerRadius = Math.min(20, Math.max(0, payload.cornerRadius));
     }
-    card.clipsContent = true;
+    card.clipsContent = false; // 스텝 배지(-9px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
     card.fills = [{ type: 'SOLID', color: bgColor }];
 
     if (typeof payload.strokeWeight === 'number') {
@@ -2492,7 +2501,7 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     frame.resize(w, h);
     frame.primaryAxisSizingMode = 'FIXED';
     frame.counterAxisSizingMode = 'FIXED';
-    frame.clipsContent = true;
+    frame.clipsContent = false; // 스텝 배지 및 엘리베이션이 잘리지 않도록 클리핑 해제
 
     frame.minWidth = w;
     frame.maxWidth = w;

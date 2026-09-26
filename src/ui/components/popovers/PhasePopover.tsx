@@ -26,13 +26,19 @@ export function PhasePopover({ phases, onSelectPhase }: PhasePopoverProps) {
     <div
       id="popover-phase"
       className="popover-phase-select active"
-      style={{ position: 'fixed', top: phasePopoverPos.top, left: phasePopoverPos.left, zIndex: 999 }}
+      style={{
+        position: 'absolute',
+        top: 'calc(100% + 4px)',
+        right: 0,
+        zIndex: 1060,
+      }}
+      onClick={(e) => e.stopPropagation()}
     >
       {/* Mixed 상태: 컬러칩이 포함된 옵션이므로 16x16 체크 + 컬러칩 위치의 '-' 대시 아이콘 + Mixed 라벨 */}
       {selectedPhase === 'mixed' && (
         <DropdownMixedItem
           variant="chip"
-          chipSize={14}
+          chipSize={16}
           className="phase-menu-item"
           onClick={() => setPhasePopoverOpen(false)}
         />

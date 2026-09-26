@@ -808,6 +808,28 @@
       justify-content: center;
       flex-shrink: 0;
       box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+      color: rgba(0, 0, 0, 0.9);
+    }
+
+    .icon-phase-mixed-24 svg.conn-color-mixed-svg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px;
+      height: 24px;
+      pointer-events: none;
+    }
+
+    .icon-phase-mixed-24 svg.conn-color-mixed-svg path {
+      fill: currentColor;
+    }
+
+    .figma-dark .icon-phase-mixed-24 {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
     }
 
     .icon-phase-mixed-24 .phase-mixed-dash {
@@ -1129,6 +1151,8 @@
       width: 180px;
       background: #1e1e1e;
       color: #ffffff;
+      --color-chip-border: rgba(255, 255, 255, 0.15);
+      --color-chip-icon: rgba(255, 255, 255, 0.9);
       border-radius: 13px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1660,6 +1684,35 @@
       position: relative;
       overflow: visible;
       color: var(--color-chip-icon, rgba(0, 0, 0, 0.9));
+    }
+
+    /* conn-color-chip 다크모드 버전 (화이트 반투명 0.15 직접 명시하여 라이트모드 검정 상속 완벽 차단) */
+    .figma-dropdown-menu .conn-color-chip,
+    .size-mode-menu-popover .conn-color-chip,
+    .popover-phase-select .conn-color-chip,
+    .terminal-dropdown-popup .conn-color-chip,
+    .conn-color-chip.dark {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      background-color: transparent !important;
+    }
+
+    .figma-dropdown-menu .conn-color-chip svg.conn-color-mixed-svg path,
+    .size-mode-menu-popover .conn-color-chip svg.conn-color-mixed-svg path,
+    .popover-phase-select .conn-color-chip svg.conn-color-mixed-svg path,
+    .terminal-dropdown-popup .conn-color-chip svg.conn-color-mixed-svg path,
+    .conn-color-chip.dark svg.conn-color-mixed-svg path {
+      fill: currentColor !important;
+    }
+
+    .figma-dark .conn-color-chip:not(.light) {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      background-color: transparent !important;
+    }
+
+    .figma-dark .conn-color-chip:not(.light) svg.conn-color-mixed-svg path {
+      fill: currentColor !important;
     }
 
     .conn-color-hex-input {
@@ -2261,6 +2314,23 @@
       justify-content: center;
       flex-shrink: 0;
       box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+      color: currentColor;
+    }
+
+    .icon-phase-mixed-14 svg.conn-color-mixed-svg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px;
+      height: 24px;
+      pointer-events: none;
+    }
+
+    .icon-phase-mixed-14 svg.conn-color-mixed-svg path {
+      fill: currentColor;
     }
 
     .icon-phase-mixed-14 .phase-mixed-dash {

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { COLOR_MIXED_ICON } from './icons';
 
 // ---- 색상 변환 유틸리티 (Hex <-> HSV) ----
 
@@ -82,23 +83,7 @@ export function hsvToHex(h: number, s: number, v: number): string {
   return `${rHex}${gHex}${bHex}`.toUpperCase();
 }
 
-// 2개 이상 다중 선택 시 Mixed 표시용 24×24 대시 SVG 아이콘 (피그마 UI3 다크모드 대응)
-const COLOR_MIXED_ICON = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    className="conn-color-mixed-svg"
-  >
-    <path
-      d="M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z"
-      fill="white"
-      fillOpacity="0.9"
-    />
-  </svg>
-);
+
 
 export interface ColorWheelFieldProps {
   value: string; // 예: 'EA2039' 또는 '#EA2039'

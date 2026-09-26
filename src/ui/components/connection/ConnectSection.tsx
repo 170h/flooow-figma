@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useApp, StylePreset, NodeInfo } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { ConnectorTerminalType } from '../../../types';
-import { IcPalette } from '../shared/icons';
+import { IcPalette, COLOR_MIXED_ICON } from '../shared/icons';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 
 // ============================================================
@@ -84,22 +84,7 @@ const CHEVRON_SVG = (
   </svg>
 );
 
-// 피그마 UI3 공식 Mixed 컬러 인디케이터 대시 SVG (24×24 규격)
-const COLOR_MIXED_ICON = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    className="conn-color-mixed-svg"
-  >
-    <path
-      d="M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z"
-      fill="currentColor"
-    />
-  </svg>
-);
+
 
 /**
  * Connect 섹션 - 피그마 UI3 키트 공식 디자인 완벽 반영

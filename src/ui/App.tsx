@@ -8,7 +8,6 @@ import { NodePanel } from './components/node/NodePanel';
 import { AppearancePanel } from './components/appearance/AppearancePanel';
 import { ConnectionPanel } from './components/connection/ConnectionPanel';
 import { FigmaTooltip } from './components/shared/Tooltip';
-import { PhasePopover } from './components/popovers/PhasePopover';
 import { ContextMenu } from './components/popovers/ContextMenu';
 import { PhaseModal, PhaseData } from './components/modals/PhaseModal';
 import { SizeModal } from './components/modals/SizeModal';
@@ -69,14 +68,11 @@ export function App() {
     autoResizeWindow,
     stylePresets,
     setSelectedStylePresetId,
+    phases,
+    setPhases,
+    editingPhase,
+    setEditingPhase,
   } = useApp();
-
-  // Phase 관리 (로컬 상태)
-  const [phases, setPhases] = useState<PhaseData[]>([
-    { id: 'phase-1', name: 'Phase 1', color: '#EA2039' },
-    { id: 'phase-2', name: 'Phase 2', color: '#8638E5' },
-  ]);
-  const [editingPhase, setEditingPhase] = useState<PhaseData | null>(null);
 
   const summary = useSelectionSummary();
   const nodeCount = selectedNodes.length;
@@ -226,13 +222,6 @@ export function App() {
     parent.postMessage({ pluginMessage: { type: 'SET_PHASE', phaseId: phase.id, phaseName: phase.name, phaseColor: phase.color } }, '*');
   }
 
-  // Phase 선택
-  function handleSelectPhase(id: string, name: string, color: string) {
-    setUIState({ selectedPhase: id });
-    setLastNodeConfig({ phase: id, phaseName: name, phaseColor: color });
-    parent.postMessage({ pluginMessage: { type: 'SET_PHASE', phaseId: id, phaseName: name, phaseColor: color } }, '*');
-    setPhasePopoverOpen(false);
-  }
 
   // Context menu 핸들러
   function handleContextEdit() {
@@ -408,7 +397,6 @@ export function App() {
       )}
 
       {/* 팝오버 레이어 */}
-      <PhasePopover phases={phases} onSelectPhase={handleSelectPhase} />
       <ContextMenu onEdit={handleContextEdit} onDelete={handleContextDelete} />
 
       {/* 모달 레이어 */}

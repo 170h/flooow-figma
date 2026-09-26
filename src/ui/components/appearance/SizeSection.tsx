@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { useApp, SizePreset, NodeInfo } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
+import { COLOR_MIXED_ICON, MixedDashChip } from '../shared/icons';
 
 const FIXED_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -12,15 +13,6 @@ const FIXED_SVG = (
 const HUG_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path d="M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z" fill="currentColor"/>
-  </svg>
-);
-
-const DASH_SVG = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M15.5 11.5C15.7761 11.5 16 11.7239 16 12C16 12.2761 15.7761 12.5 15.5 12.5H8.5C8.22386 12.5 8 12.2761 8 12C8 11.7239 8.22386 11.5 8.5 11.5H15.5Z"
-      fill="currentColor"
-    />
   </svg>
 );
 
@@ -344,7 +336,7 @@ export function SizeSection() {
             >
               <div className="size-mode-btn-content figma-dropdown-btn-content">
                 <span className="size-mode-current-icon figma-dropdown-current-icon" id="size-mode-current-icon">
-                  {currentSizeMode === 'hug' ? HUG_SVG : currentSizeMode === 'mixed' ? DASH_SVG : FIXED_SVG}
+                  {currentSizeMode === 'hug' ? HUG_SVG : currentSizeMode === 'mixed' ? <MixedDashChip size={16} /> : FIXED_SVG}
                 </span>
                 <span className="size-mode-current-text figma-dropdown-current-text" id="size-mode-current-text">
                   {currentSizeMode === 'hug' ? 'Hug contents' : currentSizeMode === 'mixed' ? 'Mixed' : 'Fixed height'}
