@@ -36,6 +36,18 @@ export interface ConnectorOptions {
   strokePattern?: ConnectorStrokePattern;
 }
 
+// 안전한 플러그인 데이터 조회 헬퍼 (피그잼 네이티브 노드 중 getPluginData가 없거나 함수가 아닌 경우 TypeError 방지)
+export function safeGetPluginData(node: any, key: string): string {
+  if (node && typeof node.getPluginData === 'function') {
+    try {
+      return node.getPluginData(key) || '';
+    } catch (_) {
+      return '';
+    }
+  }
+  return '';
+}
+
 // 터미널 타입을 피그마 VectorVertex의 StrokeCap으로 매핑
 export function terminalToStrokeCap(terminal?: ConnectorTerminalType): StrokeCap {
   switch (terminal) {
@@ -901,8 +913,8 @@ export function registerConnectorInRegistry(connectorNode: SceneNode) {
     return;
   }
 
-  const srcId = connectorNode.getPluginData('source_node_id');
-  const tgtId = connectorNode.getPluginData('target_node_id');
+  const srcId = safeGetPluginData(connectorNode, 'source_node_id');
+  const tgtId = safeGetPluginData(connectorNode, 'target_node_id');
   if (srcId) {
     if (!nodeToConnectorsMap.has(srcId)) nodeToConnectorsMap.set(srcId, new Set());
     nodeToConnectorsMap.get(srcId)!.add(connectorNode.id);
@@ -918,12 +930,16 @@ export function cleanupGhostTerminalMarkers(): number {
   let count = 0;
   try {
     const ghosts = figma.currentPage.findAll((n) => {
-      if (n.type !== 'RECTANGLE') return false;
-      const name = n.name;
-      if (name === 'ConnectorStartTerminal' || name === 'ConnectorEndTerminal') return true;
-      const isTerm = n.getPluginData('is_terminal_marker');
-      if (isTerm === 'start' || isTerm === 'end') return true;
-      return false;
+      try {
+        if (!n || n.type !== 'RECTANGLE') return false;
+        const name = n.name;
+        if (name === 'ConnectorStartTerminal' || name === 'ConnectorEndTerminal') return true;
+        const isTerm = safeGetPluginData(n, 'is_terminal_marker');
+        if (isTerm === 'start' || isTerm === 'end') return true;
+        return false;
+      } catch (_) {
+        return false;
+      }
     });
     for (const g of ghosts) {
       g.remove();
@@ -941,11 +957,26 @@ export function cleanupGhostTerminalMarkers(): number {
 // 캔버스 내 모든 커넥터(커스텀 및 네이티브) 스캔 및 레지스트리 초기화
 export function refreshConnectorRegistry() {
   nodeToConnectorsMap.clear();
-  const connectors = figma.currentPage.findAll(
-    (n) => n.getPluginData('is_custom_connector') === 'true' || n.type === 'CONNECTOR'
-  );
-  for (const conn of connectors) {
-    registerConnectorInRegistry(conn);
+  try {
+    const connectors = figma.currentPage.findAll((n) => {
+      try {
+        if (!n) return false;
+        // 1. 피그마 네이티브 커넥터는 즉시 매칭 (가장 빠르고 안전)
+        if (n.type === 'CONNECTOR') return true;
+        // 2. 커스텀 커넥터는 오직 VECTOR 또는 GROUP 타입에만 존재하므로, 그 외 노드는 플러그인 데이터 조회를 건너뜀
+        if (n.type === 'VECTOR' || n.type === 'GROUP') {
+          return safeGetPluginData(n, 'is_custom_connector') === 'true';
+        }
+        return false;
+      } catch (_) {
+        return false;
+      }
+    });
+    for (const conn of connectors) {
+      registerConnectorInRegistry(conn);
+    }
+  } catch (err) {
+    console.error('refreshConnectorRegistry 에러:', err);
   }
 }
 
@@ -1069,8 +1100,8 @@ export async function updateOrthogonalVectorConnector(
   explicitTargetMagnet?: MagnetPosition,
   forceOptimal: boolean = false
 ) {
-  const srcId = connectorNode.getPluginData('source_node_id');
-  const tgtId = connectorNode.getPluginData('target_node_id');
+  const srcId = safeGetPluginData(connectorNode, 'source_node_id');
+  const tgtId = safeGetPluginData(connectorNode, 'target_node_id');
 
   if (!srcId || !tgtId) return;
 
@@ -1089,7 +1120,7 @@ export async function updateOrthogonalVectorConnector(
     vector = (group.children.find((c) => c.type === 'VECTOR') as VectorNode) || null;
     labelFrame =
       (group.children.find(
-        (c) => c.getPluginData('is_connector_label') === 'true' || c.name === 'ConnectorLabel'
+        (c) => safeGetPluginData(c, 'is_connector_label') === 'true' || c.name === 'ConnectorLabel'
       ) as FrameNode) || null;
   } else if (connectorNode.type === 'VECTOR') {
     vector = connectorNode as VectorNode;
@@ -1131,21 +1162,21 @@ export async function updateOrthogonalVectorConnector(
 
   // 라우팅 타입 조회 (직각, 라운드니스 S_CURVE, 자유곡선 CURVED, 직선 STRAIGHT)
   const routingType: ConnectorRoutingType =
-    (connectorNode.getPluginData('connector_routing') as ConnectorRoutingType) ||
-    (vector.getPluginData('connector_routing') as ConnectorRoutingType) ||
+    (safeGetPluginData(connectorNode, 'connector_routing') as ConnectorRoutingType) ||
+    (safeGetPluginData(vector, 'connector_routing') as ConnectorRoutingType) ||
     'ORTHOGONAL';
 
   const pStart = getMagnetPoint(srcBox, sourceMagnet);
   const pEnd = getMagnetPoint(tgtBox, targetMagnet);
 
   const startOffset = parseFloat(
-    connectorNode.getPluginData('start_offset') ||
-    vector.getPluginData('start_offset') ||
+    safeGetPluginData(connectorNode, 'start_offset') ||
+    safeGetPluginData(vector, 'start_offset') ||
     '0'
   ) || 0;
   const endOffset = parseFloat(
-    connectorNode.getPluginData('end_offset') ||
-    vector.getPluginData('end_offset') ||
+    safeGetPluginData(connectorNode, 'end_offset') ||
+    safeGetPluginData(vector, 'end_offset') ||
     '0'
   ) || 0;
 
@@ -1166,12 +1197,12 @@ export async function updateOrthogonalVectorConnector(
   const allY = worldPoints.map((p) => p.y);
 
   const startTerminal =
-    (connectorNode.getPluginData('start_terminal') as ConnectorTerminalType) ||
-    (vector.getPluginData('start_terminal') as ConnectorTerminalType) ||
+    (safeGetPluginData(connectorNode, 'start_terminal') as ConnectorTerminalType) ||
+    (safeGetPluginData(vector, 'start_terminal') as ConnectorTerminalType) ||
     'NONE';
   const endTerminal =
-    (connectorNode.getPluginData('end_terminal') as ConnectorTerminalType) ||
-    (vector.getPluginData('end_terminal') as ConnectorTerminalType) ||
+    (safeGetPluginData(connectorNode, 'end_terminal') as ConnectorTerminalType) ||
+    (safeGetPluginData(vector, 'end_terminal') as ConnectorTerminalType) ||
     'ARROW';
 
   const strokeWeight = (typeof vector.strokeWeight === 'number' ? vector.strokeWeight : 1.5);
@@ -1230,15 +1261,23 @@ export async function updateOrthogonalVectorConnector(
   // 기존 그룹 내에 남아있던 레거시 사각형 단자 마커가 있다면 깔끔하게 제거
   if (connectorNode.type === 'GROUP') {
     const group = connectorNode as GroupNode;
-    const legacyMarkers = group.findAll(
-      (n) =>
-        n.name === 'ConnectorStartTerminal' ||
-        n.name === 'ConnectorEndTerminal' ||
-        n.getPluginData('is_terminal_marker') !== ''
-    );
-    for (const m of legacyMarkers) {
-      m.remove();
-    }
+    try {
+      const legacyMarkers = group.findAll((n) => {
+        try {
+          if (!n) return false;
+          return (
+            n.name === 'ConnectorStartTerminal' ||
+            n.name === 'ConnectorEndTerminal' ||
+            safeGetPluginData(n, 'is_terminal_marker') !== ''
+          );
+        } catch (_) {
+          return false;
+        }
+      });
+      for (const m of legacyMarkers) {
+        m.remove();
+      }
+    } catch (_) {}
   }
 
   if (connectorNode.parent) {
@@ -1275,8 +1314,12 @@ function copyConnectorData(source: SceneNode, target: SceneNode) {
     'end_offset',
   ];
   for (const k of keys) {
-    const v = source.getPluginData(k);
-    if (v) target.setPluginData(k, v);
+    const v = safeGetPluginData(source, k);
+    if (v && typeof target.setPluginData === 'function') {
+      try {
+        target.setPluginData(k, v);
+      } catch (_) {}
+    }
   }
 }
 

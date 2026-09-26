@@ -90,6 +90,10 @@ export interface SelectionSummary {
   connectorTargetMagnet: PropertySummary<MagnetPosition>;
   connectorStartOffset: PropertySummary<number>;
   connectorEndOffset: PropertySummary<number>;
+
+  // 피그잼 일반 객체 요약
+  isFigJamObject: boolean;
+  figjamNodeCount: number;
 }
 
 /**
@@ -97,17 +101,22 @@ export interface SelectionSummary {
  */
 export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): SelectionSummary {
   const validNodes = (nodes || []).filter((n): n is NodeInfo => Boolean(n));
-  const flowNodes = validNodes.filter((n) => !n.isConnector);
-  const connectorNodes = validNodes.filter((n) => n.isConnector);
+  const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode));
+  const connectorNodes = validNodes.filter((n) => Boolean(n.isConnector));
+  const figjamNodes = validNodes.filter((n) => !n.isFlowNode && !n.isConnector);
 
   const totalCount = validNodes.length;
   const flowNodeCount = flowNodes.length;
   const connectorCount = connectorNodes.length;
+  const figjamNodeCount = figjamNodes.length;
+  const isFigJamObject = totalCount > 0 && figjamNodeCount === totalCount;
 
   return {
     totalCount,
     flowNodeCount,
     connectorCount,
+    figjamNodeCount,
+    isFigJamObject,
     isMulti: totalCount > 1,
     isSingleFlowNode: flowNodeCount === 1 && connectorCount === 0,
     isMultiFlowNode: flowNodeCount > 1,

@@ -248,6 +248,14 @@
       border-color: var(--color-brand);
     }
 
+    .node-title-input:disabled {
+      color: var(--color-text-secondary);
+      background: transparent;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
     .multi-selection-indicator {
       display: none;
       align-items: center;
@@ -321,6 +329,13 @@
       flex-direction: column;
       gap: 0;
       box-sizing: border-box;
+    }
+
+    .tab-panels.editor-disabled {
+      opacity: 0.35;
+      pointer-events: none !important;
+      user-select: none !important;
+      cursor: not-allowed;
     }
 
     /* 슬림 커스텀 스크롤바 (오직 .tab-panels에만 적용) */
@@ -2201,6 +2216,31 @@
 
     .btn-cta-primary:hover {
       background: var(--color-brand-cta-hover);
+    }
+
+    .btn-cta-primary:disabled {
+      opacity: 0.35;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+
+    /* 피그잼 오브젝트 선택 시 하단 안내 배너 (그레이 라운드 박스) */
+    .figjam-notice-banner {
+      width: 100%;
+      height: 36px;
+      padding: 0 12px;
+      background-color: var(--color-bg-secondary, #f5f5f5);
+      border: 1px solid var(--color-border, #e5e5e5);
+      border-radius: var(--radius-sm, 6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--color-text-secondary, #808080);
+      font-size: 11px;
+      font-weight: 400;
+      box-sizing: border-box;
+      user-select: none;
     }
 
     /* 피그마 UI3 24px 디폴트 버튼 사이즈 (Figma 1027377:4208) */
@@ -29239,6 +29279,9 @@
                   const linkUrlEl = document.getElementById("single-screen-url");
                   if (linkUrlEl) linkUrlEl.value = "";
                 }
+              } else if (!node.isFlowNode && !node.isConnector) {
+                const titleEl = document.getElementById("node-title-input");
+                if (titleEl) titleEl.value = "Figjam object";
               }
             } else if (!nodes || nodes.length === 0) {
               if (isDifferentNode) {
@@ -29312,15 +29355,20 @@
   }
   function analyzeSelection(nodes) {
     const validNodes = (nodes || []).filter((n) => Boolean(n));
-    const flowNodes = validNodes.filter((n) => !n.isConnector);
-    const connectorNodes = validNodes.filter((n) => n.isConnector);
+    const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode));
+    const connectorNodes = validNodes.filter((n) => Boolean(n.isConnector));
+    const figjamNodes = validNodes.filter((n) => !n.isFlowNode && !n.isConnector);
     const totalCount = validNodes.length;
     const flowNodeCount = flowNodes.length;
     const connectorCount = connectorNodes.length;
+    const figjamNodeCount = figjamNodes.length;
+    const isFigJamObject = totalCount > 0 && figjamNodeCount === totalCount;
     return {
       totalCount,
       flowNodeCount,
       connectorCount,
+      figjamNodeCount,
+      isFigJamObject,
       isMulti: totalCount > 1,
       isSingleFlowNode: flowNodeCount === 1 && connectorCount === 0,
       isMultiFlowNode: flowNodeCount > 1,
@@ -34787,6 +34835,9 @@
     } = useApp();
     const summary = useSelectionSummary();
     const nodeCount = selectedNodes.length;
+    const isFigjamSelected = summary.isFigJamObject;
+    const isSingleFigjam = isFigjamSelected && nodeCount === 1;
+    const isMultiFigjam = isFigjamSelected && nodeCount >= 2;
     const allConnectors = nodeCount > 0 && selectedNodes.every((n) => n && n.isConnector);
     const isSingleConn = nodeCount === 1 && allConnectors;
     const isMultiConn = nodeCount >= 2 && allConnectors;
@@ -34796,7 +34847,17 @@
       const tabNode = document.getElementById("tab-btn-node");
       const tabAppearance = document.getElementById("tab-btn-appearance");
       const tabConnection = document.getElementById("tab-btn-connection");
-      if (isConnSel) {
+      if (isSingleFigjam) {
+        tabNode?.classList.add("disabled");
+        tabAppearance?.classList.add("disabled");
+        tabConnection?.classList.add("disabled");
+        if (currentTab !== "node") setCurrentTab("node");
+      } else if (isMultiFigjam) {
+        tabNode?.classList.add("disabled");
+        tabAppearance?.classList.add("disabled");
+        tabConnection?.classList.remove("disabled");
+        if (currentTab !== "connection") setCurrentTab("connection");
+      } else if (isConnSel) {
         tabNode?.classList.add("disabled");
         tabAppearance?.classList.add("disabled");
         tabConnection?.classList.remove("disabled");
@@ -34816,7 +34877,7 @@
         tabAppearance?.classList.remove("disabled");
         tabConnection?.classList.remove("disabled");
       }
-    }, [isConnSel, nodeCount, currentTab, setCurrentTab]);
+    }, [isSingleFigjam, isMultiFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
     (0, import_react22.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
@@ -34850,9 +34911,11 @@
       };
     }, []);
     function switchTab(tabId) {
+      if (isSingleFigjam) return;
+      if (isMultiFigjam && tabId !== "connection") return;
       if (tabId === "connection" && !isConnSel && nodeCount < 2) return;
-      if (tabId === "appearance" && (nodeCount === 0 || isConnSel)) return;
-      if (tabId === "node" && isConnSel) return;
+      if (tabId === "appearance" && (nodeCount === 0 || isConnSel || isFigjamSelected)) return;
+      if (tabId === "node" && (isConnSel || isFigjamSelected)) return;
       const btn = document.getElementById(`tab-btn-${tabId}`);
       if (btn?.classList.contains("disabled")) return;
       setCurrentTab(tabId);
@@ -34901,6 +34964,22 @@
       }
     }
     function renderTitleBanner() {
+      if (isSingleFigjam) {
+        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+          "input",
+          {
+            type: "text",
+            id: "node-title-input",
+            className: "node-title-input",
+            value: "Figjam object",
+            readOnly: true,
+            disabled: true
+          }
+        ) });
+      }
+      if (isMultiFigjam) {
+        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figjam objects selected` }) });
+      }
       if (isSingleConn) {
         return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
           "input",
@@ -34916,7 +34995,7 @@
         ) });
       }
       if (nodeCount >= 2) {
-        const flowNodeCount = selectedNodes.filter((n) => n && !n.isConnector).length;
+        const flowNodeCount = selectedNodes.filter((n) => n && n.isFlowNode).length;
         const connCount = selectedNodes.filter((n) => n && n.isConnector).length;
         let selText = "";
         if (connCount > 0 && flowNodeCount === 0) {
@@ -34951,10 +35030,12 @@
           {
             type: "button",
             id: "btn-header-settings",
-            className: "btn-action-icon",
+            className: `btn-action-icon${isSingleFigjam ? " disabled" : ""}`,
+            disabled: isSingleFigjam,
             title: "Settings",
             "data-tooltip": "Settings",
             onClick: () => {
+              if (isSingleFigjam) return;
               showToast("Settings \uBA54\uB274\uC785\uB2C8\uB2E4.");
             },
             children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
@@ -34970,10 +35051,10 @@
         )
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
-        const isConnectionDisabled = tab.id === "connection" && (!isConnSel && nodeCount < 2);
-        const isAppearanceDisabled = tab.id === "appearance" && (nodeCount === 0 || isConnSel);
-        const isNodeDisabled = tab.id === "node" && isConnSel;
-        const isDisabled = isConnectionDisabled || isAppearanceDisabled || isNodeDisabled;
+        const isConnectionDisabled = isSingleFigjam || !isConnSel && nodeCount < 2;
+        const isAppearanceDisabled = isFigjamSelected || nodeCount === 0 || isConnSel;
+        const isNodeDisabled = isFigjamSelected || isConnSel;
+        const isDisabled = tab.id === "connection" ? isConnectionDisabled : tab.id === "appearance" ? isAppearanceDisabled : isNodeDisabled;
         return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
           "button",
           {
@@ -34988,36 +35069,54 @@
         );
       }) }) }),
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("hr", { className: "section-divider" }),
-      /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("main", { className: "tab-panels", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
-          "section",
+      /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(
+        "main",
+        {
+          className: `tab-panels${isSingleFigjam ? " editor-disabled" : ""}`,
+          "aria-disabled": isSingleFigjam,
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+              "section",
+              {
+                id: "panel-node",
+                className: "tab-panel",
+                style: { display: currentTab === "node" ? "block" : "none" },
+                children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(NodePanel, {})
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+              "section",
+              {
+                id: "panel-appearance",
+                className: "tab-panel",
+                style: { display: currentTab === "appearance" ? "block" : "none" },
+                children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(AppearancePanel, {})
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+              "section",
+              {
+                id: "panel-connection",
+                className: "tab-panel",
+                style: { display: currentTab === "connection" ? "block" : "none" },
+                children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(ConnectionPanel, {})
+              }
+            )
+          ]
+        }
+      ),
+      isSingleFigjam ? /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { className: "figjam-notice-banner", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", style: { flexShrink: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+          "path",
           {
-            id: "panel-node",
-            className: "tab-panel",
-            style: { display: currentTab === "node" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(NodePanel, {})
+            fillRule: "evenodd",
+            clipRule: "evenodd",
+            d: "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0-1.2A5.8 5.8 0 1 0 8 2.2a5.8 5.8 0 0 0 0 11.6zM7.3 6.5h1.4v4.7H7.3V6.5zm.7-2.7a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z",
+            fill: "currentColor"
           }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
-          "section",
-          {
-            id: "panel-appearance",
-            className: "tab-panel",
-            style: { display: currentTab === "appearance" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(AppearancePanel, {})
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
-          "section",
-          {
-            id: "panel-connection",
-            className: "tab-panel",
-            style: { display: currentTab === "connection" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(ConnectionPanel, {})
-          }
-        )
-      ] }),
-      currentTab !== "connection" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        ) }),
+        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("span", { children: "Flooow node\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694." })
+      ] }) }) : currentTab !== "connection" ? /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
         "button",
         {
           id: "btn-main-cta",
@@ -35026,7 +35125,7 @@
           onClick: handleMainAction,
           children: ctaLabel
         }
-      ) }),
+      ) }) : null,
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
       activeModal === "phase" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
         PhaseModal,

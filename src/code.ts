@@ -557,7 +557,7 @@ async function updateFigmaLinkBadge(
   clearCache = false
 ) {
   const existingBadge = card.children.find(
-    (c) => c.getPluginData('is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+    (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
   ) as FrameNode | undefined;
 
   const rawLink = (figmaLink || '').trim();
@@ -645,6 +645,18 @@ async function updateFigmaLinkBadge(
   badge.y = card.height - badge.height - 10;
 }
 
+// 안전한 플러그인 데이터 조회 헬퍼 (피그잼 네이티브 노드 중 getPluginData가 없거나 함수가 아닌 경우 TypeError 방지)
+function safeGetPluginData(node: any, key: string): string {
+  if (node && typeof node.getPluginData === 'function') {
+    try {
+      return node.getPluginData(key) || '';
+    } catch (_) {
+      return '';
+    }
+  }
+  return '';
+}
+
 // 선택된 요소 또는 조상 중 커넥터(Figma 네이티브 CONNECTOR 또는 커스텀 벡터 직각 커넥터) 탐색
 function findConnectorNode(node: BaseNode | null): SceneNode | null {
   if (!node) return null;
@@ -653,16 +665,16 @@ function findConnectorNode(node: BaseNode | null): SceneNode | null {
   while (curr && curr.type !== 'PAGE' && curr.type !== 'DOCUMENT') {
     if (
       curr.type === 'CONNECTOR' ||
-      curr.getPluginData('is_custom_connector') === 'true' ||
-      curr.getPluginData('is_flow_connector') === 'true'
+      safeGetPluginData(curr, 'is_custom_connector') === 'true' ||
+      safeGetPluginData(curr, 'is_flow_connector') === 'true'
     ) {
       // 만약 부모가 커스텀 커넥터 그룹이라면 최상위 커넥터 그룹을 반환
       let topConnector: SceneNode = curr as SceneNode;
       let parentScan: BaseNode | null = curr.parent;
       while (parentScan && parentScan.type !== 'PAGE' && parentScan.type !== 'DOCUMENT') {
         if (
-          parentScan.getPluginData('is_custom_connector') === 'true' ||
-          parentScan.getPluginData('is_flow_connector') === 'true'
+          safeGetPluginData(parentScan, 'is_custom_connector') === 'true' ||
+          safeGetPluginData(parentScan, 'is_flow_connector') === 'true'
         ) {
           topConnector = parentScan as SceneNode;
         }
@@ -686,11 +698,11 @@ function findFlowNode(node: BaseNode | null): (FrameNode | ShapeWithTextNode) | 
   let topCandidate: (FrameNode | ShapeWithTextNode) | null = null;
 
   while (curr && curr.type !== 'PAGE' && curr.type !== 'DOCUMENT') {
-    if (curr.getPluginData('is_flow_node') === 'true') {
+    if (safeGetPluginData(curr, 'is_flow_node') === 'true') {
       return curr as FrameNode | ShapeWithTextNode;
     }
     if (curr.type === 'FRAME' || curr.type === 'SHAPE_WITH_TEXT') {
-      if (curr.getPluginData('is_connector_label') !== 'true' && curr.name !== 'ConnectorLabel') {
+      if (safeGetPluginData(curr, 'is_connector_label') !== 'true' && curr.name !== 'ConnectorLabel') {
         topCandidate = curr as FrameNode | ShapeWithTextNode;
       }
     }
@@ -701,10 +713,20 @@ function findFlowNode(node: BaseNode | null): (FrameNode | ShapeWithTextNode) | 
 
 // 캔버스 내 플로우 노드 개수 확인 (태그 자동 넘버링: p1, p2, p3...)
 function getNextFlowTag(): string {
-  const flowNodes = figma.currentPage.findAll(
-    (node) => node.getPluginData('is_flow_node') === 'true'
-  );
-  return `p${flowNodes.length + 1}`;
+  try {
+    const flowNodes = figma.currentPage.findAll((node) => {
+      try {
+        if (!node) return false;
+        if (node.type !== 'FRAME' && node.type !== 'SHAPE_WITH_TEXT') return false;
+        return safeGetPluginData(node, 'is_flow_node') === 'true';
+      } catch (_) {
+        return false;
+      }
+    });
+    return `p${flowNodes.length + 1}`;
+  } catch (_) {
+    return 'p1';
+  }
 }
 
 // FigJam Node 객체 자체를 Source of Truth로 하여 실제 Title/Description 텍스트 추출
@@ -716,10 +738,10 @@ function extractNodeText(node: SceneNode): { title: string; description: string 
     const frame = node as FrameNode;
     // 1. node_role 플러그인 데이터 또는 이름으로 명시적 자식 검색
     const titleTextNode = frame.findOne(
-      (c) => c.type === 'TEXT' && (c.name === 'TitleText' || c.getPluginData('node_role') === 'title')
+      (c) => Boolean(c && c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title'))
     ) as TextNode | null;
     const descTextNode = frame.findOne(
-      (c) => c.type === 'TEXT' && (c.name === 'DescText' || c.getPluginData('node_role') === 'desc')
+      (c) => Boolean(c && c.type === 'TEXT' && (c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'))
     ) as TextNode | null;
 
     if (titleTextNode) {
@@ -731,7 +753,13 @@ function extractNodeText(node: SceneNode): { title: string; description: string 
 
     // 2. 명시적 역할이 없는 일반 텍스트 노드인 경우 순서대로 추출
     if (!title) {
-      const allTexts = frame.findAll((n) => n.type === 'TEXT') as TextNode[];
+      const allTexts = frame.findAll((n) => {
+        try {
+          return Boolean(n && n.type === 'TEXT');
+        } catch (_) {
+          return false;
+        }
+      }) as TextNode[];
       if (allTexts.length > 0) title = allTexts[0].characters;
       if (allTexts.length > 1 && !description) {
         description = allTexts[1].characters;
@@ -751,10 +779,10 @@ function extractNodeText(node: SceneNode): { title: string; description: string 
 
   // 3. Fallback: 노드 이름 및 하위 호환 레거시 pluginData
   if (!title) {
-    title = node.name || node.getPluginData('node_title') || 'Untitled';
+    title = node.name || safeGetPluginData(node, 'node_title') || 'Untitled';
   }
   if (!description) {
-    description = node.getPluginData('node_desc') || '';
+    description = safeGetPluginData(node, 'node_desc') || '';
   }
 
   return { title, description };
@@ -764,9 +792,9 @@ function extractNodeText(node: SceneNode): { title: string; description: string 
 function isHeaderFrame(c: SceneNode): boolean {
   if (c.type !== 'FRAME') return false;
   if (c.name === 'Header') return true;
-  if (c.name.startsWith('[Step]') || c.getPluginData('is_step_badge') === 'true') return false;
-  if (c.name === 'StatusBadge' || c.getPluginData('is_status_badge') === 'true') return false;
-  if (c.name === 'FigmaLinkBadge' || c.getPluginData('is_figma_link_badge') === 'true') return false;
+  if (c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true') return false;
+  if (c.name === 'StatusBadge' || safeGetPluginData(c, 'is_status_badge') === 'true') return false;
+  if (c.name === 'FigmaLinkBadge' || safeGetPluginData(c, 'is_figma_link_badge') === 'true') return false;
   return (c as FrameNode).layoutMode === 'HORIZONTAL';
 }
 
@@ -784,7 +812,7 @@ function calculateCardHugHeight(card: FrameNode, textCharacters?: string): numbe
   const prevMaxHeight = card.maxHeight;
 
   const descText = card.children.find(
-    (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+    (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
   ) as TextNode | undefined;
   const prevMaxLines = descText ? descText.maxLines : null;
   const prevDescChars = descText ? descText.characters : '';
@@ -907,7 +935,7 @@ async function updateDescTextTruncation(card: FrameNode, descText: TextNode, cur
 
     // 박스 높이를 실제로 벗어나는 경우에만 가용 줄수 계산하여 말줄임
     const statusBadge = card.children.find(
-      (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+      (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
     );
     const pb = statusBadge ? 36 : 16;
     const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
@@ -1025,8 +1053,8 @@ async function handleSelectionChange() {
   // - otherObjects: 그 외 일반 객체 (피그잼 스티키 노트, 기본 도형, 일반 프레임/텍스트 등)
   const connNodes = allResolvedNodes.filter((n) => Boolean(findConnectorNode(n)));
   const nonConnNodes = allResolvedNodes.filter((n) => !findConnectorNode(n));
-  const flowNodes = nonConnNodes.filter((n) => n.getPluginData('is_flow_node') === 'true');
-  const otherObjects = nonConnNodes.filter((n) => n.getPluginData('is_flow_node') !== 'true');
+  const flowNodes = nonConnNodes.filter((n) => safeGetPluginData(n, 'is_flow_node') === 'true');
+  const otherObjects = nonConnNodes.filter((n) => safeGetPluginData(n, 'is_flow_node') !== 'true');
 
   const flowNodeCount = flowNodes.length;
   const otherObjectCount = otherObjects.length;
@@ -1066,8 +1094,8 @@ async function handleSelectionChange() {
           if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
         }
       } else {
-        const srcId = c.getPluginData('source_node_id');
-        const tgtId = c.getPluginData('target_node_id');
+        const srcId = safeGetPluginData(c, 'source_node_id');
+        const tgtId = safeGetPluginData(c, 'target_node_id');
         if (srcId) {
           const srcNode = figma.getNodeById(srcId) as SceneNode | null;
           if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
@@ -1086,7 +1114,7 @@ async function handleSelectionChange() {
   }
 
   const nodes: SelectedNodeInfo[] = await Promise.all(uniqueNodes.map(async (node) => {
-    const isFlowNode = node.getPluginData('is_flow_node') === 'true';
+    const isFlowNode = safeGetPluginData(node, 'is_flow_node') === 'true';
 
     // 캔버스 기즈모로 사이즈 조절이 되지 않도록 min/max 치수를 현재 크기로 완전 잠금
     if (isFlowNode && node.type === 'FRAME') {
@@ -1102,7 +1130,7 @@ async function handleSelectionChange() {
 
       // 기존 우상단에 있던 상태 뱃지를 하단 오른쪽 박스 안쪽으로 자동 이동 및 텍스트 수정 차단(locked=true)
       const statusBadge = frame.children.find(
-        (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+        (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
       ) as FrameNode | undefined;
       if (statusBadge) {
         if (frame.paddingBottom !== 36) {
@@ -1135,12 +1163,12 @@ async function handleSelectionChange() {
       const headerFrame = frame.children.find(isHeaderFrame) as FrameNode | undefined;
       const titleText = headerFrame
         ? (headerFrame.children.find((c) => c.type === 'TEXT') as TextNode | undefined)
-        : (frame.children.find((c) => c.type === 'TEXT' && (c.name === 'TitleText' || c.getPluginData('node_role') === 'title')) as TextNode | undefined);
+        : (frame.children.find((c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')) as TextNode | undefined);
       if (titleText) {
         enforceTitleStandardStyle(titleText, frame);
       }
       const descText = frame.children.find(
-        (c) => c.type === 'TEXT' && (c.name === 'DescText' || c.getPluginData('node_role') === 'desc')
+        (c) => c.type === 'TEXT' && (c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc')
       ) as TextNode | undefined;
       if (descText) {
         await lockTextFontSizeAndAutoResize(descText, 11);
@@ -1150,7 +1178,7 @@ async function handleSelectionChange() {
 
     let title = '';
     let description = '';
-    let tag = node.getPluginData('node_tag') || '';
+    let tag = safeGetPluginData(node, 'node_tag') || '';
     let connectorLabel: string | undefined;
     let connectorLineType: 'ELBOWED' | 'STRAIGHT' | 'CURVED' | undefined;
     let connectorColorHex: string | undefined;
@@ -1696,10 +1724,12 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
         }
       } catch (_) {}
 
-      // 전체 범위 일괄 초기화 (이중 안전장치)
+      // 전체 범위 일괄 초기화 (이중 안전장치) - 피그잼 속성에서 수정한 타이틀 컬러(Fills)는 보존
       try { textNode.setRangeFontName(0, len, targetFont); } catch (_) {}
       try { textNode.setRangeFontSize(0, len, targetSize); } catch (_) {}
-      try { textNode.setRangeFills(0, len, [titleFill]); } catch (_) {}
+      if (Array.isArray(textNode.fills) && textNode.fills.length === 0) {
+        try { textNode.setRangeFills(0, len, [titleFill]); } catch (_) {}
+      }
       try { textNode.setRangeTextDecoration(0, len, 'NONE'); } catch (_) {}
       try { textNode.setRangeHyperlink(0, len, null); } catch (_) {}
       try { textNode.setRangeListOptions(0, len, { type: 'NONE' }); } catch (_) {}
@@ -1707,7 +1737,9 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
     } else {
       try { textNode.fontName = targetFont; } catch (_) {}
       try { textNode.fontSize = targetSize; } catch (_) {}
-      try { textNode.fills = [titleFill]; } catch (_) {}
+      if (Array.isArray(textNode.fills) && textNode.fills.length === 0) {
+        try { textNode.fills = [titleFill]; } catch (_) {}
+      }
       try { textNode.textDecoration = 'NONE'; } catch (_) {}
       try { textNode.hyperlink = null; } catch (_) {}
     }
@@ -1959,7 +1991,13 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
 
   // 커넥터 연결선 안전 인계
   const oldId = shape.id;
-  const connectors = figma.currentPage.findAll((n) => n.type === 'CONNECTOR') as ConnectorNode[];
+  const connectors = figma.currentPage.findAll((n) => {
+    try {
+      return Boolean(n && n.type === 'CONNECTOR');
+    } catch (_) {
+      return false;
+    }
+  }) as ConnectorNode[];
   for (const conn of connectors) {
     if (conn.connectorStart && 'endpointNodeId' in conn.connectorStart && conn.connectorStart.endpointNodeId === oldId) {
       const magnet = 'magnet' in conn.connectorStart ? conn.connectorStart.magnet : 'AUTO';
@@ -2278,7 +2316,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     }
 
     let titleText = headerRow.children.find(
-      (c) => c.name === 'TitleText' || c.getPluginData('node_role') === 'title'
+      (c) => c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title'
     ) as TextNode | undefined;
 
     if (!titleText) {
@@ -2296,11 +2334,14 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     titleText.textTruncation = 'ENDING';
     titleText.maxLines = 1;
     await safeSetCharacters(titleText, title);
-    titleText.fills = [titleFill];
+    const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
+    if (!hasExistingTitleFill || payload.colorHex) {
+      titleText.fills = [titleFill];
+    }
 
     // 설명 텍스트 갱신 (설명이 없는 경우 텍스트 노드 제거, 있는 경우에만 갱신)
     let descText = card.children.find(
-      (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+      (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
     ) as TextNode | undefined;
 
     if (!description) {
@@ -2331,7 +2372,10 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       await updateDescTextTruncation(card, descText, currentH, description);
 
       await safeSetCharacters(descText, description);
-      descText.fills = [descFill];
+      const hasExistingDescFill = descText.fills === figma.mixed || (Array.isArray(descText.fills) && descText.fills.length > 0);
+      if (!hasExistingDescFill || payload.colorHex) {
+        descText.fills = [descFill];
+      }
       try {
         const descFont: FontName = { family: 'Inter', style: 'Regular' };
         await figma.loadFontAsync(descFont);
@@ -2348,7 +2392,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
     // 상태 여부 및 링크 여부에 따른 하단 패딩 및 세로 정렬 동기화
     let statusBadge = card.children.find(
-      (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+      (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
     ) as FrameNode | undefined;
     const hasStatus = Boolean(statusBadge || (payload.status && STATUS_CONFIG[payload.status]));
     const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
@@ -2373,7 +2417,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
 
       // 노드 배경색 변화에 따른 상태 뱃지 컬러 동기화
-      const currentStatus = (payload.status || card.getPluginData('workflow_status')) as WorkflowStatus;
+      const currentStatus = (payload.status || safeGetPluginData(card, 'workflow_status')) as WorkflowStatus;
       if (currentStatus && STATUS_CONFIG[currentStatus]) {
         const { badgeBg, badgeTextColor } = getStatusBadgeColors(currentStatus, bgColor, isDark);
         statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
@@ -2391,12 +2435,12 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
     // 기존 스텝 뱃지가 존재하는 경우 노드 색상/보더 변화에 맞춰 컬러 동기화
     const existingStepBadge = card.children.find(
-      (c) => c.name.startsWith('[Step]') || c.getPluginData('is_step_badge') === 'true'
+      (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
     ) as FrameNode | undefined;
     if (existingStepBadge) {
       const stepText = existingStepBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
       if (stepText) {
-        const currentMode = (card.getPluginData('badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
+        const currentMode = (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
         applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
       }
     }
@@ -2457,7 +2501,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         statusBadge.y = curH - statusBadge.height - 10;
       }
       const linkBadge = card.children.find(
-        (c) => c.getPluginData('is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+        (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
       ) as FrameNode | undefined;
       if (linkBadge) {
         linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
@@ -2548,7 +2592,7 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     const headerRow = frame.children.find(isHeaderFrame) as FrameNode | undefined;
     if (headerRow) {
       const title = headerRow.children.find(
-        (c) => c.name === 'TitleText' || c.getPluginData('node_role') === 'title'
+        (c) => c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title'
       ) as TextNode | undefined;
       if (title) {
         title.textAlignHorizontal = 'LEFT';
@@ -2559,14 +2603,14 @@ async function resizeNode(nodeId: string, width: number, height: number) {
 
     // 상태 뱃지 탐색 및 패딩 동기화
     const statusBadge = frame.children.find(
-      (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+      (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
     ) as FrameNode | undefined;
     const hasStatus = Boolean(statusBadge);
     frame.paddingBottom = hasStatus ? 36 : 16;
 
     // 설명 텍스트 말줄임 및 최대 줄수 동기화
     const desc = frame.children.find(
-      (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+      (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
     ) as TextNode | undefined;
     if (desc) {
       desc.textAlignHorizontal = 'LEFT';
@@ -2999,7 +3043,7 @@ async function updateConnectorProperties(payload: {
       let labelFrame: FrameNode | null = null;
       if (node.type === 'GROUP') {
         labelFrame = (node as GroupNode).findOne(
-          (n) => n.name === 'ConnectorLabel' || n.getPluginData('is_connector_label') === 'true'
+          (n) => n.name === 'ConnectorLabel' || safeGetPluginData(n, 'is_connector_label') === 'true'
         ) as FrameNode | null;
       }
 
@@ -3100,7 +3144,13 @@ async function setConnectorLineType(connectorId?: string, lineType: 'ELBOWED' | 
 // 캔버스 내 모든 연결선을 직각(ELBOWED)으로 일괄 변환하는 기능
 async function convertAllConnectorsToElbowed() {
   try {
-    const connectors = figma.currentPage.findAll((n) => n.type === 'CONNECTOR') as ConnectorNode[];
+    const connectors = figma.currentPage.findAll((n) => {
+      try {
+        return Boolean(n && n.type === 'CONNECTOR');
+      } catch (_) {
+        return false;
+      }
+    }) as ConnectorNode[];
     if (connectors.length === 0) {
       notify('캔버스에 변환할 연결선이 없습니다.', 'info');
       return;
@@ -3154,32 +3204,41 @@ async function toggleNodeTheme(nodeId: string) {
 // 5. 상태 뱃지 및 설정 저장
 // ----------------------------------------------------
 function collectStatusItems(): FrameStatusItem[] {
-  const nodes = figma.currentPage.findAll((node) => {
-    return Boolean(node.getPluginData('workflow_status'));
-  });
-
-  return nodes.map((node) => {
-    const status = node.getPluginData('workflow_status') as WorkflowStatus;
-    if (node.type === 'FRAME' && node.getPluginData('is_flow_node') === 'true') {
-      const frame = node as FrameNode;
-      const statusBadge = frame.children.find(
-        (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
-      ) as FrameNode | undefined;
-      if (statusBadge && statusBadge.y <= 0) {
-        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-        statusBadge.x = frame.width - statusBadge.width - 10;
-        statusBadge.y = frame.height - statusBadge.height - 10;
+  try {
+    const nodes = figma.currentPage.findAll((node) => {
+      try {
+        if (!node) return false;
+        return Boolean(safeGetPluginData(node, 'workflow_status'));
+      } catch (_) {
+        return false;
       }
-    }
-    const extracted = extractNodeText(node);
-    return {
-      id: node.id,
-      name: extracted.title || node.name,
-      status: status || 'draft',
-      x: Math.round(node.x),
-      y: Math.round(node.y),
-    };
-  });
+    });
+
+    return nodes.map((node) => {
+      const status = safeGetPluginData(node, 'workflow_status') as WorkflowStatus;
+      if (node.type === 'FRAME' && safeGetPluginData(node, 'is_flow_node') === 'true') {
+        const frame = node as FrameNode;
+        const statusBadge = frame.children.find(
+          (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
+        ) as FrameNode | undefined;
+        if (statusBadge && statusBadge.y <= 0) {
+          statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+          statusBadge.x = frame.width - statusBadge.width - 10;
+          statusBadge.y = frame.height - statusBadge.height - 10;
+        }
+      }
+      const extracted = extractNodeText(node);
+      return {
+        id: node.id,
+        name: extracted.title || node.name,
+        status: status || 'draft',
+        x: Math.round(node.x),
+        y: Math.round(node.y),
+      };
+    });
+  } catch (_) {
+    return [];
+  }
 }
 
 function syncStatusList() {
@@ -3250,13 +3309,13 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
       let oldBadgeInHeader: FrameNode | undefined;
       if (headerRow) {
         oldBadgeInHeader = headerRow.children.find(
-          (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+          (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
         ) as FrameNode | undefined;
       }
 
       // 2. card 직속 상태 뱃지 탐색
       let statusBadge = card.children.find(
-        (c) => c.getPluginData('is_status_badge') === 'true' || c.name === 'StatusBadge'
+        (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
       ) as FrameNode | undefined;
 
       if (isRemove) {
@@ -3267,7 +3326,7 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
         if (statusBadge) statusBadge.remove();
 
         const descText = card.children.find(
-          (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+          (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
         ) as TextNode | undefined;
         if (descText) {
           await updateDescTextTruncation(card, descText, card.height);
@@ -3346,7 +3405,7 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
 
         // 설명 텍스트 줄수 동기화: Hug 모드이면 전체 표시(null), Fixed 모드일 때만 높이에 맞게 줄수 제한
         const descText = card.children.find(
-          (c) => c.name === 'DescText' || c.getPluginData('node_role') === 'desc'
+          (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
         ) as TextNode | undefined;
         if (descText) {
           await updateDescTextTruncation(card, descText, card.height);
@@ -3516,7 +3575,7 @@ async function applyStepBadgeToSingleCard(
   card.setPluginData('badge_color_mode', colorMode);
 
   let stepBadge = card.children.find(
-    (c) => c.getPluginData('is_step_badge') === 'true' || c.name.startsWith('[Step]')
+    (c) => safeGetPluginData(c, 'is_step_badge') === 'true' || c.name.startsWith('[Step]')
   ) as FrameNode | undefined;
 
   let numText: TextNode;
@@ -3668,7 +3727,7 @@ async function removeStepBadges() {
       card.setPluginData('badge_corner', '');
       card.setPluginData('badge_shape', '');
       const stepBadges = card.children.filter(
-        (c) => c.getPluginData('is_step_badge') === 'true' || c.name.startsWith('[Step]')
+        (c) => safeGetPluginData(c, 'is_step_badge') === 'true' || c.name.startsWith('[Step]')
       );
       for (const badge of stepBadges) {
         badge.remove();
@@ -3706,8 +3765,8 @@ function getDesignFrames(): DesignFrameItem[] {
   for (const node of figma.currentPage.selection) {
     if (
       (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') &&
-      !node.getPluginData('is_flow_node') &&
-      !node.getPluginData('flow_node_type') &&
+      !safeGetPluginData(node, 'is_flow_node') &&
+      !safeGetPluginData(node, 'flow_node_type') &&
       !node.name.startsWith('[Flow]')
     ) {
       const cr = 'cornerRadius' in node && typeof node.cornerRadius === 'number' ? node.cornerRadius : 0;
@@ -3727,8 +3786,8 @@ function getDesignFrames(): DesignFrameItem[] {
     if (seenIds.has(node.id)) continue;
     if (
       (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') &&
-      !node.getPluginData('is_flow_node') &&
-      !node.getPluginData('flow_node_type') &&
+      !safeGetPluginData(node, 'is_flow_node') &&
+      !safeGetPluginData(node, 'flow_node_type') &&
       !node.name.startsWith('[Flow]')
     ) {
       const cr = 'cornerRadius' in node && typeof node.cornerRadius === 'number' ? node.cornerRadius : 0;
@@ -3997,7 +4056,7 @@ figma.on('documentchange', async (event) => {
       const createdNode = figma.getNodeById(change.id) as SceneNode | null;
       if (
         createdNode &&
-        (createdNode.type === 'CONNECTOR' || createdNode.getPluginData('is_custom_connector') === 'true')
+        (createdNode.type === 'CONNECTOR' || safeGetPluginData(createdNode, 'is_custom_connector') === 'true')
       ) {
         registerConnectorInRegistry(createdNode);
       }
@@ -4031,10 +4090,10 @@ figma.on('documentchange', async (event) => {
         const node = figma.getNodeById(change.id);
         if (!node) continue;
         const flowNode = findFlowNode(node);
-        if (flowNode && flowNode.type === 'FRAME' && flowNode.getPluginData('is_flow_node') === 'true') {
+        if (flowNode && flowNode.type === 'FRAME' && safeGetPluginData(flowNode, 'is_flow_node') === 'true') {
           const frame = flowNode as FrameNode;
-          const savedW = (frame.minWidth && frame.minWidth > 0) ? frame.minWidth : parseInt(frame.getPluginData('node_width'), 10);
-          const savedH = (frame.minHeight && frame.minHeight > 0) ? frame.minHeight : parseInt(frame.getPluginData('node_height'), 10);
+          const savedW = (frame.minWidth && frame.minWidth > 0) ? frame.minWidth : parseInt(safeGetPluginData(frame, 'node_width'), 10);
+          const savedH = (frame.minHeight && frame.minHeight > 0) ? frame.minHeight : parseInt(safeGetPluginData(frame, 'node_height'), 10);
           if (savedW && savedH && (Math.round(frame.width) !== savedW || Math.round(frame.height) !== savedH)) {
             frame.minWidth = null;
             frame.maxWidth = null;
@@ -4057,7 +4116,7 @@ figma.on('documentchange', async (event) => {
       const textNodeCandidate = figma.getNodeById(change.id);
       if (textNodeCandidate && textNodeCandidate.type === 'TEXT') {
         const textNode = textNodeCandidate as TextNode;
-        const role = textNode.getPluginData('node_role');
+        const role = safeGetPluginData(textNode, 'node_role');
         const isHeaderChild = textNode.parent && textNode.parent.name === 'Header';
         const isTitle = role === 'title' || textNode.name === 'TitleText' || isHeaderChild;
         const isDesc = role === 'desc' || textNode.name === 'DescText';
@@ -4086,14 +4145,14 @@ figma.on('documentchange', async (event) => {
           const t = maybeStatusNode as TextNode;
           if (
             t.name === 'StatusText' ||
-            (t.parent && (t.parent.name === 'StatusBadge' || t.parent.getPluginData('is_status_badge') === 'true'))
+            (t.parent && (t.parent.name === 'StatusBadge' || safeGetPluginData(t.parent, 'is_status_badge') === 'true'))
           ) {
             statusTextNode = t;
             badgeFrame = t.parent && t.parent.type === 'FRAME' ? (t.parent as FrameNode) : null;
           }
         } else if (maybeStatusNode.type === 'FRAME') {
           const f = maybeStatusNode as FrameNode;
-          if (f.name === 'StatusBadge' || f.getPluginData('is_status_badge') === 'true') {
+          if (f.name === 'StatusBadge' || safeGetPluginData(f, 'is_status_badge') === 'true') {
             badgeFrame = f;
             statusTextNode = f.children.find((c) => c.type === 'TEXT') as TextNode | null;
           }
@@ -4102,7 +4161,7 @@ figma.on('documentchange', async (event) => {
         if (statusTextNode) {
           const flowNode = findFlowNode(statusTextNode);
           if (flowNode) {
-            const currentStatus = flowNode.getPluginData('workflow_status') as WorkflowStatus;
+            const currentStatus = safeGetPluginData(flowNode, 'workflow_status') as WorkflowStatus;
             const expectedLabel = currentStatus && STATUS_CONFIG[currentStatus]
               ? STATUS_CONFIG[currentStatus].label.toUpperCase()
               : 'DRAFT';

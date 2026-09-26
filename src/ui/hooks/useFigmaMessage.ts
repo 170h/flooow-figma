@@ -119,6 +119,9 @@ export function useFigmaMessage() {
                 const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
                 if (linkUrlEl) linkUrlEl.value = '';
               }
+            } else if (!node.isFlowNode && !node.isConnector) {
+              const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
+              if (titleEl) titleEl.value = 'Figjam object';
             }
           } else if (!nodes || nodes.length === 0) {
             // 선택 해제 시 (새로운 노드 생성 대기 모드): 실제로 선택이 해제된 순간에만 리셋

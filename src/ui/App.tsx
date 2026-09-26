@@ -77,6 +77,11 @@ export function App() {
   const summary = useSelectionSummary();
   const nodeCount = selectedNodes.length;
 
+  // 피그잼 일반 오브젝트 판별 (플로우 노드/커넥터가 아닌 네이티브 객체)
+  const isFigjamSelected = summary.isFigJamObject;
+  const isSingleFigjam = isFigjamSelected && nodeCount === 1;
+  const isMultiFigjam = isFigjamSelected && nodeCount >= 2;
+
   // 커넥터 여부 판별
   const allConnectors = nodeCount > 0 && selectedNodes.every(n => n && n.isConnector);
   const isSingleConn = nodeCount === 1 && allConnectors;
@@ -92,31 +97,43 @@ export function App() {
     const tabAppearance = document.getElementById('tab-btn-appearance');
     const tabConnection = document.getElementById('tab-btn-connection');
 
-    if (isConnSel) {
-      // 커넥터 선택: Node/Appearance 비활성 → Connection 강제 이동
+    if (isSingleFigjam) {
+      // 1. 피그잼 단일 오브젝트 선택: 상단 탭 3개 모두 비활성화
+      tabNode?.classList.add('disabled');
+      tabAppearance?.classList.add('disabled');
+      tabConnection?.classList.add('disabled');
+      if (currentTab !== 'node') setCurrentTab('node');
+    } else if (isMultiFigjam) {
+      // 2. 피그잼 오브젝트 2개 이상 복수 선택: 커넥션 기능 활성화 (Connection 탭 자동 이동)
+      tabNode?.classList.add('disabled');
+      tabAppearance?.classList.add('disabled');
+      tabConnection?.classList.remove('disabled');
+      if (currentTab !== 'connection') setCurrentTab('connection');
+    } else if (isConnSel) {
+      // 3. 커넥터 선택: Node/Appearance 비활성 → Connection 강제 이동
       tabNode?.classList.add('disabled');
       tabAppearance?.classList.add('disabled');
       tabConnection?.classList.remove('disabled');
       if (currentTab !== 'connection') setCurrentTab('connection');
     } else if (nodeCount === 0) {
-      // 선택 없음(생성 모드): Appearance/Connection 비활성
+      // 4. 선택 없음(생성 모드): Appearance/Connection 비활성
       tabNode?.classList.remove('disabled');
       tabAppearance?.classList.add('disabled');
       tabConnection?.classList.add('disabled');
       if (currentTab !== 'node') setCurrentTab('node');
     } else if (nodeCount === 1) {
-      // 노드 단 1개 선택: Node/Appearance 활성, Connection 비활성화!
+      // 5. 플로우 노드 단 1개 선택: Node/Appearance 활성, Connection 비활성화!
       tabNode?.classList.remove('disabled');
       tabAppearance?.classList.remove('disabled');
       tabConnection?.classList.add('disabled');
       if (currentTab === 'connection') setCurrentTab('node');
     } else {
-      // 일반 노드 2개 이상 복수 선택: 전체 활성
+      // 6. 플로우 노드 2개 이상 복수 선택: 전체 활성
       tabNode?.classList.remove('disabled');
       tabAppearance?.classList.remove('disabled');
       tabConnection?.classList.remove('disabled');
     }
-  }, [isConnSel, nodeCount, currentTab, setCurrentTab]);
+  }, [isSingleFigjam, isMultiFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
 
 
   // 탭 전환 후 autoResize
@@ -173,10 +190,13 @@ export function App() {
 
   // 탭 전환
   function switchTab(tabId: string) {
+    if (isSingleFigjam) return;
+    if (isMultiFigjam && tabId !== 'connection') return;
+
     // 노드 1개 이하일 때 Connection 탭 클릭 차단
     if (tabId === 'connection' && !isConnSel && nodeCount < 2) return;
-    if (tabId === 'appearance' && (nodeCount === 0 || isConnSel)) return;
-    if (tabId === 'node' && isConnSel) return;
+    if (tabId === 'appearance' && (nodeCount === 0 || isConnSel || isFigjamSelected)) return;
+    if (tabId === 'node' && (isConnSel || isFigjamSelected)) return;
 
     // disabled 탭은 클릭 차단
     const btn = document.getElementById(`tab-btn-${tabId}`);
@@ -250,7 +270,30 @@ export function App() {
 
   // 타이틀 배너 렌더링
   function renderTitleBanner() {
-    // 커넥터 단일 선택: 'Connector' 라벨 (읽기 전용)
+    // 0-1. 피그잼 단일 오브젝트 선택: 'Figjam object' (읽기 전용)
+    if (isSingleFigjam) {
+      return (
+        <div id="single-title-wrap" style={{ width: '100%' }}>
+          <input
+            type="text"
+            id="node-title-input"
+            className="node-title-input"
+            value="Figjam object"
+            readOnly
+            disabled
+          />
+        </div>
+      );
+    }
+    // 0-2. 피그잼 복수 오브젝트 선택: 'N Figjam objects selected' (다중 인디케이터)
+    if (isMultiFigjam) {
+      return (
+        <div id="multi-selection-indicator" className="multi-selection-indicator" style={{ width: '100%', display: 'flex' }}>
+          <span id="multi-selection-text">{`${nodeCount} Figjam objects selected`}</span>
+        </div>
+      );
+    }
+    // 1. 커넥터 단일 선택: 'Connector' 라벨 (읽기 전용)
     if (isSingleConn) {
       return (
         <div id="single-title-wrap" style={{ width: '100%' }}>
@@ -265,10 +308,10 @@ export function App() {
         </div>
       );
     }
-    // 다중 선택 (커넥터 포함): 다중 선택 인디케이터
+    // 2. 다중 선택 (커넥터 및 플로우 노드 포함): 다중 선택 인디케이터
     if (nodeCount >= 2) {
       // 선택 텍스트 생성
-      const flowNodeCount = selectedNodes.filter(n => n && !n.isConnector).length;
+      const flowNodeCount = selectedNodes.filter(n => n && n.isFlowNode).length;
       const connCount = selectedNodes.filter(n => n && n.isConnector).length;
       let selText = '';
       if (connCount > 0 && flowNodeCount === 0) {
@@ -284,7 +327,7 @@ export function App() {
         </div>
       );
     }
-    // 단일 노드 or 0개: 타이틀 입력
+    // 3. 단일 노드 or 0개: 타이틀 입력
     return (
       <div id="single-title-wrap" style={{ width: '100%' }}>
         <input
@@ -312,10 +355,12 @@ export function App() {
         <button
           type="button"
           id="btn-header-settings"
-          className="btn-action-icon"
+          className={`btn-action-icon${isSingleFigjam ? ' disabled' : ''}`}
+          disabled={isSingleFigjam}
           title="Settings"
           data-tooltip="Settings"
           onClick={() => {
+            if (isSingleFigjam) return;
             showToast('Settings 메뉴입니다.');
           }}
         >
@@ -334,10 +379,20 @@ export function App() {
       <nav className="main-tabs-wrapper">
         <div className="segmented-control" role="tablist">
           {TABS.map(tab => {
-            const isConnectionDisabled = tab.id === 'connection' && (!isConnSel && nodeCount < 2);
-            const isAppearanceDisabled = tab.id === 'appearance' && (nodeCount === 0 || isConnSel);
-            const isNodeDisabled = tab.id === 'node' && isConnSel;
-            const isDisabled = isConnectionDisabled || isAppearanceDisabled || isNodeDisabled;
+            const isConnectionDisabled =
+              isSingleFigjam ||
+              (!isConnSel && nodeCount < 2);
+            const isAppearanceDisabled =
+              isFigjamSelected ||
+              nodeCount === 0 ||
+              isConnSel;
+            const isNodeDisabled =
+              isFigjamSelected ||
+              isConnSel;
+            const isDisabled =
+              tab.id === 'connection' ? isConnectionDisabled :
+              tab.id === 'appearance' ? isAppearanceDisabled :
+              isNodeDisabled;
 
             return (
               <button
@@ -358,7 +413,10 @@ export function App() {
       <hr className="section-divider" />
 
       {/* 3. 탭 패널들 — currentTab 상태로 직접 제어 */}
-      <main className="tab-panels">
+      <main
+        className={`tab-panels${isSingleFigjam ? ' editor-disabled' : ''}`}
+        aria-disabled={isSingleFigjam}
+      >
         <section
           id="panel-node"
           className="tab-panel"
@@ -382,8 +440,22 @@ export function App() {
         </section>
       </main>
 
-      {/* 4. CTA 버튼 (Connection 탭에서는 ConnectSection 하단에 연결 버튼이 위치하므로 푸터 숨김) */}
-      {currentTab !== 'connection' && (
+      {/* 4. 푸터: 피그잼 단일 오브젝트 선택 시 그레이 라운드 안내 박스 / 그 외 탭에 따른 메인 CTA 버튼 */}
+      {isSingleFigjam ? (
+        <footer className="app-footer">
+          <div className="figjam-notice-banner">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0-1.2A5.8 5.8 0 1 0 8 2.2a5.8 5.8 0 0 0 0 11.6zM7.3 6.5h1.4v4.7H7.3V6.5zm.7-2.7a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>Flooow node를 선택해 주세요.</span>
+          </div>
+        </footer>
+      ) : currentTab !== 'connection' ? (
         <footer className="app-footer">
           <button
             id="btn-main-cta"
@@ -394,7 +466,7 @@ export function App() {
             {ctaLabel}
           </button>
         </footer>
-      )}
+      ) : null}
 
       {/* 팝오버 레이어 */}
       <ContextMenu onEdit={handleContextEdit} onDelete={handleContextDelete} />

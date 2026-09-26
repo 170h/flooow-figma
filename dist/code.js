@@ -61,6 +61,16 @@
   };
 
   // src/customConnector.ts
+  function safeGetPluginData(node, key) {
+    if (node && typeof node.getPluginData === "function") {
+      try {
+        return node.getPluginData(key) || "";
+      } catch (_) {
+        return "";
+      }
+    }
+    return "";
+  }
   function terminalToStrokeCap(terminal) {
     switch (terminal) {
       case "ARROW":
@@ -677,8 +687,8 @@
       }
       return;
     }
-    const srcId = connectorNode.getPluginData("source_node_id");
-    const tgtId = connectorNode.getPluginData("target_node_id");
+    const srcId = safeGetPluginData(connectorNode, "source_node_id");
+    const tgtId = safeGetPluginData(connectorNode, "target_node_id");
     if (srcId) {
       if (!nodeToConnectorsMap.has(srcId)) nodeToConnectorsMap.set(srcId, /* @__PURE__ */ new Set());
       nodeToConnectorsMap.get(srcId).add(connectorNode.id);
@@ -690,11 +700,24 @@
   }
   function refreshConnectorRegistry() {
     nodeToConnectorsMap.clear();
-    const connectors = figma.currentPage.findAll(
-      (n) => n.getPluginData("is_custom_connector") === "true" || n.type === "CONNECTOR"
-    );
-    for (const conn of connectors) {
-      registerConnectorInRegistry(conn);
+    try {
+      const connectors = figma.currentPage.findAll((n) => {
+        try {
+          if (!n) return false;
+          if (n.type === "CONNECTOR") return true;
+          if (n.type === "VECTOR" || n.type === "GROUP") {
+            return safeGetPluginData(n, "is_custom_connector") === "true";
+          }
+          return false;
+        } catch (_) {
+          return false;
+        }
+      });
+      for (const conn of connectors) {
+        registerConnectorInRegistry(conn);
+      }
+    } catch (err) {
+      console.error("refreshConnectorRegistry \uC5D0\uB7EC:", err);
     }
   }
   function getOptimalMagnetPair(srcBox, tgtBox) {
@@ -777,8 +800,8 @@
     }
   }
   async function updateOrthogonalVectorConnector(connectorNode, explicitSourceMagnet, explicitTargetMagnet, forceOptimal = false) {
-    const srcId = connectorNode.getPluginData("source_node_id");
-    const tgtId = connectorNode.getPluginData("target_node_id");
+    const srcId = safeGetPluginData(connectorNode, "source_node_id");
+    const tgtId = safeGetPluginData(connectorNode, "target_node_id");
     if (!srcId || !tgtId) return;
     const sourceNode = figma.getNodeById(srcId);
     const targetNode = figma.getNodeById(tgtId);
@@ -789,7 +812,7 @@
       const group = connectorNode;
       vector = group.children.find((c) => c.type === "VECTOR") || null;
       labelFrame = group.children.find(
-        (c) => c.getPluginData("is_connector_label") === "true" || c.name === "ConnectorLabel"
+        (c) => safeGetPluginData(c, "is_connector_label") === "true" || c.name === "ConnectorLabel"
       ) || null;
     } else if (connectorNode.type === "VECTOR") {
       vector = connectorNode;
@@ -820,14 +843,14 @@
       vector.setPluginData("source_magnet", sourceMagnet);
       vector.setPluginData("target_magnet", targetMagnet);
     }
-    const routingType = connectorNode.getPluginData("connector_routing") || vector.getPluginData("connector_routing") || "ORTHOGONAL";
+    const routingType = safeGetPluginData(connectorNode, "connector_routing") || safeGetPluginData(vector, "connector_routing") || "ORTHOGONAL";
     const pStart = getMagnetPoint(srcBox, sourceMagnet);
     const pEnd = getMagnetPoint(tgtBox, targetMagnet);
     const startOffset = parseFloat(
-      connectorNode.getPluginData("start_offset") || vector.getPluginData("start_offset") || "0"
+      safeGetPluginData(connectorNode, "start_offset") || safeGetPluginData(vector, "start_offset") || "0"
     ) || 0;
     const endOffset = parseFloat(
-      connectorNode.getPluginData("end_offset") || vector.getPluginData("end_offset") || "0"
+      safeGetPluginData(connectorNode, "end_offset") || safeGetPluginData(vector, "end_offset") || "0"
     ) || 0;
     const worldPoints = calculateRoutingPoints(
       pStart,
@@ -842,8 +865,8 @@
     );
     const allX = worldPoints.map((p) => p.x);
     const allY = worldPoints.map((p) => p.y);
-    const startTerminal = connectorNode.getPluginData("start_terminal") || vector.getPluginData("start_terminal") || "NONE";
-    const endTerminal = connectorNode.getPluginData("end_terminal") || vector.getPluginData("end_terminal") || "ARROW";
+    const startTerminal = safeGetPluginData(connectorNode, "start_terminal") || safeGetPluginData(vector, "start_terminal") || "NONE";
+    const endTerminal = safeGetPluginData(connectorNode, "end_terminal") || safeGetPluginData(vector, "end_terminal") || "ARROW";
     const strokeWeight = typeof vector.strokeWeight === "number" ? vector.strokeWeight : 1.5;
     let strokeColor = { r: 0.18, g: 0.18, b: 0.22 };
     if (Array.isArray(vector.strokes) && vector.strokes.length > 0 && vector.strokes[0].type === "SOLID") {
@@ -884,11 +907,19 @@
     }
     if (connectorNode.type === "GROUP") {
       const group = connectorNode;
-      const legacyMarkers = group.findAll(
-        (n) => n.name === "ConnectorStartTerminal" || n.name === "ConnectorEndTerminal" || n.getPluginData("is_terminal_marker") !== ""
-      );
-      for (const m of legacyMarkers) {
-        m.remove();
+      try {
+        const legacyMarkers = group.findAll((n) => {
+          try {
+            if (!n) return false;
+            return n.name === "ConnectorStartTerminal" || n.name === "ConnectorEndTerminal" || safeGetPluginData(n, "is_terminal_marker") !== "";
+          } catch (_) {
+            return false;
+          }
+        });
+        for (const m of legacyMarkers) {
+          m.remove();
+        }
+      } catch (_) {
       }
     }
     if (connectorNode.parent) {
@@ -919,8 +950,13 @@
       "end_offset"
     ];
     for (const k of keys) {
-      const v = source.getPluginData(k);
-      if (v) target.setPluginData(k, v);
+      const v = safeGetPluginData(source, k);
+      if (v && typeof target.setPluginData === "function") {
+        try {
+          target.setPluginData(k, v);
+        } catch (_) {
+        }
+      }
     }
   }
   async function syncConnectorsForMovedNodes(nodeIds) {
@@ -1418,7 +1454,7 @@
   }
   async function updateFigmaLinkBadge(card, figmaLink, isBgDark = false, clearCache = false) {
     const existingBadge = card.children.find(
-      (c) => c.getPluginData("is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
+      (c) => safeGetPluginData2(c, "is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
     );
     const rawLink = (figmaLink || "").trim();
     const trimmedLink = normalizeUrl(rawLink);
@@ -1487,15 +1523,25 @@
     badge.x = 16;
     badge.y = card.height - badge.height - 10;
   }
+  function safeGetPluginData2(node, key) {
+    if (node && typeof node.getPluginData === "function") {
+      try {
+        return node.getPluginData(key) || "";
+      } catch (_) {
+        return "";
+      }
+    }
+    return "";
+  }
   function findConnectorNode(node) {
     if (!node) return null;
     let curr = node;
     while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
-      if (curr.type === "CONNECTOR" || curr.getPluginData("is_custom_connector") === "true" || curr.getPluginData("is_flow_connector") === "true") {
+      if (curr.type === "CONNECTOR" || safeGetPluginData2(curr, "is_custom_connector") === "true" || safeGetPluginData2(curr, "is_flow_connector") === "true") {
         let topConnector = curr;
         let parentScan = curr.parent;
         while (parentScan && parentScan.type !== "PAGE" && parentScan.type !== "DOCUMENT") {
-          if (parentScan.getPluginData("is_custom_connector") === "true" || parentScan.getPluginData("is_flow_connector") === "true") {
+          if (safeGetPluginData2(parentScan, "is_custom_connector") === "true" || safeGetPluginData2(parentScan, "is_flow_connector") === "true") {
             topConnector = parentScan;
           }
           parentScan = parentScan.parent;
@@ -1512,11 +1558,11 @@
     let curr = node;
     let topCandidate = null;
     while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
-      if (curr.getPluginData("is_flow_node") === "true") {
+      if (safeGetPluginData2(curr, "is_flow_node") === "true") {
         return curr;
       }
       if (curr.type === "FRAME" || curr.type === "SHAPE_WITH_TEXT") {
-        if (curr.getPluginData("is_connector_label") !== "true" && curr.name !== "ConnectorLabel") {
+        if (safeGetPluginData2(curr, "is_connector_label") !== "true" && curr.name !== "ConnectorLabel") {
           topCandidate = curr;
         }
       }
@@ -1525,10 +1571,20 @@
     return topCandidate;
   }
   function getNextFlowTag() {
-    const flowNodes = figma.currentPage.findAll(
-      (node) => node.getPluginData("is_flow_node") === "true"
-    );
-    return `p${flowNodes.length + 1}`;
+    try {
+      const flowNodes = figma.currentPage.findAll((node) => {
+        try {
+          if (!node) return false;
+          if (node.type !== "FRAME" && node.type !== "SHAPE_WITH_TEXT") return false;
+          return safeGetPluginData2(node, "is_flow_node") === "true";
+        } catch (_) {
+          return false;
+        }
+      });
+      return `p${flowNodes.length + 1}`;
+    } catch (_) {
+      return "p1";
+    }
   }
   function extractNodeText(node) {
     let title = "";
@@ -1536,10 +1592,10 @@
     if (node.type === "FRAME" || "findAll" in node) {
       const frame = node;
       const titleTextNode = frame.findOne(
-        (c) => c.type === "TEXT" && (c.name === "TitleText" || c.getPluginData("node_role") === "title")
+        (c) => Boolean(c && c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title"))
       );
       const descTextNode = frame.findOne(
-        (c) => c.type === "TEXT" && (c.name === "DescText" || c.getPluginData("node_role") === "desc")
+        (c) => Boolean(c && c.type === "TEXT" && (c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"))
       );
       if (titleTextNode) {
         title = titleTextNode.characters;
@@ -1548,7 +1604,13 @@
         description = descTextNode.characters;
       }
       if (!title) {
-        const allTexts = frame.findAll((n) => n.type === "TEXT");
+        const allTexts = frame.findAll((n) => {
+          try {
+            return Boolean(n && n.type === "TEXT");
+          } catch (_) {
+            return false;
+          }
+        });
         if (allTexts.length > 0) title = allTexts[0].characters;
         if (allTexts.length > 1 && !description) {
           description = allTexts[1].characters;
@@ -1566,19 +1628,19 @@
       if (lines.length > 1) description = lines.slice(1).join("\n");
     }
     if (!title) {
-      title = node.name || node.getPluginData("node_title") || "Untitled";
+      title = node.name || safeGetPluginData2(node, "node_title") || "Untitled";
     }
     if (!description) {
-      description = node.getPluginData("node_desc") || "";
+      description = safeGetPluginData2(node, "node_desc") || "";
     }
     return { title, description };
   }
   function isHeaderFrame(c) {
     if (c.type !== "FRAME") return false;
     if (c.name === "Header") return true;
-    if (c.name.startsWith("[Step]") || c.getPluginData("is_step_badge") === "true") return false;
-    if (c.name === "StatusBadge" || c.getPluginData("is_status_badge") === "true") return false;
-    if (c.name === "FigmaLinkBadge" || c.getPluginData("is_figma_link_badge") === "true") return false;
+    if (c.name.startsWith("[Step]") || safeGetPluginData2(c, "is_step_badge") === "true") return false;
+    if (c.name === "StatusBadge" || safeGetPluginData2(c, "is_status_badge") === "true") return false;
+    if (c.name === "FigmaLinkBadge" || safeGetPluginData2(c, "is_figma_link_badge") === "true") return false;
     return c.layoutMode === "HORIZONTAL";
   }
   function calculateCardHugHeight(card, textCharacters) {
@@ -1591,7 +1653,7 @@
     const prevMinHeight = card.minHeight;
     const prevMaxHeight = card.maxHeight;
     const descText = card.children.find(
-      (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+      (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
     );
     const prevMaxLines = descText ? descText.maxLines : null;
     const prevDescChars = descText ? descText.characters : "";
@@ -1703,7 +1765,7 @@
         return;
       }
       const statusBadge = card.children.find(
-        (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+        (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
       );
       const pb = statusBadge ? 36 : 16;
       const headerRow = card.children.find(isHeaderFrame);
@@ -1791,8 +1853,8 @@
     const allResolvedNodes = Array.from(resolvedNodesMap.values());
     const connNodes = allResolvedNodes.filter((n) => Boolean(findConnectorNode(n)));
     const nonConnNodes = allResolvedNodes.filter((n) => !findConnectorNode(n));
-    const flowNodes = nonConnNodes.filter((n) => n.getPluginData("is_flow_node") === "true");
-    const otherObjects = nonConnNodes.filter((n) => n.getPluginData("is_flow_node") !== "true");
+    const flowNodes = nonConnNodes.filter((n) => safeGetPluginData2(n, "is_flow_node") === "true");
+    const otherObjects = nonConnNodes.filter((n) => safeGetPluginData2(n, "is_flow_node") !== "true");
     const flowNodeCount = flowNodes.length;
     const otherObjectCount = otherObjects.length;
     const connectorCount = connNodes.length;
@@ -1822,8 +1884,8 @@
             if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
           }
         } else {
-          const srcId = c.getPluginData("source_node_id");
-          const tgtId = c.getPluginData("target_node_id");
+          const srcId = safeGetPluginData2(c, "source_node_id");
+          const tgtId = safeGetPluginData2(c, "target_node_id");
           if (srcId) {
             const srcNode = figma.getNodeById(srcId);
             if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
@@ -1841,7 +1903,7 @@
       }
     }
     const nodes = await Promise.all(uniqueNodes.map(async (node) => {
-      const isFlowNode = node.getPluginData("is_flow_node") === "true";
+      const isFlowNode = safeGetPluginData2(node, "is_flow_node") === "true";
       if (isFlowNode && node.type === "FRAME") {
         const frame = node;
         const w = Math.round(frame.width);
@@ -1853,7 +1915,7 @@
           frame.maxHeight = h;
         }
         const statusBadge = frame.children.find(
-          (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+          (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
         );
         if (statusBadge) {
           if (frame.paddingBottom !== 36) {
@@ -1880,12 +1942,12 @@
           frame.primaryAxisAlignItems = "MIN";
         }
         const headerFrame = frame.children.find(isHeaderFrame);
-        const titleText = headerFrame ? headerFrame.children.find((c) => c.type === "TEXT") : frame.children.find((c) => c.type === "TEXT" && (c.name === "TitleText" || c.getPluginData("node_role") === "title"));
+        const titleText = headerFrame ? headerFrame.children.find((c) => c.type === "TEXT") : frame.children.find((c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title"));
         if (titleText) {
           enforceTitleStandardStyle(titleText, frame);
         }
         const descText = frame.children.find(
-          (c) => c.type === "TEXT" && (c.name === "DescText" || c.getPluginData("node_role") === "desc")
+          (c) => c.type === "TEXT" && (c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc")
         );
         if (descText) {
           await lockTextFontSizeAndAutoResize(descText, 11);
@@ -1894,7 +1956,7 @@
       }
       let title = "";
       let description = "";
-      let tag = node.getPluginData("node_tag") || "";
+      let tag = safeGetPluginData2(node, "node_tag") || "";
       let connectorLabel;
       let connectorLineType;
       let connectorColorHex;
@@ -2394,9 +2456,11 @@
           textNode.setRangeFontSize(0, len, targetSize);
         } catch (_) {
         }
-        try {
-          textNode.setRangeFills(0, len, [titleFill]);
-        } catch (_) {
+        if (Array.isArray(textNode.fills) && textNode.fills.length === 0) {
+          try {
+            textNode.setRangeFills(0, len, [titleFill]);
+          } catch (_) {
+          }
         }
         try {
           textNode.setRangeTextDecoration(0, len, "NONE");
@@ -2423,9 +2487,11 @@
           textNode.fontSize = targetSize;
         } catch (_) {
         }
-        try {
-          textNode.fills = [titleFill];
-        } catch (_) {
+        if (Array.isArray(textNode.fills) && textNode.fills.length === 0) {
+          try {
+            textNode.fills = [titleFill];
+          } catch (_) {
+          }
         }
         try {
           textNode.textDecoration = "NONE";
@@ -2645,7 +2711,13 @@
     if (stepNumber) card.setPluginData("step_number", `${stepNumber}`);
     parent.appendChild(card);
     const oldId = shape.id;
-    const connectors = figma.currentPage.findAll((n) => n.type === "CONNECTOR");
+    const connectors = figma.currentPage.findAll((n) => {
+      try {
+        return Boolean(n && n.type === "CONNECTOR");
+      } catch (_) {
+        return false;
+      }
+    });
     for (const conn of connectors) {
       if (conn.connectorStart && "endpointNodeId" in conn.connectorStart && conn.connectorStart.endpointNodeId === oldId) {
         const magnet = "magnet" in conn.connectorStart ? conn.connectorStart.magnet : "AUTO";
@@ -2905,7 +2977,7 @@
         card.insertChild(0, headerRow);
       }
       let titleText = headerRow.children.find(
-        (c) => c.name === "TitleText" || c.getPluginData("node_role") === "title"
+        (c) => c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title"
       );
       if (!titleText) {
         titleText = figma.createText();
@@ -2921,9 +2993,12 @@
       titleText.textTruncation = "ENDING";
       titleText.maxLines = 1;
       await safeSetCharacters(titleText, title);
-      titleText.fills = [titleFill];
+      const hasExistingTitleFill = titleText.fills === figma.mixed || Array.isArray(titleText.fills) && titleText.fills.length > 0;
+      if (!hasExistingTitleFill || payload.colorHex) {
+        titleText.fills = [titleFill];
+      }
       let descText = card.children.find(
-        (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+        (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
       );
       if (!description) {
         if (descText) {
@@ -2950,7 +3025,10 @@
         const currentH = payload.height || card.height;
         await updateDescTextTruncation(card, descText, currentH, description);
         await safeSetCharacters(descText, description);
-        descText.fills = [descFill];
+        const hasExistingDescFill = descText.fills === figma.mixed || Array.isArray(descText.fills) && descText.fills.length > 0;
+        if (!hasExistingDescFill || payload.colorHex) {
+          descText.fills = [descFill];
+        }
         try {
           const descFont = { family: "Inter", style: "Regular" };
           await figma.loadFontAsync(descFont);
@@ -2966,7 +3044,7 @@
         }
       }
       let statusBadge = card.children.find(
-        (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+        (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
       );
       const hasStatus = Boolean(statusBadge || payload.status && STATUS_CONFIG[payload.status]);
       const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
@@ -2987,7 +3065,7 @@
           typeof card.cornerRadius === "number" ? card.cornerRadius : 0
         );
         statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-        const currentStatus = payload.status || card.getPluginData("workflow_status");
+        const currentStatus = payload.status || safeGetPluginData2(card, "workflow_status");
         if (currentStatus && STATUS_CONFIG[currentStatus]) {
           const { badgeBg, badgeTextColor } = getStatusBadgeColors(currentStatus, bgColor, isDark);
           statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
@@ -3001,12 +3079,12 @@
       }
       await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark, payload.clearLinkCache);
       const existingStepBadge = card.children.find(
-        (c) => c.name.startsWith("[Step]") || c.getPluginData("is_step_badge") === "true"
+        (c) => c.name.startsWith("[Step]") || safeGetPluginData2(c, "is_step_badge") === "true"
       );
       if (existingStepBadge) {
         const stepText = existingStepBadge.children.find((c) => c.type === "TEXT");
         if (stepText) {
-          const currentMode = card.getPluginData("badge_color_mode") || "Style";
+          const currentMode = safeGetPluginData2(card, "badge_color_mode") || "Style";
           applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
         }
       }
@@ -3059,7 +3137,7 @@
           statusBadge.y = curH - statusBadge.height - 10;
         }
         const linkBadge = card.children.find(
-          (c) => c.getPluginData("is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
+          (c) => safeGetPluginData2(c, "is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
         );
         if (linkBadge) {
           linkBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
@@ -3131,7 +3209,7 @@
       const headerRow = frame.children.find(isHeaderFrame);
       if (headerRow) {
         const title = headerRow.children.find(
-          (c) => c.name === "TitleText" || c.getPluginData("node_role") === "title"
+          (c) => c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title"
         );
         if (title) {
           title.textAlignHorizontal = "LEFT";
@@ -3140,12 +3218,12 @@
         }
       }
       const statusBadge = frame.children.find(
-        (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+        (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
       );
       const hasStatus = Boolean(statusBadge);
       frame.paddingBottom = hasStatus ? 36 : 16;
       const desc = frame.children.find(
-        (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+        (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
       );
       if (desc) {
         desc.textAlignHorizontal = "LEFT";
@@ -3471,7 +3549,7 @@
         let labelFrame = null;
         if (node.type === "GROUP") {
           labelFrame = node.findOne(
-            (n) => n.name === "ConnectorLabel" || n.getPluginData("is_connector_label") === "true"
+            (n) => n.name === "ConnectorLabel" || safeGetPluginData2(n, "is_connector_label") === "true"
           );
         }
         if (payload.hasLabel && payload.label) {
@@ -3561,7 +3639,13 @@
   }
   async function convertAllConnectorsToElbowed() {
     try {
-      const connectors = figma.currentPage.findAll((n) => n.type === "CONNECTOR");
+      const connectors = figma.currentPage.findAll((n) => {
+        try {
+          return Boolean(n && n.type === "CONNECTOR");
+        } catch (_) {
+          return false;
+        }
+      });
       if (connectors.length === 0) {
         notify("\uCE94\uBC84\uC2A4\uC5D0 \uBCC0\uD658\uD560 \uC5F0\uACB0\uC120\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.", "info");
         return;
@@ -3602,31 +3686,40 @@
     });
   }
   function collectStatusItems() {
-    const nodes = figma.currentPage.findAll((node) => {
-      return Boolean(node.getPluginData("workflow_status"));
-    });
-    return nodes.map((node) => {
-      const status = node.getPluginData("workflow_status");
-      if (node.type === "FRAME" && node.getPluginData("is_flow_node") === "true") {
-        const frame = node;
-        const statusBadge = frame.children.find(
-          (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
-        );
-        if (statusBadge && statusBadge.y <= 0) {
-          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-          statusBadge.x = frame.width - statusBadge.width - 10;
-          statusBadge.y = frame.height - statusBadge.height - 10;
+    try {
+      const nodes = figma.currentPage.findAll((node) => {
+        try {
+          if (!node) return false;
+          return Boolean(safeGetPluginData2(node, "workflow_status"));
+        } catch (_) {
+          return false;
         }
-      }
-      const extracted = extractNodeText(node);
-      return {
-        id: node.id,
-        name: extracted.title || node.name,
-        status: status || "draft",
-        x: Math.round(node.x),
-        y: Math.round(node.y)
-      };
-    });
+      });
+      return nodes.map((node) => {
+        const status = safeGetPluginData2(node, "workflow_status");
+        if (node.type === "FRAME" && safeGetPluginData2(node, "is_flow_node") === "true") {
+          const frame = node;
+          const statusBadge = frame.children.find(
+            (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
+          );
+          if (statusBadge && statusBadge.y <= 0) {
+            statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+            statusBadge.x = frame.width - statusBadge.width - 10;
+            statusBadge.y = frame.height - statusBadge.height - 10;
+          }
+        }
+        const extracted = extractNodeText(node);
+        return {
+          id: node.id,
+          name: extracted.title || node.name,
+          status: status || "draft",
+          x: Math.round(node.x),
+          y: Math.round(node.y)
+        };
+      });
+    } catch (_) {
+      return [];
+    }
   }
   function syncStatusList() {
     const items = collectStatusItems();
@@ -3679,11 +3772,11 @@
         let oldBadgeInHeader;
         if (headerRow) {
           oldBadgeInHeader = headerRow.children.find(
-            (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+            (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
           );
         }
         let statusBadge = card.children.find(
-          (c) => c.getPluginData("is_status_badge") === "true" || c.name === "StatusBadge"
+          (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
         );
         if (isRemove) {
           card.setPluginData("workflow_status", "");
@@ -3691,7 +3784,7 @@
           if (oldBadgeInHeader) oldBadgeInHeader.remove();
           if (statusBadge) statusBadge.remove();
           const descText = card.children.find(
-            (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+            (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
           );
           if (descText) {
             await updateDescTextTruncation(card, descText, card.height);
@@ -3758,7 +3851,7 @@
           statusBadge.visible = true;
           statusBadge.locked = true;
           const descText = card.children.find(
-            (c) => c.name === "DescText" || c.getPluginData("node_role") === "desc"
+            (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
           );
           if (descText) {
             await updateDescTextTruncation(card, descText, card.height);
@@ -3879,7 +3972,7 @@
     card.setPluginData("badge_shape", shape);
     card.setPluginData("badge_color_mode", colorMode);
     let stepBadge = card.children.find(
-      (c) => c.getPluginData("is_step_badge") === "true" || c.name.startsWith("[Step]")
+      (c) => safeGetPluginData2(c, "is_step_badge") === "true" || c.name.startsWith("[Step]")
     );
     let numText;
     if (!stepBadge) {
@@ -4001,7 +4094,7 @@
         card.setPluginData("badge_corner", "");
         card.setPluginData("badge_shape", "");
         const stepBadges = card.children.filter(
-          (c) => c.getPluginData("is_step_badge") === "true" || c.name.startsWith("[Step]")
+          (c) => safeGetPluginData2(c, "is_step_badge") === "true" || c.name.startsWith("[Step]")
         );
         for (const badge of stepBadges) {
           badge.remove();
@@ -4030,7 +4123,7 @@
     const items = [];
     const seenIds = /* @__PURE__ */ new Set();
     for (const node of figma.currentPage.selection) {
-      if ((node.type === "FRAME" || node.type === "COMPONENT" || node.type === "INSTANCE") && !node.getPluginData("is_flow_node") && !node.getPluginData("flow_node_type") && !node.name.startsWith("[Flow]")) {
+      if ((node.type === "FRAME" || node.type === "COMPONENT" || node.type === "INSTANCE") && !safeGetPluginData2(node, "is_flow_node") && !safeGetPluginData2(node, "flow_node_type") && !node.name.startsWith("[Flow]")) {
         const cr = "cornerRadius" in node && typeof node.cornerRadius === "number" ? node.cornerRadius : 0;
         items.push({
           id: node.id,
@@ -4044,7 +4137,7 @@
     }
     for (const node of figma.currentPage.children) {
       if (seenIds.has(node.id)) continue;
-      if ((node.type === "FRAME" || node.type === "COMPONENT" || node.type === "INSTANCE") && !node.getPluginData("is_flow_node") && !node.getPluginData("flow_node_type") && !node.name.startsWith("[Flow]")) {
+      if ((node.type === "FRAME" || node.type === "COMPONENT" || node.type === "INSTANCE") && !safeGetPluginData2(node, "is_flow_node") && !safeGetPluginData2(node, "flow_node_type") && !node.name.startsWith("[Flow]")) {
         const cr = "cornerRadius" in node && typeof node.cornerRadius === "number" ? node.cornerRadius : 0;
         items.push({
           id: node.id,
@@ -4282,7 +4375,7 @@
     for (const change of event.documentChanges) {
       if (change.type === "CREATE") {
         const createdNode = figma.getNodeById(change.id);
-        if (createdNode && (createdNode.type === "CONNECTOR" || createdNode.getPluginData("is_custom_connector") === "true")) {
+        if (createdNode && (createdNode.type === "CONNECTOR" || safeGetPluginData2(createdNode, "is_custom_connector") === "true")) {
           registerConnectorInRegistry(createdNode);
         }
       }
@@ -4306,10 +4399,10 @@
           const node = figma.getNodeById(change.id);
           if (!node) continue;
           const flowNode = findFlowNode(node);
-          if (flowNode && flowNode.type === "FRAME" && flowNode.getPluginData("is_flow_node") === "true") {
+          if (flowNode && flowNode.type === "FRAME" && safeGetPluginData2(flowNode, "is_flow_node") === "true") {
             const frame = flowNode;
-            const savedW = frame.minWidth && frame.minWidth > 0 ? frame.minWidth : parseInt(frame.getPluginData("node_width"), 10);
-            const savedH = frame.minHeight && frame.minHeight > 0 ? frame.minHeight : parseInt(frame.getPluginData("node_height"), 10);
+            const savedW = frame.minWidth && frame.minWidth > 0 ? frame.minWidth : parseInt(safeGetPluginData2(frame, "node_width"), 10);
+            const savedH = frame.minHeight && frame.minHeight > 0 ? frame.minHeight : parseInt(safeGetPluginData2(frame, "node_height"), 10);
             if (savedW && savedH && (Math.round(frame.width) !== savedW || Math.round(frame.height) !== savedH)) {
               frame.minWidth = null;
               frame.maxWidth = null;
@@ -4328,7 +4421,7 @@
         const textNodeCandidate = figma.getNodeById(change.id);
         if (textNodeCandidate && textNodeCandidate.type === "TEXT") {
           const textNode = textNodeCandidate;
-          const role = textNode.getPluginData("node_role");
+          const role = safeGetPluginData2(textNode, "node_role");
           const isHeaderChild = textNode.parent && textNode.parent.name === "Header";
           const isTitle = role === "title" || textNode.name === "TitleText" || isHeaderChild;
           const isDesc = role === "desc" || textNode.name === "DescText";
@@ -4349,13 +4442,13 @@
           let badgeFrame = null;
           if (maybeStatusNode.type === "TEXT") {
             const t = maybeStatusNode;
-            if (t.name === "StatusText" || t.parent && (t.parent.name === "StatusBadge" || t.parent.getPluginData("is_status_badge") === "true")) {
+            if (t.name === "StatusText" || t.parent && (t.parent.name === "StatusBadge" || safeGetPluginData2(t.parent, "is_status_badge") === "true")) {
               statusTextNode = t;
               badgeFrame = t.parent && t.parent.type === "FRAME" ? t.parent : null;
             }
           } else if (maybeStatusNode.type === "FRAME") {
             const f = maybeStatusNode;
-            if (f.name === "StatusBadge" || f.getPluginData("is_status_badge") === "true") {
+            if (f.name === "StatusBadge" || safeGetPluginData2(f, "is_status_badge") === "true") {
               badgeFrame = f;
               statusTextNode = f.children.find((c) => c.type === "TEXT");
             }
@@ -4363,7 +4456,7 @@
           if (statusTextNode) {
             const flowNode = findFlowNode(statusTextNode);
             if (flowNode) {
-              const currentStatus = flowNode.getPluginData("workflow_status");
+              const currentStatus = safeGetPluginData2(flowNode, "workflow_status");
               const expectedLabel = currentStatus && STATUS_CONFIG[currentStatus] ? STATUS_CONFIG[currentStatus].label.toUpperCase() : "DRAFT";
               if (statusTextNode.characters !== expectedLabel) {
                 statusTextNode.locked = false;
