@@ -418,18 +418,7 @@ function isHexDark(hex: string): boolean {
             </div>
 
             {/* 우측 Corner Position Controls (4버튼) */}
-            <div
-              style={{
-                flex: 1,
-                height: '28px',
-                backgroundColor: '#F3F4F6',
-                borderRadius: '6px',
-                padding: '2px',
-                display: 'flex',
-                alignItems: 'center',
-                boxSizing: 'border-box',
-              }}
-            >
+            <div className="corner-position-group">
               {BADGE_CORNERS.map(c => {
                 const active = selectedBadgeCorner === c.pos;
                 return (
@@ -438,21 +427,7 @@ function isHexDark(hex: string): boolean {
                     type="button"
                     title={c.title}
                     onClick={() => handleCornerSelect(c.pos)}
-                    style={{
-                      flex: 1,
-                      height: '24px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: 'none',
-                      borderRadius: '4px',
-                      backgroundColor: active ? '#FFFFFF' : 'transparent',
-                      boxShadow: active ? '0 1px 2px rgba(0,0,0,0.12)' : 'none',
-                      color: active ? '#111827' : '#9CA3AF',
-                      cursor: 'pointer',
-                      padding: 0,
-                      transition: 'all 0.15s ease',
-                    }}
+                    className={`corner-btn${active ? ' active' : ''}`}
                   >
                     {c.svg}
                   </button>
@@ -558,18 +533,7 @@ function isHexDark(hex: string): boolean {
             </div>
 
             {/* 우측 Shape Segmented Controls (Square, Circle, Round Box) */}
-            <div
-              style={{
-                flex: 1,
-                height: '28px',
-                backgroundColor: '#F3F4F6',
-                borderRadius: '6px',
-                padding: '2px',
-                display: 'flex',
-                alignItems: 'center',
-                boxSizing: 'border-box',
-              }}
-            >
+            <div className="shape-segment-group">
               {BADGE_SHAPES.map(s => {
                 const active = selectedBadgeShape === s.id;
                 return (
@@ -577,24 +541,7 @@ function isHexDark(hex: string): boolean {
                     key={s.id}
                     type="button"
                     onClick={() => handleShapeSelect(s.id)}
-                    style={{
-                      flex: 1,
-                      height: '24px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: 'none',
-                      borderRadius: '4px',
-                      backgroundColor: active ? '#FFFFFF' : 'transparent',
-                      boxShadow: active ? '0 1px 2px rgba(0,0,0,0.12)' : 'none',
-                      color: active ? '#111827' : '#6B7280',
-                      fontWeight: 400,
-                      fontSize: '11px',
-                      cursor: 'pointer',
-                      padding: 0,
-                      transition: 'all 0.15s ease',
-                      whiteSpace: 'nowrap',
-                    }}
+                    className={`shape-btn${active ? ' active' : ''}`}
                   >
                     {s.label}
                   </button>
