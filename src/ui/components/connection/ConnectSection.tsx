@@ -29,7 +29,7 @@ const TERMINAL_SVGS_BTN: Record<'start' | 'end', Record<TerminalOption, string>>
     BAR: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M2 3.5V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M7 3.5L2 8L7 12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1.2"/><circle cx="5.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
-    DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9.5 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 3.5L1.5 8L5.5 12.5L9.5 8Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
+    DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M10 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 3.5L1 8L5.5 12.5L10 8Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
     SQUARE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="4.5" width="7" height="7" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
   },
   end: {
@@ -37,7 +37,7 @@ const TERMINAL_SVGS_BTN: Record<'start' | 'end', Record<TerminalOption, string>>
     BAR: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M50 3.5V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1.2"/><path d="M45 3.5L50 8L45 12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1.2"/><circle cx="46.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
-    DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H42.5" stroke="currentColor" stroke-width="1.2"/><path d="M46.5 3.5L42.5 8L46.5 12.5L50.5 8Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
+    DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H42" stroke="currentColor" stroke-width="1.2"/><path d="M46.5 3.5L42 8L46.5 12.5L51 8Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
     SQUARE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1.2"/><rect x="43" y="4.5" width="7" height="7" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
   },
 };

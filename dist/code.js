@@ -70,7 +70,6 @@
       case "CIRCLE":
         return "CIRCLE_FILLED";
       case "DIAMOND":
-        return "DIAMOND_FILLED";
       case "SQUARE":
       case "BAR":
       case "NONE":
@@ -217,6 +216,7 @@
       const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
       const half = sqSize / 2;
       const vStart = vertices.length;
+      const sStart = segments.length;
       vertices.push(
         { x: p0.x - half, y: p0.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
         { x: p0.x + half, y: p0.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
@@ -227,16 +227,19 @@
         { start: vStart, end: vStart + 1 },
         { start: vStart + 1, end: vStart + 2 },
         { start: vStart + 2, end: vStart + 3 },
-        { start: vStart + 3, end: vStart },
-        { start: vStart, end: vStart + 2 },
-        { start: vStart + 1, end: vStart + 3 }
+        { start: vStart + 3, end: vStart }
       );
+      regions.push({
+        windingRule: "NONZERO",
+        loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]]
+      });
     }
     if (len >= 2 && endTerminal === "SQUARE") {
       const pn = localPoints[len - 1];
       const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
       const half = sqSize / 2;
       const vStart = vertices.length;
+      const sStart = segments.length;
       vertices.push(
         { x: pn.x - half, y: pn.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
         { x: pn.x + half, y: pn.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
@@ -247,10 +250,56 @@
         { start: vStart, end: vStart + 1 },
         { start: vStart + 1, end: vStart + 2 },
         { start: vStart + 2, end: vStart + 3 },
-        { start: vStart + 3, end: vStart },
-        { start: vStart, end: vStart + 2 },
-        { start: vStart + 1, end: vStart + 3 }
+        { start: vStart + 3, end: vStart }
       );
+      regions.push({
+        windingRule: "NONZERO",
+        loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]]
+      });
+    }
+    if (len >= 2 && startTerminal === "DIAMOND") {
+      const p0 = localPoints[0];
+      const diaRadius = Math.max(3.8, Math.round(strokeWeight * 2.6));
+      const vStart = vertices.length;
+      const sStart = segments.length;
+      vertices.push(
+        { x: p0.x, y: p0.y - diaRadius, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: p0.x + diaRadius, y: p0.y, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: p0.x, y: p0.y + diaRadius, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: p0.x - diaRadius, y: p0.y, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
+      );
+      segments.push(
+        { start: vStart, end: vStart + 1 },
+        { start: vStart + 1, end: vStart + 2 },
+        { start: vStart + 2, end: vStart + 3 },
+        { start: vStart + 3, end: vStart }
+      );
+      regions.push({
+        windingRule: "NONZERO",
+        loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]]
+      });
+    }
+    if (len >= 2 && endTerminal === "DIAMOND") {
+      const pn = localPoints[len - 1];
+      const diaRadius = Math.max(3.8, Math.round(strokeWeight * 2.6));
+      const vStart = vertices.length;
+      const sStart = segments.length;
+      vertices.push(
+        { x: pn.x, y: pn.y - diaRadius, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: pn.x + diaRadius, y: pn.y, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: pn.x, y: pn.y + diaRadius, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
+        { x: pn.x - diaRadius, y: pn.y, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
+      );
+      segments.push(
+        { start: vStart, end: vStart + 1 },
+        { start: vStart + 1, end: vStart + 2 },
+        { start: vStart + 2, end: vStart + 3 },
+        { start: vStart + 3, end: vStart }
+      );
+      regions.push({
+        windingRule: "NONZERO",
+        loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]]
+      });
     }
     return { vertices, segments, regions };
   }
@@ -799,7 +848,11 @@
       strokeColor
     );
     await vector.setVectorNetworkAsync({ vertices, segments, regions });
-    vector.fills = [];
+    if (regions.length > 0) {
+      vector.fills = [{ type: "SOLID", color: strokeColor }];
+    } else {
+      vector.fills = [];
+    }
     vector.strokeJoin = routingType === "S_CURVE" || routingType === "CURVED" ? "ROUND" : "MITER";
     if (connectorNode.type === "GROUP") {
       const group = connectorNode;

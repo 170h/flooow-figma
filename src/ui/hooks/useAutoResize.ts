@@ -26,8 +26,8 @@ export function getPluginIdealHeight(root: HTMLElement): number {
   const dividerH = divider ? divider.offsetHeight : 1;
   const footerH = (footer && footer.offsetParent !== null) ? footer.offsetHeight : 0;
 
-  // 서브픽셀 및 하단 여백을 감안한 12px 여유 버퍼 추가 (여유 공간일 때 스크롤바 미표시 보장)
-  return Math.ceil(titleH + tabsH + dividerH + contentH + footerH + 12);
+  // 패널의 콘텐츠 높이(contentH: 섹션 펼침 시 CSS 12px 패딩 자동 포함, 접힘 시 0px)를 정확히 반영
+  return Math.ceil(titleH + tabsH + dividerH + contentH + footerH);
 }
 
 /**
