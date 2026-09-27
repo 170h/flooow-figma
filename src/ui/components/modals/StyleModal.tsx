@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ColorWheelField } from '../shared/ColorWheelField';
+import { StrokeColorIcon, FillColorIcon } from '../shared/icons';
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -23,62 +24,129 @@ const STROKE_ICON_SVG = (
 );
 
 interface StyleModalProps {
+  mode?: 'add' | 'edit';
+  editingPresetId?: string | null;
   onClose: () => void;
   initialColor?: string;
   isMixed?: boolean;
 }
 
 /**
- * 피그마 UI3 공식 Add Style 모달
- * - Fill: ColorWheelField (Hex 입력 필드 + 무지개 도넛 컬러 휠 + 원형 컬러휠)
- * - Stroke: ColorWheelField (Hex 입력 + 도넛 컬러 휠 + Stroke 두께 입력 박스 + 원형 컬러휠)
+ * 피그마 UI3 공식 Add style / Edit style 모달
+ * - Fill: ColorWheelField (Hex 입력 필드 + 무지개 도넛 컬러 휠 + 원형 컬러휠 + 투명/None 지원)
+ * - Stroke: ColorWheelField (Hex 입력 + 도넛 컬러 휠 + Stroke 두께 입력 박스 + 원형 컬러휠 + StrokeColorIcon)
  */
-export function StyleModal({ onClose, initialColor, isMixed = false }: StyleModalProps) {
+export function StyleModal({
+  mode = 'add',
+  editingPresetId,
+  onClose,
+  initialColor,
+  isMixed = false,
+}: StyleModalProps) {
   const {
     uiState,
     setUIState,
     setLastNodeConfig,
     applyCurrentNodeState,
+    stylePresets,
     addStylePreset,
+    updateStylePreset,
     showToast,
     selectedNodes,
   } = useApp();
 
-  // Fill 상태: 사용자가 현재 선택한 컬러를 최우선으로 반영
-  const resolvedColor = (initialColor || uiState.selectedColor || '#EA2039')
+  // 수정 대상 프리셋 조회
+  const targetPreset = mode === 'edit' && editingPresetId
+    ? stylePresets.find((p) => p.id === editingPresetId)
+    : null;
+
+  // Fill 상태: 수정 모드일 때는 targetPreset을 우선, 아니면 initialColor/uiState를 반영
+  const rawInitFill = targetPreset
+    ? targetPreset.fillColor
+    : (initialColor || uiState.selectedColor || '#EA2039');
+
+  const isInitialFillNone = !isMixed && (
+    rawInitFill.toLowerCase() === 'none' ||
+    rawInitFill.toLowerCase() === 'transparent'
+  );
+
+  const resolvedColor = (isInitialFillNone ? 'EA2039' : rawInitFill)
     .replace('#', '')
     .trim()
     .toUpperCase();
   const validFill = resolvedColor.length === 6 ? resolvedColor : 'EA2039';
 
+  const firstSelectedNode = selectedNodes.length > 0 ? selectedNodes[0] : null;
+  const initialStrokeWeight = targetPreset
+    ? targetPreset.strokeWeight
+    : (firstSelectedNode
+      ? (firstSelectedNode.strokeWeight ?? 0)
+      : (uiState.selectedStrokeWeight ?? 0));
+
+  const initialStrokeHex = (targetPreset
+    ? targetPreset.strokeColor
+    : (firstSelectedNode?.strokeColorHex || uiState.selectedStrokeColor || '#000000'))
+    .replace('#', '')
+    .trim()
+    .toUpperCase();
+  const validStrokeHex = initialStrokeHex.length === 6 ? initialStrokeHex : '000000';
+
   const [fillHex, setFillHex] = useState(isMixed ? '' : validFill);
+  const [isFillNone, setIsFillNone] = useState(isInitialFillNone);
   const [isFillMixed, setIsFillMixed] = useState(Boolean(isMixed));
-  const [strokeHex, setStrokeHex] = useState(validFill);
-  const [strokeWeight, setStrokeWeight] = useState(0);
+  const [strokeHex, setStrokeHex] = useState(validStrokeHex);
+  const [strokeWeight, setStrokeWeight] = useState(initialStrokeWeight);
+
+  // 직전 유효 색상 기억 (투명 해제 시 복원용)
+  const lastValidFillRef = useRef<string>(validFill);
 
   // 현재 열려있는 컬러 피커 ('fill' | 'stroke' | null) - 기본값 'fill'
   const [activePicker, setActivePicker] = useState<'fill' | 'stroke' | null>('fill');
 
+  // Fill 칩 클릭 핸들러 (배경 투명/None 토글)
+  const handleFillChipClick = () => {
+    if (isFillNone) {
+      setIsFillNone(false);
+      setFillHex(lastValidFillRef.current || 'EA2039');
+    } else {
+      if (fillHex && fillHex.length === 6) {
+        lastValidFillRef.current = fillHex;
+      }
+      setIsFillNone(true);
+    }
+  };
+
   // 저장 처리
   function handleSave() {
-    const finalFill = fillHex.trim() ? fillHex : validFill;
-    const finalFillColor = `#${finalFill.padStart(6, '0')}`;
+    const finalFillColor = isFillNone
+      ? 'None'
+      : `#${(fillHex.trim() ? fillHex : validFill).padStart(6, '0')}`;
     const finalStrokeColor = `#${strokeHex.padStart(6, '0')}`;
     const finalStrokeWeight = Math.max(0, strokeWeight);
 
-    // 1) 신규 스타일 프리셋 등록 (갤러리 카드에 보더 사이즈, 컬러가 그대로 반영됨)
-    addStylePreset({
-      name: `Custom ${finalFillColor}`,
-      fillColor: finalFillColor,
-      strokeWeight: finalStrokeWeight,
-      strokeColor: finalStrokeColor,
-    });
+    if (mode === 'edit' && editingPresetId) {
+      updateStylePreset(editingPresetId, {
+        name: targetPreset?.name || (isFillNone ? 'Custom None' : `Custom ${finalFillColor}`),
+        fillColor: finalFillColor,
+        strokeWeight: finalStrokeWeight,
+        strokeColor: finalStrokeColor,
+      });
+    } else {
+      addStylePreset({
+        name: isFillNone ? 'Custom None' : `Custom ${finalFillColor}`,
+        fillColor: finalFillColor,
+        strokeWeight: finalStrokeWeight,
+        strokeColor: finalStrokeColor,
+      });
+      showToast('새 스타일이 추가되었습니다.', 'success');
+    }
 
-    // 2) UI 상태 갱신
+    // UI 상태 갱신
     setUIState({
       selectedColor: finalFillColor,
       selectedStrokeWeight: finalStrokeWeight,
       selectedStrokeColor: finalStrokeColor,
+      ...(mode === 'edit' && editingPresetId ? { selectedStylePresetId: editingPresetId } : {}),
     });
     setLastNodeConfig({
       color: finalFillColor,
@@ -86,7 +154,7 @@ export function StyleModal({ onClose, initialColor, isMixed = false }: StyleModa
       strokeColor: finalStrokeColor,
     });
 
-    // 3) 캔버스에 선택된 노드가 있다면 즉시 스타일 동기화 반영
+    // 캔버스에 선택된 노드가 있다면 즉시 스타일 동기화 반영
     if (selectedNodes.length > 0) {
       applyCurrentNodeState(undefined, {
         colorHex: finalFillColor,
@@ -95,9 +163,10 @@ export function StyleModal({ onClose, initialColor, isMixed = false }: StyleModa
       });
     }
 
-    showToast('새 스타일이 추가되었습니다.', 'success');
     onClose();
   }
+
+  const modalTitle = mode === 'edit' ? 'Edit style' : 'Add style';
 
   return (
     <div
@@ -113,10 +182,10 @@ export function StyleModal({ onClose, initialColor, isMixed = false }: StyleModa
         className="style-modal-card"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 모달 헤더 (Style 타이틀 + 닫기 버튼) */}
+        {/* 모달 헤더 (Add style / Edit style 타이틀 + 닫기 버튼) */}
         <div className="style-modal-header">
           <span className="style-modal-title">
-            Style
+            {modalTitle}
             {isFillMixed && (
               <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
                 (Mixed)
@@ -156,14 +225,44 @@ export function StyleModal({ onClose, initialColor, isMixed = false }: StyleModa
             <ColorWheelField
               value={fillHex}
               isMixed={isFillMixed}
+              isNone={isFillNone}
+              onNoneToggle={(none) => {
+                if (none) {
+                  if (fillHex && fillHex.length === 6) {
+                    lastValidFillRef.current = fillHex;
+                  }
+                  setIsFillNone(true);
+                } else {
+                  setIsFillNone(false);
+                  if (isFillNone && (!fillHex || fillHex.length !== 6)) {
+                    setFillHex(lastValidFillRef.current || 'EA2039');
+                  }
+                }
+              }}
               onMixedClear={() => setIsFillMixed(false)}
               onChange={(hex) => {
                 setIsFillMixed(false);
                 setFillHex(hex);
+                lastValidFillRef.current = hex;
+                if (isFillNone) {
+                  setIsFillNone(false);
+                }
               }}
               onEnter={handleSave}
               isOpen={activePicker === 'fill'}
               onToggleOpen={(open) => setActivePicker(open ? 'fill' : null)}
+              customChip={
+                <FillColorIcon
+                  color={`#${fillHex}`}
+                  isNone={isFillNone}
+                  isMixed={isFillMixed}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFillChipClick();
+                  }}
+                  title={isFillMixed ? 'Fill color (Mixed)' : (isFillNone ? '배경 켜기' : '배경 끄기 (None)')}
+                />
+              }
             />
           </div>
 
@@ -190,10 +289,28 @@ export function StyleModal({ onClose, initialColor, isMixed = false }: StyleModa
             {/* Stroke 라인 두께 박스 + 컬러 입력 필드 + 컬러휠 아이콘 */}
             <ColorWheelField
               value={strokeHex}
-              onChange={(hex) => setStrokeHex(hex)}
+              isNone={strokeWeight === 0}
+              onNoneToggle={(none) => setStrokeWeight(none ? 0 : (strokeWeight > 0 ? strokeWeight : 1.5))}
+              onChange={(hex) => {
+                setStrokeHex(hex);
+                if (strokeWeight === 0) {
+                  setStrokeWeight(1.5);
+                }
+              }}
               onEnter={handleSave}
               isOpen={activePicker === 'stroke'}
               onToggleOpen={(open) => setActivePicker(open ? 'stroke' : null)}
+              customChip={
+                <StrokeColorIcon
+                  color={`#${strokeHex}`}
+                  isNone={strokeWeight === 0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStrokeWeight((prev) => (prev === 0 ? 1.5 : 0));
+                  }}
+                  title={strokeWeight === 0 ? '보더 켜기' : '보더 끄기 (None)'}
+                />
+              }
               extraControlPosition="left"
               extraControl={
                 <div className="stroke-width-box">

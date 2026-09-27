@@ -59,6 +59,54 @@
       hex: "#374151"
     }
   };
+  function normalizeNodeType(type) {
+    if (!type) return "Screen";
+    switch (type) {
+      case "Screen":
+        return "Screen";
+      case "Process":
+      case "Square":
+      case "Action":
+      case "Error":
+      case "True":
+      case "False":
+        return "Process";
+      case "Connector":
+      case "Circle":
+      case "System":
+      case "Database":
+        return "Connector";
+      case "Decision":
+      case "Diamond":
+        return "Decision";
+      case "Terminator":
+      case "Pill":
+      case "Capsule":
+        return "Terminator";
+      case "Branch":
+      case "Subflow":
+        return "Branch";
+      default:
+        return type || "Screen";
+    }
+  }
+  var NODE_TYPE_SHAPE_SPECS = {
+    Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
+    Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+    Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+    Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
+    Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+    // 레거시 별칭
+    Square: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+    Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Diamond: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+    Pill: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
+    Action: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+    System: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false }
+  };
 
   // src/customConnector.ts
   function safeGetPluginData(node, key) {
@@ -799,23 +847,27 @@
       console.error("\uB124\uC774\uD2F0\uBE0C \uCEE4\uB125\uD130 \uCD5C\uC801\uD654 \uC2E4\uD328:", err);
     }
   }
-  async function updateOrthogonalVectorConnector(connectorNode, explicitSourceMagnet, explicitTargetMagnet, forceOptimal = false) {
-    const srcId = safeGetPluginData(connectorNode, "source_node_id");
-    const tgtId = safeGetPluginData(connectorNode, "target_node_id");
+  async function updateOrthogonalVectorConnector(connectorNode, explicitSourceMagnet, explicitTargetMagnet, forceOptimal = false, explicitStartOffset, explicitEndOffset) {
+    let rootNode = connectorNode;
+    if (connectorNode.parent && connectorNode.parent.type === "GROUP" && safeGetPluginData(connectorNode.parent, "is_custom_connector") === "true") {
+      rootNode = connectorNode.parent;
+    }
+    const srcId = safeGetPluginData(rootNode, "source_node_id") || safeGetPluginData(connectorNode, "source_node_id");
+    const tgtId = safeGetPluginData(rootNode, "target_node_id") || safeGetPluginData(connectorNode, "target_node_id");
     if (!srcId || !tgtId) return;
     const sourceNode = figma.getNodeById(srcId);
     const targetNode = figma.getNodeById(tgtId);
     if (!sourceNode || !targetNode) return;
     let vector = null;
     let labelFrame = null;
-    if (connectorNode.type === "GROUP") {
-      const group = connectorNode;
+    if (rootNode.type === "GROUP") {
+      const group = rootNode;
       vector = group.children.find((c) => c.type === "VECTOR") || null;
       labelFrame = group.children.find(
         (c) => safeGetPluginData(c, "is_connector_label") === "true" || c.name === "ConnectorLabel"
       ) || null;
-    } else if (connectorNode.type === "VECTOR") {
-      vector = connectorNode;
+    } else if (rootNode.type === "VECTOR") {
+      vector = rootNode;
     }
     if (!vector) return;
     const srcBox = {
@@ -837,21 +889,27 @@
       if (!sourceMagnet) sourceMagnet = optimal.sourceMagnet;
       if (!targetMagnet) targetMagnet = optimal.targetMagnet;
     }
-    connectorNode.setPluginData("source_magnet", sourceMagnet);
-    connectorNode.setPluginData("target_magnet", targetMagnet);
-    if (vector !== connectorNode) {
+    rootNode.setPluginData("source_magnet", sourceMagnet);
+    rootNode.setPluginData("target_magnet", targetMagnet);
+    if (vector !== rootNode) {
       vector.setPluginData("source_magnet", sourceMagnet);
       vector.setPluginData("target_magnet", targetMagnet);
     }
-    const routingType = safeGetPluginData(connectorNode, "connector_routing") || safeGetPluginData(vector, "connector_routing") || "ORTHOGONAL";
+    const routingType = safeGetPluginData(rootNode, "connector_routing") || safeGetPluginData(vector, "connector_routing") || "ORTHOGONAL";
     const pStart = getMagnetPoint(srcBox, sourceMagnet);
     const pEnd = getMagnetPoint(tgtBox, targetMagnet);
-    const startOffset = parseFloat(
-      safeGetPluginData(connectorNode, "start_offset") || safeGetPluginData(vector, "start_offset") || "0"
+    const startOffset = typeof explicitStartOffset === "number" ? explicitStartOffset : parseFloat(
+      safeGetPluginData(rootNode, "start_offset") || safeGetPluginData(vector, "start_offset") || "0"
     ) || 0;
-    const endOffset = parseFloat(
-      safeGetPluginData(connectorNode, "end_offset") || safeGetPluginData(vector, "end_offset") || "0"
+    const endOffset = typeof explicitEndOffset === "number" ? explicitEndOffset : parseFloat(
+      safeGetPluginData(rootNode, "end_offset") || safeGetPluginData(vector, "end_offset") || "0"
     ) || 0;
+    rootNode.setPluginData("start_offset", String(startOffset));
+    rootNode.setPluginData("end_offset", String(endOffset));
+    if (vector !== rootNode) {
+      vector.setPluginData("start_offset", String(startOffset));
+      vector.setPluginData("end_offset", String(endOffset));
+    }
     const worldPoints = calculateRoutingPoints(
       pStart,
       sourceMagnet,
@@ -865,8 +923,8 @@
     );
     const allX = worldPoints.map((p) => p.x);
     const allY = worldPoints.map((p) => p.y);
-    const startTerminal = safeGetPluginData(connectorNode, "start_terminal") || safeGetPluginData(vector, "start_terminal") || "NONE";
-    const endTerminal = safeGetPluginData(connectorNode, "end_terminal") || safeGetPluginData(vector, "end_terminal") || "ARROW";
+    const startTerminal = safeGetPluginData(rootNode, "start_terminal") || safeGetPluginData(vector, "start_terminal") || "NONE";
+    const endTerminal = safeGetPluginData(rootNode, "end_terminal") || safeGetPluginData(vector, "end_terminal") || "ARROW";
     const strokeWeight = typeof vector.strokeWeight === "number" ? vector.strokeWeight : 1.5;
     let strokeColor = { r: 0.18, g: 0.18, b: 0.22 };
     if (Array.isArray(vector.strokes) && vector.strokes.length > 0 && vector.strokes[0].type === "SOLID") {
@@ -905,8 +963,8 @@
     if (routingType === "STRAIGHT") {
       vector.strokeCap = "ROUND";
     }
-    if (connectorNode.type === "GROUP") {
-      const group = connectorNode;
+    if (rootNode.type === "GROUP") {
+      const group = rootNode;
       try {
         const legacyMarkers = group.findAll((n) => {
           try {
@@ -922,8 +980,8 @@
       } catch (_) {
       }
     }
-    if (connectorNode.parent) {
-      connectorNode.parent.appendChild(connectorNode);
+    if (rootNode.parent) {
+      rootNode.parent.appendChild(rootNode);
     }
     if (labelFrame) {
       const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
@@ -1518,7 +1576,9 @@
     linkText.opacity = 0;
     linkText.hyperlink = { type: "URL", value: trimmedLink };
     badge.appendChild(linkText);
-    badge.layoutPositioning = "ABSOLUTE";
+    if (card.layoutMode !== "NONE") {
+      badge.layoutPositioning = "ABSOLUTE";
+    }
     badge.constraints = { horizontal: "MIN", vertical: "MAX" };
     badge.x = 16;
     badge.y = card.height - badge.height - 10;
@@ -1935,11 +1995,16 @@
         if (frame.layoutMode !== "VERTICAL") {
           frame.layoutMode = "VERTICAL";
         }
-        if (frame.counterAxisAlignItems !== "MIN") {
-          frame.counterAxisAlignItems = "MIN";
+        const rawNodeType = safeGetPluginData2(frame, "node_type");
+        const nType = normalizeNodeType(rawNodeType);
+        const nSpec = NODE_TYPE_SHAPE_SPECS[nType] || NODE_TYPE_SHAPE_SPECS.Screen;
+        const isShape = !nSpec.allowDescription;
+        const targetAlign = isShape ? "CENTER" : "MIN";
+        if (frame.counterAxisAlignItems !== targetAlign) {
+          frame.counterAxisAlignItems = targetAlign;
         }
-        if (frame.primaryAxisAlignItems !== "MIN") {
-          frame.primaryAxisAlignItems = "MIN";
+        if (frame.primaryAxisAlignItems !== targetAlign) {
+          frame.primaryAxisAlignItems = targetAlign;
         }
         const headerFrame = frame.children.find(isHeaderFrame);
         const titleText = headerFrame ? headerFrame.children.find((c) => c.type === "TEXT") : frame.children.find((c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title"));
@@ -2004,6 +2069,10 @@
           const savedEndTerm = node.getPluginData("end_terminal");
           connectorStartTerminal = savedStartTerm || mapCapToTerm(String(conn.connectorStartStrokeCap || "NONE"));
           connectorEndTerminal = savedEndTerm || mapCapToTerm(String(conn.connectorEndStrokeCap || "NONE"));
+          const rawStartOff = node.getPluginData("start_offset");
+          const rawEndOff = node.getPluginData("end_offset");
+          connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
+          connectorEndOffset = rawEndOff ? parseFloat(rawEndOff) : 0;
           let sourceEndpointNode = null;
           let targetEndpointNode = null;
           if (conn.connectorStart && "endpointNodeId" in conn.connectorStart && conn.connectorStart.endpointNodeId) {
@@ -2153,26 +2222,55 @@
       let hugHeight = Math.round(node.height);
       if (isFlowNode && node.type === "FRAME") {
         const frame = node;
-        const isAuto = frame.primaryAxisSizingMode === "AUTO";
-        sizeMode = isAuto ? "hug" : "fixed";
+        const isAutoPrimary = frame.primaryAxisSizingMode === "AUTO";
+        const isAutoCounter = frame.counterAxisSizingMode === "AUTO";
+        const savedSizeMode = frame.getPluginData("size_mode");
+        if (savedSizeMode === "fit" || isAutoPrimary && isAutoCounter) {
+          sizeMode = "fit";
+        } else if (isAutoPrimary) {
+          sizeMode = "hug";
+        } else {
+          sizeMode = "fixed";
+        }
         hugHeight = calculateCardHugHeight(frame);
       }
       let nodeFillColor;
       let nodeStrokeColor;
       let nodeStrokeWeight;
-      if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
-        const firstFill = node.fills[0];
-        if (firstFill.type === "SOLID") {
-          nodeFillColor = rgbToHexColor(firstFill.color);
+      if (isFlowNode && node.type === "FRAME") {
+        const frame = node;
+        const shapeVector = frame.children.find(
+          (c) => (c.name === "ShapeVector" || c.name === "DiamondShape") && c.type === "VECTOR"
+        );
+        if (shapeVector) {
+          if (Array.isArray(shapeVector.fills) && shapeVector.fills.length > 0 && shapeVector.fills[0].type === "SOLID") {
+            nodeFillColor = rgbToHexColor(shapeVector.fills[0].color);
+          }
+          if (Array.isArray(shapeVector.strokes) && shapeVector.strokes.length > 0 && shapeVector.strokes[0].type === "SOLID") {
+            nodeStrokeColor = rgbToHexColor(shapeVector.strokes[0].color);
+          }
+          if (typeof shapeVector.strokeWeight === "number") {
+            nodeStrokeWeight = shapeVector.strokeWeight;
+          }
         }
       }
-      if ("strokes" in node && Array.isArray(node.strokes) && node.strokes.length > 0) {
+      if (!nodeFillColor && "fills" in node && Array.isArray(node.fills)) {
+        if (node.fills.length === 0) {
+          nodeFillColor = "None";
+        } else {
+          const firstFill = node.fills[0];
+          if (firstFill.type === "SOLID") {
+            nodeFillColor = rgbToHexColor(firstFill.color);
+          }
+        }
+      }
+      if (!nodeStrokeColor && "strokes" in node && Array.isArray(node.strokes) && node.strokes.length > 0) {
         const firstStroke = node.strokes[0];
         if (firstStroke.type === "SOLID") {
           nodeStrokeColor = rgbToHexColor(firstStroke.color);
         }
       }
-      if ("strokeWeight" in node && typeof node.strokeWeight === "number") {
+      if (nodeStrokeWeight === void 0 && "strokeWeight" in node && typeof node.strokeWeight === "number") {
         nodeStrokeWeight = node.strokeWeight;
       }
       if (isConnector && typeof connectorStrokeWeight === "number") {
@@ -2181,6 +2279,12 @@
       let cornerRadius = 0;
       if ("cornerRadius" in node && typeof node.cornerRadius === "number") {
         cornerRadius = Math.round(node.cornerRadius);
+      }
+      if (isFlowNode && flowNodeType) {
+        const nSpec = NODE_TYPE_SHAPE_SPECS[flowNodeType];
+        if (nSpec && typeof nSpec.cornerRadius === "number" && nSpec.cornerRadius > 0 && cornerRadius === 0) {
+          cornerRadius = nSpec.cornerRadius;
+        }
       }
       const pos = getNodeTopLeft(node);
       return {
@@ -2502,14 +2606,88 @@
         } catch (_) {
         }
       }
-      if (textNode.textAutoResize !== "HEIGHT") {
-        textNode.textAutoResize = "HEIGHT";
+      const rawNodeType = flowNode ? safeGetPluginData2(flowNode, "node_type") : "";
+      const nType = normalizeNodeType(rawNodeType);
+      const nSpec = NODE_TYPE_SHAPE_SPECS[nType] || NODE_TYPE_SHAPE_SPECS.Screen;
+      const isShape = !nSpec.allowDescription;
+      if (isShape) {
+        textNode.textAlignHorizontal = "CENTER";
+        textNode.textAlignVertical = "CENTER";
+        textNode.layoutAlign = "STRETCH";
+        try {
+          textNode.lineHeight = { value: 18, unit: "PIXELS" };
+        } catch (_) {
+        }
+        if (nType === "Decision") {
+          const pCard = flowNode;
+          const pl = pCard && typeof pCard.paddingLeft === "number" ? pCard.paddingLeft : 24;
+          const pr = pCard && typeof pCard.paddingRight === "number" ? pCard.paddingRight : 24;
+          const curW = pCard ? Math.max(50, pCard.width - pl - pr) : Math.max(50, textNode.width);
+          try {
+            textNode.resize(curW, 54);
+          } catch (_) {
+          }
+          try {
+            textNode.maxHeight = 54;
+          } catch (_) {
+          }
+          try {
+            textNode.textAutoResize = "TRUNCATE";
+          } catch (_) {
+          }
+          try {
+            textNode.textTruncation = "ENDING";
+          } catch (_) {
+          }
+          try {
+            textNode.maxLines = 3;
+          } catch (_) {
+          }
+        } else {
+          try {
+            textNode.maxHeight = null;
+          } catch (_) {
+          }
+          if (textNode.textAutoResize !== "HEIGHT") {
+            textNode.textAutoResize = "HEIGHT";
+          }
+          textNode.textTruncation = "ENDING";
+          textNode.maxLines = 3;
+        }
+      } else {
+        const pCard = flowNode;
+        const pl = pCard && typeof pCard.paddingLeft === "number" ? pCard.paddingLeft : 16;
+        const pr = pCard && typeof pCard.paddingRight === "number" ? pCard.paddingRight : 16;
+        const curW = pCard ? Math.max(50, pCard.width - pl - pr) : Math.max(50, textNode.width);
+        if (textNode.parent && textNode.parent.type === "FRAME" && textNode.parent.name === "Header") {
+          const headerFrame = textNode.parent;
+          headerFrame.layoutAlign = "STRETCH";
+          headerFrame.resize(curW, headerFrame.height || 18);
+          headerFrame.primaryAxisSizingMode = "FIXED";
+          headerFrame.counterAxisSizingMode = "AUTO";
+          headerFrame.primaryAxisAlignItems = "MIN";
+          headerFrame.counterAxisAlignItems = "MIN";
+        }
+        try {
+          textNode.resize(curW, textNode.height || 18);
+        } catch (_) {
+        }
+        if (textNode.textAutoResize !== "HEIGHT") {
+          textNode.textAutoResize = "HEIGHT";
+        }
+        textNode.textAlignHorizontal = "LEFT";
+        textNode.textAlignVertical = "TOP";
+        try {
+          textNode.lineHeight = { value: 18, unit: "PIXELS" };
+        } catch (_) {
+        }
+        if (textNode.layoutGrow !== 1) {
+          textNode.layoutGrow = 1;
+        }
+        textNode.layoutAlign = "STRETCH";
+        textNode.textTruncation = "DISABLED";
+        textNode.maxLines = null;
       }
-      if (textNode.layoutGrow !== 1) {
-        textNode.layoutGrow = 1;
-      }
-      textNode.textTruncation = "ENDING";
-      textNode.maxLines = 1;
       if (flowNode && "name" in flowNode && textNode.characters.trim()) {
         if (flowNode.name !== textNode.characters.trim()) {
           flowNode.name = textNode.characters.trim();
@@ -2565,26 +2743,33 @@
     card.maxWidth = width;
     card.minHeight = height;
     card.maxHeight = height;
+    const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
     const headerRow = figma.createFrame();
     headerRow.name = "Header";
     headerRow.layoutMode = "HORIZONTAL";
     headerRow.layoutAlign = "STRETCH";
-    headerRow.primaryAxisSizingMode = "AUTO";
+    headerRow.resize(availW, 18);
+    headerRow.primaryAxisSizingMode = "FIXED";
     headerRow.counterAxisSizingMode = "AUTO";
-    headerRow.primaryAxisAlignItems = "CENTER";
-    headerRow.counterAxisAlignItems = "CENTER";
+    headerRow.primaryAxisAlignItems = "MIN";
+    headerRow.counterAxisAlignItems = "MIN";
     headerRow.itemSpacing = 8;
     headerRow.fills = [];
     const titleText = figma.createText();
     titleText.name = "TitleText";
     titleText.fontName = { family: "Inter", style: "Bold" };
     titleText.fontSize = 13;
+    titleText.lineHeight = { value: 18, unit: "PIXELS" };
     titleText.characters = title;
     titleText.fills = [titleFill];
     titleText.layoutGrow = 1;
+    titleText.layoutAlign = "STRETCH";
+    titleText.resize(availW, 18);
     titleText.textAutoResize = "HEIGHT";
-    titleText.textTruncation = "ENDING";
-    titleText.maxLines = 1;
+    titleText.textTruncation = "DISABLED";
+    titleText.maxLines = null;
+    titleText.textAlignHorizontal = "LEFT";
+    titleText.textAlignVertical = "TOP";
     titleText.setPluginData("node_role", "title");
     headerRow.appendChild(titleText);
     card.appendChild(headerRow);
@@ -2631,7 +2816,6 @@
     descText.setPluginData("node_role", "desc");
     card.appendChild(descText);
     descText.layoutAlign = "STRETCH";
-    const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
     descText.resize(availW, descText.height);
     descText.textAutoResize = "HEIGHT";
     await updateDescTextTruncation(card, descText, height, desc);
@@ -2731,108 +2915,223 @@
     shape.remove();
     return card;
   }
+  function getShapeVectorData(nodeType, w, h) {
+    if (nodeType === "Connector" || nodeType === "Circle") {
+      const rx = w / 2;
+      const ry = h / 2;
+      const kx = rx * 0.55228475;
+      const ky = ry * 0.55228475;
+      return `M ${rx} 0 C ${rx + kx} 0 ${w} ${ry - ky} ${w} ${ry} C ${w} ${ry + ky} ${rx + kx} ${h} ${rx} ${h} C ${rx - kx} ${h} 0 ${ry + ky} 0 ${ry} C 0 ${ry - ky} ${rx - kx} 0 ${rx} 0 Z`;
+    }
+    if (nodeType === "Decision" || nodeType === "Diamond") {
+      return `M ${w / 2} 0 L ${w} ${h / 2} L ${w / 2} ${h} L 0 ${h / 2} Z`;
+    }
+    if (nodeType === "Terminator" || nodeType === "Pill" || nodeType === "Capsule") {
+      const r = h / 2;
+      const k = r * 0.55228475;
+      const straightEnd = Math.max(r, w - r);
+      return `M ${r} 0 L ${straightEnd} 0 C ${straightEnd + k} 0 ${w} ${r - k} ${w} ${r} C ${w} ${r + k} ${straightEnd + k} ${h} ${straightEnd} ${h} L ${r} ${h} C ${r - k} ${h} 0 ${r + k} 0 ${r} C 0 ${r - k} ${r - k} 0 ${r} 0 Z`;
+    }
+    return null;
+  }
+  function createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight) {
+    const pathD = getShapeVectorData(nodeType, w, h);
+    if (!pathD) return null;
+    const bgHex = rgbToHexColor(bgColor);
+    const strokeHex = rgbToHexColor(strokeColor);
+    const sw = typeof strokeWeight === "number" && strokeWeight >= 0 ? strokeWeight : 1.5;
+    const strokeAttr = sw > 0 ? `stroke="${strokeHex}" stroke-width="${sw}"` : "";
+    const svgStr = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${pathD}" fill="${bgHex}" ${strokeAttr}/></svg>`;
+    try {
+      const imported = figma.createNodeFromSvg(svgStr);
+      const vector = imported.children.find((c) => c.type === "VECTOR");
+      let targetNode = imported;
+      if (vector) {
+        targetNode = vector;
+      }
+      targetNode.name = "ShapeVector";
+      return targetNode;
+    } catch (err) {
+      console.error("createShapeVectorNode error:", err);
+      return null;
+    }
+  }
+  function attachShapeVectorNode(card, nodeType, w, h, bgColor, strokeColor, strokeWeight, insertAtBottom = false) {
+    const shape = createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight);
+    if (!shape) return null;
+    const originalParent = shape.parent;
+    if (insertAtBottom) {
+      card.insertChild(0, shape);
+    } else {
+      card.appendChild(shape);
+    }
+    if (originalParent && originalParent !== card) {
+      originalParent.remove();
+    }
+    shape.layoutPositioning = "ABSOLUTE";
+    shape.x = 0;
+    shape.y = 0;
+    shape.locked = true;
+    return shape;
+  }
   async function createFlowNode(payload) {
     try {
       await loadRequiredFonts();
-      const title = (payload.title || "").trim() || "Untitled";
-      const description = (payload.description || "").trim();
+      const nodeType = normalizeNodeType(payload.nodeType || "Screen");
+      const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
+      const isShapeNode = !spec.allowDescription;
+      const rawTitle = payload.title && payload.title.trim() || (nodeType === "Screen" ? "Screen" : nodeType);
+      const title = rawTitle.slice(0, 32);
+      const width = isShapeNode ? spec.width : payload.width ? Math.max(50, payload.width) : spec.width;
+      const height = isShapeNode ? spec.height : payload.height ? Math.max(50, payload.height) : spec.height;
+      const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
+      const cornerRadius = isShapeNode ? defaultRadius : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius;
+      const description = isShapeNode ? "" : (payload.description || "").trim();
       const theme = payload.theme || "light";
-      const width = payload.width ? Math.max(120, payload.width) : 250;
-      const height = payload.height ? Math.max(50, payload.height) : 90;
       const isDark = theme === "dark";
+      const isFillNone = payload.colorHex?.toLowerCase() === "none" || payload.colorHex?.toLowerCase() === "transparent";
       let bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-      if (payload.colorHex) {
+      if (!isFillNone && payload.colorHex) {
         bgColor = hexToRgbColor(payload.colorHex);
       }
-      const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+      const { titleFill, descFill, isBgDark } = isFillNone ? {
+        titleFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } },
+        descFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 },
+        isBgDark: isDark
+      } : getTextFillsByBackground(bgColor, isDark);
       const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
       const card = figma.createFrame();
       card.name = title;
-      card.cornerRadius = typeof payload.cornerRadius === "number" ? Math.min(20, Math.max(0, payload.cornerRadius)) : 0;
-      if (typeof payload.strokeWeight === "number") {
-        card.strokeWeight = payload.strokeWeight;
-        if (payload.strokeWeight === 0) {
-          card.strokes = [];
-        } else {
-          const sColor = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
-          card.strokes = [{ type: "SOLID", color: sColor }];
-        }
+      card.cornerRadius = cornerRadius;
+      const cardStrokes = typeof payload.strokeWeight === "number" && payload.strokeWeight === 0 ? [] : [{ type: "SOLID", color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
+      const cardStrokeWeight = typeof payload.strokeWeight === "number" ? payload.strokeWeight : 1.5;
+      const vectorPathData = getShapeVectorData(nodeType, width, height);
+      if (vectorPathData) {
+        card.fills = [];
+        card.strokes = [];
+        card.strokeWeight = 0;
+        card.cornerRadius = 0;
       } else {
-        card.strokeWeight = 1.5;
-        card.strokes = [{ type: "SOLID", color: borderColor }];
+        card.fills = isFillNone ? [] : [{ type: "SOLID", color: bgColor }];
+        card.strokes = cardStrokes;
+        card.strokeWeight = cardStrokeWeight;
       }
-      card.fills = [{ type: "SOLID", color: bgColor }];
       card.clipsContent = false;
       card.layoutMode = "VERTICAL";
       card.primaryAxisSizingMode = "FIXED";
       card.counterAxisSizingMode = "FIXED";
-      const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
-      const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
-      const hasBottomBar = hasStatus || hasLink;
-      if (!description && !hasBottomBar) {
-        card.paddingTop = 14;
-        card.paddingBottom = 14;
-        card.primaryAxisAlignItems = "CENTER";
-      } else {
-        card.paddingTop = 14;
-        card.paddingBottom = hasBottomBar ? 36 : 16;
-        card.primaryAxisAlignItems = "MIN";
-      }
-      card.paddingLeft = 16;
-      card.paddingRight = 16;
-      card.itemSpacing = 8;
-      card.counterAxisAlignItems = "MIN";
-      const finalHeight = height;
-      card.resize(width, finalHeight);
+      card.resize(width, height);
       card.minWidth = width;
       card.maxWidth = width;
-      card.minHeight = finalHeight;
-      card.maxHeight = finalHeight;
-      const headerRow = figma.createFrame();
-      headerRow.name = "Header";
-      headerRow.layoutMode = "HORIZONTAL";
-      headerRow.layoutAlign = "STRETCH";
-      headerRow.primaryAxisSizingMode = "AUTO";
-      headerRow.counterAxisSizingMode = "AUTO";
-      headerRow.primaryAxisAlignItems = "CENTER";
-      headerRow.counterAxisAlignItems = "CENTER";
-      headerRow.itemSpacing = 8;
-      headerRow.fills = [];
-      const titleText = figma.createText();
-      titleText.name = "TitleText";
-      titleText.fontName = { family: "Inter", style: "Bold" };
-      titleText.fontSize = 13;
-      titleText.characters = title;
-      titleText.fills = [titleFill];
-      titleText.layoutGrow = 1;
-      titleText.textAutoResize = "HEIGHT";
-      titleText.textTruncation = "ENDING";
-      titleText.maxLines = 1;
-      titleText.setPluginData("node_role", "title");
-      headerRow.appendChild(titleText);
-      card.appendChild(headerRow);
-      if (description) {
-        const descText = figma.createText();
-        descText.name = "DescText";
-        descText.fontName = { family: "Inter", style: "Regular" };
-        descText.fontSize = 11;
-        descText.characters = description;
-        descText.fills = [descFill];
-        descText.textAlignHorizontal = "LEFT";
-        descText.setPluginData("node_role", "desc");
-        card.appendChild(descText);
-        descText.layoutAlign = "STRETCH";
+      card.minHeight = height;
+      card.maxHeight = height;
+      if (isShapeNode) {
+        const hPad = nodeType === "Decision" ? 24 : nodeType === "Connector" ? 18 : 12;
+        card.paddingLeft = hPad;
+        card.paddingRight = hPad;
+        card.paddingTop = 12;
+        card.paddingBottom = 12;
+        card.primaryAxisAlignItems = "CENTER";
+        card.counterAxisAlignItems = "CENTER";
+        card.itemSpacing = 0;
+        if (vectorPathData) {
+          const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+          attachShapeVectorNode(card, nodeType, width, height, bgColor, strokeCol, cardStrokeWeight, false);
+        }
+        const titleText = figma.createText();
+        titleText.name = "TitleText";
+        titleText.fontName = { family: "Inter", style: "Bold" };
+        titleText.fontSize = 13;
+        titleText.lineHeight = { value: 18, unit: "PIXELS" };
+        titleText.characters = title;
+        titleText.fills = [titleFill];
+        titleText.textAlignHorizontal = "CENTER";
+        titleText.textAlignVertical = "CENTER";
+        titleText.layoutAlign = "STRETCH";
+        if (nodeType === "Decision") {
+          const availW = Math.max(50, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
+          titleText.resize(availW, 54);
+          titleText.maxHeight = 54;
+          titleText.textAutoResize = "TRUNCATE";
+          titleText.textTruncation = "ENDING";
+          titleText.maxLines = 3;
+        } else {
+          titleText.textAutoResize = "HEIGHT";
+          titleText.textTruncation = "ENDING";
+          titleText.maxLines = 3;
+        }
+        titleText.setPluginData("node_role", "title");
+        card.appendChild(titleText);
+      } else {
+        const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
+        const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
+        const hasBottomBar = hasStatus || hasLink;
+        if (!description && !hasBottomBar) {
+          card.paddingTop = 14;
+          card.paddingBottom = 14;
+          card.primaryAxisAlignItems = "CENTER";
+        } else {
+          card.paddingTop = 14;
+          card.paddingBottom = hasBottomBar ? 36 : 16;
+          card.primaryAxisAlignItems = "MIN";
+        }
+        card.paddingLeft = 16;
+        card.paddingRight = 16;
+        card.itemSpacing = 8;
+        card.counterAxisAlignItems = "MIN";
         const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
-        descText.resize(availW, descText.height);
-        descText.textAutoResize = "HEIGHT";
-        await updateDescTextTruncation(card, descText, height, description);
+        const headerRow = figma.createFrame();
+        headerRow.name = "Header";
+        headerRow.layoutMode = "HORIZONTAL";
+        headerRow.layoutAlign = "STRETCH";
+        headerRow.resize(availW, 18);
+        headerRow.primaryAxisSizingMode = "FIXED";
+        headerRow.counterAxisSizingMode = "AUTO";
+        headerRow.primaryAxisAlignItems = "MIN";
+        headerRow.counterAxisAlignItems = "MIN";
+        headerRow.itemSpacing = 8;
+        headerRow.fills = [];
+        const titleText = figma.createText();
+        titleText.name = "TitleText";
+        titleText.fontName = { family: "Inter", style: "Bold" };
+        titleText.fontSize = 13;
+        titleText.lineHeight = { value: 18, unit: "PIXELS" };
+        titleText.characters = title;
+        titleText.fills = [titleFill];
+        titleText.layoutGrow = 1;
+        titleText.layoutAlign = "STRETCH";
+        titleText.resize(availW, 18);
+        titleText.textAutoResize = "HEIGHT";
+        titleText.textTruncation = "DISABLED";
+        titleText.maxLines = null;
+        titleText.textAlignHorizontal = "LEFT";
+        titleText.textAlignVertical = "TOP";
+        titleText.setPluginData("node_role", "title");
+        headerRow.appendChild(titleText);
+        card.appendChild(headerRow);
+        if (description) {
+          const descText = figma.createText();
+          descText.name = "DescText";
+          descText.fontName = { family: "Inter", style: "Regular" };
+          descText.fontSize = 11;
+          descText.characters = description;
+          descText.fills = [descFill];
+          descText.textAlignHorizontal = "LEFT";
+          descText.setPluginData("node_role", "desc");
+          card.appendChild(descText);
+          descText.layoutAlign = "STRETCH";
+          const availW2 = Math.max(50, width - card.paddingLeft - card.paddingRight);
+          descText.resize(availW2, descText.height);
+          descText.textAutoResize = "HEIGHT";
+          await updateDescTextTruncation(card, descText, height, description);
+        }
       }
       card.name = title;
       card.setPluginData("is_flow_node", "true");
       card.setPluginData("schema_version", "2");
       card.setPluginData("node_theme", theme);
-      card.setPluginData("node_type", payload.nodeType || "Screen");
-      if (payload.status) {
+      card.setPluginData("node_type", nodeType);
+      if (!isShapeNode && payload.status) {
         card.setPluginData("workflow_status", payload.status);
         if (STATUS_CONFIG[payload.status]) {
           const cfg = STATUS_CONFIG[payload.status];
@@ -2868,7 +3167,9 @@
           statusBadge.y = card.height - statusBadge.height - 10;
         }
       }
-      await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark);
+      if (!isShapeNode) {
+        await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark);
+      }
       if (typeof payload.elevation === "number") {
         card.setPluginData("node_elevation", `${payload.elevation}`);
         card.effects = getElevationEffects(payload.elevation, isBgDark);
@@ -2926,81 +3227,231 @@
         flowNode = await convertShapeToFrameNode(flowNode);
       }
       await loadRequiredFonts();
-      const title = payload.title.trim() || "Untitled";
+      const rawTitle = payload.title.trim() || "Untitled";
+      const title = rawTitle.slice(0, 32);
       const description = payload.description.trim() || "";
       const isDark = payload.theme === "dark";
+      const isFillNone = payload.colorHex?.toLowerCase() === "none" || payload.colorHex?.toLowerCase() === "transparent";
       let bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-      if (payload.colorHex) {
-        bgColor = hexToRgbColor(payload.colorHex);
-      } else {
-        const currentFill = flowNode.fills;
-        if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === "SOLID") {
-          bgColor = currentFill[0].color;
+      if (!isFillNone) {
+        if (payload.colorHex) {
+          bgColor = hexToRgbColor(payload.colorHex);
+        } else {
+          const currentFill = flowNode.fills;
+          if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === "SOLID") {
+            bgColor = currentFill[0].color;
+          }
         }
       }
-      const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+      const { titleFill, descFill, isBgDark } = isFillNone ? {
+        titleFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } },
+        descFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 },
+        isBgDark: isDark
+      } : getTextFillsByBackground(bgColor, isDark);
       const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
       const card = flowNode;
-      card.name = title;
-      if (typeof payload.cornerRadius === "number") {
-        card.cornerRadius = Math.min(20, Math.max(0, payload.cornerRadius));
-      }
+      const prevRawType = safeGetPluginData2(card, "node_type") || "Screen";
+      const prevNodeType = normalizeNodeType(prevRawType);
+      const rawType = payload.nodeType || prevRawType;
+      const nodeType = normalizeNodeType(rawType);
+      const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
+      const isShapeNode = !spec.allowDescription;
+      const isChangingToScreen = prevNodeType !== "Screen" && nodeType === "Screen";
+      const DEFAULT_SHAPE_NAMES = /* @__PURE__ */ new Set([
+        "Decision",
+        "Process",
+        "Connector",
+        "Terminator",
+        "Branch",
+        "Action",
+        "System",
+        "Database",
+        "Square",
+        "Circle",
+        "Diamond",
+        "Pill",
+        "Capsule"
+      ]);
+      const effectiveTitle = isChangingToScreen && (DEFAULT_SHAPE_NAMES.has(rawTitle) || !rawTitle) ? "Screen" : title;
+      card.name = effectiveTitle;
       card.clipsContent = false;
-      card.fills = [{ type: "SOLID", color: bgColor }];
-      if (typeof payload.strokeWeight === "number") {
-        card.strokeWeight = payload.strokeWeight;
-        if (payload.strokeWeight === 0) {
-          card.strokes = [];
-        } else {
-          const sColor = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
-          card.strokes = [{ type: "SOLID", color: sColor }];
+      const cardStrokes = typeof payload.strokeWeight === "number" && payload.strokeWeight === 0 ? [] : [{ type: "SOLID", color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
+      const cardStrokeWeight = typeof payload.strokeWeight === "number" ? payload.strokeWeight : 1.5;
+      if (card.layoutMode !== "VERTICAL") {
+        card.layoutMode = "VERTICAL";
+      }
+      const existingShapeVector = card.children.find(
+        (c) => (c.name === "ShapeVector" || c.name === "DiamondShape") && c.type === "VECTOR"
+      );
+      const targetW = isShapeNode ? payload.width ? Math.max(50, payload.width) : spec.width : isChangingToScreen ? payload.width || spec.width : payload.width ? Math.max(50, payload.width) : card.width;
+      const targetH = isShapeNode ? payload.height ? Math.max(50, payload.height) : spec.height : isChangingToScreen ? payload.height || spec.height : payload.height ? Math.max(50, payload.height) : card.height;
+      const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
+      if (vectorPathData) {
+        card.fills = [];
+        card.strokes = [];
+        card.strokeWeight = 0;
+        card.cornerRadius = 0;
+        if (existingShapeVector) {
+          existingShapeVector.remove();
         }
-      } else if (payload.strokeColor) {
-        card.strokes = [{ type: "SOLID", color: hexToRgbColor(payload.strokeColor) }];
+        const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+        attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true);
+      } else {
+        if (existingShapeVector) {
+          existingShapeVector.remove();
+        }
+        const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
+        const targetRadius = isChangingToScreen ? typeof payload.cornerRadius === "number" ? payload.cornerRadius : defaultRadius : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius;
+        card.cornerRadius = targetRadius;
+        card.fills = isFillNone ? [] : [{ type: "SOLID", color: bgColor }];
+        card.strokes = cardStrokes;
+        card.strokeWeight = cardStrokeWeight;
       }
       if (card.layoutMode !== "VERTICAL") {
         card.layoutMode = "VERTICAL";
       }
-      if (card.counterAxisAlignItems !== "MIN") {
-        card.counterAxisAlignItems = "MIN";
+      card.counterAxisAlignItems = isShapeNode ? "CENTER" : "MIN";
+      card.primaryAxisAlignItems = isShapeNode ? "CENTER" : "MIN";
+      if (isShapeNode) {
+        const existingStatusBadge = card.children.find(
+          (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
+        );
+        if (existingStatusBadge) existingStatusBadge.remove();
+        card.setPluginData("workflow_status", "");
+        const existingLinkBadge = card.children.find(
+          (c) => safeGetPluginData2(c, "is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
+        );
+        if (existingLinkBadge) existingLinkBadge.remove();
+        card.setPluginData("figma_link", "");
       }
-      let headerRow = card.children.find(isHeaderFrame);
-      if (!headerRow) {
-        headerRow = figma.createFrame();
-        headerRow.name = "Header";
-        headerRow.layoutMode = "HORIZONTAL";
-        headerRow.layoutAlign = "STRETCH";
-        headerRow.primaryAxisAlignItems = "CENTER";
-        headerRow.counterAxisAlignItems = "CENTER";
-        headerRow.itemSpacing = 8;
-        headerRow.fills = [];
-        card.insertChild(0, headerRow);
-      }
-      let titleText = headerRow.children.find(
-        (c) => c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title"
+      let titleText = card.findOne(
+        (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
       );
-      if (!titleText) {
-        titleText = figma.createText();
-        titleText.name = "TitleText";
-        titleText.fontName = { family: "Inter", style: "Bold" };
-        titleText.fontSize = 13;
+      if (isShapeNode) {
+        const existingHeader = card.children.find(isHeaderFrame);
+        if (existingHeader) {
+          if (!titleText) {
+            titleText = existingHeader.children.find((c) => c.type === "TEXT");
+          }
+          if (titleText && titleText.parent === existingHeader) {
+            card.appendChild(titleText);
+          }
+          existingHeader.remove();
+        }
+        if (!titleText) {
+          titleText = figma.createText();
+          titleText.name = "TitleText";
+          titleText.fontName = { family: "Inter", style: "Bold" };
+          titleText.fontSize = 13;
+          titleText.setPluginData("node_role", "title");
+          card.appendChild(titleText);
+        }
+        titleText.layoutAlign = "STRETCH";
+        titleText.textAlignHorizontal = "CENTER";
+        titleText.textAlignVertical = "CENTER";
+        titleText.lineHeight = { value: 18, unit: "PIXELS" };
+        if (nodeType === "Decision") {
+          const availW = Math.max(50, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
+          try {
+            titleText.resize(availW, 54);
+          } catch (_) {
+          }
+          try {
+            titleText.maxHeight = 54;
+          } catch (_) {
+          }
+          try {
+            titleText.textAutoResize = "TRUNCATE";
+          } catch (_) {
+          }
+          try {
+            titleText.textTruncation = "ENDING";
+          } catch (_) {
+          }
+          try {
+            titleText.maxLines = 3;
+          } catch (_) {
+          }
+        } else {
+          try {
+            titleText.maxHeight = null;
+          } catch (_) {
+          }
+          try {
+            titleText.textAutoResize = "HEIGHT";
+          } catch (_) {
+          }
+          try {
+            titleText.textTruncation = "ENDING";
+          } catch (_) {
+          }
+          try {
+            titleText.maxLines = 3;
+          } catch (_) {
+          }
+        }
+        await safeSetCharacters(titleText, title);
+        const hasExistingTitleFill = titleText.fills === figma.mixed || Array.isArray(titleText.fills) && titleText.fills.length > 0;
+        if (!hasExistingTitleFill || payload.colorHex) {
+          titleText.fills = [titleFill];
+        }
+      } else {
+        const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
+        const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
+        const availW = Math.max(50, card.width - pl - pr);
+        let headerRow = card.children.find(isHeaderFrame);
+        if (!headerRow) {
+          headerRow = figma.createFrame();
+          headerRow.name = "Header";
+          headerRow.layoutMode = "HORIZONTAL";
+          headerRow.layoutAlign = "STRETCH";
+          headerRow.itemSpacing = 8;
+          headerRow.fills = [];
+          card.insertChild(0, headerRow);
+        }
+        headerRow.layoutAlign = "STRETCH";
+        headerRow.resize(availW, headerRow.height || 18);
+        headerRow.primaryAxisSizingMode = "FIXED";
+        headerRow.counterAxisSizingMode = "AUTO";
+        headerRow.primaryAxisAlignItems = "MIN";
+        headerRow.counterAxisAlignItems = "MIN";
+        if (!titleText) {
+          titleText = figma.createText();
+          titleText.name = "TitleText";
+          titleText.fontName = { family: "Inter", style: "Bold" };
+          titleText.fontSize = 13;
+          titleText.setPluginData("node_role", "title");
+          headerRow.appendChild(titleText);
+        } else if (titleText.parent !== headerRow) {
+          headerRow.appendChild(titleText);
+        }
+        titleText.lineHeight = { value: 18, unit: "PIXELS" };
+        titleText.textAlignHorizontal = "LEFT";
+        titleText.textAlignVertical = "TOP";
         titleText.layoutGrow = 1;
+        titleText.layoutAlign = "STRETCH";
+        titleText.resize(availW, titleText.height || 18);
         titleText.textAutoResize = "HEIGHT";
-        titleText.setPluginData("node_role", "title");
-        headerRow.insertChild(0, titleText);
-      }
-      titleText.textAlignHorizontal = "LEFT";
-      titleText.textTruncation = "ENDING";
-      titleText.maxLines = 1;
-      await safeSetCharacters(titleText, title);
-      const hasExistingTitleFill = titleText.fills === figma.mixed || Array.isArray(titleText.fills) && titleText.fills.length > 0;
-      if (!hasExistingTitleFill || payload.colorHex) {
-        titleText.fills = [titleFill];
+        titleText.textTruncation = "DISABLED";
+        titleText.maxLines = null;
+        try {
+          titleText.maxHeight = null;
+        } catch (_) {
+        }
+        await safeSetCharacters(titleText, effectiveTitle);
+        try {
+          titleText.resize(availW, titleText.height);
+        } catch (_) {
+        }
+        const hasExistingTitleFill = titleText.fills === figma.mixed || Array.isArray(titleText.fills) && titleText.fills.length > 0;
+        if (!hasExistingTitleFill || payload.colorHex) {
+          titleText.fills = [titleFill];
+        }
       }
       let descText = card.children.find(
         (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
       );
-      if (!description) {
+      if (isShapeNode || !description) {
         if (descText) {
           descText.remove();
           descText = void 0;
@@ -3043,22 +3494,40 @@
         } catch (_) {
         }
       }
-      let statusBadge = card.children.find(
+      let statusBadge = !isShapeNode ? card.children.find(
         (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
-      );
-      const hasStatus = Boolean(statusBadge || payload.status && STATUS_CONFIG[payload.status]);
-      const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
+      ) : void 0;
+      const hasStatus = Boolean(statusBadge || !isShapeNode && payload.status && STATUS_CONFIG[payload.status]);
+      const hasLink = !isShapeNode && Boolean(payload.figmaLink && payload.figmaLink.trim());
       const hasBottomBar = hasStatus || hasLink;
-      if (!description && !hasBottomBar) {
-        card.paddingTop = 14;
-        card.paddingBottom = 14;
+      if (isShapeNode) {
+        const hPad = nodeType === "Decision" ? 24 : 12;
+        card.paddingLeft = hPad;
+        card.paddingRight = hPad;
+        card.paddingTop = 12;
+        card.paddingBottom = 12;
         card.primaryAxisAlignItems = "CENTER";
+        card.counterAxisAlignItems = "CENTER";
+        card.itemSpacing = 0;
       } else {
-        card.paddingTop = 14;
-        card.paddingBottom = hasBottomBar ? 36 : 16;
-        card.primaryAxisAlignItems = "MIN";
+        card.itemSpacing = 8;
+        if (!description && !hasBottomBar) {
+          card.paddingLeft = 16;
+          card.paddingRight = 16;
+          card.paddingTop = 14;
+          card.paddingBottom = 14;
+          card.primaryAxisAlignItems = "CENTER";
+          card.counterAxisAlignItems = "MIN";
+        } else {
+          card.paddingLeft = 16;
+          card.paddingRight = 16;
+          card.paddingTop = 14;
+          card.paddingBottom = hasBottomBar ? 36 : 16;
+          card.primaryAxisAlignItems = "MIN";
+          card.counterAxisAlignItems = "MIN";
+        }
       }
-      if (statusBadge) {
+      if (!isShapeNode && statusBadge) {
         statusBadge.paddingLeft = 9;
         statusBadge.paddingRight = 9;
         statusBadge.cornerRadius = getStatusBadgeCornerRadius(
@@ -3077,7 +3546,9 @@
           }
         }
       }
-      await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark, payload.clearLinkCache);
+      if (!isShapeNode) {
+        await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark, payload.clearLinkCache);
+      }
       const existingStepBadge = card.children.find(
         (c) => c.name.startsWith("[Step]") || safeGetPluginData2(c, "is_step_badge") === "true"
       );
@@ -3099,53 +3570,75 @@
           if (payload.phaseColor) card.setPluginData("phase_color", payload.phaseColor);
         }
       }
-      if (payload.width && payload.height) {
-        const w = Math.max(120, payload.width);
-        const targetH = Math.max(50, payload.height);
-        const isHug = payload.sizeMode === "hug";
+      const finalW = Math.max(50, targetW);
+      const finalH = Math.max(40, targetH);
+      const isHug = !isShapeNode && payload.sizeMode === "hug";
+      const isFit = !isShapeNode && payload.sizeMode === "fit";
+      card.minWidth = null;
+      card.maxWidth = null;
+      card.minHeight = null;
+      card.maxHeight = null;
+      if (isHug) {
+        if (descText) {
+          descText.maxLines = null;
+        }
+        if (card.width !== finalW) {
+          card.counterAxisSizingMode = "FIXED";
+          card.resize(finalW, card.height);
+        }
+        card.counterAxisSizingMode = "FIXED";
+        card.primaryAxisSizingMode = "AUTO";
+        card.minWidth = finalW;
+        card.maxWidth = finalW;
+        card.minHeight = null;
+        card.maxHeight = null;
+        card.setPluginData("size_mode", "hug");
+      } else if (isFit) {
+        if (descText) {
+          descText.maxLines = null;
+        }
+        card.counterAxisSizingMode = "AUTO";
+        card.primaryAxisSizingMode = "AUTO";
         card.minWidth = null;
         card.maxWidth = null;
         card.minHeight = null;
         card.maxHeight = null;
-        if (isHug) {
-          if (descText) {
-            descText.maxLines = null;
-          }
-          if (card.width !== w) {
-            card.counterAxisSizingMode = "FIXED";
-            card.resize(w, card.height);
-          }
-          card.counterAxisSizingMode = "FIXED";
-          card.primaryAxisSizingMode = "AUTO";
-          card.minWidth = w;
-          card.maxWidth = w;
-          card.minHeight = null;
-          card.maxHeight = null;
-        } else {
-          card.primaryAxisSizingMode = "FIXED";
-          card.counterAxisSizingMode = "FIXED";
-          card.resize(w, targetH);
-          card.minWidth = w;
-          card.maxWidth = w;
-          card.minHeight = targetH;
-          card.maxHeight = targetH;
-        }
-        const curH = card.height;
-        if (statusBadge) {
-          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-          statusBadge.x = w - statusBadge.width - 10;
-          statusBadge.y = curH - statusBadge.height - 10;
-        }
-        const linkBadge = card.children.find(
-          (c) => safeGetPluginData2(c, "is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
-        );
-        if (linkBadge) {
-          linkBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
-          linkBadge.x = 16;
-          linkBadge.y = curH - linkBadge.height - 10;
+        card.setPluginData("size_mode", "fit");
+      } else {
+        card.primaryAxisSizingMode = "FIXED";
+        card.counterAxisSizingMode = "FIXED";
+        card.resize(finalW, finalH);
+        card.minWidth = finalW;
+        card.maxWidth = finalW;
+        card.minHeight = finalH;
+        card.maxHeight = finalH;
+        card.setPluginData("size_mode", "fixed");
+      }
+      const curH = card.height;
+      if (statusBadge) {
+        statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+        statusBadge.x = finalW - statusBadge.width - 10;
+        statusBadge.y = curH - statusBadge.height - 10;
+      }
+      const linkBadge = card.children.find(
+        (c) => safeGetPluginData2(c, "is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
+      );
+      if (linkBadge) {
+        linkBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
+        linkBadge.x = 16;
+        linkBadge.y = curH - linkBadge.height - 10;
+      }
+      const shapeVec = card.children.find(
+        (c) => c.name === "ShapeVector" || c.name === "DiamondShape"
+      );
+      if (shapeVec) {
+        shapeVec.remove();
+        if (isShapeNode) {
+          const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+          attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
         }
       }
-      card.name = title;
+      card.name = effectiveTitle;
       card.setPluginData("is_flow_node", "true");
       card.setPluginData("schema_version", "2");
       card.setPluginData("node_title", "");
@@ -3154,7 +3647,7 @@
       card.setPluginData("node_width", "");
       card.setPluginData("node_height", "");
       if (payload.theme) card.setPluginData("node_theme", payload.theme);
-      if (payload.nodeType) card.setPluginData("node_type", payload.nodeType);
+      card.setPluginData("node_type", nodeType);
       if (typeof payload.elevation === "number") {
         card.setPluginData("node_elevation", `${payload.elevation}`);
         card.effects = getElevationEffects(payload.elevation, isBgDark);
@@ -3189,14 +3682,19 @@
       frame.maxWidth = null;
       frame.minHeight = null;
       frame.maxHeight = null;
+      const rawNodeType = safeGetPluginData2(frame, "node_type");
+      const nType = normalizeNodeType(rawNodeType);
+      const nSpec = NODE_TYPE_SHAPE_SPECS[nType] || NODE_TYPE_SHAPE_SPECS.Screen;
+      const isShape = !nSpec.allowDescription;
       if (frame.layoutMode !== "VERTICAL") {
         frame.layoutMode = "VERTICAL";
       }
-      if (frame.counterAxisAlignItems !== "MIN") {
-        frame.counterAxisAlignItems = "MIN";
+      const targetAlign = isShape ? "CENTER" : "MIN";
+      if (frame.counterAxisAlignItems !== targetAlign) {
+        frame.counterAxisAlignItems = targetAlign;
       }
-      if (frame.primaryAxisAlignItems !== "MIN") {
-        frame.primaryAxisAlignItems = "MIN";
+      if (frame.primaryAxisAlignItems !== targetAlign) {
+        frame.primaryAxisAlignItems = targetAlign;
       }
       frame.resize(w, h);
       frame.primaryAxisSizingMode = "FIXED";
@@ -3206,16 +3704,93 @@
       frame.maxWidth = w;
       frame.minHeight = h;
       frame.maxHeight = h;
-      const headerRow = frame.children.find(isHeaderFrame);
-      if (headerRow) {
-        const title = headerRow.children.find(
-          (c) => c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title"
-        );
-        if (title) {
-          title.textAlignHorizontal = "LEFT";
-          title.textTruncation = "ENDING";
-          title.maxLines = 1;
+      const title = frame.findOne(
+        (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
+      );
+      if (title) {
+        title.textAlignHorizontal = isShape ? "CENTER" : "LEFT";
+        title.textAlignVertical = "CENTER";
+        try {
+          title.lineHeight = { value: 18, unit: "PIXELS" };
+        } catch (_) {
         }
+        if (nType === "Decision") {
+          const pl = typeof frame.paddingLeft === "number" ? frame.paddingLeft : 24;
+          const pr = typeof frame.paddingRight === "number" ? frame.paddingRight : 24;
+          const curW = Math.max(50, w - pl - pr);
+          try {
+            title.resize(curW, 54);
+          } catch (_) {
+          }
+          try {
+            title.maxHeight = 54;
+          } catch (_) {
+          }
+          try {
+            title.textAutoResize = "TRUNCATE";
+          } catch (_) {
+          }
+          try {
+            title.textTruncation = "ENDING";
+          } catch (_) {
+          }
+          try {
+            title.maxLines = 3;
+          } catch (_) {
+          }
+        } else {
+          try {
+            title.maxHeight = null;
+          } catch (_) {
+          }
+          const pl = typeof frame.paddingLeft === "number" ? frame.paddingLeft : 16;
+          const pr = typeof frame.paddingRight === "number" ? frame.paddingRight : 16;
+          const curW = Math.max(50, w - pl - pr);
+          if (isShape) {
+            if (title.textAutoResize !== "HEIGHT") {
+              title.textAutoResize = "HEIGHT";
+            }
+            title.textTruncation = "ENDING";
+            title.maxLines = 3;
+          } else {
+            const headerRow = frame.children.find(isHeaderFrame);
+            if (headerRow) {
+              headerRow.layoutAlign = "STRETCH";
+              headerRow.resize(curW, headerRow.height || 18);
+              headerRow.primaryAxisSizingMode = "FIXED";
+              headerRow.counterAxisSizingMode = "AUTO";
+              headerRow.primaryAxisAlignItems = "MIN";
+              headerRow.counterAxisAlignItems = "MIN";
+            }
+            try {
+              title.resize(curW, title.height || 18);
+            } catch (_) {
+            }
+            title.textAutoResize = "HEIGHT";
+            title.textTruncation = "DISABLED";
+            title.maxLines = null;
+            title.textAlignVertical = "TOP";
+          }
+        }
+      }
+      const shapeVec = frame.children.find(
+        (c) => c.name === "ShapeVector" || c.name === "DiamondShape"
+      );
+      if (shapeVec) {
+        let curBgColor = { r: 1, g: 1, b: 1 };
+        let curStrokeColor = { r: 0.15, g: 0.15, b: 0.18 };
+        let curStrokeWeight = 1.5;
+        if ("fills" in shapeVec && Array.isArray(shapeVec.fills) && shapeVec.fills.length > 0 && shapeVec.fills[0].type === "SOLID") {
+          curBgColor = shapeVec.fills[0].color;
+        }
+        if ("strokes" in shapeVec && Array.isArray(shapeVec.strokes) && shapeVec.strokes.length > 0 && shapeVec.strokes[0].type === "SOLID") {
+          curStrokeColor = shapeVec.strokes[0].color;
+        }
+        if ("strokeWeight" in shapeVec && typeof shapeVec.strokeWeight === "number") {
+          curStrokeWeight = shapeVec.strokeWeight;
+        }
+        shapeVec.remove();
+        attachShapeVectorNode(frame, nType, w, h, curBgColor, curStrokeColor, curStrokeWeight, true);
       }
       const statusBadge = frame.children.find(
         (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
@@ -3449,14 +4024,70 @@
         return;
       }
       await loadRequiredFonts();
+      let connectorRootNode = node;
+      if (node.parent && node.parent.type === "GROUP" && safeGetPluginData2(node.parent, "is_custom_connector") === "true") {
+        connectorRootNode = node.parent;
+      }
+      const currentStartOff = parseFloat(
+        safeGetPluginData2(connectorRootNode, "start_offset") || safeGetPluginData2(node, "start_offset") || "0"
+      ) || 0;
+      const currentEndOff = parseFloat(
+        safeGetPluginData2(connectorRootNode, "end_offset") || safeGetPluginData2(node, "end_offset") || "0"
+      ) || 0;
+      const rawStartOffset = typeof payload.startOffset === "number" ? payload.startOffset : payload.isReversed ? currentEndOff : currentStartOff;
+      const rawEndOffset = typeof payload.endOffset === "number" ? payload.endOffset : payload.isReversed ? currentStartOff : currentEndOff;
       const effectiveStartTerm = payload.isReversed ? payload.endTerminal : payload.startTerminal;
       const effectiveEndTerm = payload.isReversed ? payload.startTerminal : payload.endTerminal;
       const effectiveStartMagnet = payload.isReversed ? payload.targetMagnet : payload.sourceMagnet;
       const effectiveEndMagnet = payload.isReversed ? payload.sourceMagnet : payload.targetMagnet;
-      const effectiveStartOffset = payload.isReversed ? payload.endOffset : payload.startOffset;
-      const effectiveEndOffset = payload.isReversed ? payload.startOffset : payload.endOffset;
-      if (node.type === "CONNECTOR") {
-        const conn = node;
+      const effectiveStartOffset = payload.isReversed ? rawEndOffset : rawStartOffset;
+      const effectiveEndOffset = payload.isReversed ? rawStartOffset : rawEndOffset;
+      if (connectorRootNode.type === "CONNECTOR") {
+        const conn = connectorRootNode;
+        const nativeSourceId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
+        const nativeTargetId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
+        const hasOffset = typeof effectiveStartOffset === "number" && effectiveStartOffset > 0 || typeof effectiveEndOffset === "number" && effectiveEndOffset > 0;
+        if (hasOffset && nativeSourceId && nativeTargetId) {
+          const sourceNode = figma.getNodeById(nativeSourceId);
+          const targetNode = figma.getNodeById(nativeTargetId);
+          if (sourceNode && targetNode) {
+            const colorHex = payload.colorHex || (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === "SOLID" ? rgbToHexColor(conn.strokes[0].color) : "#000000");
+            const strokeWeight = typeof payload.strokeWeight === "number" ? payload.strokeWeight : typeof conn.strokeWeight === "number" ? conn.strokeWeight : 1.5;
+            const strokePattern = payload.strokePattern || (Array.isArray(conn.dashPattern) && conn.dashPattern.length > 0 ? conn.dashPattern[0] <= 2 ? "DOTTED" : "DASHED" : "SOLID");
+            const routingType = payload.routingType || (conn.connectorLineType === "STRAIGHT" ? "STRAIGHT" : "ORTHOGONAL");
+            const startTerm = effectiveStartTerm && effectiveStartTerm !== "MIXED" ? effectiveStartTerm : conn.getPluginData("start_terminal") || "NONE";
+            const endTerm = effectiveEndTerm && effectiveEndTerm !== "MIXED" ? effectiveEndTerm : conn.getPluginData("end_terminal") || "ARROW";
+            const label = payload.hasLabel && payload.label !== void 0 ? payload.label.trim() : conn.text ? conn.text.characters : "";
+            const sourceMag = effectiveStartMagnet || (conn.connectorStart && "magnet" in conn.connectorStart ? conn.connectorStart.magnet : "RIGHT");
+            const targetMag = effectiveEndMagnet || (conn.connectorEnd && "magnet" in conn.connectorEnd ? conn.connectorEnd.magnet : "LEFT");
+            const customConn = await createSingleConnector(
+              sourceNode,
+              sourceMag,
+              targetNode,
+              targetMag,
+              label,
+              colorHex,
+              strokeWeight,
+              routingType,
+              startTerm,
+              endTerm,
+              strokePattern,
+              effectiveStartOffset,
+              effectiveEndOffset
+            );
+            conn.remove();
+            figma.currentPage.selection = [customConn];
+            notify("\uC624\uD504\uC14B \uC801\uC6A9\uC744 \uC704\uD574 \uC9C1\uAC01 \uCEE4\uC2A4\uD140 \uCEE4\uB125\uD130\uB85C \uC790\uB3D9 \uBCC0\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
+            handleSelectionChange();
+            return;
+          }
+        }
+        if (typeof effectiveStartOffset === "number") {
+          conn.setPluginData("start_offset", String(effectiveStartOffset));
+        }
+        if (typeof effectiveEndOffset === "number") {
+          conn.setPluginData("end_offset", String(effectiveEndOffset));
+        }
         if (payload.colorHex) {
           conn.strokes = [{ type: "SOLID", color: hexToRgbColor(payload.colorHex) }];
         }
@@ -3507,26 +4138,24 @@
         } else if (payload.hasLabel === false && conn.text) {
           await safeSetCharacters(conn.text, "");
         }
-        const startEndpointNodeId = payload.isReversed ? conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0 : conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
-        const endEndpointNodeId = payload.isReversed ? conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0 : conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
-        if (effectiveStartMagnet && startEndpointNodeId) {
+        if (effectiveStartMagnet && nativeSourceId) {
           conn.connectorStart = {
-            endpointNodeId: startEndpointNodeId,
+            endpointNodeId: nativeSourceId,
             magnet: effectiveStartMagnet
           };
         }
-        if (effectiveEndMagnet && endEndpointNodeId) {
+        if (effectiveEndMagnet && nativeTargetId) {
           conn.connectorEnd = {
-            endpointNodeId: endEndpointNodeId,
+            endpointNodeId: nativeTargetId,
             magnet: effectiveEndMagnet
           };
         }
       } else {
         let vectorNode = null;
-        if (node.type === "VECTOR") {
-          vectorNode = node;
-        } else if ("findOne" in node) {
-          vectorNode = node.findOne((n) => n.type === "VECTOR");
+        if (connectorRootNode.type === "VECTOR") {
+          vectorNode = connectorRootNode;
+        } else if ("findOne" in connectorRootNode) {
+          vectorNode = connectorRootNode.findOne((n) => n.type === "VECTOR");
         }
         const rgb = payload.colorHex ? hexToRgbColor(payload.colorHex) : void 0;
         if (vectorNode) {
@@ -3547,13 +4176,13 @@
           }
         }
         let labelFrame = null;
-        if (node.type === "GROUP") {
-          labelFrame = node.findOne(
+        if (connectorRootNode.type === "GROUP") {
+          labelFrame = connectorRootNode.findOne(
             (n) => n.name === "ConnectorLabel" || safeGetPluginData2(n, "is_connector_label") === "true"
           );
         }
         if (payload.hasLabel && payload.label) {
-          node.setPluginData("connector_label", payload.label.trim());
+          connectorRootNode.setPluginData("connector_label", payload.label.trim());
           if (labelFrame) {
             labelFrame.visible = true;
             const textNode = labelFrame.findOne((n) => n.type === "TEXT");
@@ -3563,46 +4192,53 @@
             }
           }
         } else if (payload.hasLabel === false) {
-          node.setPluginData("connector_label", "");
+          connectorRootNode.setPluginData("connector_label", "");
           if (labelFrame) {
             labelFrame.visible = false;
           }
         }
         if (payload.colorHex) {
-          node.setPluginData("connector_color", payload.colorHex);
+          connectorRootNode.setPluginData("connector_color", payload.colorHex);
           if (vectorNode) vectorNode.setPluginData("connector_color", payload.colorHex);
         }
         if (payload.strokeWeight) {
-          node.setPluginData("connector_weight", String(payload.strokeWeight));
+          connectorRootNode.setPluginData("connector_weight", String(payload.strokeWeight));
           if (vectorNode) vectorNode.setPluginData("connector_weight", String(payload.strokeWeight));
         }
         if (payload.strokePattern) {
-          node.setPluginData("connector_pattern", payload.strokePattern);
+          connectorRootNode.setPluginData("connector_pattern", payload.strokePattern);
           if (vectorNode) vectorNode.setPluginData("connector_pattern", payload.strokePattern);
         }
         if (payload.routingType) {
-          node.setPluginData("connector_routing", payload.routingType);
+          connectorRootNode.setPluginData("connector_routing", payload.routingType);
           if (vectorNode) vectorNode.setPluginData("connector_routing", payload.routingType);
         }
         if (effectiveStartTerm && effectiveStartTerm !== "MIXED") {
-          node.setPluginData("start_terminal", effectiveStartTerm);
+          connectorRootNode.setPluginData("start_terminal", effectiveStartTerm);
           if (vectorNode) vectorNode.setPluginData("start_terminal", effectiveStartTerm);
         }
         if (effectiveEndTerm && effectiveEndTerm !== "MIXED") {
-          node.setPluginData("end_terminal", effectiveEndTerm);
+          connectorRootNode.setPluginData("end_terminal", effectiveEndTerm);
           if (vectorNode) vectorNode.setPluginData("end_terminal", effectiveEndTerm);
         }
         if (typeof effectiveStartOffset === "number") {
-          node.setPluginData("start_offset", String(effectiveStartOffset));
+          connectorRootNode.setPluginData("start_offset", String(effectiveStartOffset));
           if (vectorNode) vectorNode.setPluginData("start_offset", String(effectiveStartOffset));
         }
         if (typeof effectiveEndOffset === "number") {
-          node.setPluginData("end_offset", String(effectiveEndOffset));
+          connectorRootNode.setPluginData("end_offset", String(effectiveEndOffset));
           if (vectorNode) vectorNode.setPluginData("end_offset", String(effectiveEndOffset));
         }
-        if (effectiveStartMagnet) node.setPluginData("source_magnet", effectiveStartMagnet);
-        if (effectiveEndMagnet) node.setPluginData("target_magnet", effectiveEndMagnet);
-        await updateOrthogonalVectorConnector(node, effectiveStartMagnet, effectiveEndMagnet);
+        if (effectiveStartMagnet) connectorRootNode.setPluginData("source_magnet", effectiveStartMagnet);
+        if (effectiveEndMagnet) connectorRootNode.setPluginData("target_magnet", effectiveEndMagnet);
+        await updateOrthogonalVectorConnector(
+          connectorRootNode,
+          effectiveStartMagnet,
+          effectiveEndMagnet,
+          false,
+          effectiveStartOffset,
+          effectiveEndOffset
+        );
       }
       notify("\uCEE4\uB125\uD130 \uC635\uC158\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
       handleSelectionChange();
@@ -4430,6 +5066,14 @@
             if (flowNode) {
               if (isTitle) {
                 await enforceTitleStandardStyle(textNode, flowNode);
+                if (flowNode.type === "FRAME") {
+                  const descText = flowNode.children.find(
+                    (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
+                  );
+                  if (descText) {
+                    await updateDescTextTruncation(flowNode, descText, flowNode.height);
+                  }
+                }
               } else if (isDesc) {
                 await lockTextFontSizeAndAutoResize(textNode, 11);
               }

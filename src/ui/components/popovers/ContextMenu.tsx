@@ -44,7 +44,7 @@ export function ContextMenu({ onEdit, onDelete }: ContextMenuProps) {
         showToast('기본 스타일은 수정할 수 없습니다.', 'warning');
         return;
       }
-      setActiveModal('add-style');
+      setActiveModal('edit-style');
     } else {
       onEdit?.();
     }

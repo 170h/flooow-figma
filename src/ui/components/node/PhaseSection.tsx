@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { MixedDashChip } from '../shared/icons';
 import { PhasePopover } from '../popovers/PhasePopover';
@@ -29,29 +29,42 @@ export function PhaseSection() {
     contextMenuOpen,
     setLastNodeConfig,
     phases,
+    selectedNodes,
   } = useApp();
 
+  // SizeSection과 완벽히 동일하게 순수 로컬 useState로 관리하여 전역 리렌더링 폭풍 및 즉시 닫힘(깜빡임) 원천 차단
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const btnMoreRef = useRef<HTMLButtonElement>(null);
 
-  // 드롭다운 외부 클릭 시에만 안전하게 닫기 (mousedown 기준, 다른 섹션 드롭다운과 통일)
+  // 전역 closeAllPopovers()에 의한 닫힘 동기화
+  useEffect(() => {
+    if (!phasePopoverOpen && dropdownOpen) {
+      setDropdownOpen(false);
+    }
+  }, [phasePopoverOpen, dropdownOpen]);
+
+  // 드롭다운 외부 클릭 시에만 안전하게 닫기 (mousedown 기준, 다른 섹션 드롭다운과 완벽 통일)
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
         setPhasePopoverOpen(false);
       }
     }
-    if (phasePopoverOpen) {
+    if (dropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [phasePopoverOpen, setPhasePopoverOpen]);
+  }, [dropdownOpen, setPhasePopoverOpen]);
 
   function togglePhasePopover(e: React.MouseEvent) {
     e.stopPropagation();
-    setPhasePopoverOpen(!phasePopoverOpen);
+    const next = !dropdownOpen;
+    setDropdownOpen(next);
+    setPhasePopoverOpen(next);
     setContextMenuOpen(false);
   }
 
@@ -59,6 +72,7 @@ export function PhaseSection() {
     setUIState({ selectedPhase: id });
     setLastNodeConfig({ phase: id, phaseName: name, phaseColor: color });
     parent.postMessage({ pluginMessage: { type: 'SET_PHASE', phaseId: id, phaseName: name, phaseColor: color } }, '*');
+    setDropdownOpen(false);
     setPhasePopoverOpen(false);
   }
 
@@ -77,6 +91,7 @@ export function PhaseSection() {
     setContextMenuPos({ top, left });
     setContextMenuTarget('phase');
     setContextMenuOpen(true);
+    setDropdownOpen(false);
     setPhasePopoverOpen(false);
   }
 
@@ -128,14 +143,15 @@ export function PhaseSection() {
       <div className="section-body">
         <div
           ref={dropdownRef}
-          className="phase-dropdown-wrapper"
+          className="phase-dropdown-wrapper figma-dropdown-wrapper"
           style={{ position: 'relative', width: '100%' }}
         >
           <button
             type="button"
             id="btn-phase-select"
-            className={`phase-dropdown-btn${phasePopoverOpen ? ' active' : ''}`}
+            className={`phase-dropdown-btn${dropdownOpen ? ' active' : ''}`}
             onClick={togglePhasePopover}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="phase-btn-left">
               <div id="current-phase-icon" className="phase-btn-icon-wrap">
@@ -148,7 +164,7 @@ export function PhaseSection() {
             <div
               className="phase-btn-arrow"
               style={{
-                transform: phasePopoverOpen ? 'rotate(180deg)' : 'none',
+                transform: dropdownOpen ? 'rotate(180deg)' : 'none',
                 transition: 'transform 0.15s ease',
                 display: 'flex',
                 alignItems: 'center',
@@ -160,10 +176,14 @@ export function PhaseSection() {
           </button>
 
           {/* Phase 팝오버 메뉴 (인라인 absolute 배치로 뷰포트 계산 오류 및 깜빡임 원천 차단) */}
-          {phasePopoverOpen && (
+          {dropdownOpen && (
             <PhasePopover
               phases={phases}
               onSelectPhase={handleSelectPhase}
+              onClose={() => {
+                setDropdownOpen(false);
+                setPhasePopoverOpen(false);
+              }}
             />
           )}
         </div>

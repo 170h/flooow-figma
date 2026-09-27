@@ -4,7 +4,7 @@
  * 각 아이콘은 React 컴포넌트(named export)로 제공됩니다.
  * 사용법: import { IcPlus, IcMore } from '../shared/icons';
  */
-import React from 'react';
+import React, { useState } from 'react';
 
 // ─── 공통 UI 아이콘 ─────────────────────────────────────────────────────────
 
@@ -98,6 +98,16 @@ export const IcSizeModeFixed = () => (
 export const IcSizeModeHug = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path d="M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z" fill="currentColor"/>
+  </svg>
+);
+
+/** Size 모드 — Fit contents */
+export const IcSizeModeFit = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M9.5 14C9.77614 14 10 14.2239 10 14.5V17.5C10 17.7761 9.77614 18 9.5 18C9.22386 18 9 17.7761 9 17.5V15.707L6.85352 17.8535C6.65825 18.0488 6.34175 18.0488 6.14648 17.8535C5.95122 17.6583 5.95122 17.3417 6.14648 17.1465L8.29297 15H6.5C6.22386 15 6 14.7761 6 14.5C6 14.2239 6.22386 14 6.5 14H9.5ZM17.5 14C17.7761 14 18 14.2239 18 14.5C18 14.7761 17.7761 15 17.5 15H15.707L17.8535 17.1465C18.0488 17.3417 18.0488 17.6583 17.8535 17.8535C17.6583 18.0488 17.3417 18.0488 17.1465 17.8535L15 15.707V17.5C15 17.7761 14.7761 18 14.5 18C14.2239 18 14 17.7761 14 17.5V14.5C14 14.2239 14.2239 14 14.5 14H17.5ZM9.5 6C9.77614 6 10 6.22386 10 6.5V9.5C10 9.77614 9.77614 10 9.5 10H6.5C6.22386 10 6 9.77614 6 9.5C6 9.22386 6.22386 9 6.5 9H8.29297L6.14648 6.85352C5.95122 6.65825 5.95122 6.34175 6.14648 6.14648C6.34175 5.95122 6.65825 5.95122 6.85352 6.14648L9 8.29297V6.5C9 6.22386 9.22386 6 9.5 6ZM17.1465 6.14648C17.3417 5.95122 17.6583 5.95122 17.8535 6.14648C18.0488 6.34175 18.0488 6.65825 17.8535 6.85352L15.707 9H17.5C17.7761 9 18 9.22386 18 9.5C18 9.77614 17.7761 10 17.5 10H14.5C14.2239 10 14 9.77614 14 9.5V6.5C14 6.22386 14.2239 6 14.5 6C14.7761 6 15 6.22386 15 6.5V8.29297L17.1465 6.14648Z"
+      fill="currentColor"
+    />
   </svg>
 );
 
@@ -213,7 +223,7 @@ export const COLOR_MIXED_ICON = (
  * Connect의 컬러 입력 필드와 100% 동일한 둥근 사각 보더 칩([ — ]) 형태
  */
 export const MixedDashChip = ({
-  size = 16,
+  size = 14,
   theme = 'auto',
   style,
   className = '',
@@ -249,6 +259,181 @@ export const MixedDashChip = ({
       }}
     >
       {COLOR_MIXED_ICON}
+    </span>
+  );
+};
+
+/**
+ * 피그마 UI3 공식 스트로크(보더) 아이콘 컴포넌트
+ * - 1. 컬러 채움 면 (Color Fill region, None일 때는 투명)
+ * - 2. 바깥쪽 보더라인 (Outer border line, 상시 유지)
+ * - 3. 안쪽 보더라인 (Inner border line, 상시 유지)
+ * - 4. None 상태 (isNone === true): 우상단 -> 좌하단 피그마 레드(#F24822) 대각선 취소선 오버레이
+ */
+export const StrokeColorIcon = ({
+  color = '#000000',
+  isNone = false,
+  isMixed = false,
+  size = 14,
+  className = '',
+  style,
+  onClick,
+  title,
+}: {
+  color?: string;
+  isNone?: boolean;
+  isMixed?: boolean;
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+  onClick?: (e: React.MouseEvent) => void;
+  title?: string;
+}) => {
+  const formattedColor = color.startsWith('#') ? color : `#${color}`;
+  const fillColor = isNone ? 'none' : isMixed ? '#999999' : formattedColor;
+  const [maskId] = useState(() => `stroke-mask-${Math.random().toString(36).slice(2, 8)}`);
+
+  return (
+    <span
+      className={`figma-color-chip stroke-color-icon ${className}`.trim()}
+      style={{
+        width: size,
+        height: size,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: onClick ? 'pointer' : 'default',
+        boxShadow: 'none',
+        backgroundColor: 'transparent',
+        flexShrink: 0,
+        ...style,
+      }}
+      onClick={onClick}
+      title={title}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="5 5 14 14"
+        fill="none"
+      >
+        {/* 1. 컬러가 들어가는 도넛형 사각 면 (None일 때는 투명) */}
+        <path
+          d="M17 5C18.1046 5 19 5.89543 19 7V17C19 18.1046 18.1046 19 17 19H7C5.89543 19 5 18.1046 5 17V7C5 5.89543 5.89543 5 7 5H17ZM8 8V16H16V8H8Z"
+          fill={fillColor}
+        />
+        {/* 2. 바깥쪽 보더라인 (상시 유지 - 라이트/다크 테마 대응) */}
+        <path
+          className="stroke-icon-line stroke-icon-line-outer"
+          d="M7 5.5H17C17.8284 5.5 18.5 6.17157 18.5 7V17C18.5 17.8284 17.8284 18.5 17 18.5H7C6.17157 18.5 5.5 17.8284 5.5 17V7C5.5 6.17157 6.17157 5.5 7 5.5Z"
+          stroke="var(--color-stroke-icon-line, rgba(0, 0, 0, 0.15))"
+        />
+        {/* 3. 안쪽 보더라인 (상시 유지 - 라이트/다크 테마 대응) */}
+        <mask id={maskId} fill="white">
+          <rect x="7" y="7" width="10" height="10" rx="0.5" />
+        </mask>
+        <rect
+          className="stroke-icon-line stroke-icon-line-inner"
+          x="7"
+          y="7"
+          width="10"
+          height="10"
+          rx="0.5"
+          stroke="var(--color-stroke-icon-line, rgba(0, 0, 0, 0.15))"
+          strokeWidth="2"
+          mask={`url(#${maskId})`}
+        />
+        {/* 4. 보더가 적용되어 있지 않은 경우 (None): 오른쪽 상단 -> 왼쪽 하단 대각선 직선 */}
+        {isNone && (
+          <line
+            x1="18.5"
+            y1="5.5"
+            x2="5.5"
+            y2="18.5"
+            stroke="#F24822"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        )}
+      </svg>
+    </span>
+  );
+};
+
+/**
+ * 피그마 UI3 공식 Fill 컬러칩 컴포넌트
+ * - 규격: 14×14px, border-radius: 2px
+ * - 호버 애니메이션(확대) 지원 (.figma-color-chip)
+ * - 일반 상태: color로 면 채움
+ * - None 상태 (isNone === true): 체커보드 투명 배경 + 우상단 -> 좌하단 피그마 레드(#F24822) 1.5px 대각선 취소선 오버레이
+ * - Mixed 상태 (isMixed === true): 사선 패턴 채움
+ */
+export const FillColorIcon = ({
+  color = '#FFFFFF',
+  isNone = false,
+  isMixed = false,
+  size = 14,
+  className = '',
+  style,
+  onClick,
+  title,
+}: {
+  color?: string;
+  isNone?: boolean;
+  isMixed?: boolean;
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+  onClick?: (e: React.MouseEvent) => void;
+  title?: string;
+}) => {
+  const formattedColor = color.startsWith('#') ? color : `#${color}`;
+
+  return (
+    <span
+      className={`figma-color-chip${isNone ? ' is-none' : ''} ${className}`.trim()}
+      style={{
+        width: size,
+        height: size,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: onClick ? 'pointer' : 'default',
+        backgroundColor: (isMixed || isNone) ? 'transparent' : formattedColor,
+        backgroundImage: isMixed
+          ? 'repeating-linear-gradient(45deg, #ccc, #ccc 2px, transparent 2px, transparent 4px)'
+          : (isNone
+            ? 'repeating-conic-gradient(var(--checker-light, #e1e1e1) 0% 25%, var(--checker-dark, #ffffff) 0% 50%) 50% / 6px 6px'
+            : undefined),
+        overflow: 'hidden',
+        position: 'relative',
+        flexShrink: 0,
+        ...style,
+      }}
+      onClick={onClick}
+      title={title}
+    >
+      {isNone && (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={size}
+          height={size}
+          viewBox="5 5 14 14"
+          fill="none"
+          style={{ position: 'absolute', top: 0, left: 0 }}
+        >
+          <line
+            x1="18.5"
+            y1="5.5"
+            x2="5.5"
+            y2="18.5"
+            stroke="#F24822"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      )}
     </span>
   );
 };

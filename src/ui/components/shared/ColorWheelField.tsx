@@ -95,6 +95,12 @@ export interface ColorWheelFieldProps {
   extraControlPosition?: 'left' | 'right';
   isMixed?: boolean;
   onMixedClear?: () => void;
+  /** 커스텀 칩/아이콘 렌더링 지원 (예: StrokeColorIcon) */
+  customChip?: React.ReactNode;
+  /** None 상태 여부 (예: 스트로크 미사용 시 'None' 표시) */
+  isNone?: boolean;
+  /** None 상태 토글 핸들러 */
+  onNoneToggle?: (none: boolean) => void;
 }
 
 /**
@@ -114,6 +120,9 @@ export function ColorWheelField({
   extraControlPosition = 'right',
   isMixed = false,
   onMixedClear,
+  customChip,
+  isNone = false,
+  onNoneToggle,
 }: ColorWheelFieldProps) {
   const cleanHex = value.replace('#', '').toUpperCase();
   const [colorHex, setColorHex] = useState(cleanHex);
@@ -150,18 +159,37 @@ export function ColorWheelField({
     if (isMixed && onMixedClear) {
       onMixedClear();
     }
-    let val = e.target.value.replace('#', '').toUpperCase().replace(/[^0-9A-F]/g, '');
+    const rawVal = e.target.value;
+    if (rawVal.toLowerCase() === 'none') {
+      if (onNoneToggle) onNoneToggle(true);
+      return;
+    }
+    let val = rawVal.replace('#', '').toUpperCase().replace(/[^0-9A-F]/g, '');
     if (val.length > 6) val = val.slice(0, 6);
     setColorHex(val);
 
     if (val.length === 6) {
       setColorHsv((prev) => hexToHsv(val, prev.h));
       onChange(val);
+      if (isNone && onNoneToggle) {
+        onNoneToggle(false);
+      }
+    } else if (val.length > 0 && isNone && onNoneToggle) {
+      onNoneToggle(false);
     }
   }
 
   function handleHexBlur() {
+    if (isNone) {
+      return;
+    }
     let clean = colorHex.trim();
+    if (clean.toLowerCase() === 'none' || clean === '') {
+      if (onNoneToggle) {
+        onNoneToggle(true);
+      }
+      return;
+    }
     if (clean.length === 3) {
       clean = clean.split('').map((c) => c + c).join('').toUpperCase();
     }
@@ -197,10 +225,13 @@ export function ColorWheelField({
         const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
         setColorHex(nextHex);
         onChange(nextHex);
+        if (isNone && onNoneToggle) {
+          onNoneToggle(false);
+        }
         return nextHsv;
       });
     },
-    [onChange]
+    [onChange, isNone, onNoneToggle]
   );
 
   const startHueDrag = (e: React.MouseEvent) => {
@@ -274,10 +305,13 @@ export function ColorWheelField({
         const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
         setColorHex(nextHex);
         onChange(nextHex);
+        if (isNone && onNoneToggle) {
+          onNoneToggle(false);
+        }
         return nextHsv;
       });
     },
-    [onChange]
+    [onChange, isNone, onNoneToggle]
   );
 
   const startSatValDrag = (e: React.MouseEvent) => {
@@ -326,22 +360,31 @@ export function ColorWheelField({
         {extraControlPosition === 'left' && extraControl}
 
         <div className="conn-modal-hex-box">
-          <span
-            className="conn-modal-hex-chip"
-            style={{
-              backgroundColor: isMixed ? 'transparent' : currentFormattedHex,
-            }}
-          >
-            {isMixed && COLOR_MIXED_ICON}
-          </span>
+          {customChip !== undefined ? (
+            customChip
+          ) : (
+            <span
+              className="conn-modal-hex-chip"
+              style={{
+                backgroundColor: isMixed ? 'transparent' : currentFormattedHex,
+              }}
+            >
+              {isMixed && COLOR_MIXED_ICON}
+            </span>
+          )}
           <input
             type="text"
             size={1}
-            className="conn-modal-hex-input"
-            value={isMixed ? '' : colorHex}
-            placeholder={isMixed ? 'Mixed' : undefined}
-            maxLength={6}
+            className={`conn-modal-hex-input${isNone ? ' is-none' : ''}`}
+            value={isMixed ? '' : (isNone ? 'None' : colorHex)}
+            placeholder={isMixed ? 'Mixed' : (isNone ? 'None' : undefined)}
+            maxLength={isNone ? 6 : 6}
             onChange={handleHexChange}
+            onFocus={(e) => {
+              if (isNone || e.target.value === 'None') {
+                e.target.select();
+              }
+            }}
             onBlur={handleHexBlur}
             onKeyDown={(e) => e.key === 'Enter' && onEnter && onEnter()}
             spellCheck={false}

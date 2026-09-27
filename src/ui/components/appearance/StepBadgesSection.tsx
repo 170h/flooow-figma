@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 import { COLOR_MIXED_ICON, MixedDashChip } from '../shared/icons';
+import { Switch } from '../shared/Switch';
 
 type BadgeColorMode = 'White' | 'Black' | 'Style';
 
@@ -284,15 +285,16 @@ function isHexDark(hex: string): boolean {
     applyStepBadges(start, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
   }
 
-  // 컬러 스와치 렌더러 (컬러 입력필드 컬러칩 스타일과 동일한 투명 보더 반영)
-  function renderColorSwatch(mode: BadgeColorMode, size = 16) {
+  // 컬러 스와치 렌더러 (피그마 UI3 공식 표준 컬러칩 규격: 14x14, R:2px)
+  function renderColorSwatch(mode: BadgeColorMode, size = 14) {
     if (mode === 'White') {
       return (
         <span
+          className="figma-color-chip"
           style={{
             width: size,
             height: size,
-            borderRadius: 3,
+            borderRadius: 2,
             backgroundColor: '#FFFFFF',
             border: 'none',
             boxShadow: 'inset 0 0 0 1px var(--color-chip-border)',
@@ -306,10 +308,11 @@ function isHexDark(hex: string): boolean {
     if (mode === 'Black') {
       return (
         <span
+          className="figma-color-chip"
           style={{
             width: size,
             height: size,
-            borderRadius: 3,
+            borderRadius: 2,
             backgroundColor: '#18181B',
             border: 'none',
             boxShadow: 'inset 0 0 0 1px var(--color-chip-border)',
@@ -323,10 +326,11 @@ function isHexDark(hex: string): boolean {
     // Style: 노드 배경색, 노드에 보더가 있으면 노드 보더 반영, 없으면 컬러 입력필드 컬러칩과 동일하게 투명 보더
     return (
       <span
+        className="figma-color-chip"
         style={{
           width: size,
           height: size,
-          borderRadius: 3,
+          borderRadius: 2,
           backgroundColor: nodeBgColorHex,
           border: hasNodeStroke ? `${Math.min(firstNode?.strokeWeight || 1, 2)}px solid ${firstNode?.strokeColorHex}` : 'none',
           boxShadow: hasNodeStroke ? undefined : 'inset 0 0 0 1px var(--color-chip-border)',
@@ -343,15 +347,12 @@ function isHexDark(hex: string): boolean {
       {/* 상단 헤더: Step Badges + 보라색 토글 스위치 */}
       <div className="section-header toggle-row">
         <span className="section-title">Step Badges</span>
-        <label className="switch">
-          <input
-            type="checkbox"
-            id="toggle-step-badges"
-            checked={isOn}
-            onChange={e => handleToggle(e.target.checked)}
-          />
-          <span className="slider" />
-        </label>
+        <Switch
+          id="toggle-step-badges"
+          checked={isOn}
+          isMixed={summary.isMultiFlowNode && summary.hasStepBadge.isMixed}
+          onChange={handleToggle}
+        />
       </div>
 
       {isOn && (
@@ -451,7 +452,7 @@ function isHexDark(hex: string): boolean {
               >
                 <div className="figma-dropdown-btn-content">
                   <span className="figma-dropdown-current-icon">
-                    {selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 16) : <MixedDashChip size={16} />}
+                    {selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 14) : <MixedDashChip size={14} />}
                   </span>
                   <span className="figma-dropdown-current-text">
                     {selectedBadgeColorMode || 'Mixed'}
@@ -493,7 +494,7 @@ function isHexDark(hex: string): boolean {
                   {(isColorModeMixed || !selectedBadgeColorMode) && (
                     <DropdownMixedItem
                       variant="chip"
-                      chipSize={16}
+                      chipSize={14}
                       onClick={() => setColorDropdownOpen(false)}
                     />
                   )}
@@ -517,9 +518,9 @@ function isHexDark(hex: string): boolean {
                             </svg>
                           )}
                         </span>
-                        {/* 스와치 (24x24 슬롯 내 16px 칩 중앙 정렬) */}
+                        {/* 스와치 (24x24 슬롯 내 14px 표준 칩 중앙 정렬) */}
                         <span className="figma-dropdown-icon-slot">
-                          {renderColorSwatch(opt.id, 16)}
+                          {renderColorSwatch(opt.id, 14)}
                         </span>
                         {/* 라벨 */}
                         <span className="figma-dropdown-label" style={{ fontSize: '11px', fontWeight: active ? 600 : 500 }}>

@@ -140,6 +140,26 @@ export function ConnectSection() {
   const [isStartOffsetMixed, setIsStartOffsetMixed] = useState(false);
   const [isEndOffsetMixed, setIsEndOffsetMixed] = useState(false);
 
+  // 오프셋 실시간 입력 디바운스 타이머
+  const offsetDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (offsetDebounceRef.current) {
+        clearTimeout(offsetDebounceRef.current);
+      }
+    };
+  }, []);
+
+  const debouncedApplyOffset = (customStart?: number, customEnd?: number) => {
+    if (offsetDebounceRef.current) {
+      clearTimeout(offsetDebounceRef.current);
+    }
+    offsetDebounceRef.current = setTimeout(() => {
+      applyCurrentConnectorState(customStart, customEnd);
+    }, 200);
+  };
+
   // 라우팅 및 선 스타일 Mixed 상태
   const isRoutingMixed = summary.isMultiConnector && summary.connectorRoutingType.isMixed;
   const isLinePatternMixed = summary.isMultiConnector && summary.connectorStrokePattern.isMixed;
@@ -574,27 +594,35 @@ export function ConnectSection() {
 
   // 시작 오프셋 기본값(0) 리셋 핸들러
   const handleResetStartOffset = () => {
+    if (offsetDebounceRef.current) clearTimeout(offsetDebounceRef.current);
     setIsStartOffsetMixed(false);
     setStartOffsetInput('0');
     const input = document.getElementById('input-start-offset') as HTMLInputElement | null;
     if (input) {
       input.value = '0';
-      applyCurrentConnectorState();
+      input.placeholder = '';
+      applyCurrentConnectorState(0, undefined);
       input.focus();
       input.select();
+    } else {
+      applyCurrentConnectorState(0, undefined);
     }
   };
 
   // 끝 오프셋 기본값(0) 리셋 핸들러
   const handleResetEndOffset = () => {
+    if (offsetDebounceRef.current) clearTimeout(offsetDebounceRef.current);
     setIsEndOffsetMixed(false);
     setEndOffsetInput('0');
     const input = document.getElementById('input-end-offset') as HTMLInputElement | null;
     if (input) {
       input.value = '0';
-      applyCurrentConnectorState();
+      input.placeholder = '';
+      applyCurrentConnectorState(undefined, 0);
       input.focus();
       input.select();
+    } else {
+      applyCurrentConnectorState(undefined, 0);
     }
   };
 
@@ -723,6 +751,11 @@ export function ConnectSection() {
                 style={{
                   backgroundColor: isColorMixed ? 'transparent' : selectedColor,
                 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nativeColorInputRef.current?.click();
+                }}
+                title={isColorMixed ? 'Mixed' : `Color: ${selectedColor}`}
               >
                 {isColorMixed && COLOR_MIXED_ICON}
               </span>
@@ -948,35 +981,49 @@ export function ConnectSection() {
               placeholder={isStartOffsetMixed ? 'Mixed' : 'Offset'}
               value={isStartOffsetMixed ? '' : startOffsetInput}
               onChange={(e) => {
+                const val = e.target.value;
                 setIsStartOffsetMixed(false);
-                setStartOffsetInput(e.target.value);
+                setStartOffsetInput(val);
                 const inputEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
-                if (inputEl) inputEl.value = e.target.value;
+                if (inputEl) inputEl.value = val;
+
+                if (val.trim() !== '') {
+                  const parsed = parseFloat(val);
+                  if (!isNaN(parsed)) {
+                    debouncedApplyOffset(parsed, undefined);
+                  }
+                }
               }}
               onFocus={(e) => e.currentTarget.select()}
               onClick={(e) => e.currentTarget.select()}
               onBlur={() => {
+                if (offsetDebounceRef.current) clearTimeout(offsetDebounceRef.current);
+                let finalVal: number | undefined = undefined;
                 if (!isStartOffsetMixed && startOffsetInput.trim() !== '') {
                   const parsed = parseFloat(startOffsetInput);
                   if (!isNaN(parsed)) {
+                    finalVal = parsed;
                     setStartOffsetInput(String(parsed));
                     const inputEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
                     if (inputEl) inputEl.value = String(parsed);
                   }
                 }
-                applyCurrentConnectorState();
+                applyCurrentConnectorState(finalVal, undefined);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
+                  if (offsetDebounceRef.current) clearTimeout(offsetDebounceRef.current);
+                  let finalVal: number | undefined = undefined;
                   if (!isStartOffsetMixed && startOffsetInput.trim() !== '') {
                     const parsed = parseFloat(startOffsetInput);
                     if (!isNaN(parsed)) {
+                      finalVal = parsed;
                       setStartOffsetInput(String(parsed));
                       const inputEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
                       if (inputEl) inputEl.value = String(parsed);
                     }
                   }
-                  applyCurrentConnectorState();
+                  applyCurrentConnectorState(finalVal, undefined);
                 }
               }}
             />
@@ -1208,35 +1255,49 @@ export function ConnectSection() {
               placeholder={isEndOffsetMixed ? 'Mixed' : 'Offset'}
               value={isEndOffsetMixed ? '' : endOffsetInput}
               onChange={(e) => {
+                const val = e.target.value;
                 setIsEndOffsetMixed(false);
-                setEndOffsetInput(e.target.value);
+                setEndOffsetInput(val);
                 const inputEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
-                if (inputEl) inputEl.value = e.target.value;
+                if (inputEl) inputEl.value = val;
+
+                if (val.trim() !== '') {
+                  const parsed = parseFloat(val);
+                  if (!isNaN(parsed)) {
+                    debouncedApplyOffset(undefined, parsed);
+                  }
+                }
               }}
               onFocus={(e) => e.currentTarget.select()}
               onClick={(e) => e.currentTarget.select()}
               onBlur={() => {
+                if (offsetDebounceRef.current) clearTimeout(offsetDebounceRef.current);
+                let finalVal: number | undefined = undefined;
                 if (!isEndOffsetMixed && endOffsetInput.trim() !== '') {
                   const parsed = parseFloat(endOffsetInput);
                   if (!isNaN(parsed)) {
+                    finalVal = parsed;
                     setEndOffsetInput(String(parsed));
                     const inputEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
                     if (inputEl) inputEl.value = String(parsed);
                   }
                 }
-                applyCurrentConnectorState();
+                applyCurrentConnectorState(undefined, finalVal);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
+                  if (offsetDebounceRef.current) clearTimeout(offsetDebounceRef.current);
+                  let finalVal: number | undefined = undefined;
                   if (!isEndOffsetMixed && endOffsetInput.trim() !== '') {
                     const parsed = parseFloat(endOffsetInput);
                     if (!isNaN(parsed)) {
+                      finalVal = parsed;
                       setEndOffsetInput(String(parsed));
                       const inputEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
                       if (inputEl) inputEl.value = String(parsed);
                     }
                   }
-                  applyCurrentConnectorState();
+                  applyCurrentConnectorState(undefined, finalVal);
                 }
               }}
             />

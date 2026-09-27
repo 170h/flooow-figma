@@ -7,7 +7,8 @@ import React, {
   useEffect,
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
-import type { ConnectorTerminalType } from '../../types';
+import type { ConnectorTerminalType, DiagramNodeType } from '../../types';
+import { NODE_TYPE_SHAPE_SPECS } from '../../types';
 import type { PhaseData } from '../components/modals/PhaseModal';
 
 // ============================================================
@@ -20,7 +21,7 @@ export interface SizePreset {
   w: number;
   h: number;
   radius?: number;
-  sizeMode?: 'fixed' | 'hug';
+  sizeMode?: 'fixed' | 'hug' | 'fit';
   isDefault?: boolean;
 }
 
@@ -152,7 +153,7 @@ export interface UIState {
 import { DesignFrameItem } from '../../types';
 
 // 모달 타입
-export type ModalType = 'none' | 'phase' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'confirmation' | 'delete' | 'connector-color';
+export type ModalType = 'none' | 'phase' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color';
 
 export interface AppContextValue {
   // 선택 상태
@@ -226,13 +227,20 @@ export interface AppContextValue {
     linkOverrides?: {
       figmaLink?: string;
       clearLinkCache?: boolean;
-    }
+    },
+    overrideNodeType?: DiagramNodeType,
+    overrideSize?: {
+      width?: number;
+      height?: number;
+      cornerRadius?: number;
+    },
+    overrideTitle?: string
   ) => void;
   applyStatusToNode: (status?: string) => void;
   applyElevationToNodes: (level: number | null) => void;
   applyStepBadges: (startNumber?: number, corner?: string, shape?: string, colorMode?: 'White' | 'Black' | 'Style') => void;
   removeStepBadgesFromNodes: () => void;
-  applyCurrentConnectorState: () => void;
+  applyCurrentConnectorState: (customStartOffset?: number, customEndOffset?: number) => void;
   handleMainAction: () => void;
   handleSelectionChange: (count: number, nodes: NodeInfo[], meta: {
     flowNodeCount?: number;
@@ -393,6 +401,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { lastConnectorConfigRef.current = lastConnectorConfig; }, [lastConnectorConfig]);
 
   const setUIState = useCallback((partial: Partial<UIState>) => {
+    uiStateRef.current = { ...uiStateRef.current, ...partial };
     setUIStateRaw(prev => ({ ...prev, ...partial }));
   }, []);
 
@@ -433,6 +442,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const lastNodeTabRef = useRef<string>('node');
 
   const setCurrentTab = useCallback((tab: string) => {
+    if (currentTabRef.current === tab) return;
     closeAllPopovers();
     setCurrentTabState(tab);
     currentTabRef.current = tab;
@@ -454,7 +464,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     linkOverrides?: {
       figmaLink?: string;
       clearLinkCache?: boolean;
-    }
+    },
+    overrideNodeType?: DiagramNodeType,
+    overrideSize?: {
+      width?: number;
+      height?: number;
+      cornerRadius?: number;
+    },
+    overrideTitle?: string
   ) => {
     const nodes = selectedNodesRef.current;
     if (!nodes || nodes.length === 0) return;
@@ -469,13 +486,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const singleLinkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
     const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
 
-    const title = titleEl?.value.trim() || 'Untitled';
-    const isDescOn = descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false);
+    const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
+    const activeTypeBtn = document.querySelector('#node-type-icons .type-icon-btn.active') as HTMLElement | null;
+    const domNodeType = (activeTypeBtn?.dataset.type as DiagramNodeType) || undefined;
+    const effectiveNodeType = overrideNodeType || domNodeType || selectedNodeType;
+    const spec = NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
+    const isDescAllowed = spec?.allowDescription ?? false;
+
+    const currentTitleVal = titleEl?.value.trim();
+    const rawTitle = overrideTitle !== undefined
+      ? overrideTitle
+      : (currentTitleVal || (effectiveNodeType === 'Screen' ? 'Screen' : effectiveNodeType));
+    const title = rawTitle.slice(0, 32);
+    const isDescOn = isDescAllowed && (descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false));
     const desc = isDescOn ? (descEl?.value.trim() || '') : '';
-    const w = parseInt(wEl?.value || '250', 10) || 250;
-    const h = parseInt(hEl?.value || '90', 10) || 90;
-    const radius = parseInt(rEl?.value || '0', 10) || 0;
-    const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
+    const w = overrideSize?.width !== undefined
+      ? overrideSize.width
+      : (!isDescAllowed && spec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250));
+    const h = overrideSize?.height !== undefined
+      ? overrideSize.height
+      : (!isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90));
+    const radius = overrideSize?.cornerRadius !== undefined
+      ? overrideSize.cornerRadius
+      : (!isDescAllowed && spec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0));
+    const isLinkOn = isDescAllowed && (singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn);
     const rawFigmaUrl = linkOverrides?.figmaLink !== undefined
       ? linkOverrides.figmaLink
       : ((isLinkOn && urlEl) ? urlEl.value.trim() : '');
@@ -483,17 +517,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}`
     ) : '';
 
-    const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
     const elevToggleEl = document.getElementById('toggle-elevation') as HTMLInputElement | null;
     const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
     const finalElevation = isElevOn ? selectedElevation : null;
     const finalColor = styleOverrides?.colorHex ?? selectedColor;
-    const finalStrokeWeight = styleOverrides?.strokeWeight;
-    const finalStrokeColor = styleOverrides?.strokeColor;
+    const finalStrokeWeight = styleOverrides?.strokeWeight !== undefined
+      ? styleOverrides.strokeWeight
+      : (uiStateRef.current.selectedStrokeWeight !== undefined ? uiStateRef.current.selectedStrokeWeight : lastNodeConfigRef.current.strokeWeight);
+    const finalStrokeColor = styleOverrides?.strokeColor !== undefined
+      ? styleOverrides.strokeColor
+      : (uiStateRef.current.selectedStrokeColor || lastNodeConfigRef.current.strokeColor);
 
     const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || 'fixed';
 
-    setLastNodeConfig({ width: w, height: h, cornerRadius: radius, nodeType: selectedNodeType, color: finalColor, elevationOn: isElevOn, elevation: selectedElevation, singleLinkUrl: figmaUrl, sizeMode });
+    setLastNodeConfig({
+      width: w,
+      height: h,
+      cornerRadius: radius,
+      nodeType: effectiveNodeType,
+      color: finalColor,
+      strokeWeight: finalStrokeWeight,
+      strokeColor: finalStrokeColor,
+      elevationOn: isElevOn,
+      elevation: selectedElevation,
+      singleLinkUrl: figmaUrl,
+      sizeMode,
+      descriptionOn: isDescOn,
+    });
 
     nodes.forEach(node => {
       parent.postMessage({
@@ -507,7 +557,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             theme: 'light',
             figmaLink: figmaUrl,
             clearLinkCache: linkOverrides?.clearLinkCache,
-            nodeType: selectedNodeType,
+            nodeType: effectiveNodeType,
             colorHex: finalColor,
             strokeWeight: finalStrokeWeight,
             strokeColor: finalStrokeColor,
@@ -660,7 +710,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, '*');
   }, []);
 
-  const applyCurrentConnectorState = useCallback(() => {
+  const applyCurrentConnectorState = useCallback((customStartOffset?: number, customEndOffset?: number) => {
     const nodes = selectedNodesRef.current;
     if (!isConnectorSelectedRef.current || !nodes || nodes.length === 0) return;
 
@@ -686,10 +736,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const startTerm = startTermRaw && startTermRaw !== 'MIXED' ? (startTermRaw as ConnectorTerminalType) : undefined;
     const endTermRaw = endTermEl?.value;
     const endTerm = endTermRaw && endTermRaw !== 'MIXED' ? (endTermRaw as ConnectorTerminalType) : undefined;
+
     const startOffStr = startOffEl?.value;
-    const startOffset = startOffStr !== undefined && startOffStr !== null && startOffStr.trim() !== '' ? parseFloat(startOffStr) : undefined;
+    const startOffset = typeof customStartOffset === 'number'
+      ? customStartOffset
+      : (startOffStr !== undefined && startOffStr !== null && startOffStr.trim() !== '' ? parseFloat(startOffStr) : undefined);
+
     const endOffStr = endOffEl?.value;
-    const endOffset = endOffStr !== undefined && endOffStr !== null && endOffStr.trim() !== '' ? parseFloat(endOffStr) : undefined;
+    const endOffset = typeof customEndOffset === 'number'
+      ? customEndOffset
+      : (endOffStr !== undefined && endOffStr !== null && endOffStr.trim() !== '' ? parseFloat(endOffStr) : undefined);
 
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
 
@@ -720,11 +776,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const handleMainAction = useCallback(() => {
     const nodes = selectedNodesRef.current;
-    const isConn = isConnectorSelectedRef.current || (nodes.length === 1 && nodes[0]?.isConnector);
+    const isConn = isConnectorSelectedRef.current || (nodes.length > 0 && nodes.every(n => n && n.isConnector));
 
     if (isConn || currentTabRef.current === 'connection') {
       // 커넥터 수정 또는 연결
-      if (isConn && nodes.length === 1) {
+      if (isConn && nodes.length >= 1 && nodes.every(n => n && n.isConnector)) {
         applyCurrentConnectorState();
         return;
       }
@@ -781,23 +837,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const stepNumEl = document.getElementById('input-step-number') as HTMLInputElement | null;
     const singleLinkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
 
+    const { selectedColor, selectedElevation, selectedStatus, selectedBadgeCorner, selectedBadgeShape } = uiStateRef.current;
+    const activeTypeBtn = document.querySelector('#node-type-icons .type-icon-btn.active') as HTMLElement | null;
+    const domNodeType = (activeTypeBtn?.dataset.type as DiagramNodeType) || undefined;
+    const selectedNodeType = domNodeType || lastNodeConfigRef.current.nodeType || uiStateRef.current.selectedNodeType || 'Screen';
+    const spec = NODE_TYPE_SHAPE_SPECS[selectedNodeType];
+    const isDescAllowed = spec?.allowDescription ?? false;
+
     const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
-    const title = titleEl?.value.trim() || 'Untitled';
+    const defaultTitle = selectedNodeType === 'Screen' ? 'Screen' : selectedNodeType;
+    const rawTitle = titleEl?.value.trim() || defaultTitle;
+    const title = rawTitle.slice(0, 32); // 타이틀 글자 수 제한 (입력필드 너비 최적화)
     const isDescOn = descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false);
     const desc = isDescOn ? (descEl?.value.trim() || '') : '';
-    const w = parseInt(wEl?.value || '250', 10) || 250;
-    const h = parseInt(hEl?.value || '90', 10) || 90;
-    let radius = parseInt(rEl?.value || '0', 10) || 0;
-    if (radius > 20) {
-      radius = 20;
-      if (rEl) rEl.value = '20';
-      showToast('최대값은 20입니다.', 'warning');
+    const effectiveDesc = isDescAllowed ? desc : '';
+
+    const w = !isDescAllowed && spec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250);
+    const h = !isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90);
+    let radius = !isDescAllowed && spec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0);
+    if (radius > 999) {
+      radius = 999;
+      if (rEl) rEl.value = '999';
+      showToast('최대값은 999입니다.', 'warning');
+    } else if (radius < 0) {
+      radius = 0;
+      if (rEl) rEl.value = '0';
     }
-    const rawFigmaUrl = (singleLinkToggleEl?.checked && urlEl) ? urlEl.value.trim() : '';
+
+    const rawFigmaUrl = (isDescAllowed && singleLinkToggleEl?.checked && urlEl) ? urlEl.value.trim() : '';
     const figmaUrl = rawFigmaUrl ? (
       /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}`
     ) : '';
-    const { selectedColor, selectedElevation, selectedNodeType, selectedStatus, selectedBadgeCorner, selectedBadgeShape } = uiStateRef.current;
 
     const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
     const finalElevation = isElevOn ? selectedElevation : null;
@@ -824,8 +894,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       badgeCorner: selectedBadgeCorner,
       badgeShape: selectedBadgeShape,
       badgeColorMode: uiStateRef.current.selectedBadgeColorMode,
-      singleLinkOn: singleLinkToggleEl?.checked || false, singleLinkUrl: figmaUrl,
-      descriptionOn: isDescOn,
+      singleLinkOn: (isDescAllowed && singleLinkToggleEl?.checked) || false,
+      singleLinkUrl: figmaUrl,
+      descriptionOn: isDescAllowed ? isDescOn : false,
     };
     setLastNodeConfig(newConfig);
 
@@ -833,7 +904,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       parent.postMessage({
         pluginMessage: {
           type: 'UPDATE_FLOW_NODE',
-          payload: { nodeId: nodes[0].id, title, description: desc, width: w, height: h, cornerRadius: radius, theme: 'light', figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
+          payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: 'light', figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
         }
       }, '*');
     } else if (nodes.length >= 2) {
@@ -841,7 +912,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         parent.postMessage({
           pluginMessage: {
             type: 'UPDATE_FLOW_NODE',
-            payload: { nodeId: node.id, title: node.title || title, description: desc, width: w, height: h, cornerRadius: radius, theme: 'light', figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
+            payload: { nodeId: node.id, title: node.title || title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: 'light', figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
           }
         }, '*');
       });
@@ -855,7 +926,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           type: 'CREATE_FLOW_NODE',
           payload: {
             title,
-            description: desc,
+            description: effectiveDesc,
             width: w,
             height: h,
             cornerRadius: radius,
@@ -864,7 +935,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             nodeType: selectedNodeType,
             colorHex: selectedColor,
             elevation: isElevOn ? selectedElevation : undefined,
-            status: statusToggleEl?.checked ? selectedStatus : undefined,
+            status: (!isDescAllowed || !statusToggleEl?.checked) ? undefined : selectedStatus,
             badgeNumber: isStepOn ? targetStepNum : undefined,
             badgePosition: isStepOn ? (selectedBadgeCorner as any) : undefined,
             badgeShape: isStepOn ? (selectedBadgeShape as any) : undefined,

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
+import { Switch } from '../shared/Switch';
+import { normalizeNodeType } from '../../../types';
 
 /**
  * 프로토콜(http, https, figma 등)이 누락된 URL에 자동으로 https://를 붙여 유효한 링크로 정규화합니다.
@@ -19,8 +21,16 @@ function normalizeUrl(url: string): string {
  * Figma Screen Link 섹션 - Node 탭, 토글(캐시 지원) + URL 입력 + X 삭제 버튼
  */
 export function FigmaLinkSection() {
-  const { autoResizeWindow, setLastNodeConfig, lastNodeConfig, selectedNodes, applyCurrentNodeState } = useApp();
+  const { autoResizeWindow, setLastNodeConfig, lastNodeConfig, selectedNodes, applyCurrentNodeState, uiState } = useApp();
   const summary = useSelectionSummary();
+
+  // 스크린(Screen) 노드 타입일 때만 피그마 스크린 링크 허용
+  const isLinkAllowed = summary.isMultiFlowNode
+    ? (!summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === 'Screen')
+    : (selectedNodes.length === 1
+        ? normalizeNodeType(selectedNodes[0]?.flowNodeType) === 'Screen'
+        : normalizeNodeType(uiState.selectedNodeType) === 'Screen');
+
   const [isOn, setIsOn] = useState(false);
   const [url, setUrl] = useState('');
   const cachedUrlRef = useRef<string>('');
@@ -88,6 +98,7 @@ export function FigmaLinkSection() {
   }
 
   function handleToggle(checked: boolean) {
+    if (!isLinkAllowed) return;
     setIsOn(checked);
     autoResizeWindow();
 
@@ -137,28 +148,29 @@ export function FigmaLinkSection() {
     inputRef.current?.focus();
   }
 
+  const effectiveIsOn = isLinkAllowed && isOn;
+
   return (
-    <div className="section-block figma-link-section" style={{ paddingBottom: isOn ? '12px' : '0px' }}>
+    <div className="section-block figma-link-section" style={{ paddingBottom: effectiveIsOn ? '12px' : '0px' }}>
       <div className="section-header toggle-row">
-        <span className="section-title">
+        <span className={`section-title${!isLinkAllowed ? ' disabled' : ''}`}>
           Figma Screen Link
-          {isLinkMixed && (
-            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+          {isLinkAllowed && isLinkMixed && (
+            <span className="section-mixed-label">
               (Mixed)
             </span>
           )}
         </span>
-        <label className="switch">
-          <input
-            type="checkbox"
-            id="toggle-single-figma-link"
-            checked={isOn}
-            onChange={e => handleToggle(e.target.checked)}
-          />
-          <span className="slider" />
-        </label>
+        <Switch
+          id="toggle-single-figma-link"
+          checked={effectiveIsOn}
+          isMixed={isLinkAllowed && isLinkMixed}
+          disabled={!isLinkAllowed}
+          data-tooltip={!isLinkAllowed ? 'Figma Screen Link is disabled for this shape' : undefined}
+          onChange={handleToggle}
+        />
       </div>
-      {isOn && (
+      {effectiveIsOn && (
         <div className="section-body collapsible-body" id="single-figma-link-group">
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
             <input

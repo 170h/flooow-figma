@@ -76,17 +76,90 @@ export interface FrameStatusItem {
 
 export type MagnetPosition = 'TOP' | 'BOTTOM' | 'LEFT' | 'RIGHT';
 
-// 피그마 신규 디자인 9종 노드 분류 타입
+// Figma UI3 6종 노드 분류 타입 및 레거시 호환 타입
 export type DiagramNodeType =
   | 'Screen'
-  | 'Action'
+  | 'Process'
+  | 'Connector'
   | 'Decision'
+  | 'Terminator'
+  | 'Branch'
+  // 레거시 호환 타입
+  | 'Square'
+  | 'Circle'
+  | 'Diamond'
+  | 'Pill'
+  | 'Action'
   | 'System'
   | 'Database'
-  | 'Terminator'
   | 'True'
   | 'False'
-  | 'Error';
+  | 'Error'
+  | 'Capsule';
+
+/**
+ * 다양한 노드 타입 및 레거시 타입을 6종 표준 타입으로 정규화합니다.
+ */
+export function normalizeNodeType(type?: string): DiagramNodeType {
+  if (!type) return 'Screen';
+  switch (type) {
+    case 'Screen':
+      return 'Screen';
+    case 'Process':
+    case 'Square':
+    case 'Action':
+    case 'Error':
+    case 'True':
+    case 'False':
+      return 'Process';
+    case 'Connector':
+    case 'Circle':
+    case 'System':
+    case 'Database':
+      return 'Connector';
+    case 'Decision':
+    case 'Diamond':
+      return 'Decision';
+    case 'Terminator':
+    case 'Pill':
+    case 'Capsule':
+      return 'Terminator';
+    case 'Branch':
+    case 'Subflow':
+      return 'Branch';
+    default:
+      return (type as DiagramNodeType) || 'Screen';
+  }
+}
+
+/**
+ * 노드 타입별 도형 규격 및 디스크립션 허용 여부 명세
+ */
+export interface NodeTypeShapeSpec {
+  width: number;
+  height: number;
+  cornerRadius?: number;
+  allowDescription: boolean;
+  allowFigmaLink: boolean;
+}
+
+export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
+  Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
+  Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+  Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+  Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+  Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
+  Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+  // 레거시 별칭
+  Square: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+  Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+  Diamond: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+  Pill: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
+  Action: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+  System: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+  Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+  Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
+};
 
 // 스텝 배지 코너 위치 및 형태
 export type BadgePosition = 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT';
@@ -129,7 +202,7 @@ export interface FlowNodePayload {
   colorHex?: string;
   strokeWeight?: number;
   strokeColor?: string;
-  sizeMode?: 'fixed' | 'hug';
+  sizeMode?: 'fixed' | 'hug' | 'fit';
 }
 
 export interface ConnectPointsPayload {
@@ -191,7 +264,7 @@ export interface UpdateNodePayload {
   colorHex?: string;
   strokeWeight?: number;
   strokeColor?: string;
-  sizeMode?: 'fixed' | 'hug';
+  sizeMode?: 'fixed' | 'hug' | 'fit';
 }
 
 // 피그마 디자인 프레임 정보
@@ -287,7 +360,7 @@ export interface SelectedNodeInfo {
   width?: number;
   height?: number;
   hugHeight?: number;
-  sizeMode?: 'fixed' | 'hug';
+  sizeMode?: 'fixed' | 'hug' | 'fit';
   status?: WorkflowStatus;
   stepNumber?: number;
   badgeCorner?: string;

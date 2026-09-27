@@ -27,6 +27,16 @@ const HUG_SVG = (
   </svg>
 );
 
+// 피그마 UI3 공식 24×24px Fit contents 아이콘
+const FIT_SVG = (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M9.5 14C9.77614 14 10 14.2239 10 14.5V17.5C10 17.7761 9.77614 18 9.5 18C9.22386 18 9 17.7761 9 17.5V15.707L6.85352 17.8535C6.65825 18.0488 6.34175 18.0488 6.14648 17.8535C5.95122 17.6583 5.95122 17.3417 6.14648 17.1465L8.29297 15H6.5C6.22386 15 6 14.7761 6 14.5C6 14.2239 6.22386 14 6.5 14H9.5ZM17.5 14C17.7761 14 18 14.2239 18 14.5C18 14.7761 17.7761 15 17.5 15H15.707L17.8535 17.1465C18.0488 17.3417 18.0488 17.6583 17.8535 17.8535C17.6583 18.0488 17.3417 18.0488 17.1465 17.8535L15 15.707V17.5C15 17.7761 14.7761 18 14.5 18C14.2239 18 14 17.7761 14 17.5V14.5C14 14.2239 14.2239 14 14.5 14H17.5ZM9.5 6C9.77614 6 10 6.22386 10 6.5V9.5C10 9.77614 9.77614 10 9.5 10H6.5C6.22386 10 6 9.77614 6 9.5C6 9.22386 6.22386 9 6.5 9H8.29297L6.14648 6.85352C5.95122 6.65825 5.95122 6.34175 6.14648 6.14648C6.34175 5.95122 6.65825 5.95122 6.85352 6.14648L9 8.29297V6.5C9 6.22386 9.22386 6 9.5 6ZM17.1465 6.14648C17.3417 5.95122 17.6583 5.95122 17.8535 6.14648C18.0488 6.34175 18.0488 6.65825 17.8535 6.85352L15.707 9H17.5C17.7761 9 18 9.22386 18 9.5C18 9.77614 17.7761 10 17.5 10H14.5C14.2239 10 14 9.77614 14 9.5V6.5C14 6.22386 14.2239 6 14.5 6C14.7761 6 15 6.22386 15 6.5V8.29297L17.1465 6.14648Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
 // 피그마 UI3 공식 24×24px Corner Radius 아이콘 (icon.24.radius)
 const RADIUS_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -75,7 +85,7 @@ export function SizeModal({ mode, editingPreset, onClose }: SizeModalProps) {
   const [w, setW] = useState(375);
   const [h, setH] = useState(812);
   const [radius, setRadius] = useState(0);
-  const [sizeMode, setSizeMode] = useState<'fixed' | 'hug'>('fixed');
+  const [sizeMode, setSizeMode] = useState<'fixed' | 'hug' | 'fit'>('fixed');
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -90,7 +100,7 @@ export function SizeModal({ mode, editingPreset, onClose }: SizeModalProps) {
       setW(lastNodeConfig.width || 375);
       setH(lastNodeConfig.height || 812);
       setRadius(lastNodeConfig.cornerRadius || 0);
-      setSizeMode((lastNodeConfig.sizeMode as 'fixed' | 'hug') || 'fixed');
+      setSizeMode((lastNodeConfig.sizeMode as 'fixed' | 'hug' | 'fit') || 'fixed');
     } else {
       if (currentPreset) {
         setName(currentPreset.name || 'Custom');
@@ -303,10 +313,10 @@ export function SizeModal({ mode, editingPreset, onClose }: SizeModalProps) {
               >
                 <div className="size-dropdown-left" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {sizeMode === 'hug' ? HUG_SVG : FIXED_SVG}
+                    {sizeMode === 'hug' ? HUG_SVG : sizeMode === 'fit' ? FIT_SVG : FIXED_SVG}
                   </span>
                   <span id={`text-${mode}-size-mode`} style={{ fontSize: 11, color: '#ffffff' }}>
-                    {sizeMode === 'fixed' ? 'Fixed height' : 'Hug contents'}
+                    {sizeMode === 'fixed' ? 'Fixed height' : sizeMode === 'fit' ? 'Fit contents' : 'Hug contents'}
                   </span>
                 </div>
                 <svg
@@ -416,6 +426,41 @@ export function SizeModal({ mode, editingPreset, onClose }: SizeModalProps) {
                       {HUG_SVG}
                     </span>
                     <span style={{ flex: 1, whiteSpace: 'nowrap', letterSpacing: 0 }}>Hug contents</span>
+                  </div>
+
+                  {/* Fit contents 항목 */}
+                  <div
+                    onClick={() => {
+                      setSizeMode('fit');
+                      setDropdownOpen(false);
+                    }}
+                    style={{
+                      height: 28,
+                      padding: '0 6px',
+                      borderRadius: 5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      cursor: 'pointer',
+                      fontSize: 11,
+                      color: '#ffffff',
+                      background: sizeMode === 'fit' ? '#8C4CF6' : 'transparent',
+                      transition: 'background 0.12s, color 0.12s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#8C4CF6';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = sizeMode === 'fit' ? '#8C4CF6' : 'transparent';
+                    }}
+                  >
+                    <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {sizeMode === 'fit' && CHECK_SVG}
+                    </span>
+                    <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {FIT_SVG}
+                    </span>
+                    <span style={{ flex: 1, whiteSpace: 'nowrap', letterSpacing: 0 }}>Fit contents</span>
                   </div>
                 </div>
               )}

@@ -27,19 +27,35 @@
      - 마름모는 피그마 내장 Cap 대신 닫힌 루프와 Region Fill을 사용하는 커스텀 벡터 네트워크로 렌더링되어야 하며, 상기 반지름 수식을 유지해야 사각형(6px) 및 원형(직경 6px)과 시각적으로 동등한 크기로 보입니다.
 
 ## 5. UI 타이포그래피 및 폰트 굵기(Font Weight) 엄격 준수 규칙
-- **정의된 표준 굵기 외 임의 사용 절대 금지**:
-  - 프로젝트 UI에 사용할 수 있는 폰트 굵기는 아래의 **3가지 표준 토큰**으로 엄격히 제한됩니다. 임의의 중간값(450, 550 등)이나 다른 수치는 사용할 수 없습니다.
-    1. **`400` (Regular / `--font-weight-regular`)**:
-       - 모든 입력 필드(`input`, `textarea`, `placeholder`, `Mixed` 상태), 일반 본문 텍스트, 설명문, 드롭다운 기본 항목 텍스트
-    2. **`500` (Medium / `--font-weight-medium`)**:
-       - 섹션 타이틀/헤더 라벨, 버튼 내부 텍스트, 칩 텍스트, 스크러버 라벨(W, H, R 등)
-    3. **`600` (Semi-bold / `--font-weight-semibold`)**:
+- **피그마 UI3 공식 폰트 웨이트 토큰(`font / weight`) 단일 체계**:
+  - 프로젝트 UI에 사용할 수 있는 폰트 굵기는 피그마 공식 디자인 시스템(UI3) 토큰에 따라 **450**과 **550**으로만 엄격히 정의되고 사용되어야 합니다.
+    1. **`default` (450 / `--font-weight-default`)**:
+       - 일반 본문 텍스트, 설명문, 모든 입력 필드(`input`, `textarea`, `placeholder`, `Mixed` 상태), 드롭다운 기본 항목 텍스트
+    2. **`medium` (450 / `--font-weight-medium`)**:
+       - 기본 레이블 및 텍스트 항목
+    3. **`strong` (550 / `--font-weight-strong`)**:
+       - 섹션 타이틀 및 헤더 라벨(`.section-title`, `.toggle-row-label`), 버튼 내부 텍스트, 칩 텍스트, 스크러버 라벨(W, H, R 등)
+    4. **`heavy` (550 / `--font-weight-heavy`)**:
        - 모달 메인 헤더 타이틀, 강조 라벨, 주요 CTA 버튼
 - **인라인 `style={{ fontWeight: ... }}` 임의 사용 엄격 금지**:
   - JSX 컴포넌트 내에 `fontWeight: 500` 등의 인라인 스타일을 임의로 주입하지 마십시오.
   - 폰트 굵기는 반드시 `styles.css`의 정규 클래스 또는 CSS 변수(`var(--font-weight-*)`)를 통해서만 통제되어야 합니다.
-- **입력 필드(Input/Textarea) 및 Mixed 상태 굵기 불변 규칙**:
-  - 모든 `input`, `textarea` 및 `placeholder`(특히 `Mixed` 상태)의 폰트 굵기는 반드시 **`400 (Regular)`**이어야 합니다. 입력 필드에 `500` 이상의 두께를 부여하면 텍스트가 번져 보이거나 드롭다운 등 주변 UI3 컴포넌트와 시각적 부피감 불일치가 발생하므로 엄격히 금지합니다.
+- **입력 필드(Input/Textarea) 및 Mixed 상태 굵기 규칙**:
+  - 모든 `input`, `textarea` 및 `placeholder`(특히 `Mixed` 상태)의 폰트 굵기는 UI3 기본 토큰인 **`450 (default)`**을 준수합니다.
+
+## 6. 드롭다운 및 팝오버 렌더링/이벤트 격리 영구 보존 규칙
+- **로컬 `useState` 1차 격리 및 동기화 원칙**:
+  - 모든 드롭다운(Phase, Size, Color, Terminal 등)은 컴포넌트 내부의 로컬 `useState`로 열림/닫힘을 1차 관리해야 하며, 전역 Context 상태의 직접 의존으로 인한 App 전체 리렌더링 폭풍을 차단해야 합니다.
+  - 전역 닫기(`closeAllPopovers()`)와는 `useEffect`를 통해 양방향으로 안전하게 동기화합니다.
+- **스크롤바 표시 완전 차단 및 4px 레이아웃 시프트 방지 원칙**:
+  - `.tab-panels`의 스크롤바는 `scrollbar-width: none` 및 `::-webkit-scrollbar { display: none !important; width: 0 !important; }`로 완전 숨김 처리되어야 합니다.
+  - 드롭다운/팝오버가 열렸을 때 스크롤바가 깜빡이며 생겨나 패널 폭을 좁히고 전체 UI를 좌측으로 밀어내는 레이아웃 시프트(Layout Shift)를 원천 차단합니다.
+- **`useAutoResize` 창 크기 계산 간섭 완전 배제 원칙**:
+  - 플로팅 팝오버/메뉴(`.popover-phase-select`, `.figma-dropdown-menu`, `.popover-context-menu`, `.size-mode-menu-popover`)는 플러그인 창 높이 계산(`getPluginIdealHeight`)에서 100% 제외되어야 합니다.
+  - 드롭다운이 열렸다고 해서 `scrollHeight`가 팽창하여 피그마 윈도우 창 크기가 덜컥거리며 리사이즈(Flicker)되지 않도록 순수 정적 콘텐츠 요소들의 높이만 산출해야 합니다.
+- **전역 클릭 및 외부 클릭(Click-Outside) 이벤트 전파 보호 규칙**:
+  - 모든 드롭다운 래퍼에는 반드시 `.figma-dropdown-wrapper` 클래스를 부여하고, `App.tsx`의 `handleRootClick` 셀렉터에 등록하여 드롭다운 클릭 시 바깥 클릭으로 오인되어 즉시 닫히는 현상을 방지합니다.
+  - 외부 클릭 감지(`mousedown`)는 `dropdownRef.current.contains(e.target)`을 철저히 검사하여 드롭다운 내부 클릭이 보호되어야 합니다.
 
 
 

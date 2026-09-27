@@ -43,7 +43,7 @@ export interface DropdownMixedItemProps {
  */
 export function DropdownMixedItem({
   variant,
-  chipSize = 16,
+  chipSize = 14,
   onClick,
   className = '',
   style,

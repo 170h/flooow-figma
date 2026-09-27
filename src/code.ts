@@ -13,6 +13,8 @@ import {
   ConnectorRoutingType,
   ConnectorTerminalType,
   DiagramNodeType,
+  normalizeNodeType,
+  NODE_TYPE_SHAPE_SPECS,
   DesignFrameItem,
 } from './types';
 import {
@@ -639,7 +641,9 @@ async function updateFigmaLinkBadge(
   badge.appendChild(linkText);
 
   // 3. 카드 내 하단 왼쪽 절대 배치
-  badge.layoutPositioning = 'ABSOLUTE';
+  if (card.layoutMode !== 'NONE') {
+    badge.layoutPositioning = 'ABSOLUTE';
+  }
   badge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
   badge.x = 16;
   badge.y = card.height - badge.height - 10;
@@ -1148,15 +1152,21 @@ async function handleSelectionChange() {
         if (textChild) textChild.locked = true;
       }
 
-      // 프레임 레이아웃 모드 및 정렬 방향 보장
+      // 프레임 레이아웃 모드 및 정렬 방향 보장 (도형 노드는 중앙 정렬, 일반 화면 노드는 좌측/상단 정렬)
       if (frame.layoutMode !== 'VERTICAL') {
         frame.layoutMode = 'VERTICAL';
       }
-      if (frame.counterAxisAlignItems !== 'MIN') {
-        frame.counterAxisAlignItems = 'MIN';
+      const rawNodeType = safeGetPluginData(frame, 'node_type');
+      const nType = normalizeNodeType(rawNodeType);
+      const nSpec = NODE_TYPE_SHAPE_SPECS[nType] || NODE_TYPE_SHAPE_SPECS.Screen;
+      const isShape = !nSpec.allowDescription;
+
+      const targetAlign = isShape ? 'CENTER' : 'MIN';
+      if (frame.counterAxisAlignItems !== targetAlign) {
+        frame.counterAxisAlignItems = targetAlign;
       }
-      if (frame.primaryAxisAlignItems !== 'MIN') {
-        frame.primaryAxisAlignItems = 'MIN';
+      if (frame.primaryAxisAlignItems !== targetAlign) {
+        frame.primaryAxisAlignItems = targetAlign;
       }
 
       // 타이틀 텍스트 서식(블릿, 링크, 볼드, 취소선 등) 차단 및 표준 규격 검사
@@ -1234,6 +1244,11 @@ async function handleSelectionChange() {
         const savedEndTerm = node.getPluginData('end_terminal') as ConnectorTerminalType;
         connectorStartTerminal = savedStartTerm || mapCapToTerm(String(conn.connectorStartStrokeCap || 'NONE'));
         connectorEndTerminal = savedEndTerm || mapCapToTerm(String(conn.connectorEndStrokeCap || 'NONE'));
+
+        const rawStartOff = node.getPluginData('start_offset');
+        const rawEndOff = node.getPluginData('end_offset');
+        connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
+        connectorEndOffset = rawEndOff ? parseFloat(rawEndOff) : 0;
 
         // Figma 네이티브 커넥터의 연결 엔드포인트 노드 정보 확인
         let sourceEndpointNode: SceneNode | null = null;
@@ -1405,13 +1420,22 @@ async function handleSelectionChange() {
     const flowNodeType: DiagramNodeType | undefined = isFlowNode ? (savedType || 'Screen') : undefined;
     const savedStatus = isFlowNode ? (node.getPluginData('workflow_status') as WorkflowStatus) : undefined;
 
-    let sizeMode: 'fixed' | 'hug' = 'fixed';
+    let sizeMode: 'fixed' | 'hug' | 'fit' = 'fixed';
     let hugHeight = Math.round(node.height);
 
     if (isFlowNode && node.type === 'FRAME') {
       const frame = node as FrameNode;
-      const isAuto = frame.primaryAxisSizingMode === 'AUTO';
-      sizeMode = isAuto ? 'hug' : 'fixed';
+      const isAutoPrimary = frame.primaryAxisSizingMode === 'AUTO';
+      const isAutoCounter = frame.counterAxisSizingMode === 'AUTO';
+      const savedSizeMode = frame.getPluginData('size_mode');
+
+      if (savedSizeMode === 'fit' || (isAutoPrimary && isAutoCounter)) {
+        sizeMode = 'fit';
+      } else if (isAutoPrimary) {
+        sizeMode = 'hug';
+      } else {
+        sizeMode = 'fixed';
+      }
 
       // Hug contents 높이: status 유무(패딩 36px vs 16px)를 항상 정확하게 반영하여 실시간 산출
       hugHeight = calculateCardHugHeight(frame);
@@ -1421,19 +1445,41 @@ async function handleSelectionChange() {
     let nodeStrokeColor: string | undefined;
     let nodeStrokeWeight: number | undefined;
 
-    if ('fills' in node && Array.isArray(node.fills) && node.fills.length > 0) {
-      const firstFill = node.fills[0];
-      if (firstFill.type === 'SOLID') {
-        nodeFillColor = rgbToHexColor(firstFill.color);
+    if (isFlowNode && node.type === 'FRAME') {
+      const frame = node as FrameNode;
+      const shapeVector = frame.children.find(
+        (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && c.type === 'VECTOR'
+      ) as VectorNode | undefined;
+      if (shapeVector) {
+        if (Array.isArray(shapeVector.fills) && shapeVector.fills.length > 0 && shapeVector.fills[0].type === 'SOLID') {
+          nodeFillColor = rgbToHexColor(shapeVector.fills[0].color);
+        }
+        if (Array.isArray(shapeVector.strokes) && shapeVector.strokes.length > 0 && shapeVector.strokes[0].type === 'SOLID') {
+          nodeStrokeColor = rgbToHexColor(shapeVector.strokes[0].color);
+        }
+        if (typeof shapeVector.strokeWeight === 'number') {
+          nodeStrokeWeight = shapeVector.strokeWeight;
+        }
       }
     }
-    if ('strokes' in node && Array.isArray(node.strokes) && node.strokes.length > 0) {
+
+    if (!nodeFillColor && 'fills' in node && Array.isArray(node.fills)) {
+      if (node.fills.length === 0) {
+        nodeFillColor = 'None';
+      } else {
+        const firstFill = node.fills[0];
+        if (firstFill.type === 'SOLID') {
+          nodeFillColor = rgbToHexColor(firstFill.color);
+        }
+      }
+    }
+    if (!nodeStrokeColor && 'strokes' in node && Array.isArray(node.strokes) && node.strokes.length > 0) {
       const firstStroke = node.strokes[0];
       if (firstStroke.type === 'SOLID') {
         nodeStrokeColor = rgbToHexColor(firstStroke.color);
       }
     }
-    if ('strokeWeight' in node && typeof (node as any).strokeWeight === 'number') {
+    if (nodeStrokeWeight === undefined && 'strokeWeight' in node && typeof (node as any).strokeWeight === 'number') {
       nodeStrokeWeight = (node as any).strokeWeight;
     }
     if (isConnector && typeof connectorStrokeWeight === 'number') {
@@ -1442,6 +1488,12 @@ async function handleSelectionChange() {
     let cornerRadius = 0;
     if ('cornerRadius' in node && typeof (node as any).cornerRadius === 'number') {
       cornerRadius = Math.round((node as any).cornerRadius);
+    }
+    if (isFlowNode && flowNodeType) {
+      const nSpec = NODE_TYPE_SHAPE_SPECS[flowNodeType];
+      if (nSpec && typeof nSpec.cornerRadius === 'number' && nSpec.cornerRadius > 0 && cornerRadius === 0) {
+        cornerRadius = nSpec.cornerRadius;
+      }
     }
 
     const pos = getNodeTopLeft(node);
@@ -1744,15 +1796,66 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
       try { textNode.hyperlink = null; } catch (_) {}
     }
 
-    // 4. 텍스트 박스 리사이즈 모드 및 말줄임 고정
-    if (textNode.textAutoResize !== 'HEIGHT') {
-      textNode.textAutoResize = 'HEIGHT';
+    // 4. 텍스트 박스 리사이즈 모드 및 정렬/말줄임 고정 (도형 노드는 중앙 정렬)
+    const rawNodeType = flowNode ? safeGetPluginData(flowNode, 'node_type') : '';
+    const nType = normalizeNodeType(rawNodeType);
+    const nSpec = NODE_TYPE_SHAPE_SPECS[nType] || NODE_TYPE_SHAPE_SPECS.Screen;
+    const isShape = !nSpec.allowDescription;
+
+    if (isShape) {
+      textNode.textAlignHorizontal = 'CENTER';
+      textNode.textAlignVertical = 'CENTER';
+      textNode.layoutAlign = 'STRETCH';
+      try { textNode.lineHeight = { value: 18, unit: 'PIXELS' }; } catch (_) {}
+
+      if (nType === 'Decision') {
+        const pCard = flowNode as FrameNode | undefined;
+        const pl = (pCard && typeof pCard.paddingLeft === 'number') ? pCard.paddingLeft : 24;
+        const pr = (pCard && typeof pCard.paddingRight === 'number') ? pCard.paddingRight : 24;
+        const curW = pCard ? Math.max(50, pCard.width - pl - pr) : Math.max(50, textNode.width);
+        try { textNode.resize(curW, 54); } catch (_) {}
+        try { textNode.maxHeight = 54; } catch (_) {}
+        try { textNode.textAutoResize = 'TRUNCATE'; } catch (_) {}
+        try { textNode.textTruncation = 'ENDING'; } catch (_) {}
+        try { textNode.maxLines = 3; } catch (_) {}
+      } else {
+        try { textNode.maxHeight = null; } catch (_) {}
+        if (textNode.textAutoResize !== 'HEIGHT') {
+          textNode.textAutoResize = 'HEIGHT';
+        }
+        textNode.textTruncation = 'ENDING';
+        textNode.maxLines = 3;
+      }
+    } else {
+      const pCard = flowNode as FrameNode | undefined;
+      const pl = (pCard && typeof pCard.paddingLeft === 'number') ? pCard.paddingLeft : 16;
+      const pr = (pCard && typeof pCard.paddingRight === 'number') ? pCard.paddingRight : 16;
+      const curW = pCard ? Math.max(50, pCard.width - pl - pr) : Math.max(50, textNode.width);
+
+      if (textNode.parent && textNode.parent.type === 'FRAME' && textNode.parent.name === 'Header') {
+        const headerFrame = textNode.parent as FrameNode;
+        headerFrame.layoutAlign = 'STRETCH';
+        headerFrame.resize(curW, headerFrame.height || 18);
+        headerFrame.primaryAxisSizingMode = 'FIXED';
+        headerFrame.counterAxisSizingMode = 'AUTO';
+        headerFrame.primaryAxisAlignItems = 'MIN';
+        headerFrame.counterAxisAlignItems = 'MIN';
+      }
+
+      try { textNode.resize(curW, textNode.height || 18); } catch (_) {}
+      if (textNode.textAutoResize !== 'HEIGHT') {
+        textNode.textAutoResize = 'HEIGHT';
+      }
+      textNode.textAlignHorizontal = 'LEFT';
+      textNode.textAlignVertical = 'TOP';
+      try { textNode.lineHeight = { value: 18, unit: 'PIXELS' }; } catch (_) {}
+      if (textNode.layoutGrow !== 1) {
+        textNode.layoutGrow = 1;
+      }
+      textNode.layoutAlign = 'STRETCH';
+      textNode.textTruncation = 'DISABLED';
+      textNode.maxLines = null;
     }
-    if (textNode.layoutGrow !== 1) {
-      textNode.layoutGrow = 1;
-    }
-    textNode.textTruncation = 'ENDING';
-    textNode.maxLines = 1;
 
     // 5. 카드 레이어 이름 동기화
     if (flowNode && 'name' in flowNode && textNode.characters.trim()) {
@@ -1825,15 +1928,17 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.minHeight = height;
   card.maxHeight = height;
 
-  // 헤더 행 (타이틀 + 상태 뱃지 수용 공간)
+  // 헤더 행 (타이틀 수용 공간)
+  const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
   const headerRow = figma.createFrame();
   headerRow.name = 'Header';
   headerRow.layoutMode = 'HORIZONTAL';
   headerRow.layoutAlign = 'STRETCH';
-  headerRow.primaryAxisSizingMode = 'AUTO';
+  headerRow.resize(availW, 18);
+  headerRow.primaryAxisSizingMode = 'FIXED';
   headerRow.counterAxisSizingMode = 'AUTO';
-  headerRow.primaryAxisAlignItems = 'CENTER';
-  headerRow.counterAxisAlignItems = 'CENTER';
+  headerRow.primaryAxisAlignItems = 'MIN';
+  headerRow.counterAxisAlignItems = 'MIN';
   headerRow.itemSpacing = 8;
   headerRow.fills = [];
 
@@ -1841,12 +1946,17 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   titleText.name = 'TitleText';
   titleText.fontName = { family: 'Inter', style: 'Bold' };
   titleText.fontSize = 13;
+  titleText.lineHeight = { value: 18, unit: 'PIXELS' };
   titleText.characters = title;
   titleText.fills = [titleFill];
   titleText.layoutGrow = 1;
+  titleText.layoutAlign = 'STRETCH';
+  titleText.resize(availW, 18);
   titleText.textAutoResize = 'HEIGHT';
-  titleText.textTruncation = 'ENDING';
-  titleText.maxLines = 1;
+  titleText.textTruncation = 'DISABLED';
+  titleText.maxLines = null;
+  titleText.textAlignHorizontal = 'LEFT';
+  titleText.textAlignVertical = 'TOP';
   titleText.setPluginData('node_role', 'title');
   headerRow.appendChild(titleText);
 
@@ -1901,7 +2011,6 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.appendChild(descText);
 
   descText.layoutAlign = 'STRETCH';
-  const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
   descText.resize(availW, descText.height);
   descText.textAutoResize = 'HEIGHT';
   await updateDescTextTruncation(card, descText, height, desc);
@@ -2013,6 +2122,105 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   return card;
 }
 
+/**
+ * 피그잼(FigJam)에서 FrameNode는 cornerRadius를 렌더링하지 않으므로,
+ * Circle, Diamond, Capsule 형태는 프레임 내부에 정밀한 커스텀 벡터 배경을 배치하여
+ * 화이트보드 캔버스에서도 완벽한 도형 비주얼 및 4방위 자석 커넥터 스냅을 100% 보장합니다.
+ */
+function getShapeVectorData(nodeType: DiagramNodeType, w: number, h: number): string | null {
+  if (nodeType === 'Connector' || nodeType === 'Circle') {
+    // 120 x 120 등 타원/원 완벽 4분원 큐빅 베지어 경로 (kappa = 0.55228475)
+    const rx = w / 2;
+    const ry = h / 2;
+    const kx = rx * 0.55228475;
+    const ky = ry * 0.55228475;
+    return `M ${rx} 0 C ${rx + kx} 0 ${w} ${ry - ky} ${w} ${ry} C ${w} ${ry + ky} ${rx + kx} ${h} ${rx} ${h} C ${rx - kx} ${h} 0 ${ry + ky} 0 ${ry} C 0 ${ry - ky} ${rx - kx} 0 ${rx} 0 Z`;
+  }
+  if (nodeType === 'Decision' || nodeType === 'Diamond') {
+    // 140 x 140 완벽 마름모 경로
+    return `M ${w / 2} 0 L ${w} ${h / 2} L ${w / 2} ${h} L 0 ${h / 2} Z`;
+  }
+  if (nodeType === 'Terminator' || nodeType === 'Pill' || nodeType === 'Capsule') {
+    // 180 x 90 완벽 캡슐(알약) 경로 (양쪽 반원 + 중앙 직사각형)
+    const r = h / 2;
+    const k = r * 0.55228475;
+    const straightEnd = Math.max(r, w - r);
+    return `M ${r} 0 L ${straightEnd} 0 C ${straightEnd + k} 0 ${w} ${r - k} ${w} ${r} C ${w} ${r + k} ${straightEnd + k} ${h} ${straightEnd} ${h} L ${r} ${h} C ${r - k} ${h} 0 ${r + k} 0 ${r} C 0 ${r - k} ${r - k} 0 ${r} 0 Z`;
+  }
+  return null;
+}
+
+/**
+ * Figma 공식 SVG 파서(createNodeFromSvg)를 통해 Circle, Diamond, Capsule 형태의
+ * 네이티브 벡터 노드를 정밀하게 생성합니다.
+ * 피그잼 화이트보드 캔버스에서도 100% 렌더링되며, 4방위 자석 커넥터 스냅과 프레임 정렬을 온전히 보장합니다.
+ */
+function createShapeVectorNode(
+  nodeType: DiagramNodeType,
+  w: number,
+  h: number,
+  bgColor: RGB,
+  strokeColor: RGB,
+  strokeWeight: number
+): VectorNode | FrameNode | null {
+  const pathD = getShapeVectorData(nodeType, w, h);
+  if (!pathD) return null;
+
+  const bgHex = rgbToHexColor(bgColor);
+  const strokeHex = rgbToHexColor(strokeColor);
+  const sw = typeof strokeWeight === 'number' && strokeWeight >= 0 ? strokeWeight : 1.5;
+  const strokeAttr = sw > 0 ? `stroke="${strokeHex}" stroke-width="${sw}"` : '';
+
+  const svgStr = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${pathD}" fill="${bgHex}" ${strokeAttr}/></svg>`;
+
+  try {
+    const imported = figma.createNodeFromSvg(svgStr);
+    const vector = imported.children.find((c) => c.type === 'VECTOR') as VectorNode | undefined;
+    let targetNode: VectorNode | FrameNode = imported;
+    if (vector) {
+      targetNode = vector;
+    }
+    targetNode.name = 'ShapeVector';
+    return targetNode;
+  } catch (err) {
+    console.error('createShapeVectorNode error:', err);
+    return null;
+  }
+}
+
+/**
+ * 생성된 커스텀 SVG 도형 노드를 프레임 카드에 ABSOLUTE로 완벽하게 부착합니다.
+ */
+function attachShapeVectorNode(
+  card: FrameNode,
+  nodeType: DiagramNodeType,
+  w: number,
+  h: number,
+  bgColor: RGB,
+  strokeColor: RGB,
+  strokeWeight: number,
+  insertAtBottom: boolean = false
+): VectorNode | FrameNode | null {
+  const shape = createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight);
+  if (!shape) return null;
+
+  const originalParent = shape.parent;
+  if (insertAtBottom) {
+    card.insertChild(0, shape);
+  } else {
+    card.appendChild(shape);
+  }
+  if (originalParent && originalParent !== card) {
+    originalParent.remove();
+  }
+
+  shape.layoutPositioning = 'ABSOLUTE';
+  shape.x = 0;
+  shape.y = 0;
+  shape.locked = true;
+  return shape;
+}
+
 // ----------------------------------------------------
 // 3. UI Flow Node 카드 생성 (직각 모서리 + 고정 폰트 + 세련된 레이아웃)
 // ----------------------------------------------------
@@ -2020,117 +2228,188 @@ async function createFlowNode(payload: FlowNodePayload) {
   try {
     await loadRequiredFonts();
 
-    const title = (payload.title || '').trim() || 'Untitled';
-    const description = (payload.description || '').trim();
+    const nodeType = normalizeNodeType(payload.nodeType || 'Screen');
+    const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
+    const isShapeNode = !spec.allowDescription;
+
+    const rawTitle = (payload.title && payload.title.trim()) || (nodeType === 'Screen' ? 'Screen' : nodeType);
+    const title = rawTitle.slice(0, 32); // 타이틀 글자 수 제한 (입력필드 너비 최적화)
+    // 도형 노드인 경우 스펙 규격(Process: 120x120, Connector: 120x120, Decision: 140x140, Terminator: 180x90) 최우선 보장
+    const width = isShapeNode ? spec.width : (payload.width ? Math.max(50, payload.width) : spec.width);
+    const height = isShapeNode ? spec.height : (payload.height ? Math.max(50, payload.height) : spec.height);
+    const defaultRadius = spec.cornerRadius !== undefined ? spec.cornerRadius : 0;
+    const cornerRadius = isShapeNode ? defaultRadius : (typeof payload.cornerRadius === 'number' ? Math.max(0, payload.cornerRadius) : defaultRadius);
+    const description = isShapeNode ? '' : (payload.description || '').trim();
     const theme = payload.theme || 'light';
-    const width = payload.width ? Math.max(120, payload.width) : 250;
-    const height = payload.height ? Math.max(50, payload.height) : 90;
 
     const isDark = theme === 'dark';
+    const isFillNone = payload.colorHex?.toLowerCase() === 'none' || payload.colorHex?.toLowerCase() === 'transparent';
     let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-    if (payload.colorHex) {
+    if (!isFillNone && payload.colorHex) {
       bgColor = hexToRgbColor(payload.colorHex);
     }
-    const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+    const { titleFill, descFill, isBgDark } = isFillNone
+      ? {
+          titleFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } } as SolidPaint,
+          descFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 } as SolidPaint,
+          isBgDark: isDark,
+        }
+      : getTextFillsByBackground(bgColor, isDark);
 
     const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
     // 1. 메인 카드 프레임
     const card = figma.createFrame();
     card.name = title;
-    card.cornerRadius = typeof payload.cornerRadius === 'number' ? Math.min(20, Math.max(0, payload.cornerRadius)) : 0;
-    if (typeof payload.strokeWeight === 'number') {
-      card.strokeWeight = payload.strokeWeight;
-      if (payload.strokeWeight === 0) {
-        card.strokes = [];
-      } else {
-        const sColor = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
-        card.strokes = [{ type: 'SOLID', color: sColor }];
-      }
+    card.cornerRadius = cornerRadius;
+    const cardStrokes: Paint[] = typeof payload.strokeWeight === 'number' && payload.strokeWeight === 0
+      ? []
+      : [{ type: 'SOLID', color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
+    const cardStrokeWeight = typeof payload.strokeWeight === 'number' ? payload.strokeWeight : 1.5;
+
+    const vectorPathData = getShapeVectorData(nodeType, width, height);
+
+    if (vectorPathData) {
+      // Circle, Diamond, Capsule은 프레임 fills/strokes를 비우고 내부에 정밀 벡터 배치
+      card.fills = [];
+      card.strokes = [];
+      card.strokeWeight = 0;
+      card.cornerRadius = 0;
     } else {
-      card.strokeWeight = 1.5;
-      card.strokes = [{ type: 'SOLID', color: borderColor }];
+      card.fills = isFillNone ? [] : [{ type: 'SOLID', color: bgColor }];
+      card.strokes = cardStrokes;
+      card.strokeWeight = cardStrokeWeight;
     }
-    card.fills = [{ type: 'SOLID', color: bgColor }];
     card.clipsContent = false; // 스텝 배지(-9px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
 
     card.layoutMode = 'VERTICAL';
     card.primaryAxisSizingMode = 'FIXED';
     card.counterAxisSizingMode = 'FIXED';
-    const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
-    const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
-    const hasBottomBar = hasStatus || hasLink;
-
-    // 디스크립션 유무에 따른 패딩 및 세로 정렬
-    if (!description && !hasBottomBar) {
-      card.paddingTop = 14;
-      card.paddingBottom = 14;
-      card.primaryAxisAlignItems = 'CENTER';
-    } else {
-      card.paddingTop = 14;
-      card.paddingBottom = hasBottomBar ? 36 : 16;
-      card.primaryAxisAlignItems = 'MIN';
-    }
-    card.paddingLeft = 16;
-    card.paddingRight = 16;
-    card.itemSpacing = 8;
-    card.counterAxisAlignItems = 'MIN';
-
-    const finalHeight = height;
-
-    card.resize(width, finalHeight);
+    card.resize(width, height);
 
     // 캔버스 기즈모 리사이즈 원천 차단 (현재 크기로 min/max 완전 고정)
     card.minWidth = width;
     card.maxWidth = width;
-    card.minHeight = finalHeight;
-    card.maxHeight = finalHeight;
+    card.minHeight = height;
+    card.maxHeight = height;
 
-    // 2. 헤더 행 (타이틀 + 상태 뱃지 배치용)
-    const headerRow = figma.createFrame();
-    headerRow.name = 'Header';
-    headerRow.layoutMode = 'HORIZONTAL';
-    headerRow.layoutAlign = 'STRETCH';
-    headerRow.primaryAxisSizingMode = 'AUTO';
-    headerRow.counterAxisSizingMode = 'AUTO';
-    headerRow.primaryAxisAlignItems = 'CENTER';
-    headerRow.counterAxisAlignItems = 'CENTER';
-    headerRow.itemSpacing = 8;
-    headerRow.fills = [];
+    if (isShapeNode) {
+      // Process, Connector, Decision, Terminator: 디스크립션 없이 타이틀만 정중앙 정렬
+      const hPad = nodeType === 'Decision' ? 24 : (nodeType === 'Connector' ? 18 : 12);
+      card.paddingLeft = hPad;
+      card.paddingRight = hPad;
+      card.paddingTop = 12;
+      card.paddingBottom = 12;
+      card.primaryAxisAlignItems = 'CENTER';
+      card.counterAxisAlignItems = 'CENTER';
+      card.itemSpacing = 0;
 
-    // 3. 타이틀 텍스트 (13px Bold 고정, 영역 초과 시 .. 말줄임)
-    const titleText = figma.createText();
-    titleText.name = 'TitleText';
-    titleText.fontName = { family: 'Inter', style: 'Bold' };
-    titleText.fontSize = 13;
-    titleText.characters = title;
-    titleText.fills = [titleFill];
-    titleText.layoutGrow = 1;
-    titleText.textAutoResize = 'HEIGHT';
-    titleText.textTruncation = 'ENDING';
-    titleText.maxLines = 1;
-    titleText.setPluginData('node_role', 'title');
-    headerRow.appendChild(titleText);
+      if (vectorPathData) {
+        // 커스텀 SVG 벡터 배경 (Circle, Diamond, Capsule 등)
+        const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+        attachShapeVectorNode(card, nodeType, width, height, bgColor, strokeCol, cardStrokeWeight, false);
+      }
 
-    card.appendChild(headerRow);
+      const titleText = figma.createText();
+      titleText.name = 'TitleText';
+      titleText.fontName = { family: 'Inter', style: 'Bold' };
+      titleText.fontSize = 13;
+      titleText.lineHeight = { value: 18, unit: 'PIXELS' };
+      titleText.characters = title;
+      titleText.fills = [titleFill];
+      titleText.textAlignHorizontal = 'CENTER';
+      titleText.textAlignVertical = 'CENTER';
+      titleText.layoutAlign = 'STRETCH';
 
-    // 4. 설명 텍스트 (11px Regular 고정, 박스 높이 초과 시 .. 말줄임) - 설명이 있는 경우에만 생성
-    if (description) {
-      const descText = figma.createText();
-      descText.name = 'DescText';
-      descText.fontName = { family: 'Inter', style: 'Regular' };
-      descText.fontSize = 11;
-      descText.characters = description;
-      descText.fills = [descFill];
-      descText.textAlignHorizontal = 'LEFT';
-      descText.setPluginData('node_role', 'desc');
-      card.appendChild(descText);
+      if (nodeType === 'Decision') {
+        // 마름모는 3줄 높이(54px)로 고정하여 3번째 줄 끝에서 ..(말줄임) 보장
+        const availW = Math.max(50, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
+        titleText.resize(availW, 54);
+        titleText.maxHeight = 54;
+        titleText.textAutoResize = 'TRUNCATE';
+        titleText.textTruncation = 'ENDING';
+        titleText.maxLines = 3;
+      } else {
+        titleText.textAutoResize = 'HEIGHT';
+        titleText.textTruncation = 'ENDING';
+        titleText.maxLines = 3;
+      }
+      titleText.setPluginData('node_role', 'title');
+      card.appendChild(titleText);
+    } else {
+      // Screen 노드: 상단 헤더 + 설명문 레이아웃
+      const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
+      const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
+      const hasBottomBar = hasStatus || hasLink;
 
-      descText.layoutAlign = 'STRETCH';
+      // 디스크립션 유무에 따른 패딩 및 세로 정렬
+      if (!description && !hasBottomBar) {
+        card.paddingTop = 14;
+        card.paddingBottom = 14;
+        card.primaryAxisAlignItems = 'CENTER';
+      } else {
+        card.paddingTop = 14;
+        card.paddingBottom = hasBottomBar ? 36 : 16;
+        card.primaryAxisAlignItems = 'MIN';
+      }
+      card.paddingLeft = 16;
+      card.paddingRight = 16;
+      card.itemSpacing = 8;
+      card.counterAxisAlignItems = 'MIN';
+
+      // 2. 헤더 행 (타이틀 수용 공간)
       const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
-      descText.resize(availW, descText.height);
-      descText.textAutoResize = 'HEIGHT';
-      await updateDescTextTruncation(card, descText, height, description);
+      const headerRow = figma.createFrame();
+      headerRow.name = 'Header';
+      headerRow.layoutMode = 'HORIZONTAL';
+      headerRow.layoutAlign = 'STRETCH';
+      headerRow.resize(availW, 18);
+      headerRow.primaryAxisSizingMode = 'FIXED';
+      headerRow.counterAxisSizingMode = 'AUTO';
+      headerRow.primaryAxisAlignItems = 'MIN';
+      headerRow.counterAxisAlignItems = 'MIN';
+      headerRow.itemSpacing = 8;
+      headerRow.fills = [];
+
+      // 3. 타이틀 텍스트 (13px Bold 고정, 글자 수 길어지면 자동 줄바꿈)
+      const titleText = figma.createText();
+      titleText.name = 'TitleText';
+      titleText.fontName = { family: 'Inter', style: 'Bold' };
+      titleText.fontSize = 13;
+      titleText.lineHeight = { value: 18, unit: 'PIXELS' };
+      titleText.characters = title;
+      titleText.fills = [titleFill];
+      titleText.layoutGrow = 1;
+      titleText.layoutAlign = 'STRETCH';
+      titleText.resize(availW, 18);
+      titleText.textAutoResize = 'HEIGHT';
+      titleText.textTruncation = 'DISABLED';
+      titleText.maxLines = null;
+      titleText.textAlignHorizontal = 'LEFT';
+      titleText.textAlignVertical = 'TOP';
+      titleText.setPluginData('node_role', 'title');
+      headerRow.appendChild(titleText);
+
+      card.appendChild(headerRow);
+
+      // 4. 설명 텍스트 (11px Regular 고정, 박스 높이 초과 시 .. 말줄임) - 설명이 있는 경우에만 생성
+      if (description) {
+        const descText = figma.createText();
+        descText.name = 'DescText';
+        descText.fontName = { family: 'Inter', style: 'Regular' };
+        descText.fontSize = 11;
+        descText.characters = description;
+        descText.fills = [descFill];
+        descText.textAlignHorizontal = 'LEFT';
+        descText.setPluginData('node_role', 'desc');
+        card.appendChild(descText);
+
+        descText.layoutAlign = 'STRETCH';
+        const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+        descText.resize(availW, descText.height);
+        descText.textAutoResize = 'HEIGHT';
+        await updateDescTextTruncation(card, descText, height, description);
+      }
     }
 
     // 메타데이터 보관 (FigJam 네이티브 객체 속성을 Source of Truth로 사용하므로 중복 데이터 제거)
@@ -2138,8 +2417,8 @@ async function createFlowNode(payload: FlowNodePayload) {
     card.setPluginData('is_flow_node', 'true');
     card.setPluginData('schema_version', '2');
     card.setPluginData('node_theme', theme);
-    card.setPluginData('node_type', payload.nodeType || 'Screen');
-    if (payload.status) {
+    card.setPluginData('node_type', nodeType);
+    if (!isShapeNode && payload.status) {
       card.setPluginData('workflow_status', payload.status);
       if (STATUS_CONFIG[payload.status]) {
         const cfg = STATUS_CONFIG[payload.status];
@@ -2178,8 +2457,10 @@ async function createFlowNode(payload: FlowNodePayload) {
       }
     }
 
-    // Figma Screen Link 펜 아이콘 뱃지(하단 왼쪽) 생성
-    await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark);
+    // Figma Screen Link 펜 아이콘 뱃지(하단 왼쪽) 생성 (Screen 노드 등에서만 허용)
+    if (!isShapeNode) {
+      await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark);
+    }
 
     // 엘리베이션(그림자) 효과 적용
     if (typeof payload.elevation === 'number') {
@@ -2256,95 +2537,230 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
     await loadRequiredFonts();
 
-    const title = payload.title.trim() || 'Untitled';
+    const rawTitle = payload.title.trim() || 'Untitled';
+    const title = rawTitle.slice(0, 32); // 타이틀 글자 수 제한 (입력필드 너비 최적화)
     const description = payload.description.trim() || '';
     const isDark = payload.theme === 'dark';
+    const isFillNone = payload.colorHex?.toLowerCase() === 'none' || payload.colorHex?.toLowerCase() === 'transparent';
     let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-    if (payload.colorHex) {
-      bgColor = hexToRgbColor(payload.colorHex);
-    } else {
-      const currentFill = (flowNode as FrameNode).fills;
-      if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === 'SOLID') {
-        bgColor = currentFill[0].color;
+    if (!isFillNone) {
+      if (payload.colorHex) {
+        bgColor = hexToRgbColor(payload.colorHex);
+      } else {
+        const currentFill = (flowNode as FrameNode).fills;
+        if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === 'SOLID') {
+          bgColor = currentFill[0].color;
+        }
       }
     }
-    const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+    const { titleFill, descFill, isBgDark } = isFillNone
+      ? {
+          titleFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } } as SolidPaint,
+          descFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 } as SolidPaint,
+          isBgDark: isDark,
+        }
+      : getTextFillsByBackground(bgColor, isDark);
 
     const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
     const card = flowNode as FrameNode;
-    card.name = title;
-    if (typeof payload.cornerRadius === 'number') {
-      card.cornerRadius = Math.min(20, Math.max(0, payload.cornerRadius));
-    }
-    card.clipsContent = false; // 스텝 배지(-9px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
-    card.fills = [{ type: 'SOLID', color: bgColor }];
+    const prevRawType = safeGetPluginData(card, 'node_type') || 'Screen';
+    const prevNodeType = normalizeNodeType(prevRawType);
+    const rawType = payload.nodeType || prevRawType;
+    const nodeType = normalizeNodeType(rawType);
+    const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
+    const isShapeNode = !spec.allowDescription;
+    const isChangingToScreen = prevNodeType !== 'Screen' && nodeType === 'Screen';
 
-    if (typeof payload.strokeWeight === 'number') {
-      card.strokeWeight = payload.strokeWeight;
-      if (payload.strokeWeight === 0) {
-        card.strokes = [];
-      } else {
-        const sColor = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
-        card.strokes = [{ type: 'SOLID', color: sColor }];
+    const DEFAULT_SHAPE_NAMES = new Set([
+      'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
+      'Action', 'System', 'Database', 'Square', 'Circle', 'Diamond', 'Pill', 'Capsule',
+    ]);
+    const effectiveTitle = (isChangingToScreen && (DEFAULT_SHAPE_NAMES.has(rawTitle) || !rawTitle))
+      ? 'Screen'
+      : title;
+
+    card.name = effectiveTitle;
+    card.clipsContent = false; // 스텝 배지(-9px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
+
+    const cardStrokes: Paint[] = typeof payload.strokeWeight === 'number' && payload.strokeWeight === 0
+      ? []
+      : [{ type: 'SOLID', color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
+    const cardStrokeWeight = typeof payload.strokeWeight === 'number' ? payload.strokeWeight : 1.5;
+
+    // 카드 레이아웃 모드 및 정렬 방향 사전 보장 (ABSOLUTE 자식 배치를 위해 반드시 layoutMode !== NONE 필요)
+    if (card.layoutMode !== 'VERTICAL') {
+      card.layoutMode = 'VERTICAL';
+    }
+
+    // 쉐이프 커스텀 벡터(Circle, Diamond, Capsule) 탐색 (ShapeVector 또는 구버전 DiamondShape)
+    const existingShapeVector = card.children.find(
+      (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && c.type === 'VECTOR'
+    ) as VectorNode | undefined;
+
+    const targetW = isShapeNode
+      ? (payload.width ? Math.max(50, payload.width) : spec.width)
+      : (isChangingToScreen ? (payload.width || spec.width) : (payload.width ? Math.max(50, payload.width) : card.width));
+    const targetH = isShapeNode
+      ? (payload.height ? Math.max(50, payload.height) : spec.height)
+      : (isChangingToScreen ? (payload.height || spec.height) : (payload.height ? Math.max(50, payload.height) : card.height));
+    const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
+
+    if (vectorPathData) {
+      card.fills = [];
+      card.strokes = [];
+      card.strokeWeight = 0;
+      card.cornerRadius = 0;
+
+      if (existingShapeVector) {
+        existingShapeVector.remove();
       }
-    } else if (payload.strokeColor) {
-      card.strokes = [{ type: 'SOLID', color: hexToRgbColor(payload.strokeColor) }];
+      const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+      attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true);
+    } else {
+      if (existingShapeVector) {
+        existingShapeVector.remove();
+      }
+      const defaultRadius = spec.cornerRadius !== undefined ? spec.cornerRadius : 0;
+      const targetRadius = isChangingToScreen
+        ? (typeof payload.cornerRadius === 'number' ? payload.cornerRadius : defaultRadius)
+        : (typeof payload.cornerRadius === 'number' ? Math.max(0, payload.cornerRadius) : defaultRadius);
+      card.cornerRadius = targetRadius;
+      card.fills = isFillNone ? [] : [{ type: 'SOLID', color: bgColor }];
+      card.strokes = cardStrokes;
+      card.strokeWeight = cardStrokeWeight;
     }
 
     // 카드 레이아웃 모드 및 정렬 방향 보장
     if (card.layoutMode !== 'VERTICAL') {
       card.layoutMode = 'VERTICAL';
     }
-    if (card.counterAxisAlignItems !== 'MIN') {
-      card.counterAxisAlignItems = 'MIN';
+    card.counterAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
+    card.primaryAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
+
+    // shape 노드로 전환된 경우 불필요한 배지 및 상태 제거
+    if (isShapeNode) {
+      const existingStatusBadge = card.children.find(
+        (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
+      );
+      if (existingStatusBadge) existingStatusBadge.remove();
+      card.setPluginData('workflow_status', '');
+
+      const existingLinkBadge = card.children.find(
+        (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+      );
+      if (existingLinkBadge) existingLinkBadge.remove();
+      card.setPluginData('figma_link', '');
     }
 
-    // 헤더 행 및 타이틀 텍스트 갱신
-    let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+    // 헤더 행 및 타이틀 텍스트 갱신 (도형 노드는 Header 없이 직속 자식으로 정중앙 배치)
+    let titleText = card.findOne(
+      (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
+    ) as TextNode | null;
 
-    if (!headerRow) {
-      headerRow = figma.createFrame();
-      headerRow.name = 'Header';
-      headerRow.layoutMode = 'HORIZONTAL';
+    if (isShapeNode) {
+      // shape 노드: Header 프레임 제거 및 card 직속으로 titleText 배치
+      const existingHeader = card.children.find(isHeaderFrame) as FrameNode | undefined;
+      if (existingHeader) {
+        if (!titleText) {
+          titleText = existingHeader.children.find((c) => c.type === 'TEXT') as TextNode | null;
+        }
+        if (titleText && titleText.parent === existingHeader) {
+          card.appendChild(titleText);
+        }
+        existingHeader.remove();
+      }
+
+      if (!titleText) {
+        titleText = figma.createText();
+        titleText.name = 'TitleText';
+        titleText.fontName = { family: 'Inter', style: 'Bold' };
+        titleText.fontSize = 13;
+        titleText.setPluginData('node_role', 'title');
+        card.appendChild(titleText);
+      }
+
+      titleText.layoutAlign = 'STRETCH';
+      titleText.textAlignHorizontal = 'CENTER';
+      titleText.textAlignVertical = 'CENTER';
+      titleText.lineHeight = { value: 18, unit: 'PIXELS' };
+
+      if (nodeType === 'Decision') {
+        const availW = Math.max(50, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
+        try { titleText.resize(availW, 54); } catch (_) {}
+        try { titleText.maxHeight = 54; } catch (_) {}
+        try { titleText.textAutoResize = 'TRUNCATE'; } catch (_) {}
+        try { titleText.textTruncation = 'ENDING'; } catch (_) {}
+        try { titleText.maxLines = 3; } catch (_) {}
+      } else {
+        try { titleText.maxHeight = null; } catch (_) {}
+        try { titleText.textAutoResize = 'HEIGHT'; } catch (_) {}
+        try { titleText.textTruncation = 'ENDING'; } catch (_) {}
+        try { titleText.maxLines = 3; } catch (_) {}
+      }
+      await safeSetCharacters(titleText, title);
+      const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
+      if (!hasExistingTitleFill || payload.colorHex) {
+        titleText.fills = [titleFill];
+      }
+    } else {
+      // Screen 노드 등: Header 프레임 내에 titleText 배치
+      const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
+      const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
+      const availW = Math.max(50, card.width - pl - pr);
+
+      let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+      if (!headerRow) {
+        headerRow = figma.createFrame();
+        headerRow.name = 'Header';
+        headerRow.layoutMode = 'HORIZONTAL';
+        headerRow.layoutAlign = 'STRETCH';
+        headerRow.itemSpacing = 8;
+        headerRow.fills = [];
+        card.insertChild(0, headerRow);
+      }
       headerRow.layoutAlign = 'STRETCH';
-      headerRow.primaryAxisAlignItems = 'CENTER';
-      headerRow.counterAxisAlignItems = 'CENTER';
-      headerRow.itemSpacing = 8;
-      headerRow.fills = [];
-      card.insertChild(0, headerRow);
-    }
+      headerRow.resize(availW, headerRow.height || 18);
+      headerRow.primaryAxisSizingMode = 'FIXED';
+      headerRow.counterAxisSizingMode = 'AUTO';
+      headerRow.primaryAxisAlignItems = 'MIN';
+      headerRow.counterAxisAlignItems = 'MIN';
 
-    let titleText = headerRow.children.find(
-      (c) => c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title'
-    ) as TextNode | undefined;
+      if (!titleText) {
+        titleText = figma.createText();
+        titleText.name = 'TitleText';
+        titleText.fontName = { family: 'Inter', style: 'Bold' };
+        titleText.fontSize = 13;
+        titleText.setPluginData('node_role', 'title');
+        headerRow.appendChild(titleText);
+      } else if (titleText.parent !== headerRow) {
+        headerRow.appendChild(titleText);
+      }
 
-    if (!titleText) {
-      titleText = figma.createText();
-      titleText.name = 'TitleText';
-      titleText.fontName = { family: 'Inter', style: 'Bold' };
-      titleText.fontSize = 13;
+      titleText.lineHeight = { value: 18, unit: 'PIXELS' };
+      titleText.textAlignHorizontal = 'LEFT';
+      titleText.textAlignVertical = 'TOP';
       titleText.layoutGrow = 1;
+      titleText.layoutAlign = 'STRETCH';
+      titleText.resize(availW, titleText.height || 18);
       titleText.textAutoResize = 'HEIGHT';
-      titleText.setPluginData('node_role', 'title');
-      headerRow.insertChild(0, titleText);
+      titleText.textTruncation = 'DISABLED';
+      titleText.maxLines = null;
+      try { titleText.maxHeight = null; } catch (_) {}
+      await safeSetCharacters(titleText, effectiveTitle);
+      try { titleText.resize(availW, titleText.height); } catch (_) {}
+      const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
+      if (!hasExistingTitleFill || payload.colorHex) {
+        titleText.fills = [titleFill];
+      }
     }
 
-    titleText.textAlignHorizontal = 'LEFT';
-    titleText.textTruncation = 'ENDING';
-    titleText.maxLines = 1;
-    await safeSetCharacters(titleText, title);
-    const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
-    if (!hasExistingTitleFill || payload.colorHex) {
-      titleText.fills = [titleFill];
-    }
-
-    // 설명 텍스트 갱신 (설명이 없는 경우 텍스트 노드 제거, 있는 경우에만 갱신)
+    // 설명 텍스트 갱신 (isShapeNode이거나 설명이 없는 경우 제거)
     let descText = card.children.find(
       (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
     ) as TextNode | undefined;
 
-    if (!description) {
+    if (isShapeNode || !description) {
       if (descText) {
         descText.remove();
         descText = undefined;
@@ -2390,25 +2806,43 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       } catch (_) {}
     }
 
-    // 상태 여부 및 링크 여부에 따른 하단 패딩 및 세로 정렬 동기화
-    let statusBadge = card.children.find(
+    // 패딩 및 정렬 동기화
+    let statusBadge = !isShapeNode ? (card.children.find(
       (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
-    ) as FrameNode | undefined;
-    const hasStatus = Boolean(statusBadge || (payload.status && STATUS_CONFIG[payload.status]));
-    const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
+    ) as FrameNode | undefined) : undefined;
+    const hasStatus = Boolean(statusBadge || (!isShapeNode && payload.status && STATUS_CONFIG[payload.status]));
+    const hasLink = !isShapeNode && Boolean(payload.figmaLink && payload.figmaLink.trim());
     const hasBottomBar = hasStatus || hasLink;
 
-    if (!description && !hasBottomBar) {
-      card.paddingTop = 14;
-      card.paddingBottom = 14;
+    if (isShapeNode) {
+      const hPad = nodeType === 'Decision' ? 24 : 12;
+      card.paddingLeft = hPad;
+      card.paddingRight = hPad;
+      card.paddingTop = 12;
+      card.paddingBottom = 12;
       card.primaryAxisAlignItems = 'CENTER';
+      card.counterAxisAlignItems = 'CENTER';
+      card.itemSpacing = 0;
     } else {
-      card.paddingTop = 14;
-      card.paddingBottom = hasBottomBar ? 36 : 16;
-      card.primaryAxisAlignItems = 'MIN';
+      card.itemSpacing = 8;
+      if (!description && !hasBottomBar) {
+        card.paddingLeft = 16;
+        card.paddingRight = 16;
+        card.paddingTop = 14;
+        card.paddingBottom = 14;
+        card.primaryAxisAlignItems = 'CENTER';
+        card.counterAxisAlignItems = 'MIN';
+      } else {
+        card.paddingLeft = 16;
+        card.paddingRight = 16;
+        card.paddingTop = 14;
+        card.paddingBottom = hasBottomBar ? 36 : 16;
+        card.primaryAxisAlignItems = 'MIN';
+        card.counterAxisAlignItems = 'MIN';
+      }
     }
 
-    if (statusBadge) {
+    if (!isShapeNode && statusBadge) {
       statusBadge.paddingLeft = 9;
       statusBadge.paddingRight = 9;
       statusBadge.cornerRadius = getStatusBadgeCornerRadius(
@@ -2430,8 +2864,10 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
     }
 
-    // Figma Screen Link 펜 아이콘 뱃지(하단 왼쪽) 갱신
-    await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark, payload.clearLinkCache);
+    // Figma Screen Link 펜 아이콘 뱃지(하단 왼쪽) 갱신 (Screen 등에서만)
+    if (!isShapeNode) {
+      await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark, payload.clearLinkCache);
+    }
 
     // 기존 스텝 뱃지가 존재하는 경우 노드 색상/보더 변화에 맞춰 컬러 동기화
     const existingStepBadge = card.children.find(
@@ -2459,59 +2895,81 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     }
 
     // 내부 자식(DescText, Header, Badges 등) 정리 완료 후 최종 크기 조정 및 min/max 재잠금
-    if (payload.width && payload.height) {
-      const w = Math.max(120, payload.width);
-      const targetH = Math.max(50, payload.height);
-      const isHug = payload.sizeMode === 'hug';
+    const finalW = Math.max(50, targetW);
+    const finalH = Math.max(40, targetH);
+    const isHug = !isShapeNode && payload.sizeMode === 'hug';
+    const isFit = !isShapeNode && payload.sizeMode === 'fit';
 
+    card.minWidth = null;
+    card.maxWidth = null;
+    card.minHeight = null;
+    card.maxHeight = null;
+
+    if (isHug) {
+      if (descText) {
+        descText.maxLines = null;
+      }
+      if (card.width !== finalW) {
+        card.counterAxisSizingMode = 'FIXED';
+        card.resize(finalW, card.height);
+      }
+      card.counterAxisSizingMode = 'FIXED';
+      card.primaryAxisSizingMode = 'AUTO';
+      card.minWidth = finalW;
+      card.maxWidth = finalW;
+      card.minHeight = null;
+      card.maxHeight = null;
+      card.setPluginData('size_mode', 'hug');
+    } else if (isFit) {
+      if (descText) {
+        descText.maxLines = null;
+      }
+      card.counterAxisSizingMode = 'AUTO';
+      card.primaryAxisSizingMode = 'AUTO';
       card.minWidth = null;
       card.maxWidth = null;
       card.minHeight = null;
       card.maxHeight = null;
+      card.setPluginData('size_mode', 'fit');
+    } else {
+      card.primaryAxisSizingMode = 'FIXED';
+      card.counterAxisSizingMode = 'FIXED';
+      card.resize(finalW, finalH);
+      card.minWidth = finalW;
+      card.maxWidth = finalW;
+      card.minHeight = finalH;
+      card.maxHeight = finalH;
+      card.setPluginData('size_mode', 'fixed');
+    }
 
-      if (isHug) {
-        if (descText) {
-          descText.maxLines = null;
-        }
-        if (card.width !== w) {
-          card.counterAxisSizingMode = 'FIXED';
-          card.resize(w, card.height);
-        }
-        card.counterAxisSizingMode = 'FIXED';
-        card.primaryAxisSizingMode = 'AUTO';
-        card.minWidth = w;
-        card.maxWidth = w;
-        card.minHeight = null;
-        card.maxHeight = null;
-      } else {
-        card.primaryAxisSizingMode = 'FIXED';
-        card.counterAxisSizingMode = 'FIXED';
-        card.resize(w, targetH);
-        card.minWidth = w;
-        card.maxWidth = w;
-        card.minHeight = targetH;
-        card.maxHeight = targetH;
-      }
-
-      // 최종 높이에 맞춰 상태 뱃지 및 링크 뱃지 Y좌표 동기화
-      const curH = card.height;
-      if (statusBadge) {
-        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-        statusBadge.x = w - statusBadge.width - 10;
-        statusBadge.y = curH - statusBadge.height - 10;
-      }
-      const linkBadge = card.children.find(
-        (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
-      ) as FrameNode | undefined;
-      if (linkBadge) {
-        linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
-        linkBadge.x = 16;
-        linkBadge.y = curH - linkBadge.height - 10;
+    // 최종 높이에 맞춰 상태 뱃지 및 링크 뱃지 Y좌표 동기화
+    const curH = card.height;
+    if (statusBadge) {
+      statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+      statusBadge.x = finalW - statusBadge.width - 10;
+      statusBadge.y = curH - statusBadge.height - 10;
+    }
+    const linkBadge = card.children.find(
+      (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+    ) as FrameNode | undefined;
+    if (linkBadge) {
+      linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
+      linkBadge.x = 16;
+      linkBadge.y = curH - linkBadge.height - 10;
+    }
+    const shapeVec = card.children.find(
+      (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape')
+    ) as (VectorNode | FrameNode) | undefined;
+    if (shapeVec) {
+      shapeVec.remove();
+      if (isShapeNode) {
+        const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
+        attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
       }
     }
 
     // 실제 FigJam 프레임 노드 이름 동기화
-    card.name = title;
+    card.name = effectiveTitle;
 
     // 메타데이터 갱신 (FigJam 네이티브 객체 속성을 Source of Truth로 유지하며, 중복 데이터 제거)
     card.setPluginData('is_flow_node', 'true');
@@ -2522,7 +2980,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     card.setPluginData('node_width', '');
     card.setPluginData('node_height', '');
     if (payload.theme) card.setPluginData('node_theme', payload.theme);
-    if (payload.nodeType) card.setPluginData('node_type', payload.nodeType);
+    card.setPluginData('node_type', nodeType);
     if (typeof payload.elevation === 'number') {
       card.setPluginData('node_elevation', `${payload.elevation}`);
       card.effects = getElevationEffects(payload.elevation, isBgDark);
@@ -2568,14 +3026,20 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     frame.minHeight = null;
     frame.maxHeight = null;
 
+    const rawNodeType = safeGetPluginData(frame, 'node_type');
+    const nType = normalizeNodeType(rawNodeType);
+    const nSpec = NODE_TYPE_SHAPE_SPECS[nType] || NODE_TYPE_SHAPE_SPECS.Screen;
+    const isShape = !nSpec.allowDescription;
+
     if (frame.layoutMode !== 'VERTICAL') {
       frame.layoutMode = 'VERTICAL';
     }
-    if (frame.counterAxisAlignItems !== 'MIN') {
-      frame.counterAxisAlignItems = 'MIN';
+    const targetAlign = isShape ? 'CENTER' : 'MIN';
+    if (frame.counterAxisAlignItems !== targetAlign) {
+      frame.counterAxisAlignItems = targetAlign;
     }
-    if (frame.primaryAxisAlignItems !== 'MIN') {
-      frame.primaryAxisAlignItems = 'MIN';
+    if (frame.primaryAxisAlignItems !== targetAlign) {
+      frame.primaryAxisAlignItems = targetAlign;
     }
 
     frame.resize(w, h);
@@ -2588,17 +3052,74 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     frame.minHeight = h;
     frame.maxHeight = h;
 
-    // 헤더 타이틀 말줄임 동기화
-    const headerRow = frame.children.find(isHeaderFrame) as FrameNode | undefined;
-    if (headerRow) {
-      const title = headerRow.children.find(
-        (c) => c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title'
-      ) as TextNode | undefined;
-      if (title) {
-        title.textAlignHorizontal = 'LEFT';
-        title.textTruncation = 'ENDING';
-        title.maxLines = 1;
+    // 헤더 타이틀 말줄임 및 정렬 동기화
+    const title = frame.findOne(
+      (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
+    ) as TextNode | undefined;
+    if (title) {
+      title.textAlignHorizontal = isShape ? 'CENTER' : 'LEFT';
+      title.textAlignVertical = 'CENTER';
+      try { title.lineHeight = { value: 18, unit: 'PIXELS' }; } catch (_) {}
+
+      if (nType === 'Decision') {
+        const pl = typeof frame.paddingLeft === 'number' ? frame.paddingLeft : 24;
+        const pr = typeof frame.paddingRight === 'number' ? frame.paddingRight : 24;
+        const curW = Math.max(50, w - pl - pr);
+        try { title.resize(curW, 54); } catch (_) {}
+        try { title.maxHeight = 54; } catch (_) {}
+        try { title.textAutoResize = 'TRUNCATE'; } catch (_) {}
+        try { title.textTruncation = 'ENDING'; } catch (_) {}
+        try { title.maxLines = 3; } catch (_) {}
+      } else {
+        try { title.maxHeight = null; } catch (_) {}
+        const pl = typeof frame.paddingLeft === 'number' ? frame.paddingLeft : 16;
+        const pr = typeof frame.paddingRight === 'number' ? frame.paddingRight : 16;
+        const curW = Math.max(50, w - pl - pr);
+
+        if (isShape) {
+          if (title.textAutoResize !== 'HEIGHT') {
+            title.textAutoResize = 'HEIGHT';
+          }
+          title.textTruncation = 'ENDING';
+          title.maxLines = 3;
+        } else {
+          const headerRow = frame.children.find(isHeaderFrame) as FrameNode | undefined;
+          if (headerRow) {
+            headerRow.layoutAlign = 'STRETCH';
+            headerRow.resize(curW, headerRow.height || 18);
+            headerRow.primaryAxisSizingMode = 'FIXED';
+            headerRow.counterAxisSizingMode = 'AUTO';
+            headerRow.primaryAxisAlignItems = 'MIN';
+            headerRow.counterAxisAlignItems = 'MIN';
+          }
+          try { title.resize(curW, title.height || 18); } catch (_) {}
+          title.textAutoResize = 'HEIGHT';
+          title.textTruncation = 'DISABLED';
+          title.maxLines = null;
+          title.textAlignVertical = 'TOP';
+        }
       }
+    }
+
+    // 커스텀 도형 벡터(Circle, Diamond, Capsule) 크기 동기화
+    const shapeVec = frame.children.find(
+      (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape')
+    ) as (VectorNode | FrameNode) | undefined;
+    if (shapeVec) {
+      let curBgColor: RGB = { r: 1, g: 1, b: 1 };
+      let curStrokeColor: RGB = { r: 0.15, g: 0.15, b: 0.18 };
+      let curStrokeWeight = 1.5;
+      if ('fills' in shapeVec && Array.isArray(shapeVec.fills) && shapeVec.fills.length > 0 && shapeVec.fills[0].type === 'SOLID') {
+        curBgColor = shapeVec.fills[0].color;
+      }
+      if ('strokes' in shapeVec && Array.isArray(shapeVec.strokes) && shapeVec.strokes.length > 0 && shapeVec.strokes[0].type === 'SOLID') {
+        curStrokeColor = shapeVec.strokes[0].color;
+      }
+      if ('strokeWeight' in shapeVec && typeof shapeVec.strokeWeight === 'number') {
+        curStrokeWeight = shapeVec.strokeWeight;
+      }
+      shapeVec.remove();
+      attachShapeVectorNode(frame, nType, w, h, curBgColor, curStrokeColor, curStrokeWeight, true);
     }
 
     // 상태 뱃지 탐색 및 패딩 동기화
@@ -2918,15 +3439,101 @@ async function updateConnectorProperties(payload: {
 
     await loadRequiredFonts();
 
+    // 만약 선택된 노드가 커넥터 그룹 내부의 노드라면 최상위 커넥터 그룹 노드로 승격
+    let connectorRootNode: SceneNode = node;
+    if (
+      node.parent &&
+      node.parent.type === 'GROUP' &&
+      safeGetPluginData(node.parent, 'is_custom_connector') === 'true'
+    ) {
+      connectorRootNode = node.parent;
+    }
+
+    const currentStartOff = parseFloat(
+      safeGetPluginData(connectorRootNode, 'start_offset') ||
+      safeGetPluginData(node, 'start_offset') ||
+      '0'
+    ) || 0;
+    const currentEndOff = parseFloat(
+      safeGetPluginData(connectorRootNode, 'end_offset') ||
+      safeGetPluginData(node, 'end_offset') ||
+      '0'
+    ) || 0;
+
+    const rawStartOffset = typeof payload.startOffset === 'number'
+      ? payload.startOffset
+      : (payload.isReversed ? currentEndOff : currentStartOff);
+    const rawEndOffset = typeof payload.endOffset === 'number'
+      ? payload.endOffset
+      : (payload.isReversed ? currentStartOff : currentEndOff);
+
     const effectiveStartTerm = payload.isReversed ? payload.endTerminal : payload.startTerminal;
     const effectiveEndTerm = payload.isReversed ? payload.startTerminal : payload.endTerminal;
     const effectiveStartMagnet = payload.isReversed ? payload.targetMagnet : payload.sourceMagnet;
     const effectiveEndMagnet = payload.isReversed ? payload.sourceMagnet : payload.targetMagnet;
-    const effectiveStartOffset = payload.isReversed ? payload.endOffset : payload.startOffset;
-    const effectiveEndOffset = payload.isReversed ? payload.startOffset : payload.endOffset;
+    const effectiveStartOffset = payload.isReversed ? rawEndOffset : rawStartOffset;
+    const effectiveEndOffset = payload.isReversed ? rawStartOffset : rawEndOffset;
 
-    if (node.type === 'CONNECTOR') {
-      const conn = node as ConnectorNode;
+    if (connectorRootNode.type === 'CONNECTOR') {
+      const conn = connectorRootNode as ConnectorNode;
+
+      const nativeSourceId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
+      const nativeTargetId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
+
+      // Figma 네이티브 커넥터는 API상 오프셋 렌더링을 지원하지 않으므로,
+      // 오프셋이 0보다 큰 경우 동일한 스타일(색상, 두께, 패턴, 단자, 라벨)을 가진 직각 커스텀 벡터 커넥터로 자동 승격 변환합니다.
+      const hasOffset = (typeof effectiveStartOffset === 'number' && effectiveStartOffset > 0) ||
+                        (typeof effectiveEndOffset === 'number' && effectiveEndOffset > 0);
+
+      if (hasOffset && nativeSourceId && nativeTargetId) {
+        const sourceNode = figma.getNodeById(nativeSourceId) as SceneNode | null;
+        const targetNode = figma.getNodeById(nativeTargetId) as SceneNode | null;
+
+        if (sourceNode && targetNode) {
+          const colorHex = payload.colorHex || (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === 'SOLID' ? rgbToHexColor(conn.strokes[0].color) : '#000000');
+          const strokeWeight = typeof payload.strokeWeight === 'number' ? payload.strokeWeight : (typeof conn.strokeWeight === 'number' ? conn.strokeWeight : 1.5);
+          const strokePattern = payload.strokePattern || (Array.isArray(conn.dashPattern) && conn.dashPattern.length > 0 ? (conn.dashPattern[0] <= 2 ? 'DOTTED' : 'DASHED') : 'SOLID');
+          const routingType = payload.routingType || (conn.connectorLineType === 'STRAIGHT' ? 'STRAIGHT' : 'ORTHOGONAL');
+          const startTerm = effectiveStartTerm && effectiveStartTerm !== 'MIXED' ? effectiveStartTerm : ((conn.getPluginData('start_terminal') as ConnectorTerminalType) || 'NONE');
+          const endTerm = effectiveEndTerm && effectiveEndTerm !== 'MIXED' ? effectiveEndTerm : ((conn.getPluginData('end_terminal') as ConnectorTerminalType) || 'ARROW');
+          const label = payload.hasLabel && payload.label !== undefined ? payload.label.trim() : (conn.text ? conn.text.characters : '');
+
+          const sourceMag = effectiveStartMagnet || (conn.connectorStart && 'magnet' in conn.connectorStart ? conn.connectorStart.magnet as MagnetPosition : 'RIGHT');
+          const targetMag = effectiveEndMagnet || (conn.connectorEnd && 'magnet' in conn.connectorEnd ? conn.connectorEnd.magnet as MagnetPosition : 'LEFT');
+
+          // 새 커스텀 벡터 커넥터 생성
+          const customConn = await createSingleConnector(
+            sourceNode,
+            sourceMag,
+            targetNode,
+            targetMag,
+            label,
+            colorHex,
+            strokeWeight,
+            routingType,
+            startTerm,
+            endTerm,
+            strokePattern,
+            effectiveStartOffset,
+            effectiveEndOffset
+          );
+
+          // 기존 네이티브 커넥터 제거 및 새 커넥터 선택
+          conn.remove();
+          figma.currentPage.selection = [customConn];
+          notify('오프셋 적용을 위해 직각 커스텀 커넥터로 자동 변환되었습니다.', 'success');
+          handleSelectionChange();
+          return;
+        }
+      }
+
+      // 오프셋이 0이거나 변환하지 않는 네이티브 커넥터 일반 옵션 적용
+      if (typeof effectiveStartOffset === 'number') {
+        conn.setPluginData('start_offset', String(effectiveStartOffset));
+      }
+      if (typeof effectiveEndOffset === 'number') {
+        conn.setPluginData('end_offset', String(effectiveEndOffset));
+      }
 
       // 1. 색상
       if (payload.colorHex) {
@@ -2990,33 +3597,26 @@ async function updateConnectorProperties(payload: {
         await safeSetCharacters(conn.text, '');
       }
 
-      // 7. Figma 네이티브 커넥터 마그넷 위치 갱신
-      const startEndpointNodeId = payload.isReversed
-        ? (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined)
-        : (conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined);
-      const endEndpointNodeId = payload.isReversed
-        ? (conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined)
-        : (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined);
-
-      if (effectiveStartMagnet && startEndpointNodeId) {
+      // 7. Figma 네이티브 커넥터 마그넷 위치 갱신 (물리적 소스/타겟 엔드포인트 유지)
+      if (effectiveStartMagnet && nativeSourceId) {
         conn.connectorStart = {
-          endpointNodeId: startEndpointNodeId,
+          endpointNodeId: nativeSourceId,
           magnet: effectiveStartMagnet,
         };
       }
-      if (effectiveEndMagnet && endEndpointNodeId) {
+      if (effectiveEndMagnet && nativeTargetId) {
         conn.connectorEnd = {
-          endpointNodeId: endEndpointNodeId,
+          endpointNodeId: nativeTargetId,
           magnet: effectiveEndMagnet,
         };
       }
     } else {
       // 커스텀 직각 벡터 커넥터 (그룹 또는 벡터)
       let vectorNode: VectorNode | null = null;
-      if (node.type === 'VECTOR') {
-        vectorNode = node as VectorNode;
-      } else if ('findOne' in node) {
-        vectorNode = (node as GroupNode).findOne((n) => n.type === 'VECTOR') as VectorNode | null;
+      if (connectorRootNode.type === 'VECTOR') {
+        vectorNode = connectorRootNode as VectorNode;
+      } else if ('findOne' in connectorRootNode) {
+        vectorNode = (connectorRootNode as GroupNode).findOne((n) => n.type === 'VECTOR') as VectorNode | null;
       }
 
       const rgb = payload.colorHex ? hexToRgbColor(payload.colorHex) : undefined;
@@ -3041,14 +3641,14 @@ async function updateConnectorProperties(payload: {
 
       // 라벨 처리
       let labelFrame: FrameNode | null = null;
-      if (node.type === 'GROUP') {
-        labelFrame = (node as GroupNode).findOne(
+      if (connectorRootNode.type === 'GROUP') {
+        labelFrame = (connectorRootNode as GroupNode).findOne(
           (n) => n.name === 'ConnectorLabel' || safeGetPluginData(n, 'is_connector_label') === 'true'
         ) as FrameNode | null;
       }
 
       if (payload.hasLabel && payload.label) {
-        node.setPluginData('connector_label', payload.label.trim());
+        connectorRootNode.setPluginData('connector_label', payload.label.trim());
         if (labelFrame) {
           labelFrame.visible = true;
           const textNode = labelFrame.findOne((n) => n.type === 'TEXT') as TextNode | null;
@@ -3058,49 +3658,56 @@ async function updateConnectorProperties(payload: {
           }
         }
       } else if (payload.hasLabel === false) {
-        node.setPluginData('connector_label', '');
+        connectorRootNode.setPluginData('connector_label', '');
         if (labelFrame) {
           labelFrame.visible = false;
         }
       }
 
       if (payload.colorHex) {
-        node.setPluginData('connector_color', payload.colorHex);
+        connectorRootNode.setPluginData('connector_color', payload.colorHex);
         if (vectorNode) vectorNode.setPluginData('connector_color', payload.colorHex);
       }
       if (payload.strokeWeight) {
-        node.setPluginData('connector_weight', String(payload.strokeWeight));
+        connectorRootNode.setPluginData('connector_weight', String(payload.strokeWeight));
         if (vectorNode) vectorNode.setPluginData('connector_weight', String(payload.strokeWeight));
       }
       if (payload.strokePattern) {
-        node.setPluginData('connector_pattern', payload.strokePattern);
+        connectorRootNode.setPluginData('connector_pattern', payload.strokePattern);
         if (vectorNode) vectorNode.setPluginData('connector_pattern', payload.strokePattern);
       }
       if (payload.routingType) {
-        node.setPluginData('connector_routing', payload.routingType);
+        connectorRootNode.setPluginData('connector_routing', payload.routingType);
         if (vectorNode) vectorNode.setPluginData('connector_routing', payload.routingType);
       }
       if (effectiveStartTerm && effectiveStartTerm !== 'MIXED') {
-        node.setPluginData('start_terminal', effectiveStartTerm);
+        connectorRootNode.setPluginData('start_terminal', effectiveStartTerm);
         if (vectorNode) vectorNode.setPluginData('start_terminal', effectiveStartTerm);
       }
       if (effectiveEndTerm && effectiveEndTerm !== 'MIXED') {
-        node.setPluginData('end_terminal', effectiveEndTerm);
+        connectorRootNode.setPluginData('end_terminal', effectiveEndTerm);
         if (vectorNode) vectorNode.setPluginData('end_terminal', effectiveEndTerm);
       }
       if (typeof effectiveStartOffset === 'number') {
-        node.setPluginData('start_offset', String(effectiveStartOffset));
+        connectorRootNode.setPluginData('start_offset', String(effectiveStartOffset));
         if (vectorNode) vectorNode.setPluginData('start_offset', String(effectiveStartOffset));
       }
       if (typeof effectiveEndOffset === 'number') {
-        node.setPluginData('end_offset', String(effectiveEndOffset));
+        connectorRootNode.setPluginData('end_offset', String(effectiveEndOffset));
         if (vectorNode) vectorNode.setPluginData('end_offset', String(effectiveEndOffset));
       }
-      if (effectiveStartMagnet) node.setPluginData('source_magnet', effectiveStartMagnet);
-      if (effectiveEndMagnet) node.setPluginData('target_magnet', effectiveEndMagnet);
+      if (effectiveStartMagnet) connectorRootNode.setPluginData('source_magnet', effectiveStartMagnet);
+      if (effectiveEndMagnet) connectorRootNode.setPluginData('target_magnet', effectiveEndMagnet);
 
-      // 마그넷, 라우팅 또는 단자 변경 시 커스텀 벡터 직각 경로 즉시 재계산 (새로운 시작/끝 단자 버텍스 적용)
-      await updateOrthogonalVectorConnector(node, effectiveStartMagnet, effectiveEndMagnet);
+      // 마그넷, 라우팅, 오프셋 또는 단자 변경 시 커스텀 벡터 직각 경로 즉시 재계산 (새로운 시작/끝 단자 버텍스 적용)
+      await updateOrthogonalVectorConnector(
+        connectorRootNode,
+        effectiveStartMagnet,
+        effectiveEndMagnet,
+        false,
+        effectiveStartOffset,
+        effectiveEndOffset
+      );
     }
 
     notify('커넥터 옵션이 성공적으로 수정되었습니다.', 'success');
@@ -4127,6 +4734,15 @@ figma.on('documentchange', async (event) => {
             if (isTitle) {
               // 타이틀 텍스트: 블릿, 링크, 볼드, 취소선 등 일체 반영 차단 및 Inter Bold 13px 표준 규격 강제 고정
               await enforceTitleStandardStyle(textNode, flowNode);
+              // 스크린 노드 타이틀이 줄바꿈되어 높이가 변한 경우, 디스크립션 말줄임 재계산
+              if (flowNode.type === 'FRAME') {
+                const descText = flowNode.children.find(
+                  (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
+                ) as TextNode | undefined;
+                if (descText) {
+                  await updateDescTextTruncation(flowNode, descText, flowNode.height);
+                }
+              }
             } else if (isDesc) {
               // 설명 텍스트: 11px 폰트 사이즈 및 리사이즈 모드 고정, 나머지 서식(굵기, 색상, 이탤릭 등)은 모두 자유롭게 허용
               await lockTextFontSizeAndAutoResize(textNode, 11);

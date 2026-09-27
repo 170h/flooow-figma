@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
+import { Switch } from '../shared/Switch';
 
 const STATUSES = [
   { id: 'draft', label: 'Draft', color: '#9CA3AF' },
@@ -87,10 +88,12 @@ export function StatusSection() {
             </span>
           )}
         </span>
-        <label className="switch">
-          <input type="checkbox" id="toggle-status" checked={isOn} onChange={e => handleToggle(e.target.checked)} />
-          <span className="slider" />
-        </label>
+        <Switch
+          id="toggle-status"
+          checked={isOn}
+          isMixed={summary.isMultiFlowNode && summary.statusOn.isMixed}
+          onChange={handleToggle}
+        />
       </div>
       <div className="section-body">
         <div className={`chip-group${isOn ? ' active' : ''}`} id="status-options">

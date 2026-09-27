@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { IcCopy, IcCheckLarge } from '../shared/icons';
+import { Switch } from '../shared/Switch';
+import { normalizeNodeType, NODE_TYPE_SHAPE_SPECS } from '../../../types';
 
 /**
  * Description 섹션 - 스위치 토글 + 복사 버튼 + collapsible textarea
@@ -14,8 +16,16 @@ export function DescriptionSection() {
     lastNodeConfig,
     setLastNodeConfig,
     autoResizeWindow,
+    uiState,
   } = useApp();
   const summary = useSelectionSummary();
+
+  // 스크린(Screen) 노드 타입일 때만 디스크립션 허용
+  const isDescriptionAllowed = summary.isMultiFlowNode
+    ? (!summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === 'Screen')
+    : (selectedNodes.length === 1
+        ? normalizeNodeType(selectedNodes[0]?.flowNodeType) === 'Screen'
+        : normalizeNodeType(uiState.selectedNodeType) === 'Screen');
 
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,7 +49,7 @@ export function DescriptionSection() {
     return false;
   });
 
-  const isDescMixed = summary.isMultiFlowNode && summary.description.isMixed;
+  const isDescMixed = summary.isMultiFlowNode && (summary.hasDescription.isMixed || summary.description.isMixed);
 
   // 노드 선택 대상이 실제로 변경되었을 때만 토글 상태 동기화
   useEffect(() => {
@@ -138,24 +148,26 @@ export function DescriptionSection() {
     ? (isDescMixed ? '' : (summary.description.value || ''))
     : (selectedNodes.length === 1 ? (selectedNodes[0]?.description || '') : '');
 
+  const effectiveIsOn = isDescriptionAllowed && isOn;
+
   const descPlaceholder = isDescMixed
     ? 'Mixed'
     : 'Add a description';
 
   return (
-    <div className="section-block" style={{ paddingBottom: isOn ? '12px' : '0px' }}>
+    <div className="section-block" style={{ paddingBottom: effectiveIsOn ? '12px' : '0px' }}>
       <div className="section-header toggle-row">
-        <span className="section-title">
+        <span className={`section-title${!isDescriptionAllowed ? ' disabled' : ''}`}>
           Description
-          {isDescMixed && (
-            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+          {isDescriptionAllowed && isDescMixed && (
+            <span className="section-mixed-label">
               (Mixed)
             </span>
           )}
         </span>
         <div className="section-actions">
           {/* 스위치가 켜진 상태에서만 복사 버튼 노출, 텍스트가 없으면 비활성 상태 */}
-          {isOn && (
+          {effectiveIsOn && (
             <button
               id="btn-copy-desc"
               type="button"
@@ -167,18 +179,17 @@ export function DescriptionSection() {
               {copied ? <IcCheckLarge /> : <IcCopy />}
             </button>
           )}
-          <label className="switch">
-            <input
-              type="checkbox"
-              id="toggle-description"
-              checked={isOn}
-              onChange={e => handleToggle(e.target.checked)}
-            />
-            <span className="slider" />
-          </label>
+          <Switch
+            id="toggle-description"
+            checked={effectiveIsOn}
+            isMixed={isDescriptionAllowed && isDescMixed}
+            disabled={!isDescriptionAllowed}
+            data-tooltip={!isDescriptionAllowed ? 'Description is disabled for this shape' : undefined}
+            onChange={handleToggle}
+          />
         </div>
       </div>
-      {isOn && (
+      {effectiveIsOn && (
         <div className="section-body collapsible-body">
           <textarea
             key={summary.isMultiFlowNode ? 'multi-desc' : (selectedNodes[0]?.id || 'none')}

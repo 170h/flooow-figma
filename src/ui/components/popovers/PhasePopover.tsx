@@ -11,21 +11,25 @@ interface Phase {
 interface PhasePopoverProps {
   phases: Phase[];
   onSelectPhase: (id: string, name: string, color: string) => void;
+  onClose?: () => void;
 }
 
 /**
  * Phase 선택 팝오버
  */
-export function PhasePopover({ phases, onSelectPhase }: PhasePopoverProps) {
-  const { phasePopoverOpen, phasePopoverPos, setPhasePopoverOpen, uiState } = useApp();
+export function PhasePopover({ phases, onSelectPhase, onClose }: PhasePopoverProps) {
+  const { setPhasePopoverOpen, uiState } = useApp();
   const { selectedPhase } = uiState;
 
-  if (!phasePopoverOpen) return null;
+  const handleClose = () => {
+    onClose?.();
+    setPhasePopoverOpen(false);
+  };
 
   return (
     <div
       id="popover-phase"
-      className="popover-phase-select active"
+      className="popover-phase-select figma-dropdown-menu active"
       style={{
         position: 'absolute',
         top: 'calc(100% + 4px)',
@@ -33,6 +37,7 @@ export function PhasePopover({ phases, onSelectPhase }: PhasePopoverProps) {
         zIndex: 1060,
       }}
       onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Mixed 상태: 컬러칩이 포함된 옵션이므로 16x16 체크 + 컬러칩 위치의 '-' 대시 아이콘 + Mixed 라벨 */}
       {selectedPhase === 'mixed' && (
@@ -40,7 +45,7 @@ export function PhasePopover({ phases, onSelectPhase }: PhasePopoverProps) {
           variant="chip"
           chipSize={14}
           className="phase-menu-item"
-          onClick={() => setPhasePopoverOpen(false)}
+          onClick={handleClose}
         />
       )}
 
@@ -48,7 +53,7 @@ export function PhasePopover({ phases, onSelectPhase }: PhasePopoverProps) {
       <div
         className={`phase-menu-item${selectedPhase === 'none' ? ' selected' : ''}`}
         data-phase="none"
-        onClick={() => { onSelectPhase('none', 'None', '#EA2039'); setPhasePopoverOpen(false); }}
+        onClick={() => { onSelectPhase('none', 'None', '#EA2039'); handleClose(); }}
       >
         <div className="phase-item-check-slot">
           <svg className="phase-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -69,7 +74,7 @@ export function PhasePopover({ phases, onSelectPhase }: PhasePopoverProps) {
           key={phase.id}
           className={`phase-menu-item${selectedPhase === phase.id ? ' selected' : ''}`}
           data-phase={phase.id}
-          onClick={() => { onSelectPhase(phase.id, phase.name, phase.color || '#EA2039'); setPhasePopoverOpen(false); }}
+          onClick={() => { onSelectPhase(phase.id, phase.name, phase.color || '#EA2039'); handleClose(); }}
         >
           <div className="phase-item-check-slot">
             <svg className="phase-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">

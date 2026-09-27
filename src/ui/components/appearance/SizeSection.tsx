@@ -16,6 +16,15 @@ const HUG_SVG = (
   </svg>
 );
 
+const FIT_SVG = (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M9.5 14C9.77614 14 10 14.2239 10 14.5V17.5C10 17.7761 9.77614 18 9.5 18C9.22386 18 9 17.7761 9 17.5V15.707L6.85352 17.8535C6.65825 18.0488 6.34175 18.0488 6.14648 17.8535C5.95122 17.6583 5.95122 17.3417 6.14648 17.1465L8.29297 15H6.5C6.22386 15 6 14.7761 6 14.5C6 14.2239 6.22386 14 6.5 14H9.5ZM17.5 14C17.7761 14 18 14.2239 18 14.5C18 14.7761 17.7761 15 17.5 15H15.707L17.8535 17.1465C18.0488 17.3417 18.0488 17.6583 17.8535 17.8535C17.6583 18.0488 17.3417 18.0488 17.1465 17.8535L15 15.707V17.5C15 17.7761 14.7761 18 14.5 18C14.2239 18 14 17.7761 14 17.5V14.5C14 14.2239 14.2239 14 14.5 14H17.5ZM9.5 6C9.77614 6 10 6.22386 10 6.5V9.5C10 9.77614 9.77614 10 9.5 10H6.5C6.22386 10 6 9.77614 6 9.5C6 9.22386 6.22386 9 6.5 9H8.29297L6.14648 6.85352C5.95122 6.65825 5.95122 6.34175 6.14648 6.14648C6.34175 5.95122 6.65825 5.95122 6.85352 6.14648L9 8.29297V6.5C9 6.22386 9.22386 6 9.5 6ZM17.1465 6.14648C17.3417 5.95122 17.6583 5.95122 17.8535 6.14648C18.0488 6.34175 18.0488 6.65825 17.8535 6.85352L15.707 9H17.5C17.7761 9 18 9.22386 18 9.5C18 9.77614 17.7761 10 17.5 10H14.5C14.2239 10 14 9.77614 14 9.5V6.5C14 6.22386 14.2239 6 14.5 6C14.7761 6 15 6.22386 15 6.5V8.29297L17.1465 6.14648Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
 const CHEVRON_SVG = (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <path
@@ -142,6 +151,23 @@ export function SizeSection() {
           rEl.placeholder = '';
         }
       }
+    } else {
+      // 선택된 노드가 없을 때 (생성 대기 모드): lastNodeConfig 디폴트값(250, 90, 0) 동기화
+      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
+      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+      const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+      if (wEl) {
+        wEl.value = String(lastNodeConfig.width || 250);
+        wEl.placeholder = '';
+      }
+      if (hEl) {
+        hEl.value = String(lastNodeConfig.height || 90);
+        hEl.placeholder = '';
+      }
+      if (rEl) {
+        rEl.value = String(lastNodeConfig.cornerRadius ?? 0);
+        rEl.placeholder = '';
+      }
     }
   }, [summary.isMultiFlowNode, isWMixed, isHMixed, isRMixed, summary.width.value, summary.height.value, summary.cornerRadius.value, selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
 
@@ -157,18 +183,19 @@ export function SizeSection() {
     const val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
       setLastNodeConfig({ height: val });
-      const fixedValEl = document.getElementById('size-mode-val-fixed');
-      if (fixedValEl) fixedValEl.textContent = String(val);
     }
   }
 
   function handleRChange(e: React.ChangeEvent<HTMLInputElement>) {
     let val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
-      if (val > 20) {
-        val = 20;
-        e.target.value = '20';
-        showToast('최대값은 20입니다.', 'warning');
+      if (val > 999) {
+        val = 999;
+        e.target.value = '999';
+        showToast('최대값은 999입니다.', 'warning');
+      } else if (val < 0) {
+        val = 0;
+        e.target.value = '0';
       }
       setLastNodeConfig({ cornerRadius: val });
     }
@@ -181,16 +208,17 @@ export function SizeSection() {
     const w = parseInt(wEl?.value || '250', 10) || 250;
     const h = parseInt(hEl?.value || '90', 10) || 90;
     let r = parseInt(rEl?.value || '0', 10) || 0;
-    if (r > 20) {
-      r = 20;
-      if (rEl) rEl.value = '20';
-      showToast('최대값은 20입니다.', 'warning');
+    if (r > 999) {
+      r = 999;
+      if (rEl) rEl.value = '999';
+      showToast('최대값은 999입니다.', 'warning');
+    } else if (r < 0) {
+      r = 0;
+      if (rEl) rEl.value = '0';
     }
     if (!isNaN(w)) setLastNodeConfig({ width: w });
     if (!isNaN(h)) setLastNodeConfig({ height: h });
     if (!isNaN(r)) setLastNodeConfig({ cornerRadius: r });
-    const fixedValEl = document.getElementById('size-mode-val-fixed');
-    if (fixedValEl) fixedValEl.textContent = String(h);
     applyCurrentNodeState();
   }
 
@@ -208,8 +236,6 @@ export function SizeSection() {
       cornerRadius: p.radius ?? 0,
       sizeMode: p.sizeMode || 'fixed',
     });
-    const fixedValEl = document.getElementById('size-mode-val-fixed');
-    if (fixedValEl) fixedValEl.textContent = String(p.h);
     applyCurrentNodeState(p.sizeMode);
   }
 
@@ -238,18 +264,6 @@ export function SizeSection() {
   function toggleSizeModeDropdown(e: React.MouseEvent) {
     e.stopPropagation();
     const nextState = !dropdownOpen;
-    if (nextState) {
-      const currentH = (document.getElementById('input-size-h') as HTMLInputElement | null)?.value || String(lastNodeConfig.height || 90);
-      const fixedValEl = document.getElementById('size-mode-val-fixed');
-      const hugValEl = document.getElementById('size-mode-val-hug');
-      if (fixedValEl && currentH) fixedValEl.textContent = currentH;
-
-      const hasStatus = Boolean(selectedNodes[0]?.status || lastNodeConfig.statusOn || uiState.selectedStatus);
-      const defaultHugH = hasStatus ? 110 : 90;
-      const isCurrentlyHug = currentSizeMode === 'hug' || selectedNodes[0]?.sizeMode === 'hug';
-      const hugH = isCurrentlyHug ? Number(currentH) : (selectedNodes[0]?.hugHeight ?? defaultHugH);
-      if (hugValEl) hugValEl.textContent = String(hugH);
-    }
     setDropdownOpen(nextState);
     setSizeModeDropdownOpen(nextState);
   }
@@ -336,10 +350,22 @@ export function SizeSection() {
             >
               <div className="size-mode-btn-content figma-dropdown-btn-content">
                 <span className="size-mode-current-icon figma-dropdown-current-icon" id="size-mode-current-icon">
-                  {currentSizeMode === 'hug' ? HUG_SVG : currentSizeMode === 'mixed' ? <MixedDashChip size={16} /> : FIXED_SVG}
+                  {currentSizeMode === 'hug'
+                    ? HUG_SVG
+                    : currentSizeMode === 'fit'
+                    ? FIT_SVG
+                    : currentSizeMode === 'mixed'
+                    ? <MixedDashChip size={16} />
+                    : FIXED_SVG}
                 </span>
                 <span className="size-mode-current-text figma-dropdown-current-text" id="size-mode-current-text">
-                  {currentSizeMode === 'hug' ? 'Hug contents' : currentSizeMode === 'mixed' ? 'Mixed' : 'Fixed height'}
+                  {currentSizeMode === 'hug'
+                    ? 'Hug contents'
+                    : currentSizeMode === 'fit'
+                    ? 'Fit contents'
+                    : currentSizeMode === 'mixed'
+                    ? 'Mixed'
+                    : 'Fixed height'}
                 </span>
               </div>
               <span
@@ -373,17 +399,16 @@ export function SizeSection() {
                   <span className="size-mode-menu-item-check figma-dropdown-check-slot">{CHECK_SVG}</span>
                   <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">{FIXED_SVG}</span>
                   <span className="size-mode-menu-item-label figma-dropdown-label">Fixed height</span>
-                  <span className="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-fixed">{lastNodeConfig.height || 90}</span>
                 </div>
                 <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'hug' ? ' selected' : ''}`} data-value="hug" onClick={() => selectSizeMode('hug')}>
                   <span className="size-mode-menu-item-check figma-dropdown-check-slot">{CHECK_SVG}</span>
                   <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">{HUG_SVG}</span>
                   <span className="size-mode-menu-item-label figma-dropdown-label">Hug contents</span>
-                  <span className="size-mode-menu-item-value figma-dropdown-value" id="size-mode-val-hug">
-                    {(currentSizeMode === 'hug' || selectedNodes[0]?.sizeMode === 'hug')
-                      ? (selectedNodes[0]?.height || lastNodeConfig.height || 90)
-                      : (selectedNodes[0]?.hugHeight || ((lastNodeConfig.statusOn || Boolean(uiState.selectedStatus)) ? 110 : 90))}
-                  </span>
+                </div>
+                <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'fit' ? ' selected' : ''}`} data-value="fit" onClick={() => selectSizeMode('fit')}>
+                  <span className="size-mode-menu-item-check figma-dropdown-check-slot">{CHECK_SVG}</span>
+                  <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">{FIT_SVG}</span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">Fit contents</span>
                 </div>
               </div>
             )}

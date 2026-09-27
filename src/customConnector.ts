@@ -1098,10 +1098,22 @@ export async function updateOrthogonalVectorConnector(
   connectorNode: SceneNode,
   explicitSourceMagnet?: MagnetPosition,
   explicitTargetMagnet?: MagnetPosition,
-  forceOptimal: boolean = false
+  forceOptimal: boolean = false,
+  explicitStartOffset?: number,
+  explicitEndOffset?: number
 ) {
-  const srcId = safeGetPluginData(connectorNode, 'source_node_id');
-  const tgtId = safeGetPluginData(connectorNode, 'target_node_id');
+  // 만약 선택된 노드가 커넥터 그룹 내부의 VectorNode라면, 최상위 그룹 노드로 승격하여 전체 구조 동기화
+  let rootNode = connectorNode;
+  if (
+    connectorNode.parent &&
+    connectorNode.parent.type === 'GROUP' &&
+    safeGetPluginData(connectorNode.parent, 'is_custom_connector') === 'true'
+  ) {
+    rootNode = connectorNode.parent;
+  }
+
+  const srcId = safeGetPluginData(rootNode, 'source_node_id') || safeGetPluginData(connectorNode, 'source_node_id');
+  const tgtId = safeGetPluginData(rootNode, 'target_node_id') || safeGetPluginData(connectorNode, 'target_node_id');
 
   if (!srcId || !tgtId) return;
 
@@ -1115,15 +1127,15 @@ export async function updateOrthogonalVectorConnector(
   let vector: VectorNode | null = null;
   let labelFrame: FrameNode | null = null;
 
-  if (connectorNode.type === 'GROUP') {
-    const group = connectorNode as GroupNode;
+  if (rootNode.type === 'GROUP') {
+    const group = rootNode as GroupNode;
     vector = (group.children.find((c) => c.type === 'VECTOR') as VectorNode) || null;
     labelFrame =
       (group.children.find(
         (c) => safeGetPluginData(c, 'is_connector_label') === 'true' || c.name === 'ConnectorLabel'
       ) as FrameNode) || null;
-  } else if (connectorNode.type === 'VECTOR') {
-    vector = connectorNode as VectorNode;
+  } else if (rootNode.type === 'VECTOR') {
+    vector = rootNode as VectorNode;
   }
 
   if (!vector) return;
@@ -1153,32 +1165,46 @@ export async function updateOrthogonalVectorConnector(
   }
 
   // 최신 마그넷 정보 동기화 저장
-  connectorNode.setPluginData('source_magnet', sourceMagnet);
-  connectorNode.setPluginData('target_magnet', targetMagnet);
-  if (vector !== connectorNode) {
+  rootNode.setPluginData('source_magnet', sourceMagnet);
+  rootNode.setPluginData('target_magnet', targetMagnet);
+  if (vector !== rootNode) {
     vector.setPluginData('source_magnet', sourceMagnet);
     vector.setPluginData('target_magnet', targetMagnet);
   }
 
   // 라우팅 타입 조회 (직각, 라운드니스 S_CURVE, 자유곡선 CURVED, 직선 STRAIGHT)
   const routingType: ConnectorRoutingType =
-    (safeGetPluginData(connectorNode, 'connector_routing') as ConnectorRoutingType) ||
+    (safeGetPluginData(rootNode, 'connector_routing') as ConnectorRoutingType) ||
     (safeGetPluginData(vector, 'connector_routing') as ConnectorRoutingType) ||
     'ORTHOGONAL';
 
   const pStart = getMagnetPoint(srcBox, sourceMagnet);
   const pEnd = getMagnetPoint(tgtBox, targetMagnet);
 
-  const startOffset = parseFloat(
-    safeGetPluginData(connectorNode, 'start_offset') ||
-    safeGetPluginData(vector, 'start_offset') ||
-    '0'
-  ) || 0;
-  const endOffset = parseFloat(
-    safeGetPluginData(connectorNode, 'end_offset') ||
-    safeGetPluginData(vector, 'end_offset') ||
-    '0'
-  ) || 0;
+  // 명시적으로 인자로 넘어온 오프셋이 있다면 우선 적용, 없다면 저장된 플러그인 데이터 활용
+  const startOffset = typeof explicitStartOffset === 'number'
+    ? explicitStartOffset
+    : (parseFloat(
+        safeGetPluginData(rootNode, 'start_offset') ||
+        safeGetPluginData(vector, 'start_offset') ||
+        '0'
+      ) || 0);
+
+  const endOffset = typeof explicitEndOffset === 'number'
+    ? explicitEndOffset
+    : (parseFloat(
+        safeGetPluginData(rootNode, 'end_offset') ||
+        safeGetPluginData(vector, 'end_offset') ||
+        '0'
+      ) || 0);
+
+  // 최신 오프셋 동기화 저장
+  rootNode.setPluginData('start_offset', String(startOffset));
+  rootNode.setPluginData('end_offset', String(endOffset));
+  if (vector !== rootNode) {
+    vector.setPluginData('start_offset', String(startOffset));
+    vector.setPluginData('end_offset', String(endOffset));
+  }
 
   // 라우팅 타입별 경로 재계산 (시작/끝 오프셋 반영)
   const worldPoints = calculateRoutingPoints(
@@ -1197,11 +1223,11 @@ export async function updateOrthogonalVectorConnector(
   const allY = worldPoints.map((p) => p.y);
 
   const startTerminal =
-    (safeGetPluginData(connectorNode, 'start_terminal') as ConnectorTerminalType) ||
+    (safeGetPluginData(rootNode, 'start_terminal') as ConnectorTerminalType) ||
     (safeGetPluginData(vector, 'start_terminal') as ConnectorTerminalType) ||
     'NONE';
   const endTerminal =
-    (safeGetPluginData(connectorNode, 'end_terminal') as ConnectorTerminalType) ||
+    (safeGetPluginData(rootNode, 'end_terminal') as ConnectorTerminalType) ||
     (safeGetPluginData(vector, 'end_terminal') as ConnectorTerminalType) ||
     'ARROW';
 
@@ -1259,8 +1285,8 @@ export async function updateOrthogonalVectorConnector(
   }
 
   // 기존 그룹 내에 남아있던 레거시 사각형 단자 마커가 있다면 깔끔하게 제거
-  if (connectorNode.type === 'GROUP') {
-    const group = connectorNode as GroupNode;
+  if (rootNode.type === 'GROUP') {
+    const group = rootNode as GroupNode;
     try {
       const legacyMarkers = group.findAll((n) => {
         try {
@@ -1280,9 +1306,9 @@ export async function updateOrthogonalVectorConnector(
     } catch (_) {}
   }
 
-  if (connectorNode.parent) {
+  if (rootNode.parent) {
     // 커넥터가 노드 뒤에 깔리지 않도록 항상 상위 레이어에 유지
-    connectorNode.parent.appendChild(connectorNode);
+    rootNode.parent.appendChild(rootNode);
   }
 
   // 라벨 위치 갱신

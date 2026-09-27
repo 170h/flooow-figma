@@ -1,67 +1,118 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 
-interface TooltipState {
-  visible: boolean;
-  text: string;
-  x: number;
-  y: number;
-}
-
 /**
  * 피그마 UI3 스타일 플로팅 툴팁
  * data-tooltip 속성을 가진 요소에 마우스오버 시 표시된다.
  */
 export function FigmaTooltip() {
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef<TooltipState>({ visible: false, text: '', x: 0, y: 0 });
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const show = useCallback((target: Element, text: string) => {
-    if (showTimerRef.current) clearTimeout(showTimerRef.current);
-    showTimerRef.current = setTimeout(() => {
-      const rect = target.getBoundingClientRect();
-      const tooltip = tooltipRef.current;
-      if (!tooltip) return;
-
-      tooltip.textContent = text;
-      tooltip.style.visibility = 'hidden';
-      tooltip.style.display = 'block';
-      const tw = tooltip.offsetWidth;
-      const th = tooltip.offsetHeight;
-
-      let x = rect.left + rect.width / 2 - tw / 2;
-      let y = rect.top - th - 6;
-      if (y < 4) y = rect.bottom + 6;
-      if (x < 4) x = 4;
-      if (x + tw > window.innerWidth - 4) x = window.innerWidth - tw - 4;
-
-      tooltip.style.left = `${x}px`;
-      tooltip.style.top = `${y}px`;
-      tooltip.style.visibility = 'visible';
-    }, 600);
-  }, []);
+  const currentTargetRef = useRef<Element | null>(null);
 
   const hide = useCallback(() => {
-    if (showTimerRef.current) clearTimeout(showTimerRef.current);
+    if (showTimerRef.current) {
+      clearTimeout(showTimerRef.current);
+      showTimerRef.current = null;
+    }
+    currentTargetRef.current = null;
     const tooltip = tooltipRef.current;
-    if (tooltip) tooltip.style.display = 'none';
+    if (tooltip) {
+      tooltip.classList.remove('visible', 'arrow-top');
+      tooltip.style.display = 'none';
+    }
   }, []);
+
+  const show = useCallback((target: Element, text: string) => {
+    if (!text || !text.trim()) {
+      hide();
+      return;
+    }
+
+    if (showTimerRef.current) {
+      clearTimeout(showTimerRef.current);
+    }
+
+    currentTargetRef.current = target;
+
+    showTimerRef.current = setTimeout(() => {
+      const tooltip = tooltipRef.current;
+      if (!tooltip || currentTargetRef.current !== target) return;
+
+      tooltip.textContent = text;
+      tooltip.style.display = 'block';
+      tooltip.classList.remove('visible', 'arrow-top');
+
+      const rect = target.getBoundingClientRect();
+      const tipRect = tooltip.getBoundingClientRect();
+
+      // 대상 요소 상단 중앙 배치 (말꼬리 화살표 5px 고려 6px 갭)
+      let top = rect.top - tipRect.height - 6;
+      let left = rect.left + rect.width / 2 - tipRect.width / 2;
+
+      // 화면 상단 공간 부족 시 하단에 배치 및 위쪽 화살표(arrow-top) 적용
+      if (top < 4) {
+        top = rect.bottom + 6;
+        tooltip.classList.add('arrow-top');
+      } else {
+        tooltip.classList.remove('arrow-top');
+      }
+
+      // 화면 좌우 경계 이탈 방지
+      if (left < 6) left = 6;
+      if (left + tipRect.width > window.innerWidth - 6) {
+        left = window.innerWidth - tipRect.width - 6;
+      }
+
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+
+      // 리플로우 강제 후 visible 클래스 부여 (opacity: 1 활성화)
+      void tooltip.offsetWidth;
+      tooltip.classList.add('visible');
+    }, 150); // 피그마 공식 인터랙션 딜레이 (150ms)
+  }, [hide]);
 
   useEffect(() => {
     const handleMouseOver = (e: MouseEvent) => {
-      const target = (e.target as Element).closest('[data-tooltip]');
-      if (target) show(target, target.getAttribute('data-tooltip') || '');
+      const targetElement = e.target as Element;
+      // 폼 입력 필드는 툴팁 방지
+      if (targetElement.matches?.('input, textarea, select')) {
+        hide();
+        return;
+      }
+
+      const target = targetElement.closest?.('[data-tooltip]');
+      if (!target) return;
+
+      const text = target.getAttribute('data-tooltip');
+      if (!text) return;
+
+      // 이미 동일한 타깃 요소에 호버 중이면 타이머 재설정 방지
+      if (currentTargetRef.current === target) return;
+
+      show(target, text);
     };
+
     const handleMouseOut = (e: MouseEvent) => {
-      const target = (e.target as Element).closest('[data-tooltip]');
-      if (target) hide();
+      const target = (e.target as Element).closest?.('[data-tooltip]');
+      if (!target) return;
+
+      const related = e.relatedTarget as Node | null;
+      if (related && target.contains(related)) {
+        // target 내부 요소(예: button 내부 svg, path 등) 간 이동 시 닫지 않음
+        return;
+      }
+
+      hide();
     };
 
     document.addEventListener('mouseover', handleMouseOver);
     document.addEventListener('mouseout', handleMouseOut);
+
     return () => {
       document.removeEventListener('mouseover', handleMouseOver);
       document.removeEventListener('mouseout', handleMouseOut);
+      if (showTimerRef.current) clearTimeout(showTimerRef.current);
     };
   }, [show, hide]);
 
@@ -69,7 +120,7 @@ export function FigmaTooltip() {
     <div
       ref={tooltipRef}
       className="figma-tooltip"
-      style={{ display: 'none', position: 'fixed', zIndex: 9999 }}
+      style={{ display: 'none', position: 'fixed', zIndex: 99999 }}
     />
   );
 }

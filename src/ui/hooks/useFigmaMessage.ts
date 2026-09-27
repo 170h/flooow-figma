@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useApp, NodeInfo } from '../context/AppContext';
+import { normalizeNodeType } from '../../types';
 
 /**
  * Figma 플러그인 → UI 방향 메시지 처리 훅
@@ -59,7 +60,7 @@ export function useFigmaMessage() {
                 const hasDesc = Boolean(node.description && node.description.trim());
                 const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
                 if (descToggleEl) descToggleEl.checked = hasDesc;
-                if (titleEl) titleEl.value = node.title || node.name || 'Untitled';
+                if (titleEl) titleEl.value = (node.title || node.name || 'Untitled').slice(0, 32);
                 if (descEl) descEl.value = node.description || '';
                 setLastNodeConfig({ descriptionOn: hasDesc });
               }
@@ -68,7 +69,7 @@ export function useFigmaMessage() {
               if (rEl && typeof node.cornerRadius === 'number') rEl.value = String(node.cornerRadius);
 
               if (node.flowNodeType) {
-                setUIState({ selectedNodeType: node.flowNodeType });
+                setUIState({ selectedNodeType: normalizeNodeType(node.flowNodeType) });
               }
 
               const fixedValEl = document.getElementById('size-mode-val-fixed');
@@ -104,8 +105,9 @@ export function useFigmaMessage() {
                 if (statusOptionsEl) statusOptionsEl.classList.remove('active');
               }
 
-              // Figma Screen Link 복원
-              const figmaLink = node.figmaLink || '';
+              // Figma Screen Link 복원 (스크린 노드만 허용)
+              const isScreen = normalizeNodeType(node.flowNodeType) === 'Screen';
+              const figmaLink = (isScreen && node.figmaLink) || '';
               if (figmaLink) {
                 setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
                 const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
@@ -124,19 +126,38 @@ export function useFigmaMessage() {
               if (titleEl) titleEl.value = 'Figjam object';
             }
           } else if (!nodes || nodes.length === 0) {
-            // 선택 해제 시 (새로운 노드 생성 대기 모드): 실제로 선택이 해제된 순간에만 리셋
+            // 선택 해제 시 (새로운 노드 생성 대기 모드): 실제로 선택이 해제된 순간에 디폴트 값으로 완전 리셋
             if (isDifferentNode) {
               const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
               const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
               const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
+              const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
               const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+              const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
               const fixedValEl = document.getElementById('size-mode-val-fixed');
-              if (titleEl) titleEl.value = 'Untitled';
+              const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
+              const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
+
+              if (titleEl) titleEl.value = 'Screen';
               if (descEl) descEl.value = '';
               if (descToggleEl) descToggleEl.checked = false;
+              if (wEl) wEl.value = '250';
               if (hEl) hEl.value = '90';
+              if (rEl) rEl.value = '0';
               if (fixedValEl) fixedValEl.textContent = '90';
-              setLastNodeConfig({ descriptionOn: false, height: 90 });
+              if (linkToggleEl) linkToggleEl.checked = false;
+              if (linkUrlEl) linkUrlEl.value = '';
+
+              setLastNodeConfig({
+                nodeType: 'Screen',
+                width: 250,
+                height: 90,
+                cornerRadius: 0,
+                descriptionOn: false,
+                singleLinkOn: false,
+                singleLinkUrl: '',
+              });
+              setUIState({ selectedNodeType: 'Screen' });
             }
           }
           break;

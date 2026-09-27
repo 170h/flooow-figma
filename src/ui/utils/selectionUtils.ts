@@ -1,5 +1,5 @@
 import { NodeInfo } from '../context/AppContext';
-import { DiagramNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition } from '../../types';
+import { DiagramNodeType, normalizeNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition } from '../../types';
 
 export interface PropertySummary<T> {
   value: T | undefined;
@@ -67,7 +67,7 @@ export interface SelectionSummary {
   width: PropertySummary<number>;
   height: PropertySummary<number>;
   cornerRadius: PropertySummary<number>;
-  sizeMode: PropertySummary<'fixed' | 'hug'>;
+  sizeMode: PropertySummary<'fixed' | 'hug' | 'fit'>;
   stepNumber: PropertySummary<number>;
   hasStepBadge: PropertySummary<boolean>;
   badgeCorner: PropertySummary<BadgePosition | string>;
@@ -131,7 +131,7 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     elevationOn: getCommonProperty(flowNodes, (n) => (n.elevationOn !== undefined ? Boolean(n.elevationOn) : undefined)),
     status: getCommonProperty(flowNodes, (n) => n.status),
     statusOn: getCommonProperty(flowNodes, (n) => Boolean(n.status)),
-    nodeType: getCommonProperty(flowNodes, (n) => n.flowNodeType || n.nodeType),
+    nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || n.nodeType)),
     width: getCommonProperty(flowNodes, (n) => n.width),
     height: getCommonProperty(flowNodes, (n) => n.height),
     cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius),

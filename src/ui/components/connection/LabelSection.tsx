@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { Switch } from '../shared/Switch';
 
 const LABEL_PRESETS = ['Text', 'Yes', 'No', 'Success', 'Error', 'Next', 'Back'] as const;
 
@@ -31,11 +32,11 @@ export function LabelSection() {
     <div className="section-block">
       <div className="section-header toggle-row">
         <span className="section-title">Label</span>
-        <label className="switch">
-          <input type="checkbox" id="toggle-conn-label" checked={isOn}
-            onChange={e => handleToggle(e.target.checked)} />
-          <span className="slider" />
-        </label>
+        <Switch
+          id="toggle-conn-label"
+          checked={isOn}
+          onChange={handleToggle}
+        />
       </div>
       <div className="section-body">
         <div className={`collapsible-content${isOn ? ' active' : ''}`} id="conn-label-group">

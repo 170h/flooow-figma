@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
+import { Switch } from '../shared/Switch';
 
 /**
  * Elevation 섹션 - 토글 스위치 + 5단계 엘리베이션 카드 (토글형)
@@ -50,15 +51,12 @@ export function ElevationSection() {
             </span>
           )}
         </span>
-        <label className="switch">
-          <input
-            type="checkbox"
-            id="toggle-elevation"
-            checked={isOn}
-            onChange={(e) => handleToggle(e.target.checked)}
-          />
-          <span className="slider" />
-        </label>
+        <Switch
+          id="toggle-elevation"
+          checked={isOn}
+          isMixed={isElevationMixed}
+          onChange={handleToggle}
+        />
       </div>
       <div className="section-body">
         <div className={`elevation-cards-container${isOn ? ' active' : ''}`} id="elevation-options">

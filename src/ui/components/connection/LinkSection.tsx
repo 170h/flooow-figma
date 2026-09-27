@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { Switch } from '../shared/Switch';
 
 /**
  * Link 섹션 - 토글 + URL 입력
@@ -20,11 +21,11 @@ export function LinkSection() {
     <div className="section-block" id="conn-link-section-block">
       <div className="section-header toggle-row">
         <span className="section-title">Link</span>
-        <label className="switch">
-          <input type="checkbox" id="toggle-conn-link" checked={isOn}
-            onChange={e => handleToggle(e.target.checked)} />
-          <span className="slider" />
-        </label>
+        <Switch
+          id="toggle-conn-link"
+          checked={isOn}
+          onChange={handleToggle}
+        />
       </div>
       <div className="section-body">
         <div className={`collapsible-content${isOn ? ' active' : ''}`} id="conn-link-group">
