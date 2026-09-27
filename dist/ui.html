@@ -5475,7 +5475,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useRef(initialValue);
           }
-          function useEffect19(create, deps) {
+          function useEffect20(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useEffect(create, deps);
           }
@@ -6258,7 +6258,7 @@
           exports.useContext = useContext2;
           exports.useDebugValue = useDebugValue;
           exports.useDeferredValue = useDeferredValue;
-          exports.useEffect = useEffect19;
+          exports.useEffect = useEffect20;
           exports.useId = useId;
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
@@ -29008,14 +29008,7 @@
   ];
   var DEFAULT_STYLE_PRESETS = [
     { id: "style-white", name: "White", fillColor: "#ffffff", strokeWeight: 1.5, strokeColor: "#000000", isDefault: true },
-    { id: "style-black", name: "Black", fillColor: "#000000", strokeWeight: 0, strokeColor: "#000000", isDefault: true },
-    { id: "style-red-1", name: "Red 1", fillColor: "#EA2039", strokeWeight: 0, strokeColor: "#000000" },
-    { id: "style-red-2", name: "Red 2", fillColor: "#EB4C46", strokeWeight: 0, strokeColor: "#000000" },
-    { id: "style-coral-1", name: "Coral 1", fillColor: "#E03E3E", strokeWeight: 0, strokeColor: "#000000" },
-    { id: "style-coral-2", name: "Coral 2", fillColor: "#E05638", strokeWeight: 0, strokeColor: "#000000" },
-    { id: "style-orange", name: "Orange", fillColor: "#DF6246", strokeWeight: 0, strokeColor: "#000000" },
-    { id: "style-pink", name: "Pink", fillColor: "#EB5757", strokeWeight: 0, strokeColor: "#000000" },
-    { id: "style-purple", name: "Purple", fillColor: "#8638E5", strokeWeight: 0, strokeColor: "#000000" }
+    { id: "style-black", name: "Black", fillColor: "#000000", strokeWeight: 0, strokeColor: "#000000", isDefault: true }
   ];
   var DEFAULT_LAST_NODE_CONFIG = {
     phase: "none",
@@ -29123,7 +29116,19 @@
         const saved = localStorage.getItem("ui_flow_style_presets");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const legacyRemoved = /* @__PURE__ */ new Set([
+              "style-red-1",
+              "style-red-2",
+              "style-coral-1",
+              "style-coral-2",
+              "style-orange",
+              "style-pink",
+              "style-purple"
+            ]);
+            const filtered = parsed.filter((p) => !legacyRemoved.has(p.id));
+            if (filtered.length > 0) return filtered;
+          }
         }
       } catch (_) {
       }
@@ -34066,24 +34071,32 @@
   var import_jsx_runtime18 = __toESM(require_jsx_runtime());
   var LABEL_PRESETS = ["Text", "Yes", "No", "Success", "Error", "Next", "Back"];
   function LabelSection() {
-    const { setLastConnectorConfig, applyCurrentConnectorState, autoResizeWindow } = useApp();
-    const [isOn, setIsOn] = (0, import_react15.useState)(false);
+    const { lastConnectorConfig, setLastConnectorConfig, applyCurrentConnectorState, autoResizeWindow } = useApp();
+    const [isOn, setIsOn] = (0, import_react15.useState)(lastConnectorConfig.labelOn || false);
+    const [labelText, setLabelText] = (0, import_react15.useState)(lastConnectorConfig.labelText || "Text");
+    (0, import_react15.useEffect)(() => {
+      setIsOn(lastConnectorConfig.labelOn || false);
+      if (lastConnectorConfig.labelText !== void 0) {
+        setLabelText(lastConnectorConfig.labelText);
+      }
+    }, [lastConnectorConfig.labelOn, lastConnectorConfig.labelText]);
     function handleToggle(checked) {
       setIsOn(checked);
       setLastConnectorConfig({ labelOn: checked });
-      const el = document.getElementById("conn-label-group");
-      if (el) el.classList.toggle("active", checked);
       autoResizeWindow();
+      setTimeout(() => applyCurrentConnectorState(), 0);
     }
-    function setLabelPreset(val, btn) {
-      const inputEl = document.getElementById("input-conn-label");
-      if (inputEl) inputEl.value = val;
+    function handlePresetClick(val) {
+      setLabelText(val);
       setLastConnectorConfig({ labelText: val });
-      document.querySelectorAll("#conn-label-group .chip-btn").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      applyCurrentConnectorState();
+      setTimeout(() => applyCurrentConnectorState(), 0);
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: "section-block", children: [
+    function handleTextChange(val) {
+      setLabelText(val);
+      setLastConnectorConfig({ labelText: val });
+      setTimeout(() => applyCurrentConnectorState(), 0);
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: "section-block", style: { paddingBottom: isOn ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: "section-header toggle-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: "section-title", children: "Label" }),
         /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
@@ -34095,17 +34108,21 @@
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: `collapsible-content${isOn ? " active" : ""}`, id: "conn-label-group", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("div", { className: "chip-group", id: "conn-label-group-chips", children: LABEL_PRESETS.map((label) => /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
-          "button",
-          {
-            className: "chip-btn",
-            "data-label": label,
-            onClick: (e) => setLabelPreset(label, e.currentTarget),
-            children: label
-          },
-          label
-        )) }),
+      isOn && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: "collapsible-content active", id: "conn-label-group", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("div", { className: "chip-group", id: "conn-label-group-chips", children: LABEL_PRESETS.map((label) => {
+          const isActive = labelText === label;
+          return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
+            "button",
+            {
+              type: "button",
+              className: `chip-btn${isActive ? " active" : ""}`,
+              "data-label": label,
+              onClick: () => handlePresetClick(label),
+              children: label
+            },
+            label
+          );
+        }) }),
         /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
           "input",
           {
@@ -34113,8 +34130,9 @@
             id: "input-conn-label",
             className: "form-input",
             placeholder: "Label text",
+            value: labelText,
             style: { marginTop: "6px" },
-            onChange: (e) => setLastConnectorConfig({ labelText: e.target.value })
+            onChange: (e) => handleTextChange(e.target.value)
           }
         )
       ] }) })
@@ -36822,38 +36840,16 @@
     const isConnSel = isSingleConn || isMultiConn;
     const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
     (0, import_react26.useEffect)(() => {
-      const tabNode = document.getElementById("tab-btn-node");
-      const tabAppearance = document.getElementById("tab-btn-appearance");
-      const tabConnection = document.getElementById("tab-btn-connection");
       if (isSingleFigjam) {
-        tabNode?.classList.add("disabled");
-        tabAppearance?.classList.add("disabled");
-        tabConnection?.classList.add("disabled");
         if (currentTab !== "node") setCurrentTab("node");
       } else if (isMultiFigjam) {
-        tabNode?.classList.add("disabled");
-        tabAppearance?.classList.add("disabled");
-        tabConnection?.classList.remove("disabled");
         if (currentTab !== "connection") setCurrentTab("connection");
       } else if (isConnSel) {
-        tabNode?.classList.add("disabled");
-        tabAppearance?.classList.add("disabled");
-        tabConnection?.classList.remove("disabled");
         if (currentTab !== "connection") setCurrentTab("connection");
       } else if (nodeCount === 0) {
-        tabNode?.classList.remove("disabled");
-        tabAppearance?.classList.add("disabled");
-        tabConnection?.classList.add("disabled");
         if (currentTab !== "node") setCurrentTab("node");
       } else if (nodeCount === 1) {
-        tabNode?.classList.remove("disabled");
-        tabAppearance?.classList.remove("disabled");
-        tabConnection?.classList.add("disabled");
         if (currentTab === "connection") setCurrentTab("node");
-      } else {
-        tabNode?.classList.remove("disabled");
-        tabAppearance?.classList.remove("disabled");
-        tabConnection?.classList.remove("disabled");
       }
     }, [isSingleFigjam, isMultiFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
     (0, import_react26.useEffect)(() => {

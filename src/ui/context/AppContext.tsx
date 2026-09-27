@@ -44,13 +44,6 @@ export interface StylePreset {
 export const DEFAULT_STYLE_PRESETS: StylePreset[] = [
   { id: 'style-white', name: 'White', fillColor: '#ffffff', strokeWeight: 1.5, strokeColor: '#000000', isDefault: true },
   { id: 'style-black', name: 'Black', fillColor: '#000000', strokeWeight: 0, strokeColor: '#000000', isDefault: true },
-  { id: 'style-red-1', name: 'Red 1', fillColor: '#EA2039', strokeWeight: 0, strokeColor: '#000000' },
-  { id: 'style-red-2', name: 'Red 2', fillColor: '#EB4C46', strokeWeight: 0, strokeColor: '#000000' },
-  { id: 'style-coral-1', name: 'Coral 1', fillColor: '#E03E3E', strokeWeight: 0, strokeColor: '#000000' },
-  { id: 'style-coral-2', name: 'Coral 2', fillColor: '#E05638', strokeWeight: 0, strokeColor: '#000000' },
-  { id: 'style-orange', name: 'Orange', fillColor: '#DF6246', strokeWeight: 0, strokeColor: '#000000' },
-  { id: 'style-pink', name: 'Pink', fillColor: '#EB5757', strokeWeight: 0, strokeColor: '#000000' },
-  { id: 'style-purple', name: 'Purple', fillColor: '#8638E5', strokeWeight: 0, strokeColor: '#000000' },
 ];
 
 export interface NodeInfo {
@@ -388,7 +381,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem('ui_flow_style_presets');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const legacyRemoved = new Set([
+            'style-red-1', 'style-red-2', 'style-coral-1', 'style-coral-2',
+            'style-orange', 'style-pink', 'style-purple'
+          ]);
+          const filtered = parsed.filter((p: StylePreset) => !legacyRemoved.has(p.id));
+          if (filtered.length > 0) return filtered;
+        }
       }
     } catch (_) {}
     return DEFAULT_STYLE_PRESETS;

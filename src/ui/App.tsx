@@ -94,47 +94,23 @@ export function App() {
   // CTA 레이블
   const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
 
-  // 탭 활성/비활성 제어
+  // 탭 자동 전환 제어 (선택 조건에 따른 적절한 탭으로 자동 이동)
   useEffect(() => {
-    const tabNode = document.getElementById('tab-btn-node');
-    const tabAppearance = document.getElementById('tab-btn-appearance');
-    const tabConnection = document.getElementById('tab-btn-connection');
-
     if (isSingleFigjam) {
-      // 1. 피그잼 단일 오브젝트 선택: 상단 탭 3개 모두 비활성화
-      tabNode?.classList.add('disabled');
-      tabAppearance?.classList.add('disabled');
-      tabConnection?.classList.add('disabled');
+      // 1. 피그잼 단일 오브젝트 선택: 기본 Node 탭 유지
       if (currentTab !== 'node') setCurrentTab('node');
     } else if (isMultiFigjam) {
-      // 2. 피그잼 오브젝트 2개 이상 복수 선택: 커넥션 기능 활성화 (Connection 탭 자동 이동)
-      tabNode?.classList.add('disabled');
-      tabAppearance?.classList.add('disabled');
-      tabConnection?.classList.remove('disabled');
+      // 2. 피그잼 오브젝트 2개 이상 복수 선택: Connection 탭 자동 이동
       if (currentTab !== 'connection') setCurrentTab('connection');
     } else if (isConnSel) {
-      // 3. 커넥터 선택: Node/Appearance 비활성 → Connection 강제 이동
-      tabNode?.classList.add('disabled');
-      tabAppearance?.classList.add('disabled');
-      tabConnection?.classList.remove('disabled');
+      // 3. 커넥터 선택: Connection 탭 자동 이동
       if (currentTab !== 'connection') setCurrentTab('connection');
     } else if (nodeCount === 0) {
-      // 4. 선택 없음(생성 모드): Appearance/Connection 비활성
-      tabNode?.classList.remove('disabled');
-      tabAppearance?.classList.add('disabled');
-      tabConnection?.classList.add('disabled');
+      // 4. 선택 없음(생성 모드): Node 탭 유지
       if (currentTab !== 'node') setCurrentTab('node');
     } else if (nodeCount === 1) {
-      // 5. 플로우 노드 단 1개 선택: Node/Appearance 활성, Connection 비활성화!
-      tabNode?.classList.remove('disabled');
-      tabAppearance?.classList.remove('disabled');
-      tabConnection?.classList.add('disabled');
+      // 5. 플로우 노드 단 1개 선택: Connection 탭에 있었으면 Node 탭으로 복귀
       if (currentTab === 'connection') setCurrentTab('node');
-    } else {
-      // 6. 플로우 노드 2개 이상 복수 선택: 전체 활성
-      tabNode?.classList.remove('disabled');
-      tabAppearance?.classList.remove('disabled');
-      tabConnection?.classList.remove('disabled');
     }
   }, [isSingleFigjam, isMultiFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
 
