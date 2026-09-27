@@ -3638,6 +3638,15 @@
           attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
         }
       }
+      if (existingStepBadge) {
+        const stepCorner = safeGetPluginData2(card, "badge_corner") || "TOP_LEFT";
+        const bw = Math.max(24, Math.round(existingStepBadge.width));
+        const bh = 24;
+        const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, curH, bw, bh, stepCorner);
+        existingStepBadge.x = badgeCoords.x;
+        existingStepBadge.y = badgeCoords.y;
+        existingStepBadge.constraints = badgeCoords.constraints;
+      }
       card.name = effectiveTitle;
       card.setPluginData("is_flow_node", "true");
       card.setPluginData("schema_version", "2");
@@ -3816,6 +3825,18 @@
         statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
         statusBadge.x = w - statusBadge.width - 10;
         statusBadge.y = h - statusBadge.height - 10;
+      }
+      const stepBadge = frame.children.find(
+        (c) => c.name.startsWith("[Step]") || safeGetPluginData2(c, "is_step_badge") === "true"
+      );
+      if (stepBadge) {
+        const stepCorner = safeGetPluginData2(frame, "badge_corner") || "TOP_LEFT";
+        const bw = Math.max(24, Math.round(stepBadge.width));
+        const bh = 24;
+        const badgeCoords = getStepBadgeCoordinates(nType, w, h, bw, bh, stepCorner);
+        stepBadge.x = badgeCoords.x;
+        stepBadge.y = badgeCoords.y;
+        stepBadge.constraints = badgeCoords.constraints;
       }
       handleSelectionChange();
     } catch (err) {
@@ -4553,17 +4574,32 @@
   }
   function applyStepBadgeColors(stepBadge, numText, colorMode = "Style", card) {
     let nodeBgColor = { r: 1, g: 1, b: 1 };
-    const cardFills = card.fills;
-    if (Array.isArray(cardFills) && cardFills.length > 0 && cardFills[0].type === "SOLID") {
-      nodeBgColor = cardFills[0].color;
-    }
     let nodeStrokeColor = null;
-    const cardStrokes = card.strokes;
-    if (Array.isArray(cardStrokes) && cardStrokes.length > 0 && cardStrokes[0].type === "SOLID") {
-      nodeStrokeColor = cardStrokes[0].color;
+    let hasNodeStroke = false;
+    const shapeVector = card.children.find(
+      (c) => (c.name === "ShapeVector" || c.name === "DiamondShape") && (c.type === "VECTOR" || c.type === "FRAME")
+    );
+    if (shapeVector) {
+      if ("fills" in shapeVector && Array.isArray(shapeVector.fills) && shapeVector.fills.length > 0 && shapeVector.fills[0].type === "SOLID") {
+        nodeBgColor = shapeVector.fills[0].color;
+      }
+      if ("strokes" in shapeVector && Array.isArray(shapeVector.strokes) && shapeVector.strokes.length > 0 && shapeVector.strokes[0].type === "SOLID") {
+        nodeStrokeColor = shapeVector.strokes[0].color;
+        const sw = typeof shapeVector.strokeWeight === "number" ? shapeVector.strokeWeight : 1.5;
+        hasNodeStroke = sw > 0;
+      }
+    } else {
+      const cardFills = card.fills;
+      if (Array.isArray(cardFills) && cardFills.length > 0 && cardFills[0].type === "SOLID") {
+        nodeBgColor = cardFills[0].color;
+      }
+      const cardStrokes = card.strokes;
+      if (Array.isArray(cardStrokes) && cardStrokes.length > 0 && cardStrokes[0].type === "SOLID") {
+        nodeStrokeColor = cardStrokes[0].color;
+      }
+      const hasWeight = typeof card.strokeWeight === "number" ? card.strokeWeight > 0 : true;
+      hasNodeStroke = hasWeight && nodeStrokeColor !== null;
     }
-    const hasWeight = typeof card.strokeWeight === "number" ? card.strokeWeight > 0 : true;
-    const hasNodeStroke = hasWeight && nodeStrokeColor !== null;
     const lum = 0.299 * nodeBgColor.r + 0.587 * nodeBgColor.g + 0.114 * nodeBgColor.b;
     const isDarkBg = lum < 0.6;
     if (colorMode === "White") {
@@ -4668,23 +4704,94 @@
     }
     const bw = Math.max(24, Math.round(stepBadge.width));
     const bh = 24;
-    if (corner === "TOP_RIGHT") {
-      stepBadge.x = card.width - bw + 9;
-      stepBadge.y = -9;
-      stepBadge.constraints = { horizontal: "MAX", vertical: "MIN" };
-    } else if (corner === "BOTTOM_LEFT") {
-      stepBadge.x = -9;
-      stepBadge.y = card.height - bh + 9;
-      stepBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
-    } else if (corner === "BOTTOM_RIGHT") {
-      stepBadge.x = card.width - bw + 9;
-      stepBadge.y = card.height - bh + 9;
-      stepBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-    } else {
-      stepBadge.x = -9;
-      stepBadge.y = -9;
-      stepBadge.constraints = { horizontal: "MIN", vertical: "MIN" };
+    const rawNodeType = safeGetPluginData2(card, "node_type");
+    const nType = normalizeNodeType(rawNodeType);
+    const badgeCoords = getStepBadgeCoordinates(nType, card.width, card.height, bw, bh, corner);
+    stepBadge.x = badgeCoords.x;
+    stepBadge.y = badgeCoords.y;
+    stepBadge.constraints = badgeCoords.constraints;
+  }
+  function getStepBadgeCoordinates(nodeType, cardW, cardH, bw, bh, corner) {
+    if (nodeType !== "Connector" && nodeType !== "Decision" && nodeType !== "Terminator") {
+      if (corner === "TOP_RIGHT") {
+        return { x: cardW - bw + 9, y: -9, constraints: { horizontal: "MAX", vertical: "MIN" } };
+      } else if (corner === "BOTTOM_LEFT") {
+        return { x: -9, y: cardH - bh + 9, constraints: { horizontal: "MIN", vertical: "MAX" } };
+      } else if (corner === "BOTTOM_RIGHT") {
+        return { x: cardW - bw + 9, y: cardH - bh + 9, constraints: { horizontal: "MAX", vertical: "MAX" } };
+      } else {
+        return { x: -9, y: -9, constraints: { horizontal: "MIN", vertical: "MIN" } };
+      }
     }
+    if (nodeType === "Connector") {
+      const rx = cardW / 2;
+      const ry = cardH / 2;
+      const cos45 = Math.SQRT1_2;
+      let cx = rx;
+      let cy = ry;
+      if (corner === "TOP_RIGHT") {
+        cx = rx + rx * cos45;
+        cy = ry - ry * cos45;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MAX", vertical: "MIN" } };
+      } else if (corner === "BOTTOM_LEFT") {
+        cx = rx - rx * cos45;
+        cy = ry + ry * cos45;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MIN", vertical: "MAX" } };
+      } else if (corner === "BOTTOM_RIGHT") {
+        cx = rx + rx * cos45;
+        cy = ry + ry * cos45;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MAX", vertical: "MAX" } };
+      } else {
+        cx = rx - rx * cos45;
+        cy = ry - ry * cos45;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MIN", vertical: "MIN" } };
+      }
+    }
+    if (nodeType === "Decision") {
+      let cx = cardW / 2;
+      let cy = cardH / 2;
+      if (corner === "TOP_RIGHT") {
+        cx = cardW * 0.75;
+        cy = cardH * 0.25;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MAX", vertical: "MIN" } };
+      } else if (corner === "BOTTOM_LEFT") {
+        cx = cardW * 0.25;
+        cy = cardH * 0.75;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MIN", vertical: "MAX" } };
+      } else if (corner === "BOTTOM_RIGHT") {
+        cx = cardW * 0.75;
+        cy = cardH * 0.75;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MAX", vertical: "MAX" } };
+      } else {
+        cx = cardW * 0.25;
+        cy = cardH * 0.25;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MIN", vertical: "MIN" } };
+      }
+    }
+    if (nodeType === "Terminator") {
+      const r = cardH / 2;
+      const cos45 = Math.SQRT1_2;
+      let cx = r;
+      let cy = r;
+      if (corner === "TOP_RIGHT") {
+        cx = cardW - r + r * cos45;
+        cy = r - r * cos45;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MAX", vertical: "MIN" } };
+      } else if (corner === "BOTTOM_LEFT") {
+        cx = r - r * cos45;
+        cy = r + r * cos45;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MIN", vertical: "MAX" } };
+      } else if (corner === "BOTTOM_RIGHT") {
+        cx = cardW - r + r * cos45;
+        cy = r + r * cos45;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MAX", vertical: "MAX" } };
+      } else {
+        cx = r - r * cos45;
+        cy = r - r * cos45;
+        return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MIN", vertical: "MIN" } };
+      }
+    }
+    return { x: -9, y: -9, constraints: { horizontal: "MIN", vertical: "MIN" } };
   }
   async function addStepBadges(startNumber = 1, corner = "TOP_LEFT", shape = "Square", colorMode = "Style") {
     const rawSelection = [...figma.currentPage.selection];

@@ -1128,6 +1128,7 @@ export function ConnectSection() {
                       </span>
                       {/* 중앙 단자 그래픽: -short(36x16) 아이콘 */}
                       <span
+                        className="td-icon-graphic"
                         style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, height: '16px' }}
                         dangerouslySetInnerHTML={{ __html: TERMINAL_SVGS_SHORT.start[opt] }}
                       />
@@ -1237,6 +1238,7 @@ export function ConnectSection() {
                       </span>
                       {/* 중앙 단자 그래픽: -short(36x16) 아이콘 */}
                       <span
+                        className="td-icon-graphic"
                         style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, height: '16px' }}
                         dangerouslySetInnerHTML={{ __html: TERMINAL_SVGS_SHORT.end[opt] }}
                       />

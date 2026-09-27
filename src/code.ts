@@ -2968,6 +2968,17 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
     }
 
+    // 최종 크기 변경에 맞춰 스텝 뱃지 위치 재동기화
+    if (existingStepBadge) {
+      const stepCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
+      const bw = Math.max(24, Math.round(existingStepBadge.width));
+      const bh = 24;
+      const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, curH, bw, bh, stepCorner);
+      existingStepBadge.x = badgeCoords.x;
+      existingStepBadge.y = badgeCoords.y;
+      existingStepBadge.constraints = badgeCoords.constraints;
+    }
+
     // 실제 FigJam 프레임 노드 이름 동기화
     card.name = effectiveTitle;
 
@@ -3151,6 +3162,20 @@ async function resizeNode(nodeId: string, width: number, height: number) {
       statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
       statusBadge.x = w - statusBadge.width - 10;
       statusBadge.y = h - statusBadge.height - 10;
+    }
+
+    // 리사이즈 시 스텝 뱃지 위치 재동기화
+    const stepBadge = frame.children.find(
+      (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
+    ) as FrameNode | undefined;
+    if (stepBadge) {
+      const stepCorner = safeGetPluginData(frame, 'badge_corner') || 'TOP_LEFT';
+      const bw = Math.max(24, Math.round(stepBadge.width));
+      const bh = 24;
+      const badgeCoords = getStepBadgeCoordinates(nType, w, h, bw, bh, stepCorner);
+      stepBadge.x = badgeCoords.x;
+      stepBadge.y = badgeCoords.y;
+      stepBadge.constraints = badgeCoords.constraints;
     }
 
     handleSelectionChange();
@@ -4100,21 +4125,36 @@ function applyStepBadgeColors(
   colorMode: 'White' | 'Black' | 'Style' = 'Style',
   card: FrameNode
 ) {
-  // 노드 배경색
+  // 노드 배경색 및 보더 추출 (일반 프레임 또는 ShapeVector 커스텀 도형 노드 모두 지원)
   let nodeBgColor: RGB = { r: 1, g: 1, b: 1 };
-  const cardFills = card.fills;
-  if (Array.isArray(cardFills) && cardFills.length > 0 && cardFills[0].type === 'SOLID') {
-    nodeBgColor = cardFills[0].color;
-  }
-
-  // 노드 보더 컬러 및 stroke 여부
   let nodeStrokeColor: RGB | null = null;
-  const cardStrokes = card.strokes;
-  if (Array.isArray(cardStrokes) && cardStrokes.length > 0 && cardStrokes[0].type === 'SOLID') {
-    nodeStrokeColor = cardStrokes[0].color;
+  let hasNodeStroke = false;
+
+  const shapeVector = card.children.find(
+    (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && (c.type === 'VECTOR' || c.type === 'FRAME')
+  ) as (VectorNode | FrameNode) | undefined;
+
+  if (shapeVector) {
+    if ('fills' in shapeVector && Array.isArray(shapeVector.fills) && shapeVector.fills.length > 0 && shapeVector.fills[0].type === 'SOLID') {
+      nodeBgColor = shapeVector.fills[0].color;
+    }
+    if ('strokes' in shapeVector && Array.isArray(shapeVector.strokes) && shapeVector.strokes.length > 0 && shapeVector.strokes[0].type === 'SOLID') {
+      nodeStrokeColor = shapeVector.strokes[0].color;
+      const sw = typeof shapeVector.strokeWeight === 'number' ? shapeVector.strokeWeight : 1.5;
+      hasNodeStroke = sw > 0;
+    }
+  } else {
+    const cardFills = card.fills;
+    if (Array.isArray(cardFills) && cardFills.length > 0 && cardFills[0].type === 'SOLID') {
+      nodeBgColor = cardFills[0].color;
+    }
+    const cardStrokes = card.strokes;
+    if (Array.isArray(cardStrokes) && cardStrokes.length > 0 && cardStrokes[0].type === 'SOLID') {
+      nodeStrokeColor = cardStrokes[0].color;
+    }
+    const hasWeight = typeof card.strokeWeight === 'number' ? card.strokeWeight > 0 : true;
+    hasNodeStroke = hasWeight && nodeStrokeColor !== null;
   }
-  const hasWeight = typeof card.strokeWeight === 'number' ? card.strokeWeight > 0 : true;
-  const hasNodeStroke = hasWeight && nodeStrokeColor !== null;
 
   // 텍스트 대비 및 명도 판별
   const lum = 0.299 * nodeBgColor.r + 0.587 * nodeBgColor.g + 0.114 * nodeBgColor.b;
@@ -4256,24 +4296,134 @@ async function applyStepBadgeToSingleCard(
   // 텍스트 반영 후 실제 뱃지 너비(bw)를 기준으로 코너 위치 좌표 및 constraints 계산
   const bw = Math.max(24, Math.round(stepBadge.width));
   const bh = 24;
-  if (corner === 'TOP_RIGHT') {
-    stepBadge.x = card.width - bw + 9;
-    stepBadge.y = -9;
-    stepBadge.constraints = { horizontal: 'MAX', vertical: 'MIN' };
-  } else if (corner === 'BOTTOM_LEFT') {
-    stepBadge.x = -9;
-    stepBadge.y = card.height - bh + 9;
-    stepBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
-  } else if (corner === 'BOTTOM_RIGHT') {
-    stepBadge.x = card.width - bw + 9;
-    stepBadge.y = card.height - bh + 9;
-    stepBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-  } else {
-    // TOP_LEFT 기본값
-    stepBadge.x = -9;
-    stepBadge.y = -9;
-    stepBadge.constraints = { horizontal: 'MIN', vertical: 'MIN' };
+
+  // 노드 형태(Circle, Diamond, Capsule 등)에 따른 외곽선 정밀 좌표 산출
+  const rawNodeType = safeGetPluginData(card, 'node_type');
+  const nType = normalizeNodeType(rawNodeType);
+  const badgeCoords = getStepBadgeCoordinates(nType, card.width, card.height, bw, bh, corner);
+
+  stepBadge.x = badgeCoords.x;
+  stepBadge.y = badgeCoords.y;
+  stepBadge.constraints = badgeCoords.constraints;
+}
+
+/**
+ * 도형 형태(직사각형, 원, 마름모, 캡슐) 및 코너 위치에 따라
+ * 스텝 배지가 각 도형의 외곽선(Shape Line)에 자연스럽게 겹치도록 중심 및 바운딩 좌표를 정밀 산출합니다.
+ */
+function getStepBadgeCoordinates(
+  nodeType: DiagramNodeType,
+  cardW: number,
+  cardH: number,
+  bw: number,
+  bh: number,
+  corner: string
+): { x: number; y: number; constraints: Constraints } {
+  // 기본 직사각형(Screen, Process, Branch 등): 코너 꼭짓점 기준 중심(-9px 오프셋)
+  if (
+    nodeType !== 'Connector' &&
+    nodeType !== 'Decision' &&
+    nodeType !== 'Terminator'
+  ) {
+    if (corner === 'TOP_RIGHT') {
+      return { x: cardW - bw + 9, y: -9, constraints: { horizontal: 'MAX', vertical: 'MIN' } };
+    } else if (corner === 'BOTTOM_LEFT') {
+      return { x: -9, y: cardH - bh + 9, constraints: { horizontal: 'MIN', vertical: 'MAX' } };
+    } else if (corner === 'BOTTOM_RIGHT') {
+      return { x: cardW - bw + 9, y: cardH - bh + 9, constraints: { horizontal: 'MAX', vertical: 'MAX' } };
+    } else {
+      return { x: -9, y: -9, constraints: { horizontal: 'MIN', vertical: 'MIN' } };
+    }
   }
+
+  // 1. 원 (Circle / Connector): 중심 (cardW/2, cardH/2), 반경 rx, ry
+  // 각 4분면 45도(π/4) 지점의 타원/원주 상 좌표에 배지의 중심이 오도록 배치
+  if (nodeType === 'Connector') {
+    const rx = cardW / 2;
+    const ry = cardH / 2;
+    const cos45 = Math.SQRT1_2; // 약 0.7071
+    let cx = rx;
+    let cy = ry;
+
+    if (corner === 'TOP_RIGHT') {
+      cx = rx + rx * cos45;
+      cy = ry - ry * cos45;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MAX', vertical: 'MIN' } };
+    } else if (corner === 'BOTTOM_LEFT') {
+      cx = rx - rx * cos45;
+      cy = ry + ry * cos45;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MIN', vertical: 'MAX' } };
+    } else if (corner === 'BOTTOM_RIGHT') {
+      cx = rx + rx * cos45;
+      cy = ry + ry * cos45;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MAX', vertical: 'MAX' } };
+    } else {
+      // TOP_LEFT
+      cx = rx - rx * cos45;
+      cy = ry - ry * cos45;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MIN', vertical: 'MIN' } };
+    }
+  }
+
+  // 2. 마름모 (Diamond / Decision): 4개 꼭짓점이 (cardW/2, 0), (cardW, cardH/2), (cardW/2, cardH), (0, cardH/2)
+  // 각 변(사선 빗변)의 중점에 배지의 중심이 일치하도록 배치
+  if (nodeType === 'Decision') {
+    let cx = cardW / 2;
+    let cy = cardH / 2;
+
+    if (corner === 'TOP_RIGHT') {
+      // (cardW/2, 0)과 (cardW, cardH/2)의 중점 -> (0.75 * cardW, 0.25 * cardH)
+      cx = cardW * 0.75;
+      cy = cardH * 0.25;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MAX', vertical: 'MIN' } };
+    } else if (corner === 'BOTTOM_LEFT') {
+      // (0, cardH/2)와 (cardW/2, cardH)의 중점 -> (0.25 * cardW, 0.75 * cardH)
+      cx = cardW * 0.25;
+      cy = cardH * 0.75;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MIN', vertical: 'MAX' } };
+    } else if (corner === 'BOTTOM_RIGHT') {
+      // (cardW, cardH/2)와 (cardW/2, cardH)의 중점 -> (0.75 * cardW, 0.75 * cardH)
+      cx = cardW * 0.75;
+      cy = cardH * 0.75;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MAX', vertical: 'MAX' } };
+    } else {
+      // TOP_LEFT: (0, cardH/2)와 (cardW/2, 0)의 중점 -> (0.25 * cardW, 0.25 * cardH)
+      cx = cardW * 0.25;
+      cy = cardH * 0.25;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MIN', vertical: 'MIN' } };
+    }
+  }
+
+  // 3. 캡슐 / 알약 (Capsule / Terminator): 반경 r = cardH / 2
+  // 좌측 반원 중심 (r, r), 우측 반원 중심 (cardW - r, r)
+  // 좌/우 4분원 호(45도) 외곽선 상에 배지의 중심이 일치하도록 배치
+  if (nodeType === 'Terminator') {
+    const r = cardH / 2;
+    const cos45 = Math.SQRT1_2; // 약 0.7071
+    let cx = r;
+    let cy = r;
+
+    if (corner === 'TOP_RIGHT') {
+      cx = (cardW - r) + r * cos45;
+      cy = r - r * cos45;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MAX', vertical: 'MIN' } };
+    } else if (corner === 'BOTTOM_LEFT') {
+      cx = r - r * cos45;
+      cy = r + r * cos45;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MIN', vertical: 'MAX' } };
+    } else if (corner === 'BOTTOM_RIGHT') {
+      cx = (cardW - r) + r * cos45;
+      cy = r + r * cos45;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MAX', vertical: 'MAX' } };
+    } else {
+      // TOP_LEFT
+      cx = r - r * cos45;
+      cy = r - r * cos45;
+      return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: 'MIN', vertical: 'MIN' } };
+    }
+  }
+
+  return { x: -9, y: -9, constraints: { horizontal: 'MIN', vertical: 'MIN' } };
 }
 
 // 스텝 번호 부여 (노드 카드 코너에 일체형 스텝 뱃지로 부착)

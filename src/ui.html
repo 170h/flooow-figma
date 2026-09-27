@@ -1133,13 +1133,12 @@
       margin-left: 2px;
     }
 
-    /* 피그마 표준 드롭다운 팝오버 메뉴 (Select Size Option, 18:3076) */
+    /* 피그마 표준 드롭다운 팝오버 메뉴 공통 속성 */
     .figma-dropdown-menu,
     .size-mode-menu-popover {
       position: absolute;
       top: calc(100% + 4px);
       right: 0;
-      width: 180px;
       background: #1e1e1e;
       color: #ffffff;
       border-radius: 13px;
@@ -1153,21 +1152,33 @@
       box-sizing: border-box;
     }
 
+    /* 기본 드롭다운(커넥터 색상 등): 고정 180px */
+    .figma-dropdown-menu {
+      width: 180px;
+    }
+
+    /* Size 드롭다운: 버튼과 동일한 100% 폭 */
+    .size-mode-menu-popover {
+      width: 100%;
+      left: 0;
+      right: 0;
+    }
+
     .figma-dropdown-menu.active,
     .size-mode-menu-popover.active {
       display: flex;
     }
 
-    /* 메뉴 각 행 (Menu Row) */
+    /* 메뉴 각 행 (Menu Row) — gap:0으로 아이콘 간격은 슬롯 크기로만 결정 */
     .figma-dropdown-item,
     .size-mode-menu-item {
-      width: 164px;
+      width: 100%;
       height: 24px;
       padding: 0 8px 0 0;
       border-radius: 5px;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 0;
       font-size: 11px;
       font-weight: 500;
       cursor: pointer;
@@ -1187,21 +1198,23 @@
     .figma-dropdown-item:hover .figma-dropdown-label,
     .size-mode-menu-item:hover .size-mode-menu-item-label,
     .figma-dropdown-item:hover .figma-dropdown-value,
-    .size-mode-menu-item:hover .size-mode-menu-item-value,
-    .figma-dropdown-item:hover svg,
-    .size-mode-menu-item:hover svg {
-      color: #ffffff !important;
-      fill: #ffffff;
-      opacity: 1 !important;
+    .size-mode-menu-item:hover .size-mode-menu-item-value {
+      color: #ffffff;
     }
 
-    /* 선택된 항목 */
+    /* 선택된 항목 — 배경 없이 체크 아이콘으로만 표시 */
     .figma-dropdown-item.selected,
     .size-mode-menu-item.selected {
       color: #ffffff;
     }
 
-    /* 선두 체크 슬롯 (20px) */
+    /* 선택된 항목도 호버 시 동일하게 하이라이트 */
+    .figma-dropdown-item.selected:hover,
+    .size-mode-menu-item.selected:hover {
+      background: #8C4CF6;
+    }
+
+    /* 선두 체크 슬롯 (20px) — SVG 16px + 좌우 여백 2px */
     .figma-dropdown-check-slot,
     .size-mode-menu-item-check {
       width: 20px;
@@ -1732,10 +1745,8 @@
       color: #ffffff;
     }
 
-    .terminal-popup-item:hover svg,
     .terminal-popup-item:hover .phase-dash-icon {
-      color: #ffffff !important;
-      fill: #ffffff;
+      color: #ffffff;
     }
 
     .terminal-popup-item.selected {
@@ -3556,34 +3567,34 @@
               <!-- 터미널 팝업 메뉴 (start) — 피그마 UI3 표준 규격, 36x16 short 아이콘, Mixed 지원 -->
               <div class="terminal-dropdown-popup" id="popup-start-terminal">
                 <div class="terminal-popup-item" data-value="MIXED" onclick="selectTerminal('start','MIXED',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" style="display:flex;justify-content:center;align-items:center;">
                     <span class="phase-dash-icon"></span>
                   </span>
                 </div>
                 <hr class="phase-popover-divider" style="margin: 3px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);" />
                 <div class="terminal-popup-item selected" data-value="NONE" onclick="selectTerminal('start','NONE',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-start-NONE"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="ARROW" onclick="selectTerminal('start','ARROW',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-start-ARROW"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="TRIANGLE_ARROW" onclick="selectTerminal('start','TRIANGLE_ARROW',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-start-TRIANGLE_ARROW"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="REVERSED_TRIANGLE_ARROW" onclick="selectTerminal('start','REVERSED_TRIANGLE_ARROW',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-start-REVERSED_TRIANGLE_ARROW"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="CIRCLE" onclick="selectTerminal('start','CIRCLE',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-start-CIRCLE"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="DIAMOND" onclick="selectTerminal('start','DIAMOND',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-start-DIAMOND"></span>
                 </div>
               </div>
@@ -3591,34 +3602,34 @@
               <!-- 터미널 팝업 메뉴 (end) — 피그마 UI3 표준 규격, 36x16 short 아이콘, Mixed 지원 -->
               <div class="terminal-dropdown-popup" id="popup-end-terminal">
                 <div class="terminal-popup-item" data-value="MIXED" onclick="selectTerminal('end','MIXED',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" style="display:flex;justify-content:center;align-items:center;">
                     <span class="phase-dash-icon"></span>
                   </span>
                 </div>
                 <hr class="phase-popover-divider" style="margin: 3px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);" />
                 <div class="terminal-popup-item" data-value="NONE" onclick="selectTerminal('end','NONE',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-end-NONE"></span>
                 </div>
                 <div class="terminal-popup-item selected" data-value="ARROW" onclick="selectTerminal('end','ARROW',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-end-ARROW"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="TRIANGLE_ARROW" onclick="selectTerminal('end','TRIANGLE_ARROW',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-end-TRIANGLE_ARROW"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="REVERSED_TRIANGLE_ARROW" onclick="selectTerminal('end','REVERSED_TRIANGLE_ARROW',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-end-REVERSED_TRIANGLE_ARROW"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="CIRCLE" onclick="selectTerminal('end','CIRCLE',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-end-CIRCLE"></span>
                 </div>
                 <div class="terminal-popup-item" data-value="DIAMOND" onclick="selectTerminal('end','DIAMOND',this)">
-                  <svg class="td-check" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="td-check" viewBox="0 0 16 16" fill="none"><path d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z" fill="currentColor"/></svg>
                   <span class="td-icon-wrap" id="td-item-icon-end-DIAMOND"></span>
                 </div>
               </div></div>

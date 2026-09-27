@@ -502,10 +502,11 @@ function isHexDark(hex: string): boolean {
                   className="figma-dropdown-menu active"
                   style={{
                     position: 'absolute',
-                    top: 'calc(100% + 4px)',
+                    bottom: 'calc(100% + 4px)',
+                    top: 'auto',
                     left: 0,
-                    right: 'auto',
-                    width: '130px',
+                    right: 0,
+                    width: '100%',
                     display: 'flex',
                     zIndex: 1050,
                   }}
