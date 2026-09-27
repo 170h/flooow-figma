@@ -63,6 +63,32 @@ export function useFigmaMessage() {
                 if (titleEl) titleEl.value = (node.title || node.name || 'Untitled').slice(0, 32);
                 if (descEl) descEl.value = node.description || '';
                 setLastNodeConfig({ descriptionOn: hasDesc });
+
+                // 상태(status) 복원
+                const currentStatus = node.status || msg.currentStatus;
+                if (currentStatus) {
+                  setUIState({ selectedStatus: currentStatus });
+                  setLastNodeConfig({ status: currentStatus, statusOn: true });
+                } else {
+                  setLastNodeConfig({ statusOn: false });
+                }
+
+                // Figma Screen Link 복원 (스크린 노드만 허용)
+                const isScreen = normalizeNodeType(node.flowNodeType) === 'Screen';
+                const figmaLink = (isScreen && node.figmaLink) || '';
+                if (figmaLink) {
+                  setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
+                  const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
+                  if (linkToggleEl) linkToggleEl.checked = true;
+                  const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
+                  if (linkUrlEl) linkUrlEl.value = figmaLink;
+                } else {
+                  setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: '' });
+                  const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
+                  if (linkToggleEl) linkToggleEl.checked = false;
+                  const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
+                  if (linkUrlEl) linkUrlEl.value = '';
+                }
               }
               if (wEl && node.width) wEl.value = String(node.width);
               if (hEl && node.height) hEl.value = String(node.height);
@@ -86,40 +112,6 @@ export function useFigmaMessage() {
                 });
               } else if (typeof node.cornerRadius === 'number') {
                 setLastNodeConfig({ cornerRadius: node.cornerRadius });
-              }
-
-              // 상태(status) 복원
-              const currentStatus = node.status || msg.currentStatus;
-              if (currentStatus) {
-                setUIState({ selectedStatus: currentStatus });
-                setLastNodeConfig({ status: currentStatus, statusOn: true });
-                const toggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
-                if (toggleEl) toggleEl.checked = true;
-                const statusOptionsEl = document.getElementById('status-options');
-                if (statusOptionsEl) statusOptionsEl.classList.add('active');
-              } else {
-                setLastNodeConfig({ statusOn: false });
-                const toggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
-                if (toggleEl) toggleEl.checked = false;
-                const statusOptionsEl = document.getElementById('status-options');
-                if (statusOptionsEl) statusOptionsEl.classList.remove('active');
-              }
-
-              // Figma Screen Link 복원 (스크린 노드만 허용)
-              const isScreen = normalizeNodeType(node.flowNodeType) === 'Screen';
-              const figmaLink = (isScreen && node.figmaLink) || '';
-              if (figmaLink) {
-                setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
-                const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
-                if (linkToggleEl) linkToggleEl.checked = true;
-                const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
-                if (linkUrlEl) linkUrlEl.value = figmaLink;
-              } else {
-                setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: '' });
-                const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
-                if (linkToggleEl) linkToggleEl.checked = false;
-                const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
-                if (linkUrlEl) linkUrlEl.value = '';
               }
             } else if (!node.isFlowNode && !node.isConnector) {
               const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;

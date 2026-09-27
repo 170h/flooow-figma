@@ -17,22 +17,26 @@ export function getPluginIdealHeight(root: HTMLElement): number {
   if (activePanel) {
     // 플로팅 팝오버(Phase, Size, Terminal 드롭다운 등)가 열렸을 때
     // scrollHeight가 비정상적으로 팽창하여 플러그인 윈도우 창이 들썩이며 깜빡이는 현상 완벽 방지
+    const panelRect = activePanel.getBoundingClientRect();
+    const scrollTop = (activePanel.parentElement as HTMLElement | null)?.scrollTop || 0;
     let maxBottom = 0;
     const children = activePanel.children;
     for (let i = 0; i < children.length; i++) {
       const el = children[i] as HTMLElement;
-      // 플로팅 메뉴 오버레이는 창 크기 계산에서 완전 제외
+      // 플로팅 메뉴 오버레이는 창 크기 계산에서 완전 제외 (GEMINI.md 영구 보존 규칙)
       if (
         el.classList.contains('popover-phase-select') ||
         el.classList.contains('figma-dropdown-menu') ||
         el.classList.contains('popover-context-menu') ||
-        el.classList.contains('popover-size-mode')
+        el.classList.contains('popover-size-mode') ||
+        el.classList.contains('size-mode-menu-popover')
       ) {
         continue;
       }
-      const bottom = el.offsetTop + el.offsetHeight;
-      if (bottom > maxBottom) {
-        maxBottom = bottom;
+      const childRect = el.getBoundingClientRect();
+      const relativeBottom = Math.round(childRect.bottom - panelRect.top + scrollTop);
+      if (relativeBottom > maxBottom) {
+        maxBottom = relativeBottom;
       }
     }
     contentH = maxBottom > 0 ? maxBottom : activePanel.offsetHeight;
@@ -60,9 +64,9 @@ export function useAutoResize() {
 
   const autoResizeWindow = useCallback(() => {
     if (timerRef.current !== null) {
-      cancelAnimationFrame(timerRef.current);
+      clearTimeout(timerRef.current);
     }
-    timerRef.current = requestAnimationFrame(() => {
+    timerRef.current = window.setTimeout(() => {
       const root = document.getElementById('plugin-root');
       if (!root) return;
 
@@ -73,7 +77,7 @@ export function useAutoResize() {
           pluginMessage: { type: 'RESIZE_WINDOW', width: 360, height: idealHeight }
         }, '*');
       }
-    });
+    }, 35);
   }, []);
 
   useEffect(() => {
@@ -83,10 +87,9 @@ export function useAutoResize() {
     const t1 = setTimeout(() => autoResizeWindow(), 50);
     const t2 = setTimeout(() => autoResizeWindow(), 200);
 
-    // ResizeObserver로 탭 패널 내부 크기 변화 감지
+    // ResizeObserver로 탭 패널 내부 크기 변화만 정밀 감지 (root 관찰 피드백 루프 원천 차단)
     if (window.ResizeObserver && root) {
       const ro = new ResizeObserver(() => autoResizeWindow());
-      ro.observe(root);
       const panels = root.querySelectorAll('.tab-panel');
       panels.forEach((p) => ro.observe(p));
       return () => {

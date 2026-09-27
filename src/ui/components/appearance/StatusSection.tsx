@@ -23,11 +23,15 @@ export function StatusSection() {
     setUIState,
     setLastNodeConfig,
     applyStatusToNode,
+    removeStepBadgesFromNodes,
+    applyElevationToNodes,
+    activeAppearanceSection,
+    setActiveAppearanceSection,
     selectedNodes,
     autoResizeWindow
   } = useApp();
   const summary = useSelectionSummary();
-  const [isOn, setIsOn] = useState(false);
+  const isSectionOpen = activeAppearanceSection === 'status';
   const { selectedStatus } = uiState;
 
   // 선택된 노드의 상태와 UI 동기화
@@ -35,50 +39,50 @@ export function StatusSection() {
     if (summary.isSingleFlowNode) {
       const node = selectedNodes[0];
       if (node && node.status) {
-        setIsOn(true);
         setUIState({ selectedStatus: node.status });
-      } else {
-        setIsOn(false);
       }
     } else if (summary.isMultiFlowNode) {
-      // 복수 노드 선택 시: 하나라도 상태가 있으면 패널 활성화
-      const hasAnyStatus = summary.statusOn.hasValue;
-      setIsOn(hasAnyStatus);
       if (!summary.status.isMixed && summary.status.value) {
         setUIState({ selectedStatus: summary.status.value });
       }
     }
-  }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, summary.statusOn.hasValue, selectedNodes, setUIState]);
+  }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, selectedNodes, setUIState]);
 
   const isStatusMixed = summary.isMultiFlowNode && summary.status.isMixed;
   const activeStatus = isStatusMixed ? undefined : (summary.isMultiFlowNode ? summary.status.value : selectedStatus);
 
   function handleToggle(checked: boolean) {
-    setIsOn(checked);
-    setLastNodeConfig({ statusOn: checked });
-    const el = document.getElementById('status-options');
-    if (el) el.classList.toggle('active', checked);
     if (checked) {
+      setActiveAppearanceSection('status');
+      setLastNodeConfig({ statusOn: true, stepBadgesOn: false, elevationOn: false });
+      removeStepBadgesFromNodes();
+      applyElevationToNodes(null);
       const targetStatus = activeStatus || selectedStatus || 'in_progress';
       applyStatusToNode(targetStatus);
     } else {
+      setActiveAppearanceSection(null);
+      setLastNodeConfig({ statusOn: false });
       applyStatusToNode('');
     }
-    autoResizeWindow();
+    requestAnimationFrame(() => {
+      autoResizeWindow();
+    });
   }
 
   function selectStatus(status: string) {
-    setIsOn(true);
+    setActiveAppearanceSection('status');
     setUIState({ selectedStatus: status });
-    setLastNodeConfig({ status, statusOn: true });
-    const el = document.getElementById('status-options');
-    if (el) el.classList.add('active');
+    setLastNodeConfig({ status, statusOn: true, stepBadgesOn: false, elevationOn: false });
+    removeStepBadgesFromNodes();
+    applyElevationToNodes(null);
     applyStatusToNode(status);
-    autoResizeWindow();
+    requestAnimationFrame(() => {
+      autoResizeWindow();
+    });
   }
 
   return (
-    <div className="section-block">
+    <div className="section-block" style={{ paddingBottom: isSectionOpen ? '12px' : '0px' }}>
       <div className="section-header toggle-row">
         <span className="section-title">
           Status
@@ -90,31 +94,33 @@ export function StatusSection() {
         </span>
         <Switch
           id="toggle-status"
-          checked={isOn}
+          checked={isSectionOpen}
           isMixed={summary.isMultiFlowNode && summary.statusOn.isMixed}
           onChange={handleToggle}
         />
       </div>
-      <div className="section-body">
-        <div className={`chip-group${isOn ? ' active' : ''}`} id="status-options">
-          {STATUSES.map(s => {
-            const isChipActive = !isStatusMixed && activeStatus === s.id;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                className={`chip-btn${isChipActive ? ' active' : ''}`}
-                data-status={s.id}
-                data-bullet-color={s.color}
-                onClick={() => selectStatus(s.id)}
-              >
-                <span className="tab-bullet" style={{ backgroundColor: s.color }} />
-                <span className="tab-label">{s.label}</span>
-              </button>
-            );
-          })}
+      {isSectionOpen && (
+        <div className="section-body" style={{ marginTop: '6px' }}>
+          <div className="chip-group active" id="status-options" style={{ display: 'flex' }}>
+            {STATUSES.map(s => {
+              const isChipActive = !isStatusMixed && activeStatus === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`chip-btn${isChipActive ? ' active' : ''}`}
+                  data-status={s.id}
+                  data-bullet-color={s.color}
+                  onClick={() => selectStatus(s.id)}
+                >
+                  <span className="tab-bullet" style={{ backgroundColor: s.color }} />
+                  <span className="tab-label">{s.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

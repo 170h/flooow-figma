@@ -16,13 +16,19 @@ const ELEVATION_LEVELS = [
 ];
 
 export function ElevationSection() {
-  const { uiState, lastNodeConfig, applyElevationToNodes, autoResizeWindow } = useApp();
+  const {
+    uiState,
+    setLastNodeConfig,
+    applyElevationToNodes,
+    removeStepBadgesFromNodes,
+    applyStatusToNode,
+    activeAppearanceSection,
+    setActiveAppearanceSection,
+    autoResizeWindow
+  } = useApp();
   const summary = useSelectionSummary();
 
-  // 단일 노드 또는 복수 노드에 따른 켜짐 상태 계산
-  const isOn = summary.isMultiFlowNode
-    ? (summary.elevationOn.isMixed ? true : Boolean(summary.elevationOn.value))
-    : Boolean(lastNodeConfig.elevationOn);
+  const isSectionOpen = activeAppearanceSection === 'elevation';
 
   // 선택된 레벨 (Mixed 상태인 경우 선택 하이라이트 해제)
   const isElevationMixed = summary.isMultiFlowNode && summary.elevation.isMixed;
@@ -31,13 +37,32 @@ export function ElevationSection() {
     : (typeof uiState.selectedElevation === 'number' ? uiState.selectedElevation : 0);
 
   function handleToggle(checked: boolean) {
-    const targetLevel = typeof currentLevel === 'number' ? currentLevel : 0;
-    applyElevationToNodes(checked ? targetLevel : null);
-    autoResizeWindow();
+    if (checked) {
+      setActiveAppearanceSection('elevation');
+      setLastNodeConfig({ elevationOn: true, stepBadgesOn: false, statusOn: false });
+      removeStepBadgesFromNodes();
+      applyStatusToNode('');
+      const targetLevel = typeof currentLevel === 'number' ? currentLevel : 0;
+      applyElevationToNodes(targetLevel);
+    } else {
+      setActiveAppearanceSection(null);
+      setLastNodeConfig({ elevationOn: false });
+      applyElevationToNodes(null);
+    }
+    requestAnimationFrame(() => {
+      autoResizeWindow();
+    });
   }
 
   function selectElevation(level: number) {
+    setActiveAppearanceSection('elevation');
+    setLastNodeConfig({ elevationOn: true, elevation: level, stepBadgesOn: false, statusOn: false });
+    removeStepBadgesFromNodes();
+    applyStatusToNode('');
     applyElevationToNodes(level);
+    requestAnimationFrame(() => {
+      autoResizeWindow();
+    });
   }
 
   return (
@@ -53,13 +78,13 @@ export function ElevationSection() {
         </span>
         <Switch
           id="toggle-elevation"
-          checked={isOn}
+          checked={isSectionOpen}
           isMixed={isElevationMixed}
           onChange={handleToggle}
         />
       </div>
       <div className="section-body">
-        <div className={`elevation-cards-container${isOn ? ' active' : ''}`} id="elevation-options">
+        <div className={`elevation-cards-container${isSectionOpen ? ' active' : ''}`} id="elevation-options">
           {ELEVATION_LEVELS.map(({ level, label, desc }) => {
             const isSelected = !isElevationMixed && currentLevel === level;
             return (

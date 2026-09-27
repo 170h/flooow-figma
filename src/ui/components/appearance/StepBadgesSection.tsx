@@ -77,11 +77,15 @@ export function StepBadgesSection() {
     setLastNodeConfig,
     applyStepBadges,
     removeStepBadgesFromNodes,
+    applyStatusToNode,
+    applyElevationToNodes,
+    activeAppearanceSection,
+    setActiveAppearanceSection,
     selectedNodes,
     autoResizeWindow,
   } = useApp();
 
-  const [isOn, setIsOn] = useState(false);
+  const isSectionOpen = activeAppearanceSection === 'stepBadges';
   const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
   const [stepNumText, setStepNumText] = useState('1');
   const [isMixed, setIsMixed] = useState(false);
@@ -134,9 +138,6 @@ function isHexDark(hex: string): boolean {
   // 선택된 노드의 상태 동기화
   useEffect(() => {
     if (selectedNodes && selectedNodes.length > 0) {
-      const hasStep = selectedNodes.some(n => n.stepNumber !== undefined);
-      setIsOn(hasStep);
-
       if (selectedNodes.length === 1) {
         setIsMixed(false);
         const node = selectedNodes[0];
@@ -178,8 +179,6 @@ function isHexDark(hex: string): boolean {
       }
     } else {
       // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원 및 번호 +1 증가 적용
-      const cachedOn = Boolean(lastNodeConfig.stepBadgesOn);
-      setIsOn(cachedOn);
       setIsMixed(false);
       const nextStepNum = (typeof lastNodeConfig.stepNumber === 'number' && lastNodeConfig.stepNumber > 0)
         ? lastNodeConfig.stepNumber + 1
@@ -218,21 +217,26 @@ function isHexDark(hex: string): boolean {
   }
 
   function handleToggle(checked: boolean) {
-    setIsOn(checked);
-    setLastNodeConfig({ stepBadgesOn: checked });
-    autoResizeWindow();
-
     if (checked) {
+      setActiveAppearanceSection('stepBadges');
+      setLastNodeConfig({ stepBadgesOn: true, statusOn: false, elevationOn: false });
+      applyStatusToNode('');
+      applyElevationToNodes(null);
       applyStepBadges(getNumberValue(), selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
     } else {
+      setActiveAppearanceSection(null);
+      setLastNodeConfig({ stepBadgesOn: false });
       removeStepBadgesFromNodes();
     }
+    requestAnimationFrame(() => {
+      autoResizeWindow();
+    });
   }
 
   function handleCornerSelect(pos: string) {
     setUIState({ selectedBadgeCorner: pos });
     setLastNodeConfig({ badgeCorner: pos });
-    if (isOn && !isMultiMode) {
+    if (isSectionOpen && !isMultiMode) {
       applyStepBadges(getNumberValue(), pos, selectedBadgeShape, selectedBadgeColorMode);
     }
   }
@@ -240,7 +244,7 @@ function isHexDark(hex: string): boolean {
   function handleShapeSelect(shape: string) {
     setUIState({ selectedBadgeShape: shape });
     setLastNodeConfig({ badgeShape: shape });
-    if (isOn && !isMultiMode) {
+    if (isSectionOpen && !isMultiMode) {
       applyStepBadges(getNumberValue(), selectedBadgeCorner, shape, selectedBadgeColorMode);
     }
   }
@@ -249,7 +253,7 @@ function isHexDark(hex: string): boolean {
     setUIState({ selectedBadgeColorMode: mode });
     setLastNodeConfig({ badgeColorMode: mode });
     setColorDropdownOpen(false);
-    if (isOn && !isMultiMode) {
+    if (isSectionOpen && !isMultiMode) {
       applyStepBadges(getNumberValue(), selectedBadgeCorner, selectedBadgeShape, mode);
     }
   }
@@ -259,7 +263,7 @@ function isHexDark(hex: string): boolean {
     const val = getNumberValue();
     setStepNumText(String(val));
     setLastNodeConfig({ stepNumber: val });
-    if (isOn && !isMultiMode) {
+    if (isSectionOpen && !isMultiMode) {
       applyStepBadges(val, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
     }
   }
@@ -269,7 +273,7 @@ function isHexDark(hex: string): boolean {
     setIsMixed(false);
     setStepNumText('1');
     setLastNodeConfig({ stepNumber: 1 });
-    if (isOn && !isMultiMode) {
+    if (isSectionOpen && !isMultiMode) {
       applyStepBadges(1, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
     }
     const input = document.getElementById('input-step-number') as HTMLInputElement | null;
@@ -343,19 +347,19 @@ function isHexDark(hex: string): boolean {
   }
 
   return (
-    <div className="section-block step-badges-section" style={{ paddingBottom: isOn ? '12px' : '0px' }}>
+    <div className="section-block step-badges-section" style={{ paddingBottom: isSectionOpen ? '12px' : '0px' }}>
       {/* 상단 헤더: Step Badges + 보라색 토글 스위치 */}
       <div className="section-header toggle-row">
         <span className="section-title">Step Badges</span>
         <Switch
           id="toggle-step-badges"
-          checked={isOn}
+          checked={isSectionOpen}
           isMixed={summary.isMultiFlowNode && summary.hasStepBadge.isMixed}
           onChange={handleToggle}
         />
       </div>
 
-      {isOn && (
+      {isSectionOpen && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
           {/* Row 1: [#] [숫자 or Mixed] (w: 100) + 코너 위치 4버튼 (w: 220) */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>

@@ -155,6 +155,9 @@ import { DesignFrameItem } from '../../types';
 // 모달 타입
 export type ModalType = 'none' | 'phase' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color';
 
+// 어피어런스 탭 상호 배타적 토글 섹션 ('stepBadges' | 'status' | 'elevation' | null)
+export type ExclusiveAppearanceSection = 'stepBadges' | 'status' | 'elevation' | null;
+
 export interface AppContextValue {
   // 선택 상태
   selectedNodes: NodeInfo[];
@@ -162,6 +165,10 @@ export interface AppContextValue {
   isConnectorSelected: boolean;
   currentTab: string;
   setCurrentTab: (tab: string) => void;
+
+  // 어피어런스 독점 섹션 상태
+  activeAppearanceSection: ExclusiveAppearanceSection;
+  setActiveAppearanceSection: (section: ExclusiveAppearanceSection) => void;
 
   // UI 상태
   uiState: UIState;
@@ -323,6 +330,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedNodes, setSelectedNodes] = useState<NodeInfo[]>([]);
   const [isConnectorSelected, setIsConnectorSelected] = useState(false);
   const [currentTab, setCurrentTabState] = useState('node');
+  const [activeAppearanceSection, setActiveAppearanceSection] = useState<ExclusiveAppearanceSection>(null);
+  const userActionLockRef = useRef<number>(0);
+  const prevSelectedNodeIdRef = useRef<string | null>(null);
+
+  const setActiveAppearanceSectionWithLock = useCallback((section: ExclusiveAppearanceSection) => {
+    userActionLockRef.current = Date.now();
+    setActiveAppearanceSection(section);
+  }, []);
+
   const [uiState, setUIStateRaw] = useState<UIState>(DEFAULT_UI_STATE);
   const [lastNodeConfig, setLastNodeConfigRaw] = useState<LastNodeConfig>(DEFAULT_LAST_NODE_CONFIG);
   const [lastConnectorConfig, setLastConnectorConfigRaw] = useState<LastConnectorConfig>(DEFAULT_LAST_CONNECTOR_CONFIG);
@@ -420,17 +436,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     parent.postMessage({ pluginMessage: { type: 'NOTIFY', message: msg, level } }, '*');
   }, []);
 
+  const lastResizeHeightRef = useRef(0);
+  const resizeTimerRef = useRef<number | null>(null);
+
   const autoResizeWindow = useCallback(() => {
-    requestAnimationFrame(() => {
+    if (resizeTimerRef.current !== null) {
+      clearTimeout(resizeTimerRef.current);
+    }
+    resizeTimerRef.current = window.setTimeout(() => {
       const root = document.getElementById('plugin-root');
       if (!root) return;
       const idealHeight = getPluginIdealHeight(root);
-      if (idealHeight > 100) {
+      if (idealHeight > 100 && Math.abs(idealHeight - lastResizeHeightRef.current) >= 2) {
+        lastResizeHeightRef.current = idealHeight;
         parent.postMessage({
           pluginMessage: { type: 'RESIZE_WINDOW', width: 360, height: idealHeight }
         }, '*');
       }
-    });
+    }, 35);
   }, []);
 
   const closeAllPopovers = useCallback(() => {
@@ -450,7 +473,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (selectedNodesRef.current.length > 0 && !isConnectorSelectedRef.current) {
       lastNodeTabRef.current = tab;
     }
-  }, [closeAllPopovers]);
+    requestAnimationFrame(() => {
+      autoResizeWindow();
+    });
+  }, [closeAllPopovers, autoResizeWindow]);
 
   // ---- 핵심 피그마 통신 함수들 ----
 
@@ -1071,6 +1097,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUIState(colorUpdates);
       }
     }
+
+    // 어피어런스 탭 독점 섹션 동기화 (한 번에 하나만 열리도록 유지)
+    // 사용자가 UI에서 스위치를 조작한 직후 600ms 동안은 피그마의 중간 비동기 응답으로 덮어쓰지 않음
+    const isUserLocked = Date.now() - userActionLockRef.current < 600;
+    const currentNodeId = nodes.length === 1 ? nodes[0]?.id : (nodes.length > 1 ? 'MULTI' : null);
+    const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+    prevSelectedNodeIdRef.current = currentNodeId;
+
+    if (!isUserLocked || isDifferentNode) {
+      if (nodes.length > 0) {
+        const flowNodes = nodes.filter(n => n && n.isFlowNode);
+        const first = flowNodes[0] || nodes[0];
+        if (first) {
+          if (first.stepNumber !== undefined) {
+            setActiveAppearanceSection('stepBadges');
+          } else if (first.status) {
+            setActiveAppearanceSection('status');
+          } else if (first.elevationOn || (first.elevation !== undefined && first.elevation !== null && first.elevation >= 0)) {
+            setActiveAppearanceSection('elevation');
+          } else {
+            setActiveAppearanceSection(null);
+          }
+        }
+      } else {
+        if (lastNodeConfigRef.current.stepBadgesOn) {
+          setActiveAppearanceSection('stepBadges');
+        } else if (lastNodeConfigRef.current.statusOn) {
+          setActiveAppearanceSection('status');
+        } else if (lastNodeConfigRef.current.elevationOn) {
+          setActiveAppearanceSection('elevation');
+        } else {
+          setActiveAppearanceSection(null);
+        }
+      }
+    }
   }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState]);
 
   const value: AppContextValue = {
@@ -1079,6 +1140,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isConnectorSelected,
     currentTab,
     setCurrentTab,
+    activeAppearanceSection,
+    setActiveAppearanceSection: setActiveAppearanceSectionWithLock,
     uiState,
     setUIState,
     lastNodeConfig,

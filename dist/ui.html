@@ -423,6 +423,7 @@
       min-height: 0;
       width: 100%;
       box-sizing: border-box;
+      position: relative;
     }
 
     .tab-panel[style*="display: block"],
@@ -28880,16 +28881,19 @@
     const activePanel = root2.querySelector('.tab-panel[style*="display: block"]') || root2.querySelector(".tab-panel.active");
     let contentH = 0;
     if (activePanel) {
+      const panelRect = activePanel.getBoundingClientRect();
+      const scrollTop = activePanel.parentElement?.scrollTop || 0;
       let maxBottom = 0;
       const children = activePanel.children;
       for (let i = 0; i < children.length; i++) {
         const el = children[i];
-        if (el.classList.contains("popover-phase-select") || el.classList.contains("figma-dropdown-menu") || el.classList.contains("popover-context-menu") || el.classList.contains("popover-size-mode")) {
+        if (el.classList.contains("popover-phase-select") || el.classList.contains("figma-dropdown-menu") || el.classList.contains("popover-context-menu") || el.classList.contains("popover-size-mode") || el.classList.contains("size-mode-menu-popover")) {
           continue;
         }
-        const bottom = el.offsetTop + el.offsetHeight;
-        if (bottom > maxBottom) {
-          maxBottom = bottom;
+        const childRect = el.getBoundingClientRect();
+        const relativeBottom = Math.round(childRect.bottom - panelRect.top + scrollTop);
+        if (relativeBottom > maxBottom) {
+          maxBottom = relativeBottom;
         }
       }
       contentH = maxBottom > 0 ? maxBottom : activePanel.offsetHeight;
@@ -28908,9 +28912,9 @@
     const timerRef = (0, import_react.useRef)(null);
     const autoResizeWindow = (0, import_react.useCallback)(() => {
       if (timerRef.current !== null) {
-        cancelAnimationFrame(timerRef.current);
+        clearTimeout(timerRef.current);
       }
-      timerRef.current = requestAnimationFrame(() => {
+      timerRef.current = window.setTimeout(() => {
         const root2 = document.getElementById("plugin-root");
         if (!root2) return;
         const idealHeight = getPluginIdealHeight(root2);
@@ -28920,7 +28924,7 @@
             pluginMessage: { type: "RESIZE_WINDOW", width: 360, height: idealHeight }
           }, "*");
         }
-      });
+      }, 35);
     }, []);
     (0, import_react.useEffect)(() => {
       const root2 = document.getElementById("plugin-root");
@@ -28928,7 +28932,6 @@
       const t2 = setTimeout(() => autoResizeWindow(), 200);
       if (window.ResizeObserver && root2) {
         const ro = new ResizeObserver(() => autoResizeWindow());
-        ro.observe(root2);
         const panels = root2.querySelectorAll(".tab-panel");
         panels.forEach((p) => ro.observe(p));
         return () => {
@@ -29068,6 +29071,13 @@
     const [selectedNodes, setSelectedNodes] = (0, import_react2.useState)([]);
     const [isConnectorSelected, setIsConnectorSelected] = (0, import_react2.useState)(false);
     const [currentTab, setCurrentTabState] = (0, import_react2.useState)("node");
+    const [activeAppearanceSection, setActiveAppearanceSection] = (0, import_react2.useState)(null);
+    const userActionLockRef = (0, import_react2.useRef)(0);
+    const prevSelectedNodeIdRef = (0, import_react2.useRef)(null);
+    const setActiveAppearanceSectionWithLock = (0, import_react2.useCallback)((section) => {
+      userActionLockRef.current = Date.now();
+      setActiveAppearanceSection(section);
+    }, []);
     const [uiState, setUIStateRaw] = (0, import_react2.useState)(DEFAULT_UI_STATE);
     const [lastNodeConfig, setLastNodeConfigRaw] = (0, import_react2.useState)(DEFAULT_LAST_NODE_CONFIG);
     const [lastConnectorConfig, setLastConnectorConfigRaw] = (0, import_react2.useState)(DEFAULT_LAST_CONNECTOR_CONFIG);
@@ -29166,17 +29176,23 @@
       if (!msg) return;
       parent.postMessage({ pluginMessage: { type: "NOTIFY", message: msg, level } }, "*");
     }, []);
+    const lastResizeHeightRef = (0, import_react2.useRef)(0);
+    const resizeTimerRef = (0, import_react2.useRef)(null);
     const autoResizeWindow = (0, import_react2.useCallback)(() => {
-      requestAnimationFrame(() => {
+      if (resizeTimerRef.current !== null) {
+        clearTimeout(resizeTimerRef.current);
+      }
+      resizeTimerRef.current = window.setTimeout(() => {
         const root2 = document.getElementById("plugin-root");
         if (!root2) return;
         const idealHeight = getPluginIdealHeight(root2);
-        if (idealHeight > 100) {
+        if (idealHeight > 100 && Math.abs(idealHeight - lastResizeHeightRef.current) >= 2) {
+          lastResizeHeightRef.current = idealHeight;
           parent.postMessage({
             pluginMessage: { type: "RESIZE_WINDOW", width: 360, height: idealHeight }
           }, "*");
         }
-      });
+      }, 35);
     }, []);
     const closeAllPopovers = (0, import_react2.useCallback)(() => {
       setPhasePopoverOpen(false);
@@ -29192,7 +29208,10 @@
       if (selectedNodesRef.current.length > 0 && !isConnectorSelectedRef.current) {
         lastNodeTabRef.current = tab;
       }
-    }, [closeAllPopovers]);
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
+    }, [closeAllPopovers, autoResizeWindow]);
     const applyCurrentNodeState = (0, import_react2.useCallback)((overrideSizeMode, styleOverrides, linkOverrides, overrideNodeType, overrideSize, overrideTitle) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
@@ -29714,6 +29733,37 @@
           setUIState(colorUpdates);
         }
       }
+      const isUserLocked = Date.now() - userActionLockRef.current < 600;
+      const currentNodeId = nodes.length === 1 ? nodes[0]?.id : nodes.length > 1 ? "MULTI" : null;
+      const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+      prevSelectedNodeIdRef.current = currentNodeId;
+      if (!isUserLocked || isDifferentNode) {
+        if (nodes.length > 0) {
+          const flowNodes = nodes.filter((n) => n && n.isFlowNode);
+          const first = flowNodes[0] || nodes[0];
+          if (first) {
+            if (first.stepNumber !== void 0) {
+              setActiveAppearanceSection("stepBadges");
+            } else if (first.status) {
+              setActiveAppearanceSection("status");
+            } else if (first.elevationOn || first.elevation !== void 0 && first.elevation !== null && first.elevation >= 0) {
+              setActiveAppearanceSection("elevation");
+            } else {
+              setActiveAppearanceSection(null);
+            }
+          }
+        } else {
+          if (lastNodeConfigRef.current.stepBadgesOn) {
+            setActiveAppearanceSection("stepBadges");
+          } else if (lastNodeConfigRef.current.statusOn) {
+            setActiveAppearanceSection("status");
+          } else if (lastNodeConfigRef.current.elevationOn) {
+            setActiveAppearanceSection("elevation");
+          } else {
+            setActiveAppearanceSection(null);
+          }
+        }
+      }
     }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState]);
     const value = {
       selectedNodes,
@@ -29721,6 +29771,8 @@
       isConnectorSelected,
       currentTab,
       setCurrentTab,
+      activeAppearanceSection,
+      setActiveAppearanceSection: setActiveAppearanceSectionWithLock,
       uiState,
       setUIState,
       lastNodeConfig,
@@ -29825,6 +29877,28 @@
                   if (titleEl) titleEl.value = (node.title || node.name || "Untitled").slice(0, 32);
                   if (descEl) descEl.value = node.description || "";
                   setLastNodeConfig({ descriptionOn: hasDesc });
+                  const currentStatus = node.status || msg.currentStatus;
+                  if (currentStatus) {
+                    setUIState({ selectedStatus: currentStatus });
+                    setLastNodeConfig({ status: currentStatus, statusOn: true });
+                  } else {
+                    setLastNodeConfig({ statusOn: false });
+                  }
+                  const isScreen = normalizeNodeType(node.flowNodeType) === "Screen";
+                  const figmaLink = isScreen && node.figmaLink || "";
+                  if (figmaLink) {
+                    setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
+                    const linkToggleEl = document.getElementById("toggle-single-figma-link");
+                    if (linkToggleEl) linkToggleEl.checked = true;
+                    const linkUrlEl = document.getElementById("single-screen-url");
+                    if (linkUrlEl) linkUrlEl.value = figmaLink;
+                  } else {
+                    setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: "" });
+                    const linkToggleEl = document.getElementById("toggle-single-figma-link");
+                    if (linkToggleEl) linkToggleEl.checked = false;
+                    const linkUrlEl = document.getElementById("single-screen-url");
+                    if (linkUrlEl) linkUrlEl.value = "";
+                  }
                 }
                 if (wEl && node.width) wEl.value = String(node.width);
                 if (hEl && node.height) hEl.value = String(node.height);
@@ -29845,36 +29919,6 @@
                   });
                 } else if (typeof node.cornerRadius === "number") {
                   setLastNodeConfig({ cornerRadius: node.cornerRadius });
-                }
-                const currentStatus = node.status || msg.currentStatus;
-                if (currentStatus) {
-                  setUIState({ selectedStatus: currentStatus });
-                  setLastNodeConfig({ status: currentStatus, statusOn: true });
-                  const toggleEl = document.getElementById("toggle-status");
-                  if (toggleEl) toggleEl.checked = true;
-                  const statusOptionsEl = document.getElementById("status-options");
-                  if (statusOptionsEl) statusOptionsEl.classList.add("active");
-                } else {
-                  setLastNodeConfig({ statusOn: false });
-                  const toggleEl = document.getElementById("toggle-status");
-                  if (toggleEl) toggleEl.checked = false;
-                  const statusOptionsEl = document.getElementById("status-options");
-                  if (statusOptionsEl) statusOptionsEl.classList.remove("active");
-                }
-                const isScreen = normalizeNodeType(node.flowNodeType) === "Screen";
-                const figmaLink = isScreen && node.figmaLink || "";
-                if (figmaLink) {
-                  setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
-                  const linkToggleEl = document.getElementById("toggle-single-figma-link");
-                  if (linkToggleEl) linkToggleEl.checked = true;
-                  const linkUrlEl = document.getElementById("single-screen-url");
-                  if (linkUrlEl) linkUrlEl.value = figmaLink;
-                } else {
-                  setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: "" });
-                  const linkToggleEl = document.getElementById("toggle-single-figma-link");
-                  if (linkToggleEl) linkToggleEl.checked = false;
-                  const linkUrlEl = document.getElementById("single-screen-url");
-                  if (linkUrlEl) linkUrlEl.value = "";
                 }
               } else if (!node.isFlowNode && !node.isConnector) {
                 const titleEl = document.getElementById("node-title-input");
@@ -32041,18 +32085,46 @@
     { level: 4, label: "E500", desc: "Modals, Dialogs" }
   ];
   function ElevationSection() {
-    const { uiState, lastNodeConfig, applyElevationToNodes, autoResizeWindow } = useApp();
+    const {
+      uiState,
+      setLastNodeConfig,
+      applyElevationToNodes,
+      removeStepBadgesFromNodes,
+      applyStatusToNode,
+      activeAppearanceSection,
+      setActiveAppearanceSection,
+      autoResizeWindow
+    } = useApp();
     const summary = useSelectionSummary();
-    const isOn = summary.isMultiFlowNode ? summary.elevationOn.isMixed ? true : Boolean(summary.elevationOn.value) : Boolean(lastNodeConfig.elevationOn);
+    const isSectionOpen = activeAppearanceSection === "elevation";
     const isElevationMixed = summary.isMultiFlowNode && summary.elevation.isMixed;
     const currentLevel = summary.isMultiFlowNode ? summary.elevation.value : typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
     function handleToggle(checked) {
-      const targetLevel = typeof currentLevel === "number" ? currentLevel : 0;
-      applyElevationToNodes(checked ? targetLevel : null);
-      autoResizeWindow();
+      if (checked) {
+        setActiveAppearanceSection("elevation");
+        setLastNodeConfig({ elevationOn: true, stepBadgesOn: false, statusOn: false });
+        removeStepBadgesFromNodes();
+        applyStatusToNode("");
+        const targetLevel = typeof currentLevel === "number" ? currentLevel : 0;
+        applyElevationToNodes(targetLevel);
+      } else {
+        setActiveAppearanceSection(null);
+        setLastNodeConfig({ elevationOn: false });
+        applyElevationToNodes(null);
+      }
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
     }
     function selectElevation(level) {
+      setActiveAppearanceSection("elevation");
+      setLastNodeConfig({ elevationOn: true, elevation: level, stepBadgesOn: false, statusOn: false });
+      removeStepBadgesFromNodes();
+      applyStatusToNode("");
       applyElevationToNodes(level);
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
     }
     return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "section-header toggle-row", children: [
@@ -32064,13 +32136,13 @@
           Switch,
           {
             id: "toggle-elevation",
-            checked: isOn,
+            checked: isSectionOpen,
             isMixed: isElevationMixed,
             onChange: handleToggle
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: `elevation-cards-container${isOn ? " active" : ""}`, id: "elevation-options", children: ELEVATION_LEVELS.map(({ level, label, desc }) => {
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: `elevation-cards-container${isSectionOpen ? " active" : ""}`, id: "elevation-options", children: ELEVATION_LEVELS.map(({ level, label, desc }) => {
         const isSelected = !isElevationMixed && currentLevel === level;
         return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
           "div",
@@ -32106,54 +32178,59 @@
       setUIState,
       setLastNodeConfig,
       applyStatusToNode,
+      removeStepBadgesFromNodes,
+      applyElevationToNodes,
+      activeAppearanceSection,
+      setActiveAppearanceSection,
       selectedNodes,
       autoResizeWindow
     } = useApp();
     const summary = useSelectionSummary();
-    const [isOn, setIsOn] = (0, import_react12.useState)(false);
+    const isSectionOpen = activeAppearanceSection === "status";
     const { selectedStatus } = uiState;
     import_react12.default.useEffect(() => {
       if (summary.isSingleFlowNode) {
         const node = selectedNodes[0];
         if (node && node.status) {
-          setIsOn(true);
           setUIState({ selectedStatus: node.status });
-        } else {
-          setIsOn(false);
         }
       } else if (summary.isMultiFlowNode) {
-        const hasAnyStatus = summary.statusOn.hasValue;
-        setIsOn(hasAnyStatus);
         if (!summary.status.isMixed && summary.status.value) {
           setUIState({ selectedStatus: summary.status.value });
         }
       }
-    }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, summary.statusOn.hasValue, selectedNodes, setUIState]);
+    }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, selectedNodes, setUIState]);
     const isStatusMixed = summary.isMultiFlowNode && summary.status.isMixed;
     const activeStatus = isStatusMixed ? void 0 : summary.isMultiFlowNode ? summary.status.value : selectedStatus;
     function handleToggle(checked) {
-      setIsOn(checked);
-      setLastNodeConfig({ statusOn: checked });
-      const el = document.getElementById("status-options");
-      if (el) el.classList.toggle("active", checked);
       if (checked) {
+        setActiveAppearanceSection("status");
+        setLastNodeConfig({ statusOn: true, stepBadgesOn: false, elevationOn: false });
+        removeStepBadgesFromNodes();
+        applyElevationToNodes(null);
         const targetStatus = activeStatus || selectedStatus || "in_progress";
         applyStatusToNode(targetStatus);
       } else {
+        setActiveAppearanceSection(null);
+        setLastNodeConfig({ statusOn: false });
         applyStatusToNode("");
       }
-      autoResizeWindow();
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
     }
     function selectStatus(status) {
-      setIsOn(true);
+      setActiveAppearanceSection("status");
       setUIState({ selectedStatus: status });
-      setLastNodeConfig({ status, statusOn: true });
-      const el = document.getElementById("status-options");
-      if (el) el.classList.add("active");
+      setLastNodeConfig({ status, statusOn: true, stepBadgesOn: false, elevationOn: false });
+      removeStepBadgesFromNodes();
+      applyElevationToNodes(null);
       applyStatusToNode(status);
-      autoResizeWindow();
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "section-block", children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "section-block", style: { paddingBottom: isSectionOpen ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "section-header toggle-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("span", { className: "section-title", children: [
           "Status",
@@ -32163,13 +32240,13 @@
           Switch,
           {
             id: "toggle-status",
-            checked: isOn,
+            checked: isSectionOpen,
             isMixed: summary.isMultiFlowNode && summary.statusOn.isMixed,
             onChange: handleToggle
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: `chip-group${isOn ? " active" : ""}`, id: "status-options", children: STATUSES.map((s) => {
+      isSectionOpen && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "section-body", style: { marginTop: "6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "chip-group active", id: "status-options", style: { display: "flex" }, children: STATUSES.map((s) => {
         const isChipActive = !isStatusMixed && activeStatus === s.id;
         return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
           "button",
@@ -32233,10 +32310,14 @@
       setLastNodeConfig,
       applyStepBadges,
       removeStepBadgesFromNodes,
+      applyStatusToNode,
+      applyElevationToNodes,
+      activeAppearanceSection,
+      setActiveAppearanceSection,
       selectedNodes,
       autoResizeWindow
     } = useApp();
-    const [isOn, setIsOn] = (0, import_react13.useState)(false);
+    const isSectionOpen = activeAppearanceSection === "stepBadges";
     const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react13.useState)(false);
     const [stepNumText, setStepNumText] = (0, import_react13.useState)("1");
     const [isMixed, setIsMixed] = (0, import_react13.useState)(false);
@@ -32280,8 +32361,6 @@
     const hasNodeStroke = (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
     (0, import_react13.useEffect)(() => {
       if (selectedNodes && selectedNodes.length > 0) {
-        const hasStep = selectedNodes.some((n) => n.stepNumber !== void 0);
-        setIsOn(hasStep);
         if (selectedNodes.length === 1) {
           setIsMixed(false);
           const node = selectedNodes[0];
@@ -32320,8 +32399,6 @@
           }
         }
       } else {
-        const cachedOn = Boolean(lastNodeConfig.stepBadgesOn);
-        setIsOn(cachedOn);
         setIsMixed(false);
         const nextStepNum = typeof lastNodeConfig.stepNumber === "number" && lastNodeConfig.stepNumber > 0 ? lastNodeConfig.stepNumber + 1 : 1;
         setStepNumText(String(nextStepNum));
@@ -32354,26 +32431,32 @@
       return isNaN(parsed) || parsed < 1 ? 1 : parsed;
     }
     function handleToggle(checked) {
-      setIsOn(checked);
-      setLastNodeConfig({ stepBadgesOn: checked });
-      autoResizeWindow();
       if (checked) {
+        setActiveAppearanceSection("stepBadges");
+        setLastNodeConfig({ stepBadgesOn: true, statusOn: false, elevationOn: false });
+        applyStatusToNode("");
+        applyElevationToNodes(null);
         applyStepBadges(getNumberValue(), selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
       } else {
+        setActiveAppearanceSection(null);
+        setLastNodeConfig({ stepBadgesOn: false });
         removeStepBadgesFromNodes();
       }
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
     }
     function handleCornerSelect(pos) {
       setUIState({ selectedBadgeCorner: pos });
       setLastNodeConfig({ badgeCorner: pos });
-      if (isOn && !isMultiMode) {
+      if (isSectionOpen && !isMultiMode) {
         applyStepBadges(getNumberValue(), pos, selectedBadgeShape, selectedBadgeColorMode);
       }
     }
     function handleShapeSelect(shape) {
       setUIState({ selectedBadgeShape: shape });
       setLastNodeConfig({ badgeShape: shape });
-      if (isOn && !isMultiMode) {
+      if (isSectionOpen && !isMultiMode) {
         applyStepBadges(getNumberValue(), selectedBadgeCorner, shape, selectedBadgeColorMode);
       }
     }
@@ -32381,7 +32464,7 @@
       setUIState({ selectedBadgeColorMode: mode });
       setLastNodeConfig({ badgeColorMode: mode });
       setColorDropdownOpen(false);
-      if (isOn && !isMultiMode) {
+      if (isSectionOpen && !isMultiMode) {
         applyStepBadges(getNumberValue(), selectedBadgeCorner, selectedBadgeShape, mode);
       }
     }
@@ -32390,7 +32473,7 @@
       const val = getNumberValue();
       setStepNumText(String(val));
       setLastNodeConfig({ stepNumber: val });
-      if (isOn && !isMultiMode) {
+      if (isSectionOpen && !isMultiMode) {
         applyStepBadges(val, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
       }
     }
@@ -32398,7 +32481,7 @@
       setIsMixed(false);
       setStepNumText("1");
       setLastNodeConfig({ stepNumber: 1 });
-      if (isOn && !isMultiMode) {
+      if (isSectionOpen && !isMultiMode) {
         applyStepBadges(1, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
       }
       const input = document.getElementById("input-step-number");
@@ -32468,20 +32551,20 @@
         }
       );
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "section-block step-badges-section", style: { paddingBottom: isOn ? "12px" : "0px" }, children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "section-block step-badges-section", style: { paddingBottom: isSectionOpen ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "section-header toggle-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "section-title", children: "Step Badges" }),
         /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
           Switch,
           {
             id: "toggle-step-badges",
-            checked: isOn,
+            checked: isSectionOpen,
             isMixed: summary.isMultiFlowNode && summary.hasStepBadge.isMixed,
             onChange: handleToggle
           }
         )
       ] }),
-      isOn && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }, children: [
+      isSectionOpen && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { style: { display: "flex", gap: "8px", alignItems: "center", width: "100%" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
             "div",
