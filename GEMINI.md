@@ -57,5 +57,52 @@
   - 모든 드롭다운 래퍼에는 반드시 `.figma-dropdown-wrapper` 클래스를 부여하고, `App.tsx`의 `handleRootClick` 셀렉터에 등록하여 드롭다운 클릭 시 바깥 클릭으로 오인되어 즉시 닫히는 현상을 방지합니다.
   - 외부 클릭 감지(`mousedown`)는 `dropdownRef.current.contains(e.target)`을 철저히 검사하여 드롭다운 내부 클릭이 보호되어야 합니다.
 
+## 7. 어피어런스 독점 아코디언 및 비동기 깜빡임(Flicker) 차단 규칙
+- **Step Badges / Status / Elevation 3사 상호 배타적 아코디언(Exclusive Accordion) 원칙**:
+  - `AppearancePanel` 내의 **Step Badges**, **Status**, **Elevation** 세 스위치는 **동시에 다 열리지 않고 오직 하나만 열리는 배타적 아코디언 방식**으로 동작해야 합니다.
+  - 전역 상태 `activeAppearanceSection: 'stepBadges' | 'status' | 'elevation' | null`을 단일 진실 공급원(Single Source of Truth)으로 사용합니다.
+  - 하나가 켜지면(열리면) 나머지 둘의 스위치와 옵션 바디는 즉시 닫히고, 피그마 노드에서도 타 속성 해제(`removeStepBadgesFromNodes()`, `applyStatusToNode('')`, `applyElevationToNodes(null)`) 및 `lastNodeConfig` 동기화가 이루어져야 합니다.
+  - 이미 켜진 스위치를 다시 클릭해 끄면 세 섹션 모두 닫힌(`null`) 상태가 됩니다.
+- **`userActionLockRef` 600ms 보호 메커니즘 필수 유지**:
+  - 스위치 조작 시 `userActionLockRef.current = Date.now()`로 타임스탬프를 갱신합니다.
+  - 사용자가 스위치를 조작한 직후 600ms 이내에는 피그마 백엔드로부터 도착하는 중간 비동기 응답(`SELECTION_CHANGED`)으로 로컬 열림/닫힘 상태를 덮어쓰지 않도록 차단하여, **열렸다가 찰나에 닫힌 뒤 다시 열리는 깜빡임(Flicker)**을 원천 차단합니다.
+  - 단, 캔버스에서 다른 노드를 클릭하여 선택 ID가 변경된 경우(`isDifferentNode`)에는 락을 우회하여 새로운 노드의 상태로 즉시 동기화합니다.
+
+## 8. 플러그인 창 높이 자동 조절(`useAutoResize`) 및 울찔(Jitter) 차단 규칙
+- **콘텐츠 높이 이중 합산 절대 금지 원칙**:
+  - `getPluginIdealHeight`에서 활성 패널(`activePanel`) 내부의 콘텐츠 높이(`contentH`) 산출 시, 자식 요소의 상대 Y 좌표는 반드시 패널 상단 기준(`childRect.bottom - panelRect.top + scrollTop`)으로 측정해야 합니다.
+  - `el.offsetTop`을 직접 사용하면 최상위 컨테이너 기준 좌표가 들어가 상단 타이틀/탭 높이(약 77px)가 리턴문에서 이중으로 더해져 **푸터 위에 100~150px 이상의 거대한 빈 공간이 남는 버그가 발생하므로 절대 금지**합니다.
+- **`ResizeObserver` 자기 참조(Root Observe) 피드백 루프 원천 차단**:
+  - `ro.observe(root)`로 최상위 루트 윈도우(`#plugin-root`)를 관찰하면, 창 리사이즈가 일어날 때마다 옵저버가 다시 격발되어 **창이 0.1초 동안 2~3회 연타로 덜컥거리며 울찔(Jitter)거리는 현상**이 발생합니다.
+  - `ResizeObserver`는 실제 콘텐츠가 변경되는 내부 탭 패널(`.tab-panel`)들만 관찰해야 합니다.
+- **리사이즈 35ms 디바운스(Debounce) 필수 적용**:
+  - `autoResizeWindow`는 `setTimeout(..., 35)` 디바운스를 적용하여, 토글 클릭/DOM 확장/리렌더링이 완전히 안정화된 후 **최종 높이로 단 1회만 `RESIZE_WINDOW` 메시지를 전송**해야 합니다.
+- **플로팅 메뉴 완전 배제 원칙**:
+  - `.popover-phase-select`, `.figma-dropdown-menu`, `.popover-context-menu`, `.popover-size-mode`, `.size-mode-menu-popover`는 플러그인 창 높이 계산에서 100% 제외되어야 합니다.
+
+## 9. 레거시 명령형 DOM 조작 금지 및 React 선언적 렌더링 규칙
+- **`useFigmaMessage.ts` 등 훅/리스너에서의 DOM 직접 조작 금지**:
+  - `statusOptionsEl.classList.remove('active')`, `toggleEl.checked = false`, `tabNode?.classList.add('disabled')` 등 명령형으로 DOM 클래스나 checked를 직접 덮어쓰는 코드는 React의 가상 DOM 렌더링과 충돌하여 **요소가 깜빡이며 다시 형성되거나 상태가 꼬이는 버그**를 일으키므로 절대 작성하지 마십시오.
+  - 노드 선택 변경 동기화는 반드시 React Context(`setUIState`, `setLastNodeConfig`, `setActiveAppearanceSection`)를 통해서만 이루어져야 합니다.
+- **섹션 바디 조건부 렌더링 통일**:
+  - `StatusSection`, `StepBadgesSection`, `LabelSection` 등 토글 섹션의 바디는 CSS 클래스 토글 방식 대신 React 조건부 렌더링(`{isSectionOpen && ( ... )}`)을 준수하여, 닫혀 있을 때 DOM 간섭을 배제하고 열릴 때 단 한 번에 온전히 렌더링되어야 합니다.
+
+## 10. 스타일(Style) 프리셋 화이트/블랙 2종 영구 규격
+- **기본 프리셋 단일 체계**:
+  - 기본 스타일 프리셋(`DEFAULT_STYLE_PRESETS`)은 오직 **White**(`style-white`, `#ffffff`, stroke 1.5px `#000000`)와 **Black**(`style-black`, `#000000`, stroke 0px) 2종만 유지합니다.
+  - 과거의 Red, Coral, Orange, Pink, Purple 등 다채색 기본 프리셋은 영구 삭제되었으며, 로컬 스토리지 캐시 로드 시에도 해당 legacy ID는 자동 필터링되어야 합니다.
+
+## 11. 커넥터(Connector) 네이티브 추종 및 실시간 바인딩 보존 규칙
+- **피그잼 네이티브 커넥터(`ConnectorNode`) 간섭 절대 금지 원칙**:
+  - 피그잼 네이티브 커넥터는 캔버스에서 노드를 이동할 때 피그마 코어 엔진이 자체적으로 엔드포인트 스냅 및 실시간 추종을 100% 자동 처리합니다.
+  - `documentchange` 등 노드 이동 이벤트에서 `conn.connectorStart` / `conn.connectorEnd`를 임의로 재할당하거나 강제 최적화(`optimizeNativeConnector` 등)를 시도하면 피그마 내부 바인딩이 손상되어 연결선이 풀리거나 사용자가 의도한 마그넷 연결이 파괴되므로 **절대 임의로 덮어쓰지 마십시오.**
+- **커스텀 벡터 커넥터 추적 엔진 무결성 및 레지스트리 보장 원칙**:
+  - `updateOrthogonalVectorConnector` 등 패스 재계산 함수에서 Bounding Box 산출 시 `allX`, `allY` 좌표 배열 선언이 누락되어 `ReferenceError` 런타임 에러가 발생하면 전체 커넥터 추적 엔진이 중단되므로 무결성을 반드시 유지해야 합니다.
+  - 라벨이나 특수 마커가 없는 단일 `VectorNode` 커넥터 생성 시에도 `source_node_id`, `target_node_id`, `is_flow_connector`, `is_custom_connector`, `source_magnet`, `target_magnet` 등의 필수 `pluginData`를 빠짐없이 기록하여 `nodeToConnectorsMap` 레지스트리에 반드시 등록되어야 합니다.
+  - 부모 컨테이너(Section, Group, Frame 등)가 드래그 이동될 때도 하위 자식 노드들에 연결된 커넥터까지 탐색 및 감지되어 위치가 정확히 갱신되어야 합니다.
+- **커넥터 반전(`isReversed`) 시 엔드포인트 노드 바인딩 보존 원칙**:
+  - 커넥터 반전(`isReversed: true`) 시 마그넷(`targetMagnet` ↔ `sourceMagnet`)만 바꾸고 노드 ID를 그대로 두면 시작 노드에 타깃 마그넷이 적용되어 연결이 꼬이거나 풀리므로, 반드시 `endpointNodeId`(`startEndpointNodeId` ↔ `endEndpointNodeId`)도 함께 상호 교체해야 합니다.
+
+
 
 

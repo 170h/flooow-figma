@@ -269,7 +269,7 @@ const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
   elevationOn: false,
   elevation: 0,
   statusOn: false,
-  status: 'in_progress',
+  status: 'draft',
   stepBadgesOn: false,
   stepNumber: 1,
   badgeCorner: 'TOP_LEFT',
@@ -290,7 +290,7 @@ const DEFAULT_LAST_CONNECTOR_CONFIG: LastConnectorConfig = {
 const DEFAULT_UI_STATE: UIState = {
   selectedColor: '#ffffff',
   selectedElevation: 0,
-  selectedStatus: 'in_progress',
+  selectedStatus: 'draft',
   selectedBadgeCorner: 'TOP_LEFT',
   selectedBadgeShape: 'Square',
   selectedBadgeColorMode: 'Style',
@@ -1112,22 +1112,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const flowNodes = nodes.filter(n => n && n.isFlowNode);
         const first = flowNodes[0] || nodes[0];
         if (first) {
-          if (first.stepNumber !== undefined) {
-            setActiveAppearanceSection('stepBadges');
-          } else if (first.status) {
-            setActiveAppearanceSection('status');
-          } else if (first.elevationOn || (first.elevation !== undefined && first.elevation !== null && first.elevation >= 0)) {
+          if (first.elevationOn || (first.elevation !== undefined && first.elevation !== null && first.elevation >= 0)) {
             setActiveAppearanceSection('elevation');
           } else {
             setActiveAppearanceSection(null);
           }
         }
       } else {
-        if (lastNodeConfigRef.current.stepBadgesOn) {
-          setActiveAppearanceSection('stepBadges');
-        } else if (lastNodeConfigRef.current.statusOn) {
-          setActiveAppearanceSection('status');
-        } else if (lastNodeConfigRef.current.elevationOn) {
+        if (lastNodeConfigRef.current.elevationOn) {
           setActiveAppearanceSection('elevation');
         } else {
           setActiveAppearanceSection(null);

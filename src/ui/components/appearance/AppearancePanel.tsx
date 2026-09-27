@@ -1,13 +1,11 @@
 import React from 'react';
 import { SizeSection } from './SizeSection';
 import { StyleSection } from './StyleSection';
-import { ElevationSection } from './ElevationSection';
-import { StatusSection } from './StatusSection';
 import { StepBadgesSection } from './StepBadgesSection';
+import { ElevationSection } from './ElevationSection';
 
 /**
- * Appearance 탭 내용 - Size + Style + Elevation + Status + StepBadges
- * (section 래퍼는 App.tsx에서 관리)
+ * Appearance 탭 내용 - Size + Style + Step Badges + Elevation
  */
 export function AppearancePanel(_props?: any) {
   return (
@@ -17,8 +15,6 @@ export function AppearancePanel(_props?: any) {
       <StyleSection />
       <hr className="section-divider" />
       <StepBadgesSection />
-      <hr className="section-divider" />
-      <StatusSection />
       <hr className="section-divider" />
       <ElevationSection />
     </>

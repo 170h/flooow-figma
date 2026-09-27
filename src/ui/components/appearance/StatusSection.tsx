@@ -21,47 +21,64 @@ export function StatusSection() {
   const {
     uiState,
     setUIState,
+    lastNodeConfig,
     setLastNodeConfig,
     applyStatusToNode,
-    removeStepBadgesFromNodes,
-    applyElevationToNodes,
-    activeAppearanceSection,
-    setActiveAppearanceSection,
     selectedNodes,
     autoResizeWindow
   } = useApp();
   const summary = useSelectionSummary();
-  const isSectionOpen = activeAppearanceSection === 'status';
+
+  const [isOpen, setIsOpen] = useState(() => {
+    if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+      return Boolean(selectedNodes[0]?.status);
+    }
+    return Boolean(lastNodeConfig.statusOn);
+  });
+
+  const userActionLockRef = React.useRef<number>(0);
+  const prevSelectedNodeIdRef = React.useRef<string | null>(null);
+
   const { selectedStatus } = uiState;
 
-  // 선택된 노드의 상태와 UI 동기화
+  // 선택된 노드의 상태와 UI 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   React.useEffect(() => {
-    if (summary.isSingleFlowNode) {
-      const node = selectedNodes[0];
-      if (node && node.status) {
-        setUIState({ selectedStatus: node.status });
-      }
-    } else if (summary.isMultiFlowNode) {
-      if (!summary.status.isMixed && summary.status.value) {
-        setUIState({ selectedStatus: summary.status.value });
+    const isUserLocked = Date.now() - userActionLockRef.current < 600;
+    const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : (selectedNodes.length > 1 ? 'MULTI' : null);
+    const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+    prevSelectedNodeIdRef.current = currentNodeId;
+
+    if (!isUserLocked || isDifferentNode) {
+      if (summary.isSingleFlowNode) {
+        const node = selectedNodes[0];
+        const hasStatus = Boolean(node && node.status);
+        setIsOpen(hasStatus);
+        if (node && node.status) {
+          setUIState({ selectedStatus: node.status });
+        }
+      } else if (summary.isMultiFlowNode) {
+        const hasStatus = summary.statusOn.hasValue;
+        setIsOpen(hasStatus);
+        if (!summary.status.isMixed && summary.status.value) {
+          setUIState({ selectedStatus: summary.status.value });
+        }
+      } else {
+        setIsOpen(Boolean(lastNodeConfig.statusOn));
       }
     }
-  }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, selectedNodes, setUIState]);
+  }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, summary.statusOn.hasValue, selectedNodes, lastNodeConfig.statusOn, setUIState]);
 
   const isStatusMixed = summary.isMultiFlowNode && summary.status.isMixed;
   const activeStatus = isStatusMixed ? undefined : (summary.isMultiFlowNode ? summary.status.value : selectedStatus);
 
   function handleToggle(checked: boolean) {
+    userActionLockRef.current = Date.now();
+    setIsOpen(checked);
+    setLastNodeConfig({ statusOn: checked });
     if (checked) {
-      setActiveAppearanceSection('status');
-      setLastNodeConfig({ statusOn: true, stepBadgesOn: false, elevationOn: false });
-      removeStepBadgesFromNodes();
-      applyElevationToNodes(null);
-      const targetStatus = activeStatus || selectedStatus || 'in_progress';
+      const targetStatus = activeStatus || selectedStatus || 'draft';
       applyStatusToNode(targetStatus);
     } else {
-      setActiveAppearanceSection(null);
-      setLastNodeConfig({ statusOn: false });
       applyStatusToNode('');
     }
     requestAnimationFrame(() => {
@@ -70,11 +87,10 @@ export function StatusSection() {
   }
 
   function selectStatus(status: string) {
-    setActiveAppearanceSection('status');
+    userActionLockRef.current = Date.now();
+    setIsOpen(true);
     setUIState({ selectedStatus: status });
-    setLastNodeConfig({ status, statusOn: true, stepBadgesOn: false, elevationOn: false });
-    removeStepBadgesFromNodes();
-    applyElevationToNodes(null);
+    setLastNodeConfig({ status, statusOn: true });
     applyStatusToNode(status);
     requestAnimationFrame(() => {
       autoResizeWindow();
@@ -82,7 +98,7 @@ export function StatusSection() {
   }
 
   return (
-    <div className="section-block" style={{ paddingBottom: isSectionOpen ? '12px' : '0px' }}>
+    <div className="section-block" style={{ paddingBottom: isOpen ? '12px' : '0px' }}>
       <div className="section-header toggle-row">
         <span className="section-title">
           Status
@@ -94,12 +110,12 @@ export function StatusSection() {
         </span>
         <Switch
           id="toggle-status"
-          checked={isSectionOpen}
+          checked={isOpen}
           isMixed={summary.isMultiFlowNode && summary.statusOn.isMixed}
           onChange={handleToggle}
         />
       </div>
-      {isSectionOpen && (
+      {isOpen && (
         <div className="section-body" style={{ marginTop: '6px' }}>
           <div className="chip-group active" id="status-options" style={{ display: 'flex' }}>
             {STATUSES.map(s => {

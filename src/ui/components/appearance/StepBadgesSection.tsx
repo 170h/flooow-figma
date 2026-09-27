@@ -77,22 +77,29 @@ export function StepBadgesSection() {
     setLastNodeConfig,
     applyStepBadges,
     removeStepBadgesFromNodes,
-    applyStatusToNode,
-    applyElevationToNodes,
-    activeAppearanceSection,
-    setActiveAppearanceSection,
     selectedNodes,
     autoResizeWindow,
   } = useApp();
 
-  const isSectionOpen = activeAppearanceSection === 'stepBadges';
+  const summary = useSelectionSummary();
+  const isMultiMode = summary.isMultiFlowNode;
+
+  const [isOpen, setIsOpen] = useState(() => {
+    if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+      return selectedNodes[0]?.stepNumber !== undefined;
+    }
+    return Boolean(lastNodeConfig.stepBadgesOn);
+  });
+
+  const userActionLockRef = useRef<number>(0);
+  const prevSelectedNodeIdRef = useRef<string | null>(null);
+
+  const isSectionOpen = isOpen;
   const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
   const [stepNumText, setStepNumText] = useState('1');
   const [isMixed, setIsMixed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  const summary = useSelectionSummary();
-  const isMultiMode = summary.isMultiFlowNode;
   const isCornerMixed = isMultiMode && summary.badgeCorner.isMixed;
   const isShapeMixed = isMultiMode && summary.badgeShape.isMixed;
   const isColorModeMixed = isMultiMode && summary.badgeColorMode.isMixed;
@@ -135,66 +142,78 @@ function isHexDark(hex: string): boolean {
   const nodeBgColorHex = firstNode?.fillColorHex || '#E11D48';
   const hasNodeStroke = (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
 
-  // 선택된 노드의 상태 동기화
+  // 선택된 노드의 상태 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   useEffect(() => {
-    if (selectedNodes && selectedNodes.length > 0) {
-      if (selectedNodes.length === 1) {
-        setIsMixed(false);
-        const node = selectedNodes[0];
-        if (node.stepNumber !== undefined) {
-          setStepNumText(String(node.stepNumber));
+    const isUserLocked = Date.now() - userActionLockRef.current < 600;
+    const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : (selectedNodes.length > 1 ? 'MULTI' : null);
+    const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+    prevSelectedNodeIdRef.current = currentNodeId;
+
+    if (!isUserLocked || isDifferentNode) {
+      if (selectedNodes && selectedNodes.length > 0) {
+        if (selectedNodes.length === 1) {
+          setIsMixed(false);
+          const node = selectedNodes[0];
+          if (node.stepNumber !== undefined) {
+            setIsOpen(true);
+            setStepNumText(String(node.stepNumber));
+          } else {
+            setIsOpen(false);
+            setStepNumText('1');
+          }
+          if (node.badgeCorner) {
+            setUIState({ selectedBadgeCorner: node.badgeCorner });
+          }
+          if (node.badgeShape) {
+            setUIState({ selectedBadgeShape: node.badgeShape });
+          }
+          if (node.badgeColorMode) {
+            setUIState({ selectedBadgeColorMode: node.badgeColorMode });
+          }
         } else {
-          setStepNumText('1');
-        }
-        if (node.badgeCorner) {
-          setUIState({ selectedBadgeCorner: node.badgeCorner });
-        }
-        if (node.badgeShape) {
-          setUIState({ selectedBadgeShape: node.badgeShape });
-        }
-        if (node.badgeColorMode) {
-          setUIState({ selectedBadgeColorMode: node.badgeColorMode });
+          // 복수 선택
+          const hasBadges = summary.hasStepBadge.hasValue;
+          setIsOpen(hasBadges);
+          const stepNums = selectedNodes.map(n => n.stepNumber).filter(n => n !== undefined);
+          const allSame = stepNums.length > 0 && stepNums.every(v => v === stepNums[0]);
+          if (allSame) {
+            setIsMixed(false);
+            setStepNumText(String(stepNums[0]));
+          } else {
+            setIsMixed(true);
+            setStepNumText('');
+          }
+
+          if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
+            setUIState({ selectedBadgeCorner: summary.badgeCorner.value });
+          }
+          if (!summary.badgeShape.isMixed && summary.badgeShape.value) {
+            setUIState({ selectedBadgeShape: summary.badgeShape.value });
+          }
+          if (!summary.badgeColorMode.isMixed && summary.badgeColorMode.value) {
+            setUIState({ selectedBadgeColorMode: summary.badgeColorMode.value as BadgeColorMode });
+          }
         }
       } else {
-        // 복수 선택
-        const stepNums = selectedNodes.map(n => n.stepNumber).filter(n => n !== undefined);
-        const allSame = stepNums.length > 0 && stepNums.every(v => v === stepNums[0]);
-        if (allSame) {
-          setIsMixed(false);
-          setStepNumText(String(stepNums[0]));
-        } else {
-          setIsMixed(true);
-          setStepNumText('');
+        // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원 및 번호 +1 증가 적용
+        setIsOpen(Boolean(lastNodeConfig.stepBadgesOn));
+        setIsMixed(false);
+        const nextStepNum = (typeof lastNodeConfig.stepNumber === 'number' && lastNodeConfig.stepNumber > 0)
+          ? lastNodeConfig.stepNumber + 1
+          : 1;
+        setStepNumText(String(nextStepNum));
+        if (lastNodeConfig.badgeCorner) {
+          setUIState({ selectedBadgeCorner: lastNodeConfig.badgeCorner });
         }
-
-        if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
-          setUIState({ selectedBadgeCorner: summary.badgeCorner.value });
+        if (lastNodeConfig.badgeShape) {
+          setUIState({ selectedBadgeShape: lastNodeConfig.badgeShape });
         }
-        if (!summary.badgeShape.isMixed && summary.badgeShape.value) {
-          setUIState({ selectedBadgeShape: summary.badgeShape.value });
+        if (lastNodeConfig.badgeColorMode) {
+          setUIState({ selectedBadgeColorMode: lastNodeConfig.badgeColorMode });
         }
-        if (!summary.badgeColorMode.isMixed && summary.badgeColorMode.value) {
-          setUIState({ selectedBadgeColorMode: summary.badgeColorMode.value as BadgeColorMode });
-        }
-      }
-    } else {
-      // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원 및 번호 +1 증가 적용
-      setIsMixed(false);
-      const nextStepNum = (typeof lastNodeConfig.stepNumber === 'number' && lastNodeConfig.stepNumber > 0)
-        ? lastNodeConfig.stepNumber + 1
-        : 1;
-      setStepNumText(String(nextStepNum));
-      if (lastNodeConfig.badgeCorner) {
-        setUIState({ selectedBadgeCorner: lastNodeConfig.badgeCorner });
-      }
-      if (lastNodeConfig.badgeShape) {
-        setUIState({ selectedBadgeShape: lastNodeConfig.badgeShape });
-      }
-      if (lastNodeConfig.badgeColorMode) {
-        setUIState({ selectedBadgeColorMode: lastNodeConfig.badgeColorMode });
       }
     }
-  }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, lastNodeConfig.stepBadgesOn, lastNodeConfig.stepNumber, lastNodeConfig.badgeCorner, lastNodeConfig.badgeShape, lastNodeConfig.badgeColorMode, setUIState]);
+  }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, summary.hasStepBadge.hasValue, lastNodeConfig.stepBadgesOn, lastNodeConfig.stepNumber, lastNodeConfig.badgeCorner, lastNodeConfig.badgeShape, lastNodeConfig.badgeColorMode, setUIState]);
 
   // 드롭다운 외부 클릭 닫기
   useEffect(() => {
@@ -217,15 +236,12 @@ function isHexDark(hex: string): boolean {
   }
 
   function handleToggle(checked: boolean) {
+    userActionLockRef.current = Date.now();
+    setIsOpen(checked);
+    setLastNodeConfig({ stepBadgesOn: checked });
     if (checked) {
-      setActiveAppearanceSection('stepBadges');
-      setLastNodeConfig({ stepBadgesOn: true, statusOn: false, elevationOn: false });
-      applyStatusToNode('');
-      applyElevationToNodes(null);
       applyStepBadges(getNumberValue(), selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
     } else {
-      setActiveAppearanceSection(null);
-      setLastNodeConfig({ stepBadgesOn: false });
       removeStepBadgesFromNodes();
     }
     requestAnimationFrame(() => {

@@ -39,9 +39,7 @@ export function ElevationSection() {
   function handleToggle(checked: boolean) {
     if (checked) {
       setActiveAppearanceSection('elevation');
-      setLastNodeConfig({ elevationOn: true, stepBadgesOn: false, statusOn: false });
-      removeStepBadgesFromNodes();
-      applyStatusToNode('');
+      setLastNodeConfig({ elevationOn: true });
       const targetLevel = typeof currentLevel === 'number' ? currentLevel : 0;
       applyElevationToNodes(targetLevel);
     } else {
@@ -56,9 +54,7 @@ export function ElevationSection() {
 
   function selectElevation(level: number) {
     setActiveAppearanceSection('elevation');
-    setLastNodeConfig({ elevationOn: true, elevation: level, stepBadgesOn: false, statusOn: false });
-    removeStepBadgesFromNodes();
-    applyStatusToNode('');
+    setLastNodeConfig({ elevationOn: true, elevation: level });
     applyElevationToNodes(level);
     requestAnimationFrame(() => {
       autoResizeWindow();
