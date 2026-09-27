@@ -65,17 +65,34 @@ export function App() {
     phasePopoverOpen, setPhasePopoverOpen,
     contextMenuOpen, setContextMenuOpen,
     applyCurrentNodeState,
+    lastNodeConfig,
     setLastNodeConfig,
     showToast,
     autoResizeWindow,
     stylePresets,
     selectedStylePresetId,
     setSelectedStylePresetId,
+    selectedSizePresetId,
+    sizePresets,
+    addSizePreset,
+    updateSizePreset,
     phases,
     setPhases,
     editingPhase,
     setEditingPhase,
   } = useApp();
+
+  // SizeModal onSave 핸들러 (매 렌더마다 새 함수 생성 방지)
+  const handleAddSizeSave = useCallback((preset: { name: string; w: number; h: number; radius: number; sizeMode: 'fixed' | 'hug' | 'fit' }) => {
+    addSizePreset(preset);
+  }, [addSizePreset]);
+
+  // edit 대상 프리셋
+  const editSizePreset = sizePresets?.find(p => p.id === selectedSizePresetId) || sizePresets?.[0];
+
+  const handleEditSizeSave = useCallback((preset: { name: string; w: number; h: number; radius: number; sizeMode: 'fixed' | 'hug' | 'fit' }) => {
+    if (editSizePreset) updateSizePreset(editSizePreset.id, preset);
+  }, [editSizePreset, updateSizePreset]);
 
   const summary = useSelectionSummary();
   const nodeCount = selectedNodes.length;
@@ -449,12 +466,23 @@ export function App() {
       {activeModal === 'add-size' && (
         <SizeModal
           mode="add"
+          initialW={lastNodeConfig.width || 375}
+          initialH={lastNodeConfig.height || 812}
+          initialRadius={lastNodeConfig.cornerRadius || 0}
+          initialSizeMode={(lastNodeConfig.sizeMode as 'fixed' | 'hug' | 'fit') || 'fixed'}
+          onSave={handleAddSizeSave}
           onClose={() => setActiveModal('none')}
         />
       )}
       {activeModal === 'edit-size' && (
         <SizeModal
           mode="edit"
+          initialName={editSizePreset?.name || 'Custom'}
+          initialW={editSizePreset?.w || 375}
+          initialH={editSizePreset?.h || 812}
+          initialRadius={editSizePreset?.radius ?? 0}
+          initialSizeMode={editSizePreset?.sizeMode || 'fixed'}
+          onSave={handleEditSizeSave}
           onClose={() => setActiveModal('none')}
         />
       )}

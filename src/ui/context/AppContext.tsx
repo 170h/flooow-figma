@@ -603,6 +603,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     const next = [...sizePresets, newPreset];
     savePresets(next);
+    // 새로 추가된 프리셋을 선택 상태로 설정
+    setSelectedSizePresetId(newId);
     setLastNodeConfig({
       width: preset.w,
       height: preset.h,
@@ -617,7 +619,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (rEl) rEl.value = String(preset.radius ?? 0);
     applyCurrentNodeState(preset.sizeMode);
     showToast(`"${preset.name}" 사이즈가 추가되었습니다.`, 'success');
-  }, [sizePresets, savePresets, setLastNodeConfig, applyCurrentNodeState, showToast]);
+  }, [sizePresets, savePresets, setSelectedSizePresetId, setLastNodeConfig, applyCurrentNodeState, showToast]);
 
   const updateSizePreset = useCallback((id: string, partial: Partial<SizePreset>) => {
     const next = sizePresets.map((p) => (p.id === id ? { ...p, ...partial } : p));

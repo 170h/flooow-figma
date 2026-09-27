@@ -55,6 +55,7 @@ export function SizeSection() {
     selectedNodes,
     uiState,
     sizePresets,
+    selectedSizePresetId,
     setActiveModal,
     contextMenuOpen,
     setContextMenuOpen,
@@ -422,7 +423,7 @@ export function SizeSection() {
             <button
               key={p.id}
               type="button"
-              className={`chip-btn${lastNodeConfig.width === p.w && lastNodeConfig.height === p.h ? ' active' : ''}`}
+              className={`chip-btn${selectedSizePresetId === p.id ? ' active' : ''}`}
               onClick={() => applySizePreset(p)}
               title={`${p.name} (${p.w}×${p.h})`}
             >
