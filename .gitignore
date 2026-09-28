@@ -13,3 +13,5 @@ dist/ui-bundle.js
 *.swp
 *.swo
 .vscode/settings.json
+
+harness-starter-kit/

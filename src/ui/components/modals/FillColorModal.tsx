@@ -88,8 +88,9 @@ export function FillColorModal({
   };
 
   // 취소 처리 (원래 색상으로 롤백 후 닫기)
+  // C-04: 초기 상태가 None이었으면 Cancel 시 None을 복원 (초기 색상으로 롤백되지 않도록)
   const handleCancel = () => {
-    onApply(initialColor);
+    onApply(isInitialNone ? "None" : initialColor);
     onClose();
   };
 

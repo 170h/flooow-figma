@@ -36438,7 +36438,7 @@
       handleNoneToggle(!isNone);
     };
     const handleCancel = () => {
-      onApply(initialColor);
+      onApply(isInitialNone ? "None" : initialColor);
       onClose();
     };
     const handleSave = () => {
@@ -36630,7 +36630,10 @@
       handleNoneToggle(strokeWeight > 0);
     };
     const handleCancel = () => {
-      onApply(initialColor, initialWeight);
+      onApply(
+        isInitialNone ? "None" : initialColor,
+        isInitialNone ? 0 : initialWeight
+      );
       onClose();
     };
     const handleSave = () => {

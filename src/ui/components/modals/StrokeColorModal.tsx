@@ -139,8 +139,12 @@ export function StrokeColorModal({
   };
 
   // 취소 처리 (원래 상태로 롤백 후 닫기)
+  // C-04: 초기 상태가 None이었으면 Cancel 시 None(두께 0)을 복원
   const handleCancel = () => {
-    onApply(initialColor, initialWeight);
+    onApply(
+      isInitialNone ? "None" : initialColor,
+      isInitialNone ? 0 : initialWeight,
+    );
     onClose();
   };
 
