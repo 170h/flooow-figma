@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { useApp } from '../../context/AppContext';
-import { ColorWheelField } from '../shared/ColorWheelField';
-import { StrokeColorIcon, FillColorIcon } from '../shared/icons';
+import React, { useState, useRef } from "react";
+import { useApp } from "../../context/AppContext";
+import { ColorWheelField } from "../shared/ColorWheelField";
+import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -24,7 +24,7 @@ const STROKE_ICON_SVG = (
 );
 
 interface StyleModalProps {
-  mode?: 'add' | 'edit';
+  mode?: "add" | "edit";
   editingPresetId?: string | null;
   onClose: () => void;
   initialColor?: string;
@@ -37,7 +37,7 @@ interface StyleModalProps {
  * - Stroke: ColorWheelField (Hex 입력 + 도넛 컬러 휠 + Stroke 두께 입력 박스 + 원형 컬러휠 + StrokeColorIcon)
  */
 export function StyleModal({
-  mode = 'add',
+  mode = "add",
   editingPresetId,
   onClose,
   initialColor,
@@ -56,42 +56,48 @@ export function StyleModal({
   } = useApp();
 
   // 수정 대상 프리셋 조회
-  const targetPreset = mode === 'edit' && editingPresetId
-    ? stylePresets.find((p) => p.id === editingPresetId)
-    : null;
+  const targetPreset =
+    mode === "edit" && editingPresetId
+      ? stylePresets.find((p) => p.id === editingPresetId)
+      : null;
 
   // Fill 상태: 수정 모드일 때는 targetPreset을 우선, 아니면 initialColor/uiState를 반영
   const rawInitFill = targetPreset
     ? targetPreset.fillColor
-    : (initialColor || uiState.selectedColor || '#EA2039');
+    : initialColor || uiState.selectedColor || "#EA2039";
 
-  const isInitialFillNone = !isMixed && (
-    rawInitFill.toLowerCase() === 'none' ||
-    rawInitFill.toLowerCase() === 'transparent'
-  );
+  const isInitialFillNone =
+    !isMixed &&
+    (rawInitFill.toLowerCase() === "none" ||
+      rawInitFill.toLowerCase() === "transparent");
 
-  const resolvedColor = (isInitialFillNone ? 'EA2039' : rawInitFill)
-    .replace('#', '')
+  const resolvedColor = (isInitialFillNone ? "EA2039" : rawInitFill)
+    .replace("#", "")
     .trim()
     .toUpperCase();
-  const validFill = resolvedColor.length === 6 ? resolvedColor : 'EA2039';
+  const validFill = resolvedColor.length === 6 ? resolvedColor : "EA2039";
 
   const firstSelectedNode = selectedNodes.length > 0 ? selectedNodes[0] : null;
   const initialStrokeWeight = targetPreset
     ? targetPreset.strokeWeight
-    : (firstSelectedNode
+    : firstSelectedNode
       ? (firstSelectedNode.strokeWeight ?? 0)
-      : (uiState.selectedStrokeWeight ?? 0));
+      : (uiState.selectedStrokeWeight ?? 0);
 
-  const initialStrokeHex = (targetPreset
-    ? targetPreset.strokeColor
-    : (firstSelectedNode?.strokeColorHex || uiState.selectedStrokeColor || '#000000'))
-    .replace('#', '')
+  const initialStrokeHex = (
+    targetPreset
+      ? targetPreset.strokeColor
+      : firstSelectedNode?.strokeColorHex ||
+        uiState.selectedStrokeColor ||
+        "#000000"
+  )
+    .replace("#", "")
     .trim()
     .toUpperCase();
-  const validStrokeHex = initialStrokeHex.length === 6 ? initialStrokeHex : '000000';
+  const validStrokeHex =
+    initialStrokeHex.length === 6 ? initialStrokeHex : "000000";
 
-  const [fillHex, setFillHex] = useState(isMixed ? '' : validFill);
+  const [fillHex, setFillHex] = useState(isMixed ? "" : validFill);
   const [isFillNone, setIsFillNone] = useState(isInitialFillNone);
   const [isFillMixed, setIsFillMixed] = useState(Boolean(isMixed));
   const [strokeHex, setStrokeHex] = useState(validStrokeHex);
@@ -101,13 +107,15 @@ export function StyleModal({
   const lastValidFillRef = useRef<string>(validFill);
 
   // 현재 열려있는 컬러 피커 ('fill' | 'stroke' | null) - 기본값 'fill'
-  const [activePicker, setActivePicker] = useState<'fill' | 'stroke' | null>('fill');
+  const [activePicker, setActivePicker] = useState<"fill" | "stroke" | null>(
+    "fill",
+  );
 
   // Fill 칩 클릭 핸들러 (배경 투명/None 토글)
   const handleFillChipClick = () => {
     if (isFillNone) {
       setIsFillNone(false);
-      setFillHex(lastValidFillRef.current || 'EA2039');
+      setFillHex(lastValidFillRef.current || "EA2039");
     } else {
       if (fillHex && fillHex.length === 6) {
         lastValidFillRef.current = fillHex;
@@ -118,27 +126,44 @@ export function StyleModal({
 
   // 저장 처리
   function handleSave() {
+    const resolvedFill = fillHex.trim() ? fillHex : validFill;
     const finalFillColor = isFillNone
-      ? 'None'
-      : `#${(fillHex.trim() ? fillHex : validFill).padStart(6, '0')}`;
-    const finalStrokeColor = `#${strokeHex.padStart(6, '0')}`;
+      ? "None"
+      : `#${
+          resolvedFill.length === 3
+            ? resolvedFill
+                .split("")
+                .map((c) => c + c)
+                .join("")
+            : resolvedFill
+        }`;
+    const finalStrokeColor = `#${
+      strokeHex.length === 3
+        ? strokeHex
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : strokeHex
+    }`;
     const finalStrokeWeight = Math.max(0, strokeWeight);
 
-    if (mode === 'edit' && editingPresetId) {
+    if (mode === "edit" && editingPresetId) {
       updateStylePreset(editingPresetId, {
-        name: targetPreset?.name || (isFillNone ? 'Custom None' : `Custom ${finalFillColor}`),
+        name:
+          targetPreset?.name ||
+          (isFillNone ? "Custom None" : `Custom ${finalFillColor}`),
         fillColor: finalFillColor,
         strokeWeight: finalStrokeWeight,
         strokeColor: finalStrokeColor,
       });
     } else {
       addStylePreset({
-        name: isFillNone ? 'Custom None' : `Custom ${finalFillColor}`,
+        name: isFillNone ? "Custom None" : `Custom ${finalFillColor}`,
         fillColor: finalFillColor,
         strokeWeight: finalStrokeWeight,
         strokeColor: finalStrokeColor,
       });
-      showToast('새 스타일이 추가되었습니다.', 'success');
+      showToast("새 스타일이 추가되었습니다.", "success");
     }
 
     // UI 상태 갱신
@@ -146,7 +171,9 @@ export function StyleModal({
       selectedColor: finalFillColor,
       selectedStrokeWeight: finalStrokeWeight,
       selectedStrokeColor: finalStrokeColor,
-      ...(mode === 'edit' && editingPresetId ? { selectedStylePresetId: editingPresetId } : {}),
+      ...(mode === "edit" && editingPresetId
+        ? { selectedStylePresetId: editingPresetId }
+        : {}),
     });
     setLastNodeConfig({
       color: finalFillColor,
@@ -166,13 +193,17 @@ export function StyleModal({
     onClose();
   }
 
-  const modalTitle = mode === 'edit' ? 'Edit style' : 'Add style';
+  const modalTitle = mode === "edit" ? "Edit style" : "Add style";
 
   return (
     <div
       id="modal-style-backdrop"
       className="popover-backdrop"
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -187,7 +218,14 @@ export function StyleModal({
           <span className="style-modal-title">
             {modalTitle}
             {isFillMixed && (
-              <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "var(--figma-color-text-tertiary, #999)",
+                  marginLeft: "6px",
+                  fontWeight: "normal",
+                }}
+              >
                 (Mixed)
               </span>
             )}
@@ -203,20 +241,31 @@ export function StyleModal({
         </div>
 
         {/* 모달 바디 */}
-        <div className="style-modal-body" style={{ padding: '12px 16px' }}>
+        <div className="style-modal-body" style={{ padding: "12px 16px" }}>
           {/* ==================== 1. Fill 섹션 ==================== */}
-          <div className="style-section-group" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div
+            className="style-section-group"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
             {/* Fill 헤더 행 */}
             <div
               className="style-section-header"
               style={{
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 height: 24,
                 marginBottom: 6,
               }}
             >
-              <span className="style-section-label" style={{ fontSize: 11, fontWeight: 550, color: '#FFFFFF', letterSpacing: 0 }}>
+              <span
+                className="style-section-label"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 550,
+                  color: "#FFFFFF",
+                  letterSpacing: 0,
+                }}
+              >
                 Fill
               </span>
             </div>
@@ -235,7 +284,7 @@ export function StyleModal({
                 } else {
                   setIsFillNone(false);
                   if (isFillNone && (!fillHex || fillHex.length !== 6)) {
-                    setFillHex(lastValidFillRef.current || 'EA2039');
+                    setFillHex(lastValidFillRef.current || "EA2039");
                   }
                 }
               }}
@@ -249,8 +298,8 @@ export function StyleModal({
                 }
               }}
               onEnter={handleSave}
-              isOpen={activePicker === 'fill'}
-              onToggleOpen={(open) => setActivePicker(open ? 'fill' : null)}
+              isOpen={activePicker === "fill"}
+              onToggleOpen={(open) => setActivePicker(open ? "fill" : null)}
               customChip={
                 <FillColorIcon
                   color={`#${fillHex}`}
@@ -260,28 +309,45 @@ export function StyleModal({
                     e.stopPropagation();
                     handleFillChipClick();
                   }}
-                  title={isFillMixed ? 'Fill color (Mixed)' : (isFillNone ? '배경 켜기' : '배경 끄기 (None)')}
+                  title={
+                    isFillMixed
+                      ? "Fill color (Mixed)"
+                      : isFillNone
+                        ? "배경 켜기"
+                        : "배경 끄기 (None)"
+                  }
                 />
               }
             />
           </div>
 
           {/* 중간 구분선 (1px Divider) */}
-          <div className="style-divider" style={{ margin: '12px 0' }} />
+          <div className="style-divider" style={{ margin: "12px 0" }} />
 
           {/* ==================== 2. Stroke 섹션 ==================== */}
-          <div className="style-section-group" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div
+            className="style-section-group"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
             {/* Stroke 헤더 행 */}
             <div
               className="style-section-header"
               style={{
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 height: 24,
                 marginBottom: 6,
               }}
             >
-              <span className="style-section-label" style={{ fontSize: 11, fontWeight: 550, color: '#FFFFFF', letterSpacing: 0 }}>
+              <span
+                className="style-section-label"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 550,
+                  color: "#FFFFFF",
+                  letterSpacing: 0,
+                }}
+              >
                 Stroke
               </span>
             </div>
@@ -290,7 +356,11 @@ export function StyleModal({
             <ColorWheelField
               value={strokeHex}
               isNone={strokeWeight === 0}
-              onNoneToggle={(none) => setStrokeWeight(none ? 0 : (strokeWeight > 0 ? strokeWeight : 1.5))}
+              onNoneToggle={(none) =>
+                setStrokeWeight(
+                  none ? 0 : strokeWeight > 0 ? strokeWeight : 1.5,
+                )
+              }
               onChange={(hex) => {
                 setStrokeHex(hex);
                 if (strokeWeight === 0) {
@@ -298,8 +368,8 @@ export function StyleModal({
                 }
               }}
               onEnter={handleSave}
-              isOpen={activePicker === 'stroke'}
-              onToggleOpen={(open) => setActivePicker(open ? 'stroke' : null)}
+              isOpen={activePicker === "stroke"}
+              onToggleOpen={(open) => setActivePicker(open ? "stroke" : null)}
               customChip={
                 <StrokeColorIcon
                   color={`#${strokeHex}`}
@@ -308,7 +378,7 @@ export function StyleModal({
                     e.stopPropagation();
                     setStrokeWeight((prev) => (prev === 0 ? 1.5 : 0));
                   }}
-                  title={strokeWeight === 0 ? '보더 켜기' : '보더 끄기 (None)'}
+                  title={strokeWeight === 0 ? "보더 켜기" : "보더 끄기 (None)"}
                 />
               }
               extraControlPosition="left"
@@ -318,10 +388,10 @@ export function StyleModal({
                     style={{
                       width: 24,
                       height: 24,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'rgba(255, 255, 255, 0.6)',
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "rgba(255, 255, 255, 0.6)",
                       flexShrink: 0,
                     }}
                   >
@@ -333,11 +403,13 @@ export function StyleModal({
                     min={0}
                     max={50}
                     value={strokeWeight}
-                    onChange={(e) => setStrokeWeight(parseInt(e.target.value, 10) || 0)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                    onChange={(e) =>
+                      setStrokeWeight(parseInt(e.target.value, 10) || 0)
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleSave()}
                     style={{
-                      width: '100%',
-                      textAlign: 'left',
+                      width: "100%",
+                      textAlign: "left",
                       letterSpacing: 0,
                     }}
                   />

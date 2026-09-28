@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { COLOR_MIXED_ICON } from './icons';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { COLOR_MIXED_ICON } from "./icons";
 
 // ---- 색상 변환 유틸리티 (Hex <-> HSV) ----
 
@@ -8,10 +8,16 @@ import { COLOR_MIXED_ICON } from './icons';
  * @param hex 16진수 색상 코드
  * @param fallbackHue 무채색(채도 0 또는 명도 0)일 때 유지할 Hue 값
  */
-export function hexToHsv(hex: string, fallbackHue = 0): { h: number; s: number; v: number } {
-  let clean = hex.replace('#', '').trim();
+export function hexToHsv(
+  hex: string,
+  fallbackHue = 0,
+): { h: number; s: number; v: number } {
+  let clean = hex.replace("#", "").trim();
   if (clean.length === 3) {
-    clean = clean.split('').map((c) => c + c).join('');
+    clean = clean
+      .split("")
+      .map((c) => c + c)
+      .join("");
   }
   const r = (parseInt(clean.substring(0, 2), 16) || 0) / 255;
   const g = (parseInt(clean.substring(2, 4), 16) || 0) / 255;
@@ -61,29 +67,47 @@ export function hsvToHex(h: number, s: number, v: number): string {
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = vNorm - c;
 
-  let r = 0, g = 0, b = 0;
+  let r = 0,
+    g = 0,
+    b = 0;
   if (h >= 0 && h < 60) {
-    r = c; g = x; b = 0;
+    r = c;
+    g = x;
+    b = 0;
   } else if (h >= 60 && h < 120) {
-    r = x; g = c; b = 0;
+    r = x;
+    g = c;
+    b = 0;
   } else if (h >= 120 && h < 180) {
-    r = 0; g = c; b = x;
+    r = 0;
+    g = c;
+    b = x;
   } else if (h >= 180 && h < 240) {
-    r = 0; g = x; b = c;
+    r = 0;
+    g = x;
+    b = c;
   } else if (h >= 240 && h < 300) {
-    r = x; g = 0; b = c;
+    r = x;
+    g = 0;
+    b = c;
   } else if (h >= 300 && h <= 360) {
-    r = c; g = 0; b = x;
+    r = c;
+    g = 0;
+    b = x;
   }
 
-  const rHex = Math.round((r + m) * 255).toString(16).padStart(2, '0');
-  const gHex = Math.round((g + m) * 255).toString(16).padStart(2, '0');
-  const bHex = Math.round((b + m) * 255).toString(16).padStart(2, '0');
+  const rHex = Math.round((r + m) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  const gHex = Math.round((g + m) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  const bHex = Math.round((b + m) * 255)
+    .toString(16)
+    .padStart(2, "0");
 
   return `${rHex}${gHex}${bHex}`.toUpperCase();
 }
-
-
 
 export interface ColorWheelFieldProps {
   value: string; // 예: 'EA2039' 또는 '#EA2039'
@@ -92,7 +116,7 @@ export interface ColorWheelFieldProps {
   isOpen?: boolean;
   onToggleOpen?: (open: boolean) => void;
   extraControl?: React.ReactNode;
-  extraControlPosition?: 'left' | 'right';
+  extraControlPosition?: "left" | "right";
   isMixed?: boolean;
   onMixedClear?: () => void;
   /** 커스텀 칩/아이콘 렌더링 지원 (예: StrokeColorIcon) */
@@ -117,14 +141,14 @@ export function ColorWheelField({
   isOpen,
   onToggleOpen,
   extraControl,
-  extraControlPosition = 'right',
+  extraControlPosition = "right",
   isMixed = false,
   onMixedClear,
   customChip,
   isNone = false,
   onNoneToggle,
 }: ColorWheelFieldProps) {
-  const cleanHex = value.replace('#', '').toUpperCase();
+  const cleanHex = value.replace("#", "").toUpperCase();
   const [colorHex, setColorHex] = useState(cleanHex);
   const [colorHsv, setColorHsv] = useState(() => hexToHsv(cleanHex));
   const [internalOpen, setInternalOpen] = useState(false);
@@ -147,7 +171,7 @@ export function ColorWheelField({
   // 외부 value 변경 동기화 (내부 드래그 인터랙션 중이거나 이미 같은 색상이면 Hue 보존을 위해 무시)
   useEffect(() => {
     if (isInteractingRef.current) return;
-    const nextClean = value.replace('#', '').toUpperCase();
+    const nextClean = value.replace("#", "").toUpperCase();
     if (nextClean === colorHex) return;
 
     setColorHex(nextClean);
@@ -160,11 +184,14 @@ export function ColorWheelField({
       onMixedClear();
     }
     const rawVal = e.target.value;
-    if (rawVal.toLowerCase() === 'none') {
+    if (rawVal.toLowerCase() === "none") {
       if (onNoneToggle) onNoneToggle(true);
       return;
     }
-    let val = rawVal.replace('#', '').toUpperCase().replace(/[^0-9A-F]/g, '');
+    let val = rawVal
+      .replace("#", "")
+      .toUpperCase()
+      .replace(/[^0-9A-F]/g, "");
     if (val.length > 6) val = val.slice(0, 6);
     setColorHex(val);
 
@@ -184,14 +211,18 @@ export function ColorWheelField({
       return;
     }
     let clean = colorHex.trim();
-    if (clean.toLowerCase() === 'none' || clean === '') {
+    if (clean.toLowerCase() === "none" || clean === "") {
       if (onNoneToggle) {
         onNoneToggle(true);
       }
       return;
     }
     if (clean.length === 3) {
-      clean = clean.split('').map((c) => c + c).join('').toUpperCase();
+      clean = clean
+        .split("")
+        .map((c) => c + c)
+        .join("")
+        .toUpperCase();
     }
     if (clean.length === 6 && /^[0-9A-F]{6}$/i.test(clean)) {
       setColorHex(clean.toUpperCase());
@@ -231,7 +262,7 @@ export function ColorWheelField({
         return nextHsv;
       });
     },
-    [onChange, isNone, onNoneToggle]
+    [onChange, isNone, onNoneToggle],
   );
 
   const startHueDrag = (e: React.MouseEvent) => {
@@ -250,7 +281,7 @@ export function ColorWheelField({
     // 마우스 클릭 위치가 내부 디스크 영역(반경 54px 이하)인데
     // 사용자가 Hue 핸들을 직접 클릭한 것이 아니라면 내부 디스크의 동작을 방해하지 않음
     const target = e.target as HTMLElement | null;
-    const isTargetHueKnob = target?.classList.contains('conn-wheel-hue-knob');
+    const isTargetHueKnob = target?.classList.contains("conn-wheel-hue-knob");
     if (!isTargetHueKnob && dist < 54) {
       return;
     }
@@ -258,14 +289,15 @@ export function ColorWheelField({
     isInteractingRef.current = true;
     updateHueFromPoint(e.clientX, e.clientY);
 
-    const onMove = (ev: MouseEvent) => updateHueFromPoint(ev.clientX, ev.clientY);
+    const onMove = (ev: MouseEvent) =>
+      updateHueFromPoint(ev.clientX, ev.clientY);
     const onUp = () => {
       isInteractingRef.current = false;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
     };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   };
 
   // 2D 디스크 채도/명도 드래그 계산 (Hue가 절대 변경되지 않도록 확실하게 고정)
@@ -311,7 +343,7 @@ export function ColorWheelField({
         return nextHsv;
       });
     },
-    [onChange, isNone, onNoneToggle]
+    [onChange, isNone, onNoneToggle],
   );
 
   const startSatValDrag = (e: React.MouseEvent) => {
@@ -322,14 +354,15 @@ export function ColorWheelField({
     isInteractingRef.current = true;
     updateSatValFromPoint(e.clientX, e.clientY);
 
-    const onMove = (ev: MouseEvent) => updateSatValFromPoint(ev.clientX, ev.clientY);
+    const onMove = (ev: MouseEvent) =>
+      updateSatValFromPoint(ev.clientX, ev.clientY);
     const onUp = () => {
       isInteractingRef.current = false;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
     };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   };
 
   // Hue 손잡이 좌표 (원형 링 직경 168px, 중심선 R = 74px, 링 두께 20px)
@@ -351,13 +384,20 @@ export function ColorWheelField({
   const satValX = discCenter + normU * invFactor * discRadius;
   const satValY = discCenter + normV * invFactor * discRadius;
 
-  const currentFormattedHex = `#${colorHex.padStart(6, '0')}`;
+  const currentFormattedHex = `#${
+    colorHex.length === 3
+      ? colorHex
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : colorHex
+  }`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+    <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
       {/* 1. Hex 입력 필드 + 무지개 도넛 토글 버튼 (+ 선택적 extraControl) */}
       <div className="conn-color-input-row">
-        {extraControlPosition === 'left' && extraControl}
+        {extraControlPosition === "left" && extraControl}
 
         <div className="conn-modal-hex-box">
           {customChip !== undefined ? (
@@ -366,7 +406,7 @@ export function ColorWheelField({
             <span
               className="conn-modal-hex-chip"
               style={{
-                backgroundColor: isMixed ? 'transparent' : currentFormattedHex,
+                backgroundColor: isMixed ? "transparent" : currentFormattedHex,
               }}
             >
               {isMixed && COLOR_MIXED_ICON}
@@ -375,18 +415,18 @@ export function ColorWheelField({
           <input
             type="text"
             size={1}
-            className={`conn-modal-hex-input${isNone ? ' is-none' : ''}`}
-            value={isMixed ? '' : (isNone ? 'None' : colorHex)}
-            placeholder={isMixed ? 'Mixed' : (isNone ? 'None' : undefined)}
+            className={`conn-modal-hex-input${isNone ? " is-none" : ""}`}
+            value={isMixed ? "" : isNone ? "None" : colorHex}
+            placeholder={isMixed ? "Mixed" : isNone ? "None" : undefined}
             maxLength={isNone ? 6 : 6}
             onChange={handleHexChange}
             onFocus={(e) => {
-              if (isNone || e.target.value === 'None') {
+              if (isNone || e.target.value === "None") {
                 e.target.select();
               }
             }}
             onBlur={handleHexBlur}
-            onKeyDown={(e) => e.key === 'Enter' && onEnter && onEnter()}
+            onKeyDown={(e) => e.key === "Enter" && onEnter && onEnter()}
             spellCheck={false}
             autoComplete="off"
           />
@@ -395,14 +435,14 @@ export function ColorWheelField({
         {/* 무지개 도넛 컬러 휠 토글 버튼 */}
         <button
           type="button"
-          className={`conn-modal-wheel-donut-btn${isWheelOpen ? ' selected' : ''}`}
-          title={isWheelOpen ? 'Hide color wheel' : 'Show color wheel'}
+          className={`conn-modal-wheel-donut-btn${isWheelOpen ? " selected" : ""}`}
+          title={isWheelOpen ? "Hide color wheel" : "Show color wheel"}
           onClick={toggleWheel}
         >
           <span className="conn-modal-wheel-donut-icon" />
         </button>
 
-        {extraControlPosition === 'right' && extraControl}
+        {extraControlPosition === "right" && extraControl}
       </div>
 
       {/* 2. 원형 컬러 휠 (Hue) + 채도/명도 2D 디스크 */}

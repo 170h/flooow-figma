@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useApp } from '../../context/AppContext';
-import { ColorWheelField } from '../shared/ColorWheelField';
+import React, { useState, useEffect } from "react";
+import { useApp } from "../../context/AppContext";
+import { ColorWheelField } from "../shared/ColorWheelField";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -31,13 +31,16 @@ interface PhaseModalProps {
  */
 export function PhaseModal({ editingPhase, onSave, onClose }: PhaseModalProps) {
   const { activeModal } = useApp();
-  const isOpen = activeModal === 'phase';
+  const isOpen = activeModal === "phase";
 
-  const [name, setName] = useState(editingPhase?.name || '');
+  const [name, setName] = useState(editingPhase?.name || "");
 
   // 컬러 상태
-  const initialColor = (editingPhase?.color || '#EA2039').replace('#', '').trim().toUpperCase();
-  const validHex = initialColor.length === 6 ? initialColor : 'EA2039';
+  const initialColor = (editingPhase?.color || "#EA2039")
+    .replace("#", "")
+    .trim()
+    .toUpperCase();
+  const validHex = initialColor.length === 6 ? initialColor : "EA2039";
 
   const [colorHex, setColorHex] = useState(validHex);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -45,9 +48,12 @@ export function PhaseModal({ editingPhase, onSave, onClose }: PhaseModalProps) {
   // 모달 열림 또는 편집 대상 변경 시 폼 필드 동기화
   useEffect(() => {
     if (isOpen) {
-      setName(editingPhase?.name || '');
-      const rawColor = (editingPhase?.color || '#EA2039').replace('#', '').trim().toUpperCase();
-      setColorHex(rawColor.length === 6 ? rawColor : 'EA2039');
+      setName(editingPhase?.name || "");
+      const rawColor = (editingPhase?.color || "#EA2039")
+        .replace("#", "")
+        .trim()
+        .toUpperCase();
+      setColorHex(rawColor.length === 6 ? rawColor : "EA2039");
       setPickerOpen(false);
     }
   }, [editingPhase, isOpen]);
@@ -55,7 +61,14 @@ export function PhaseModal({ editingPhase, onSave, onClose }: PhaseModalProps) {
   // 저장 처리
   function handleSave() {
     if (!name.trim()) return;
-    const finalColor = `#${colorHex.padStart(6, '0')}`;
+    const finalColor = `#${
+      colorHex.length === 3
+        ? colorHex
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : colorHex
+    }`;
     onSave({
       id: editingPhase?.id || `phase-${Date.now()}`,
       name: name.trim(),
@@ -70,7 +83,7 @@ export function PhaseModal({ editingPhase, onSave, onClose }: PhaseModalProps) {
     <div
       id="modal-backdrop"
       className="popover-backdrop"
-      style={{ display: 'flex' }}
+      style={{ display: "flex" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -78,12 +91,12 @@ export function PhaseModal({ editingPhase, onSave, onClose }: PhaseModalProps) {
       <div
         id="modal-phase"
         className="style-modal-card"
-        style={{ display: 'flex' }}
+        style={{ display: "flex" }}
       >
         {/* 모달 헤더 (피그마 노드 1027248:4797) */}
         <div className="style-modal-header">
           <span className="style-modal-title">
-            {editingPhase ? 'Edit Phase' : 'Add Phase'}
+            {editingPhase ? "Edit Phase" : "Add Phase"}
           </span>
           <button
             type="button"
@@ -96,20 +109,31 @@ export function PhaseModal({ editingPhase, onSave, onClose }: PhaseModalProps) {
         </div>
 
         {/* 모달 바디 */}
-        <div className="style-modal-body" style={{ padding: '12px 16px' }}>
+        <div className="style-modal-body" style={{ padding: "12px 16px" }}>
           {/* 1. Name 필드 */}
-          <div className="style-section-group" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div
+            className="style-section-group"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
             <div
               className="style-section-header"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 height: 24,
                 marginBottom: 6,
               }}
             >
-              <span className="style-section-label" style={{ fontSize: 11, fontWeight: 550, color: '#FFFFFF', letterSpacing: 0 }}>
+              <span
+                className="style-section-label"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 550,
+                  color: "#FFFFFF",
+                  letterSpacing: 0,
+                }}
+              >
                 Name
               </span>
             </div>
@@ -120,7 +144,7 @@ export function PhaseModal({ editingPhase, onSave, onClose }: PhaseModalProps) {
               placeholder="Phase Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+              onKeyDown={(e) => e.key === "Enter" && handleSave()}
               autoFocus
               style={{
                 height: 28,
@@ -130,21 +154,32 @@ export function PhaseModal({ editingPhase, onSave, onClose }: PhaseModalProps) {
           </div>
 
           {/* 중간 구분선 (1px Divider) */}
-          <div className="style-divider" style={{ margin: '12px 0' }} />
+          <div className="style-divider" style={{ margin: "12px 0" }} />
 
           {/* 2. Background Color 필드 */}
-          <div className="style-section-group" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div
+            className="style-section-group"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
             {/* Background Color 헤더 행 */}
             <div
               className="style-section-header"
               style={{
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 height: 24,
                 marginBottom: 6,
               }}
             >
-              <span className="style-section-label" style={{ fontSize: 11, fontWeight: 550, color: '#FFFFFF', letterSpacing: 0 }}>
+              <span
+                className="style-section-label"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 550,
+                  color: "#FFFFFF",
+                  letterSpacing: 0,
+                }}
+              >
                 Background Color
               </span>
             </div>

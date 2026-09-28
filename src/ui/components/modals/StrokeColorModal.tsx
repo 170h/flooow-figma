@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
-import { ColorWheelField } from '../shared/ColorWheelField';
-import { StrokeColorIcon } from '../shared/icons';
+import React, { useState, useRef } from "react";
+import { ColorWheelField } from "../shared/ColorWheelField";
+import { StrokeColorIcon } from "../shared/icons";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -47,32 +47,37 @@ export function StrokeColorModal({
   onApply,
   onClose,
 }: StrokeColorModalProps) {
-  const rawInit = initialColor || '#000000';
+  const rawInit = initialColor || "#000000";
   const isInitialNone =
     !isColorMixed &&
     (initialWeight === 0 ||
-      rawInit.toLowerCase() === 'none' ||
-      rawInit.toLowerCase() === 'transparent');
+      rawInit.toLowerCase() === "none" ||
+      rawInit.toLowerCase() === "transparent");
 
-  const resolvedColor = (isInitialNone ? '000000' : rawInit)
-    .replace('#', '')
+  const resolvedColor = (isInitialNone ? "000000" : rawInit)
+    .replace("#", "")
     .trim()
     .toUpperCase();
-  const validStroke = resolvedColor.length === 6 ? resolvedColor : '000000';
+  const validStroke = resolvedColor.length === 6 ? resolvedColor : "000000";
 
-  const [strokeHex, setStrokeHex] = useState(isColorMixed ? '' : validStroke);
-  const [strokeWeight, setStrokeWeight] = useState(isWeightMixed ? 0 : initialWeight);
+  const [strokeHex, setStrokeHex] = useState(isColorMixed ? "" : validStroke);
+  const [strokeWeight, setStrokeWeight] = useState(
+    isWeightMixed ? 0 : initialWeight,
+  );
   const [showWheel, setShowWheel] = useState(true);
 
   // 직전 유효 상태 기억 (복원용)
   const lastValidColorRef = useRef<string>(validStroke);
-  const lastValidWeightRef = useRef<number>(initialWeight > 0 ? initialWeight : 1.5);
+  const lastValidWeightRef = useRef<number>(
+    initialWeight > 0 ? initialWeight : 1.5,
+  );
 
   // 색상 변경 핸들러 (실시간 프리뷰 적용)
   const handleColorChange = (hex: string) => {
     setStrokeHex(hex);
     lastValidColorRef.current = hex;
-    const targetWeight = strokeWeight === 0 ? (lastValidWeightRef.current || 1.5) : strokeWeight;
+    const targetWeight =
+      strokeWeight === 0 ? lastValidWeightRef.current || 1.5 : strokeWeight;
     if (strokeWeight === 0) {
       setStrokeWeight(targetWeight);
     }
@@ -86,7 +91,15 @@ export function StrokeColorModal({
     if (valid > 0) {
       lastValidWeightRef.current = valid;
     }
-    const color = `#${(strokeHex.trim() ? strokeHex : validStroke).padStart(6, '0')}`;
+    const resolved = strokeHex.trim() ? strokeHex : validStroke;
+    const color = `#${
+      resolved.length === 3
+        ? resolved
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : resolved
+    }`;
     onApply(color, valid);
   };
 
@@ -94,12 +107,28 @@ export function StrokeColorModal({
   const handleNoneToggle = (none: boolean) => {
     if (none) {
       setStrokeWeight(0);
-      const color = `#${(strokeHex.trim() ? strokeHex : validStroke).padStart(6, '0')}`;
+      const resolved = strokeHex.trim() ? strokeHex : validStroke;
+      const color = `#${
+        resolved.length === 3
+          ? resolved
+              .split("")
+              .map((c) => c + c)
+              .join("")
+          : resolved
+      }`;
       onApply(color, 0);
     } else {
       const restoreWeight = lastValidWeightRef.current || 1.5;
       setStrokeWeight(restoreWeight);
-      const color = `#${(strokeHex.trim() ? strokeHex : validStroke).padStart(6, '0')}`;
+      const resolved = strokeHex.trim() ? strokeHex : validStroke;
+      const color = `#${
+        resolved.length === 3
+          ? resolved
+              .split("")
+              .map((c) => c + c)
+              .join("")
+          : resolved
+      }`;
       onApply(color, restoreWeight);
     }
   };
@@ -117,7 +146,15 @@ export function StrokeColorModal({
 
   // 저장 처리 (최종 상태 확정 후 닫기)
   const handleSave = () => {
-    const finalColor = `#${(strokeHex.trim() ? strokeHex : validStroke).padStart(6, '0')}`;
+    const resolved = strokeHex.trim() ? strokeHex : validStroke;
+    const finalColor = `#${
+      resolved.length === 3
+        ? resolved
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : resolved
+    }`;
     const finalWeight = Math.max(0, strokeWeight);
     onApply(finalColor, finalWeight);
     onClose();
@@ -127,7 +164,11 @@ export function StrokeColorModal({
     <div
       id="modal-stroke-color-backdrop"
       className="popover-backdrop"
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) handleCancel();
       }}
@@ -144,10 +185,10 @@ export function StrokeColorModal({
             {(isColorMixed || isWeightMixed) && (
               <span
                 style={{
-                  fontSize: '11px',
-                  color: 'var(--figma-color-text-tertiary, #999)',
-                  marginLeft: '6px',
-                  fontWeight: 'normal',
+                  fontSize: "11px",
+                  color: "var(--figma-color-text-tertiary, #999)",
+                  marginLeft: "6px",
+                  fontWeight: "normal",
                 }}
               >
                 (Mixed)
@@ -165,8 +206,11 @@ export function StrokeColorModal({
         </div>
 
         {/* 모달 바디 (Stroke 라인 두께 박스 + 컬러 입력 필드 + 컬러휠 아이콘) */}
-        <div className="style-modal-body" style={{ padding: '12px 16px' }}>
-          <div className="style-section-group" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="style-modal-body" style={{ padding: "12px 16px" }}>
+          <div
+            className="style-section-group"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
             <ColorWheelField
               value={strokeHex}
               isNone={strokeWeight === 0}
@@ -183,7 +227,7 @@ export function StrokeColorModal({
                     e.stopPropagation();
                     handleChipClick();
                   }}
-                  title={strokeWeight === 0 ? '보더 켜기' : '보더 끄기 (None)'}
+                  title={strokeWeight === 0 ? "보더 켜기" : "보더 끄기 (None)"}
                 />
               }
               extraControlPosition="left"
@@ -193,10 +237,10 @@ export function StrokeColorModal({
                     style={{
                       width: 24,
                       height: 24,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'rgba(255, 255, 255, 0.6)',
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "rgba(255, 255, 255, 0.6)",
                       flexShrink: 0,
                     }}
                   >
@@ -208,11 +252,13 @@ export function StrokeColorModal({
                     min={0}
                     max={50}
                     value={strokeWeight}
-                    onChange={(e) => handleWeightChange(parseInt(e.target.value, 10) || 0)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                    onChange={(e) =>
+                      handleWeightChange(parseInt(e.target.value, 10) || 0)
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleSave()}
                     style={{
-                      width: '100%',
-                      textAlign: 'left',
+                      width: "100%",
+                      textAlign: "left",
                       letterSpacing: 0,
                     }}
                   />

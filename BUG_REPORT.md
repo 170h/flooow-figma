@@ -3,6 +3,8 @@
 > **작성일**: 2026-09-28
 > **범위**: `src/ui/` 전체 (17개 TSX/TS 파일) + `src/ui/styles.css` (4,370줄) + `src/code.ts`, `src/types.ts`, `src/customConnector.ts`
 > **총 식별**: 74개 이상 버그/문제점
+>
+> ⚠️ **1차 검증 완료 (2026-09-28)**: 각 항목의 현재 코드 대조 판정(CONFIRMED / PARTIAL / FALSE POSITIVE)과 수정 방향이 [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md)에 정리되어 있습니다. **수작업 전 반드시 해당 문서를 참고하세요.** 특히 C-15, C-31은 FALSE POSITIVE(수정 제외), C-04, C-20, M-07, L-07은 PARTIAL(범위 축소)입니다.
 
 ---
 

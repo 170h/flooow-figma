@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
-import { ColorWheelField } from '../shared/ColorWheelField';
-import { FillColorIcon } from '../shared/icons';
+import React, { useState, useRef } from "react";
+import { ColorWheelField } from "../shared/ColorWheelField";
+import { FillColorIcon } from "../shared/icons";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -32,18 +32,19 @@ export function FillColorModal({
   onApply,
   onClose,
 }: FillColorModalProps) {
-  const rawInit = initialColor || '#FFFFFF';
+  const rawInit = initialColor || "#FFFFFF";
   const isInitialNone =
     !isMixed &&
-    (rawInit.toLowerCase() === 'none' || rawInit.toLowerCase() === 'transparent');
+    (rawInit.toLowerCase() === "none" ||
+      rawInit.toLowerCase() === "transparent");
 
-  const resolvedColor = (isInitialNone ? 'FFFFFF' : rawInit)
-    .replace('#', '')
+  const resolvedColor = (isInitialNone ? "FFFFFF" : rawInit)
+    .replace("#", "")
     .trim()
     .toUpperCase();
-  const validFill = resolvedColor.length === 6 ? resolvedColor : 'FFFFFF';
+  const validFill = resolvedColor.length === 6 ? resolvedColor : "FFFFFF";
 
-  const [fillHex, setFillHex] = useState(isMixed ? '' : validFill);
+  const [fillHex, setFillHex] = useState(isMixed ? "" : validFill);
   const [isNone, setIsNone] = useState(isInitialNone);
   const [isFillMixed, setIsFillMixed] = useState(Boolean(isMixed));
   const [showWheel, setShowWheel] = useState(true);
@@ -69,13 +70,13 @@ export function FillColorModal({
         lastValidFillRef.current = fillHex;
       }
       setIsNone(true);
-      onApply('None');
+      onApply("None");
     } else {
       setIsNone(false);
       const restore =
         fillHex && fillHex.length === 6
           ? fillHex
-          : lastValidFillRef.current || 'FFFFFF';
+          : lastValidFillRef.current || "FFFFFF";
       setFillHex(restore);
       onApply(`#${restore}`);
     }
@@ -94,9 +95,17 @@ export function FillColorModal({
 
   // 저장 처리 (최종 색상 확정 후 닫기)
   const handleSave = () => {
+    const resolvedFill = fillHex.trim() ? fillHex : validFill;
     const finalColor = isNone
-      ? 'None'
-      : `#${(fillHex.trim() ? fillHex : validFill).padStart(6, '0')}`;
+      ? "None"
+      : `#${
+          resolvedFill.length === 3
+            ? resolvedFill
+                .split("")
+                .map((c) => c + c)
+                .join("")
+            : resolvedFill
+        }`;
     onApply(finalColor);
     onClose();
   };
@@ -105,7 +114,11 @@ export function FillColorModal({
     <div
       id="modal-fill-color-backdrop"
       className="popover-backdrop"
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) handleCancel();
       }}
@@ -122,10 +135,10 @@ export function FillColorModal({
             {isFillMixed && (
               <span
                 style={{
-                  fontSize: '11px',
-                  color: 'var(--figma-color-text-tertiary, #999)',
-                  marginLeft: '6px',
-                  fontWeight: 'normal',
+                  fontSize: "11px",
+                  color: "var(--figma-color-text-tertiary, #999)",
+                  marginLeft: "6px",
+                  fontWeight: "normal",
                 }}
               >
                 (Mixed)
@@ -143,8 +156,11 @@ export function FillColorModal({
         </div>
 
         {/* 모달 바디 (Fill 컬러 입력 필드 + 컬러휠 컴포넌트) */}
-        <div className="style-modal-body" style={{ padding: '12px 16px' }}>
-          <div className="style-section-group" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="style-modal-body" style={{ padding: "12px 16px" }}>
+          <div
+            className="style-section-group"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
             <ColorWheelField
               value={fillHex}
               isMixed={isFillMixed}
@@ -166,10 +182,10 @@ export function FillColorModal({
                   }}
                   title={
                     isFillMixed
-                      ? 'Fill color (Mixed)'
+                      ? "Fill color (Mixed)"
                       : isNone
-                      ? '배경 켜기'
-                      : '배경 끄기 (None)'
+                        ? "배경 켜기"
+                        : "배경 끄기 (None)"
                   }
                 />
               }

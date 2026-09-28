@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -10,10 +16,8 @@ const CLOSE_SVG = (
   </svg>
 );
 
-
-
-import { ColorWheelField } from '../shared/ColorWheelField';
-import { useApp, StylePreset } from '../../context/AppContext';
+import { ColorWheelField } from "../shared/ColorWheelField";
+import { useApp, StylePreset } from "../../context/AppContext";
 
 // 스타일 프리셋 중 보더컬러가 있는 것은 보더 컬러만, 없는 것은 배경 컬러 반환 (커넥터 라인 컬러)
 function getPresetLineColor(preset: StylePreset): string {
@@ -42,7 +46,9 @@ export function ConnectorColorModal({
   isMixed: initialIsMixed = false,
 }: ConnectorColorModalProps) {
   const { stylePresets } = useApp();
-  const [colorHex, setColorHex] = useState(() => (initialIsMixed ? '' : initialColor.replace('#', '').toUpperCase()));
+  const [colorHex, setColorHex] = useState(() =>
+    initialIsMixed ? "" : initialColor.replace("#", "").toUpperCase(),
+  );
   const [isMixed, setIsMixed] = useState(Boolean(initialIsMixed));
   const [showWheel, setShowWheel] = useState(false);
 
@@ -53,9 +59,9 @@ export function ConnectorColorModal({
 
     // 1. 기본 무채색 3종 (화이트, 그레이, 블랙)
     const baseColors = [
-      { id: 'conn-default-white', name: 'White', color: '#FFFFFF' },
-      { id: 'conn-default-gray', name: 'Gray', color: '#757575' },
-      { id: 'conn-default-black', name: 'Black', color: '#000000' },
+      { id: "conn-default-white", name: "White", color: "#FFFFFF" },
+      { id: "conn-default-gray", name: "Gray", color: "#757575" },
+      { id: "conn-default-black", name: "Black", color: "#000000" },
     ];
 
     for (const base of baseColors) {
@@ -85,9 +91,9 @@ export function ConnectorColorModal({
   // 초기값 동기화
   useEffect(() => {
     if (!initialIsMixed) {
-      setColorHex(initialColor.replace('#', '').toUpperCase());
+      setColorHex(initialColor.replace("#", "").toUpperCase());
     } else {
-      setColorHex('');
+      setColorHex("");
     }
   }, [initialColor, initialIsMixed]);
 
@@ -98,7 +104,7 @@ export function ConnectorColorModal({
   // 1. 프리셋 색상 선택 (컬러칩 클릭 시 어플라이 버튼 없이 즉시 적용 및 모달 닫기)
   function handleSelectPreset(hex: string) {
     setIsMixed(false);
-    const formatted = hex.replace('#', '').toUpperCase();
+    const formatted = hex.replace("#", "").toUpperCase();
     setColorHex(formatted);
     onApply(`#${formatted}`);
     onClose();
@@ -114,22 +120,42 @@ export function ConnectorColorModal({
 
   // 3. 적용 핸들러 (현재 선택된 컬러 확정 적용 후 닫기)
   function handleApply() {
-    if (!colorHex || colorHex.trim() === '') {
+    if (!colorHex || colorHex.trim() === "") {
       onClose();
       return;
     }
-    const finalHex = `#${colorHex.padStart(6, '0')}`;
+    const finalHex = `#${
+      colorHex.length === 3
+        ? colorHex
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : colorHex
+    }`;
     onApply(finalHex);
     onClose();
   }
 
-  const currentFormattedHex = colorHex ? `#${colorHex.padStart(6, '0')}` : '';
+  const currentFormattedHex = colorHex
+    ? `#${
+        colorHex.length === 3
+          ? colorHex
+              .split("")
+              .map((c) => c + c)
+              .join("")
+          : colorHex
+      }`
+    : "";
 
   return (
     <div
       id="modal-connector-color-backdrop"
       className="popover-backdrop"
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -144,7 +170,14 @@ export function ConnectorColorModal({
           <span className="conn-color-modal-title">
             Connector Color
             {isMixed && (
-              <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "var(--figma-color-text-tertiary, #999)",
+                  marginLeft: "6px",
+                  fontWeight: "normal",
+                }}
+              >
                 (Mixed)
               </span>
             )}
@@ -167,12 +200,15 @@ export function ConnectorColorModal({
           {presetsRow1.length > 0 && (
             <div className="conn-color-presets-row">
               {presetsRow1.map((item) => {
-                const isSelected = !isMixed && currentFormattedHex.toUpperCase() === item.color.toUpperCase();
+                const isSelected =
+                  !isMixed &&
+                  currentFormattedHex.toUpperCase() ===
+                    item.color.toUpperCase();
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    className={`conn-preset-card${isSelected ? ' selected' : ''}`}
+                    className={`conn-preset-card${isSelected ? " selected" : ""}`}
                     style={{
                       backgroundColor: item.color,
                     }}
@@ -189,12 +225,15 @@ export function ConnectorColorModal({
           {presetsRow2.length > 0 && (
             <div className="conn-color-presets-row">
               {presetsRow2.map((item) => {
-                const isSelected = !isMixed && currentFormattedHex.toUpperCase() === item.color.toUpperCase();
+                const isSelected =
+                  !isMixed &&
+                  currentFormattedHex.toUpperCase() ===
+                    item.color.toUpperCase();
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    className={`conn-preset-card${isSelected ? ' selected' : ''}`}
+                    className={`conn-preset-card${isSelected ? " selected" : ""}`}
                     style={{
                       backgroundColor: item.color,
                     }}
@@ -239,11 +278,7 @@ export function ConnectorColorModal({
           >
             Cancel
           </button>
-          <button
-            type="button"
-            className="conn-btn-save"
-            onClick={handleApply}
-          >
+          <button type="button" className="conn-btn-save" onClick={handleApply}>
             Apply
           </button>
         </div>
