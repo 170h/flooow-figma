@@ -293,12 +293,12 @@
 
     /* 피그잼 단일 오브젝트 선택 시 볼드 타이틀 라벨 (이미지 디자인 규격) */
     .figjam-title-label {
-      font-size: 15px;
-      font-weight: 600;
-      line-height: 20px;
+      font-size: 13px;
+      font-weight: 550;
+      line-height: 18px;
       color: var(--color-text-primary);
       user-select: none;
-      padding: 2px 0;
+      padding: 3px 0;
     }
 
     /* 피그잼 단일 오브젝트 선택 시 본문 대형 안내 카드 (이미지 디자인 규격) */

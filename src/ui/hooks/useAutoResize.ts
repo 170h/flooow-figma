@@ -40,8 +40,32 @@ export function getPluginIdealHeight(root: HTMLElement): number {
     }
     contentH = maxBottom > 0 ? maxBottom : activePanel.offsetHeight;
   } else {
+    // .tab-panels는 flex:1로 컨테이너를 꽉 채우므로 offsetHeight가 실제 콘텐츠를 반영하지 않음
+    // FigJam 카드 등 실제 자식 요소의 높이를 합산하여 정확한 콘텐츠 높이 산출
     const panels = root.querySelector('.tab-panels') as HTMLElement | null;
-    contentH = panels ? panels.offsetHeight : 0;
+    if (panels) {
+      let childrenH = 0;
+      for (let i = 0; i < panels.children.length; i++) {
+        const el = panels.children[i] as HTMLElement;
+        // display:none 요소 제외
+        if (el.style.display === 'none' || window.getComputedStyle(el).display === 'none') continue;
+        // 플로팅 메뉴 제외
+        if (
+          el.classList.contains('figma-dropdown-menu') ||
+          el.classList.contains('popover-context-menu') ||
+          el.classList.contains('popover-size-mode') ||
+          el.classList.contains('size-mode-menu-popover')
+        ) continue;
+        childrenH += el.offsetHeight;
+        // 마진 포함
+        const st = window.getComputedStyle(el);
+        childrenH += parseFloat(st.marginTop || '0') + parseFloat(st.marginBottom || '0');
+      }
+      // padding-top + padding-bottom 포함
+      const panelSt = window.getComputedStyle(panels);
+      childrenH += parseFloat(panelSt.paddingTop || '0') + parseFloat(panelSt.paddingBottom || '0');
+      contentH = Math.ceil(childrenH);
+    }
   }
 
   const titleH = titleBanner ? titleBanner.offsetHeight : 40;

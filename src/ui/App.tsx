@@ -131,6 +131,13 @@ export function App() {
     autoResizeWindow();
   }, [currentTab, autoResizeWindow]);
 
+  // FigJam 오브젝트 선택/해제 시 autoResize
+  // isSingleFigjam/isMultiFigjam 변화 시 .tab-panel들이 DOM에서 교체되어
+  // ResizeObserver가 감지하지 못하므로 명시적으로 창 크기를 재계산한다.
+  useEffect(() => {
+    autoResizeWindow();
+  }, [isSingleFigjam, isMultiFigjam, autoResizeWindow]);
+
   // 입력 필드 클릭/포커스 시 텍스트 전체 자동 선택 (Figma UI3 인스펙터 UX 표준)
   useEffect(() => {
     let newlyFocusedInput: HTMLInputElement | null = null;
@@ -300,8 +307,7 @@ export function App() {
         <div style={{ flex: 1, minWidth: 0, marginRight: '8px' }}>
           {renderTitleBanner()}
         </div>
-        {!isSingleFigjam && (
-          <button
+        <button
             type="button"
             id="btn-header-settings"
             className="btn-action-icon"
@@ -320,7 +326,6 @@ export function App() {
               />
             </svg>
           </button>
-        )}
       </div>
 
       {/* 2. 메인 탭 세그먼트 컨트롤 */}
@@ -395,14 +400,15 @@ export function App() {
         )}
       </main>
 
-      {/* 4. 푸터: 피그잼 단일 선택 시에는 완전 숨김 / 그 외 CTA 버튼 노출 */}
-      {!isSingleFigjam && currentTab !== 'connection' && (
+      {/* 4. 푸터: connection 탭이 아닐 때 CTA 버튼 노출 (FigJam 단일 선택 포함) */}
+      {currentTab !== 'connection' && (
         <footer className="app-footer">
           <button
             id="btn-main-cta"
-            className="btn-cta-primary"
+            className={`btn-cta-primary${isFigjamSelected ? ' disabled' : ''}`}
             type="button"
-            onClick={handleMainAction}
+            disabled={isFigjamSelected}
+            onClick={isFigjamSelected ? undefined : handleMainAction}
           >
             {ctaLabel}
           </button>

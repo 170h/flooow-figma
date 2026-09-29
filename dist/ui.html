@@ -299,12 +299,12 @@
 
     /* 피그잼 단일 오브젝트 선택 시 볼드 타이틀 라벨 (이미지 디자인 규격) */
     .figjam-title-label {
-      font-size: 15px;
-      font-weight: 600;
-      line-height: 20px;
+      font-size: 13px;
+      font-weight: 550;
+      line-height: 18px;
       color: var(--color-text-primary);
       user-select: none;
-      padding: 2px 0;
+      padding: 3px 0;
     }
 
     /* 피그잼 단일 오브젝트 선택 시 본문 대형 안내 카드 (이미지 디자인 규격) */
@@ -28343,7 +28343,20 @@
       contentH = maxBottom > 0 ? maxBottom : activePanel.offsetHeight;
     } else {
       const panels = root2.querySelector(".tab-panels");
-      contentH = panels ? panels.offsetHeight : 0;
+      if (panels) {
+        let childrenH = 0;
+        for (let i = 0; i < panels.children.length; i++) {
+          const el = panels.children[i];
+          if (el.style.display === "none" || window.getComputedStyle(el).display === "none") continue;
+          if (el.classList.contains("figma-dropdown-menu") || el.classList.contains("popover-context-menu") || el.classList.contains("popover-size-mode") || el.classList.contains("size-mode-menu-popover")) continue;
+          childrenH += el.offsetHeight;
+          const st = window.getComputedStyle(el);
+          childrenH += parseFloat(st.marginTop || "0") + parseFloat(st.marginBottom || "0");
+        }
+        const panelSt = window.getComputedStyle(panels);
+        childrenH += parseFloat(panelSt.paddingTop || "0") + parseFloat(panelSt.paddingBottom || "0");
+        contentH = Math.ceil(childrenH);
+      }
     }
     const titleH = titleBanner ? titleBanner.offsetHeight : 40;
     const tabsH = tabsWrapper ? tabsWrapper.offsetHeight : 36;
@@ -35825,6 +35838,9 @@
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
     (0, import_react24.useEffect)(() => {
+      autoResizeWindow();
+    }, [isSingleFigjam, isMultiFigjam, autoResizeWindow]);
+    (0, import_react24.useEffect)(() => {
       let newlyFocusedInput = null;
       const handleFocusIn = (e) => {
         const target = e.target;
@@ -35929,7 +35945,7 @@
     return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, children: [
       /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { className: "title-banner", children: [
         /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { style: { flex: 1, minWidth: 0, marginRight: "8px" }, children: renderTitleBanner() }),
-        !isSingleFigjam && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
           "button",
           {
             type: "button",
@@ -36001,13 +36017,14 @@
           }
         )
       ] }) }),
-      !isSingleFigjam && currentTab !== "connection" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      currentTab !== "connection" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
         "button",
         {
           id: "btn-main-cta",
-          className: "btn-cta-primary",
+          className: `btn-cta-primary${isFigjamSelected ? " disabled" : ""}`,
           type: "button",
-          onClick: handleMainAction,
+          disabled: isFigjamSelected,
+          onClick: isFigjamSelected ? void 0 : handleMainAction,
           children: ctaLabel
         }
       ) }),
