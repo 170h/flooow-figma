@@ -87,7 +87,7 @@
 
 ---
 
-## 5. R-01~R-17이 통제되는 Harness 요소
+## 5. R-01~R-18이 통제되는 Harness 요소
 
 | Risk                                | 1차 통제 요소                                                            | 2차/보조                                                         |
 | ----------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- |
@@ -108,6 +108,7 @@
 | **R-15** clientStorage 키 무분별    | `allowlists.json`(client_storage_keys) + AGENTS.md                       | 공식 문서: `figma-plugin-guide/api/figma-clientStorage.md`       |
 | **R-16** variables API 미검증       | AGENTS.md 금지 + `03-agent-failure-risks.md`                             | 공식 문서: `figma-plugin-guide/api/figma-variables.md`           |
 | **R-17** 제거된 노드 접근           | AGENTS.md 금지 + `03-agent-failure-risks.md`                             | 공식 문서: `figma-plugin-guide/api/typings-and-errors.md`        |
+| **R-18** 명령 반복 실행 루프/정체    | AGENTS.md 금지(2회 한도·실패 분석) + `03-agent-failure-risks.md`          | `07-verification-gates.md`(정상 검증 재실행 예외)                |
 
 ---
 
@@ -239,7 +240,6 @@
   "post_message_ui_to_core_files": [
     "src/ui/context/AppContext.tsx",
     "src/ui/App.tsx",
-    "src/ui/components/node/PhaseSection.tsx",
     "src/ui/hooks/useAutoResize.ts",
     "..."
   ],

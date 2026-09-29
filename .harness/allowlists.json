@@ -56,7 +56,6 @@
   "post_message_ui_to_core_files": [
     "src/ui/hooks/useAutoResize.ts",
     "src/ui/hooks/useFigmaMessage.ts",
-    "src/ui/components/node/PhaseSection.tsx",
     "src/ui/context/AppContext.tsx",
     "src/ui/App.tsx"
   ],

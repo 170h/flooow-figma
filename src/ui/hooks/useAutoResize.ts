@@ -15,7 +15,7 @@ export function getPluginIdealHeight(root: HTMLElement): number {
 
   let contentH = 0;
   if (activePanel) {
-    // 플로팅 팝오버(Phase, Size, Terminal 드롭다운 등)가 열렸을 때
+    // 플로팅 팝오버(Size, Terminal 드롭다운 등)가 열렸을 때
     // scrollHeight가 비정상적으로 팽창하여 플러그인 윈도우 창이 들썩이며 깜빡이는 현상 완벽 방지
     const panelRect = activePanel.getBoundingClientRect();
     const scrollTop = (activePanel.parentElement as HTMLElement | null)?.scrollTop || 0;
@@ -25,7 +25,6 @@ export function getPluginIdealHeight(root: HTMLElement): number {
       const el = children[i] as HTMLElement;
       // 플로팅 메뉴 오버레이는 창 크기 계산에서 완전 제외 (GEMINI.md 영구 보존 규칙)
       if (
-        el.classList.contains('popover-phase-select') ||
         el.classList.contains('figma-dropdown-menu') ||
         el.classList.contains('popover-context-menu') ||
         el.classList.contains('popover-size-mode') ||

@@ -73,7 +73,6 @@ export interface SelectionSummary {
   badgeCorner: PropertySummary<BadgePosition | string>;
   badgeShape: PropertySummary<BadgeShape | string>;
   badgeColorMode: PropertySummary<'White' | 'Black' | 'Style'>;
-  phase: PropertySummary<string>;
   description: PropertySummary<string>;
   hasDescription: PropertySummary<boolean>;
   figmaLink: PropertySummary<string>;
@@ -141,7 +140,6 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     badgeCorner: getCommonProperty(flowNodes, (n) => n.badgeCorner),
     badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape),
     badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode),
-    phase: getCommonProperty(flowNodes, (n) => n.phaseId || 'none'),
     description: getCommonProperty(flowNodes, (n) => n.description),
     hasDescription: getCommonProperty(flowNodes, (n) => Boolean(n.description && n.description.trim().length > 0)),
     figmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink),

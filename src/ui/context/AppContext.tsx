@@ -9,7 +9,6 @@ import React, {
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
 import type { ConnectorTerminalType, DiagramNodeType } from '../../types';
 import { NODE_TYPE_SHAPE_SPECS } from '../../types';
-import type { PhaseData } from '../components/modals/PhaseModal';
 
 // ============================================================
 // 타입 정의
@@ -86,15 +85,9 @@ export interface NodeInfo {
   cachedFigmaLink?: string;
   connectorIsReversed?: boolean;
   connectedNodeNames?: string[];
-  phaseId?: string;
-  phaseName?: string;
-  phaseColor?: string;
 }
 
 export interface LastNodeConfig {
-  phase: string;
-  phaseName: string;
-  phaseColor: string;
   nodeType: string;
   width: number;
   height: number;
@@ -138,7 +131,6 @@ export interface UIState {
   selectedRoutingType: string;
   sourceMagnet: string;
   targetMagnet: string;
-  selectedPhase: string;
   selectedNodeType: string;
   selectedConnectorColor?: string;
 }
@@ -146,7 +138,7 @@ export interface UIState {
 import { DesignFrameItem } from '../../types';
 
 // 모달 타입
-export type ModalType = 'none' | 'phase' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color';
+export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color';
 
 // 어피어런스 탭 상호 배타적 토글 섹션 ('stepBadges' | 'status' | 'elevation' | null)
 export type ExclusiveAppearanceSection = 'stepBadges' | 'status' | 'elevation' | null;
@@ -178,30 +170,18 @@ export interface AppContextValue {
   setActiveModal: (modal: ModalType) => void;
 
   // 팝오버 상태
-  phasePopoverOpen: boolean;
-  setPhasePopoverOpen: (open: boolean) => void;
   contextMenuOpen: boolean;
   setContextMenuOpen: (open: boolean) => void;
   sizeModeDropdownOpen: boolean;
   setSizeModeDropdownOpen: (open: boolean) => void;
-  phasePopoverPos: { top: number; left: number };
-  setPhasePopoverPos: (pos: { top: number; left: number }) => void;
   contextMenuPos: { top: number; left: number };
   setContextMenuPos: (pos: { top: number; left: number }) => void;
-  contextMenuTarget: 'phase' | 'size' | 'style' | null;
-  setContextMenuTarget: (target: 'phase' | 'size' | 'style' | null) => void;
+  contextMenuTarget: 'size' | 'style' | null;
+  setContextMenuTarget: (target: 'size' | 'style' | null) => void;
   selectedSizePresetId: string | null;
   setSelectedSizePresetId: (id: string | null) => void;
   selectedStylePresetId: string | null;
   setSelectedStylePresetId: (id: string | null) => void;
-
-  // Phase 목록 및 편집 상태
-  phases: PhaseData[];
-  setPhases: React.Dispatch<React.SetStateAction<PhaseData[]>>;
-  editingPhase: PhaseData | null;
-  setEditingPhase: (phase: PhaseData | null) => void;
-  phaseModalEditingId: string | null;
-  setPhaseModalEditingId: (id: string | null) => void;
 
   // 피그마 디자인 프레임 목록
   designFrames: DesignFrameItem[];
@@ -257,9 +237,6 @@ export interface AppContextValue {
 // ============================================================
 
 const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
-  phase: 'none',
-  phaseName: 'None',
-  phaseColor: '#EA2039',
   nodeType: 'Screen',
   width: 250,
   height: 90,
@@ -298,7 +275,6 @@ const DEFAULT_UI_STATE: UIState = {
   selectedRoutingType: 'ORTHOGONAL',
   sourceMagnet: 'RIGHT',
   targetMagnet: 'LEFT',
-  selectedPhase: 'none',
   selectedNodeType: 'Screen',
   selectedConnectorColor: '#000000',
 };
@@ -336,20 +312,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [lastNodeConfig, setLastNodeConfigRaw] = useState<LastNodeConfig>(DEFAULT_LAST_NODE_CONFIG);
   const [lastConnectorConfig, setLastConnectorConfigRaw] = useState<LastConnectorConfig>(DEFAULT_LAST_CONNECTOR_CONFIG);
   const [activeModal, setActiveModal] = useState<ModalType>('none');
-  const [phasePopoverOpen, setPhasePopoverOpen] = useState(false);
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [sizeModeDropdownOpen, setSizeModeDropdownOpen] = useState(false);
-  const [phasePopoverPos, setPhasePopoverPos] = useState({ top: 0, left: 0 });
   const [contextMenuPos, setContextMenuPos] = useState({ top: 0, left: 0 });
-  const [contextMenuTarget, setContextMenuTarget] = useState<'phase' | 'size' | 'style' | null>(null);
+  const [contextMenuTarget, setContextMenuTarget] = useState<'size' | 'style' | null>(null);
   const [selectedSizePresetId, setSelectedSizePresetId] = useState<string | null>('default');
   const [selectedStylePresetId, setSelectedStylePresetId] = useState<string | null>('style-white');
-  const [phaseModalEditingId, setPhaseModalEditingId] = useState<string | null>(null);
-  const [phases, setPhases] = useState<PhaseData[]>([
-    { id: 'phase-1', name: 'Phase 1', color: '#EA2039' },
-    { id: 'phase-2', name: 'Phase 2', color: '#8638E5' },
-  ]);
-  const [editingPhase, setEditingPhase] = useState<PhaseData | null>(null);
   const [designFrames, setDesignFrames] = useState<DesignFrameItem[]>([]);
 
   const loadDesignFrames = useCallback(() => {
@@ -457,7 +425,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const closeAllPopovers = useCallback(() => {
-    setPhasePopoverOpen(false);
     setContextMenuOpen(false);
     setSizeModeDropdownOpen(false);
   }, []);
@@ -1046,19 +1013,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           colorUpdates.selectedBadgeColorMode = first.badgeColorMode || lastNodeConfigRef.current.badgeColorMode || 'Style';
         }
 
-        // Phase 상태 동기화
-        if (flowNodes.length === 1) {
-          const pId = first.phaseId || 'none';
-          colorUpdates.selectedPhase = pId;
-          stepConfigUpdates.phase = pId;
-          stepConfigUpdates.phaseName = first.phaseName || 'None';
-          stepConfigUpdates.phaseColor = first.phaseColor || '#EA2039';
-        } else if (flowNodes.length > 1) {
-          const firstPhase = flowNodes[0].phaseId || 'none';
-          const isMixedPhase = flowNodes.some((n) => (n.phaseId || 'none') !== firstPhase);
-          colorUpdates.selectedPhase = isMixedPhase ? 'mixed' : firstPhase;
-        }
-
         if (first.fillColorHex) {
           colorUpdates.selectedColor = first.fillColorHex;
           colorUpdates.selectedStrokeWeight = first.strokeWeight;
@@ -1144,14 +1098,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLastConnectorConfig,
     activeModal,
     setActiveModal,
-    phasePopoverOpen,
-    setPhasePopoverOpen,
     contextMenuOpen,
     setContextMenuOpen,
     sizeModeDropdownOpen,
     setSizeModeDropdownOpen,
-    phasePopoverPos,
-    setPhasePopoverPos,
     contextMenuPos,
     setContextMenuPos,
     contextMenuTarget,
@@ -1160,12 +1110,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSelectedSizePresetId,
     selectedStylePresetId,
     setSelectedStylePresetId,
-    phaseModalEditingId,
-    setPhaseModalEditingId,
-    phases,
-    setPhases,
-    editingPhase,
-    setEditingPhase,
     designFrames,
     setDesignFrames,
     loadDesignFrames,

@@ -31,7 +31,7 @@ export const IcChevronDown = () => (
   </svg>
 );
 
-/** 소형 드롭다운 쉐브론 (Phase 버튼 등) */
+/** 소형 드롭다운 쉐브론 */
 export const IcChevronDownSm = () => (
   <svg width="8" height="5" viewBox="0 0 8 5" fill="none">
     <path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>

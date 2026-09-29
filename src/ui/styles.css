@@ -141,7 +141,6 @@
     .size-modal-card,
     .style-modal-card,
     .conn-color-modal-card,
-    .phase-modal-card,
     .design-picker-modal-card {
       --color-chip-border: rgba(255, 255, 255, 0.12);
       --color-chip-icon: rgba(255, 255, 255, 0.9);
@@ -1009,129 +1008,6 @@
     /* ============================================================ */
     /* 1. [ Node ] 탭 세부 스타일 (18:819)                           */
     /* ============================================================ */
-    .phase-dropdown-btn {
-      width: 100%;
-      height: 32px;
-      background: #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 5px;
-      padding: 0 4px 0 4px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      transition: border-color 0.15s, background 0.15s;
-    }
-
-    .phase-dropdown-btn:hover {
-      border-color: rgba(0, 0, 0, 0.2);
-      background: #fafafa;
-    }
-
-    .phase-dropdown-btn:focus,
-    .phase-dropdown-btn.active {
-      border-color: var(--color-brand);
-      background: #ffffff;
-      outline: none;
-    }
-
-    .phase-btn-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .phase-btn-icon-wrap {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .phase-checkerboard-24 {
-      width: 24px;
-      height: 24px;
-      border-radius: 5px;
-      background: repeating-conic-gradient(#e1e1e1 0% 25%, #ffffff 0% 50%) 50% / 8px 8px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      flex-shrink: 0;
-      box-sizing: border-box;
-    }
-
-    .phase-chip-24 {
-      width: 24px;
-      height: 24px;
-      border-radius: 5px;
-      flex-shrink: 0;
-      box-sizing: border-box;
-    }
-
-    /* 피그마 정품 icon-phase-mixed (18:814 / 18:918) */
-    .icon-phase-mixed-24 {
-      width: 24px;
-      height: 24px;
-      border-radius: 5px;
-      background: #f5f5f5;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      box-sizing: border-box;
-      position: relative;
-      overflow: hidden;
-      color: rgba(0, 0, 0, 0.9);
-    }
-
-    .icon-phase-mixed-24 svg.conn-color-mixed-svg {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 24px;
-      height: 24px;
-      pointer-events: none;
-    }
-
-    .icon-phase-mixed-24 svg.conn-color-mixed-svg path {
-      fill: currentColor;
-    }
-
-    .figma-dark .icon-phase-mixed-24 {
-      background: rgba(255, 255, 255, 0.15);
-      color: #ffffff;
-    }
-
-    .icon-phase-mixed-24 .phase-mixed-dash {
-      width: 10px;
-      height: 1.5px;
-      background: #2c2c2c;
-      border-radius: 1px;
-    }
-
-    .phase-btn-label {
-      font-size: 11px;
-      font-weight: 500;
-      color: rgba(0, 0, 0, 0.9);
-      line-height: 16px;
-      letter-spacing: 0;
-    }
-
-    .phase-btn-arrow {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: rgba(0, 0, 0, 0.9);
-      transition: transform 0.15s ease;
-    }
-
-    .phase-dropdown-btn.active .phase-btn-arrow {
-      transform: rotate(180deg);
-    }
-
     .desc-textarea {
       width: 100%;
       height: 110px;
@@ -1479,7 +1355,7 @@
       width: 180px;
     }
 
-    /* Size / Phase 등 래퍼 기준 드롭다운: 버튼과 동일한 100% 폭 */
+    /* Size 등 래퍼 기준 드롭다운: 버튼과 동일한 100% 폭 */
     .size-mode-menu-popover {
       width: 100%;
       left: 0;
@@ -2275,7 +2151,6 @@
     /* conn-color-chip 다크모드 버전 (화이트 반투명 0.15 직접 명시하여 라이트모드 검정 상속 완벽 차단) */
     .figma-dropdown-menu .conn-color-chip,
     .size-mode-menu-popover .conn-color-chip,
-    .popover-phase-select .conn-color-chip,
     .terminal-dropdown-popup .conn-color-chip,
     .conn-color-chip.dark {
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
@@ -2285,7 +2160,6 @@
 
     .figma-dropdown-menu .conn-color-chip svg.conn-color-mixed-svg path,
     .size-mode-menu-popover .conn-color-chip svg.conn-color-mixed-svg path,
-    .popover-phase-select .conn-color-chip svg.conn-color-mixed-svg path,
     .terminal-dropdown-popup .conn-color-chip svg.conn-color-mixed-svg path,
     .conn-color-chip.dark svg.conn-color-mixed-svg path {
       fill: currentColor !important;
@@ -2825,167 +2699,6 @@
       display: flex;
     }
 
-    /* 1. Phase Select 팝오버 (피그마 18:2325) */
-    .popover-phase-select {
-      position: absolute;
-      width: 180px;
-      background: #1e1e1e;
-      color: #ffffff;
-      border-radius: 13px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 8px;
-      display: none;
-      flex-direction: column;
-      gap: 0;
-      z-index: 1010;
-      box-sizing: border-box;
-    }
-
-    .popover-phase-select.active {
-      display: flex;
-    }
-
-    .phase-menu-item {
-      width: 164px;
-      height: 24px;
-      padding: 0 8px 0 0;
-      border-radius: 5px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      font-weight: 500;
-      cursor: pointer;
-      color: #ffffff;
-      transition: background 0.15s;
-      user-select: none;
-      box-sizing: border-box;
-    }
-
-    .phase-menu-item:hover {
-      background: #8C4CF6;
-      color: #ffffff;
-    }
-
-    .phase-menu-item:hover svg,
-    .phase-menu-item:hover .phase-item-label,
-    .phase-menu-item:hover .phase-check-icon {
-      color: #ffffff !important;
-      fill: #ffffff;
-    }
-
-    .phase-menu-item.selected {
-      color: #ffffff;
-    }
-
-    .phase-item-check-slot {
-      width: 20px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .phase-item-check-slot .phase-check-icon {
-      display: none;
-      width: 16px;
-      height: 16px;
-    }
-
-    .phase-menu-item.selected .phase-item-check-slot .phase-check-icon {
-      display: block;
-    }
-
-    .phase-item-icon-slot {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .phase-dash-icon {
-      width: 8px;
-      height: 1px;
-      background: #ffffff;
-      opacity: 0.9;
-      border-radius: 1px;
-    }
-
-    .icon-phase-mixed-14 {
-      width: 14px;
-      height: 14px;
-      border-radius: 2px;
-      background: rgba(255, 255, 255, 0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      box-sizing: border-box;
-      position: relative;
-      overflow: hidden;
-      color: currentColor;
-    }
-
-    .icon-phase-mixed-14 svg.conn-color-mixed-svg {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 24px;
-      height: 24px;
-      pointer-events: none;
-    }
-
-    .icon-phase-mixed-14 svg.conn-color-mixed-svg path {
-      fill: currentColor;
-    }
-
-    .icon-phase-mixed-14 .phase-mixed-dash {
-      width: 8px;
-      height: 1px;
-      background: #ffffff;
-      border-radius: 1px;
-    }
-
-    .phase-checkerboard-14 {
-      width: 14px;
-      height: 14px;
-      border-radius: 2px;
-      background: repeating-conic-gradient(#e1e1e1 0% 25%, #ffffff 0% 50%) 50% / 6px 6px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-sizing: border-box;
-    }
-
-    .phase-chip-14 {
-      width: 14px;
-      height: 14px;
-      border-radius: 2px;
-      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.15));
-      flex-shrink: 0;
-      box-sizing: border-box;
-    }
-
-    .phase-item-label {
-      font-size: 11px;
-      font-weight: 500;
-      line-height: 16px;
-      color: #ffffff;
-      letter-spacing: 0;
-      flex: 1;
-    }
-
-    .phase-popover-divider {
-      width: 164px;
-      height: 1px;
-      background: rgba(255, 255, 255, 0.15);
-      margin: 8px 0;
-      border: none;
-    }
-
     .menu-divider {
       height: 1px;
       background: var(--color-border-dark);
@@ -3157,63 +2870,7 @@
       background: var(--color-brand-cta-hover);
     }
 
-    /* Add / Edit Phase 전용 모달 (피그마 18:2289, 18:2351, 18:3034 규격) */
-    .phase-modal-card {
-      width: 200px;
-      background: #1E1E1E;
-      color: #FFFFFF;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      animation: modalFadeIn 0.18s ease-out;
-    }
-
-    .phase-modal-header {
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 8px 0 16px;
-      border-bottom: 1px solid #444444;
-      box-sizing: border-box;
-    }
-
-    .phase-modal-title {
-      font-size: 11px;
-      font-weight: 550;
-      color: #FFFFFF;
-      line-height: 16px;
-    }
-
-    .phase-modal-close-btn {
-      width: 24px;
-      height: 24px;
-      border-radius: 5px;
-      background: transparent;
-      border: none;
-      color: rgba(255, 255, 255, 0.9);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      transition: background 0.15s ease, color 0.15s ease;
-    }
-
-    .phase-modal-close-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: #FFFFFF;
-    }
-
-    .phase-modal-body {
-      padding: 0 16px;
-      display: flex;
-      flex-direction: column;
-      box-sizing: border-box;
-    }
+    /* 모달 폼 필드 공통 규격 */
 
     .phase-field-group {
       display: flex;
@@ -3295,197 +2952,6 @@
       color: rgba(255, 255, 255, 0.35);
     }
 
-    .phase-color-picker-box {
-      width: 100%;
-      height: 24px;
-      background: #383838;
-      border: 1px solid transparent;
-      border-radius: 5px;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      box-sizing: border-box;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.15s ease;
-    }
-
-    .phase-color-picker-box:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .phase-color-picker-box:focus,
-    .phase-color-picker-box.active {
-      border-color: #8C4CF6;
-      outline: none;
-    }
-
-    .phase-color-picker-box:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .phase-color-picker-box:focus-within {
-      border-color: #8C4CF6;
-    }
-
-    .phase-color-preview-wrap {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .phase-color-preview-chip {
-      width: 14px;
-      height: 14px;
-      border-radius: 2px;
-      background: #EA2039;
-      border: none;
-      box-shadow: inset 0 0 0 1px var(--color-chip-border, rgba(255, 255, 255, 0.1));
-      flex-shrink: 0;
-      box-sizing: border-box;
-    }
-
-    .phase-color-hex-input {
-      flex: 1;
-      min-width: 0;
-      height: 24px;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: #FFFFFF;
-      font-size: 11px;
-      padding: 0 4px;
-      font-family: inherit;
-      text-transform: uppercase;
-      cursor: text;
-      box-sizing: border-box;
-    }
-
-    .phase-color-hex-input::placeholder {
-      text-transform: none;
-    }
-
-    .phase-color-chevron-wrap {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      color: rgba(255, 255, 255, 0.7);
-      pointer-events: none;
-      transition: transform 0.15s ease;
-    }
-
-    .phase-color-picker-box.is-open {
-      border-color: #8C4CF6;
-    }
-
-    .phase-color-picker-box.is-open .phase-color-chevron-wrap {
-      transform: rotate(180deg);
-    }
-
-    .phase-color-dropdown-panel {
-      display: flex;
-      flex-direction: column;
-      margin-top: 0;
-      animation: modalFadeIn 0.15s ease-out;
-      user-select: none;
-    }
-
-    /* 피그마 Frame 1 (18:3053): 높이 52px, paddingTop 20px, paddingBottom 20px */
-    .phase-hue-container {
-      width: 100%;
-      height: 52px;
-      padding: 20px 0;
-      box-sizing: border-box;
-      display: flex;
-      align-items: center;
-    }
-
-    .phase-hue-track {
-      width: 100%;
-      height: 12px;
-      border-radius: 9999px;
-      background: linear-gradient(to right, #FF0000 0%, #FFFF00 17%, #00FF00 33%, #00FFFF 50%, #0000FF 67%, #FF00FF 83%, #FF0000 100%);
-      position: relative;
-      cursor: pointer;
-      box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
-    }
-
-    /* 피그마 Ellipse 314 규격: 24x24px 순색 유지 핸들 */
-    .phase-hue-thumb {
-      position: absolute;
-      top: 50%;
-      left: 0%;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: #FF0000;
-      border: 2px solid #FFFFFF;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      box-sizing: border-box;
-    }
-
-    /* 피그마 Frame 14694 규격: 너비 168px, 높이 148px */
-    .phase-satval-canvas {
-      width: 100%;
-      height: 148px;
-      border-radius: 6px;
-      background-color: #FF0000;
-      position: relative;
-      cursor: crosshair;
-      overflow: hidden;
-      box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
-    }
-
-    .phase-satval-white-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to right, #FFFFFF, rgba(255, 255, 255, 0));
-      pointer-events: none;
-    }
-
-    .phase-satval-black-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to top, #000000, rgba(0, 0, 0, 0));
-      pointer-events: none;
-    }
-
-    /* 피그마 Ellipse 315 규격: 24x24px 링 */
-    .phase-satval-ring {
-      position: absolute;
-      top: 0%;
-      left: 0%;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid #FFFFFF;
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.8), inset 0 0 2px rgba(0, 0, 0, 0.5);
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      box-sizing: border-box;
-    }
-
-    .phase-modal-footer {
-      height: 40px;
-      padding: 0 16px;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      background: #1E1E1E;
-      box-sizing: border-box;
-    }
-
     .btn-phase-modal-cancel {
       height: 24px;
       padding: 0 8px;
@@ -3521,31 +2987,6 @@
     .btn-phase-modal-save:disabled {
       opacity: 0.35;
       cursor: not-allowed;
-    }
-
-    .btn-phase-modal-delete {
-      height: 24px;
-      padding: 0 8px;
-      background: transparent;
-      border: 1px solid rgba(234, 32, 57, 0.4);
-      border-radius: 5px;
-      color: #EA2039;
-      font-size: 11px;
-      cursor: pointer;
-      margin-right: auto;
-      transition: all 0.15s ease;
-    }
-
-    .btn-phase-modal-delete:hover {
-      background: rgba(234, 32, 57, 0.15);
-      border-color: #EA2039;
-    }
-
-    .btn-phase-modal-delete:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-      border-color: rgba(255, 255, 255, 0.15);
-      color: rgba(255, 255, 255, 0.4);
     }
 
     /* 피그마 공식 UI3 규격 모달 3종 (Add Size, Edit Size, Add Style) */

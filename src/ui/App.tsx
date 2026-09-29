@@ -9,7 +9,6 @@ import { AppearancePanel } from './components/appearance/AppearancePanel';
 import { ConnectionPanel } from './components/connection/ConnectionPanel';
 import { FigmaTooltip } from './components/shared/Tooltip';
 import { ContextMenu } from './components/popovers/ContextMenu';
-import { PhaseModal, PhaseData } from './components/modals/PhaseModal';
 import { SizeModal } from './components/modals/SizeModal';
 import { FigmaDesignPickerModal } from './components/modals/FigmaDesignPickerModal';
 import { StyleModal } from './components/modals/StyleModal';
@@ -62,7 +61,6 @@ export function App() {
     closeAllPopovers,
     activeModal, setActiveModal,
     uiState, setUIState,
-    phasePopoverOpen, setPhasePopoverOpen,
     contextMenuOpen, setContextMenuOpen,
     applyCurrentNodeState,
     lastNodeConfig,
@@ -76,10 +74,6 @@ export function App() {
     sizePresets,
     addSizePreset,
     updateSizePreset,
-    phases,
-    setPhases,
-    editingPhase,
-    setEditingPhase,
   } = useApp();
 
   // SizeModal onSave 핸들러 (매 렌더마다 새 함수 생성 방지)
@@ -204,15 +198,11 @@ export function App() {
   function handleRootClick(e: React.MouseEvent) {
     const target = e.target as HTMLElement;
     const isPopoverTrigger =
-      target.closest('#btn-phase-select') ||
-      target.closest('#btn-phase-more') ||
       target.closest('#btn-size-more') ||
       target.closest('#btn-style-more') ||
       target.closest('#btn-size-mode-dropdown') ||
-      target.closest('#popover-phase') ||
       target.closest('#popover-context') ||
       target.closest('#popover-size-mode') ||
-      target.closest('.phase-dropdown-wrapper') ||
       target.closest('.figma-dropdown-wrapper') ||
       target.closest('.figma-dropdown-menu') ||
       target.closest('.terminal-ui3-menu') ||
@@ -223,46 +213,13 @@ export function App() {
     }
   }
 
-  // Phase 저장
-  function handleSavePhase(phase: PhaseData) {
-    setPhases(prev => {
-      const idx = prev.findIndex(p => p.id === phase.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = phase;
-        return next;
-      }
-      return [...prev, phase];
-    });
-    setUIState({ selectedPhase: phase.id });
-    setLastNodeConfig({ phase: phase.id, phaseName: phase.name, phaseColor: phase.color });
-    parent.postMessage({ pluginMessage: { type: 'SET_PHASE', phaseId: phase.id, phaseName: phase.name, phaseColor: phase.color } }, '*');
-  }
-
-
   // Context menu 핸들러
   function handleContextEdit() {
     setContextMenuOpen(false);
-    const currentPhaseId = uiState.selectedPhase;
-    if (currentPhaseId && currentPhaseId !== 'none') {
-      const phase = phases.find(p => p.id === currentPhaseId);
-      if (phase) {
-        setEditingPhase(phase);
-        setActiveModal('phase');
-      }
-    }
   }
 
   function handleContextDelete() {
     setContextMenuOpen(false);
-    const currentPhaseId = uiState.selectedPhase;
-    if (currentPhaseId && currentPhaseId !== 'none') {
-      setPhases(prev => prev.filter(p => p.id !== currentPhaseId));
-      setUIState({ selectedPhase: 'none' });
-      setLastNodeConfig({ phase: 'none', phaseName: 'None', phaseColor: '#EA2039' });
-      parent.postMessage({ pluginMessage: { type: 'SET_PHASE', phaseId: 'none', phaseName: 'None', phaseColor: '#EA2039' } }, '*');
-      showToast('Phase가 삭제되었습니다.');
-    }
   }
 
   // 타이틀 배너 렌더링
@@ -456,13 +413,6 @@ export function App() {
       <ContextMenu onEdit={handleContextEdit} onDelete={handleContextDelete} />
 
       {/* 모달 레이어 */}
-      {activeModal === 'phase' && (
-        <PhaseModal
-          editingPhase={editingPhase}
-          onSave={handleSavePhase}
-          onClose={() => { setActiveModal('none'); setEditingPhase(null); }}
-        />
-      )}
       {activeModal === 'add-size' && (
         <SizeModal
           mode="add"

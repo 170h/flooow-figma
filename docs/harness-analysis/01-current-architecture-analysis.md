@@ -13,7 +13,7 @@
 
 ### 1-1. Figma Core Sandbox
 
-- `src/code.ts` — **4,993줄 단일 모놀리스**. 모든 캔버스 조작(노드 생성/수정, 커넥터, 배지, 페이즈, 상태, 엘레베이션, UI3 변수 추출, 설정 저장)을 담당
+- `src/code.ts` — **4,993줄 단일 모놀리스**. 모든 캔버스 조작(노드 생성/수정, 커넥터, 배지, 상태, 엘레베이션, UI3 변수 추출, 설정 저장)을 담당
   - 진입점: `figma.showUI(__html__, { width: 360, height: 486 })` (L38)
   - 메시지 라우터: `figma.ui.onmessage = async (msg: PluginAction) => switch` (L4709, 파일 말미)
   - 캔버스 변경 감지: `figma.on('documentchange', ...)` (L4807) — 커넥터 레지스트리 등록, 노드 이동 시 커넥터 추적
@@ -31,11 +31,11 @@
 - `src/ui/App.tsx` — 604줄, 3개 탭(Node / Appearance / Connection) + CTA 로직 + 모달 관리
 - `src/ui/context/AppContext.tsx` — 전역 상태(`useApp`)
 - 컴포넌트 도메인별 구성:
-  - `node/` — NodePanel, PhaseSection, TypeSection, DescriptionSection, FigmaLinkSection
+  - `node/` — NodePanel, TypeSection, DescriptionSection, FigmaLinkSection
   - `appearance/` — AppearancePanel, StyleSection, SizeSection, StatusSection, StepBadgesSection, ElevationSection
   - `connection/` — ConnectionPanel, ConnectSection, LabelSection, LinkSection, FigmaLinkSection
-  - `modals/` — PhaseModal, SizeModal, StyleModal, ConnectorColorModal, FillColorModal, StrokeColorModal, FigmaDesignPickerModal
-  - `popovers/` — ContextMenu, PhasePopover
+  - `modals/` — SizeModal, StyleModal, ConnectorColorModal, FillColorModal, StrokeColorModal, FigmaDesignPickerModal
+  - `popovers/` — ContextMenu
   - `shared/` — ColorWheelField, DropdownMixedItem, SectionBlock, Switch, Tooltip, icons
 - 훅:
   - `useFigmaMessage` (Core→UI 수신)
@@ -68,7 +68,6 @@
 - `CONVERT_ALL_CONNECTORS_TO_ELBOWED`
 - `EXTRACT_UI3_VARIABLES`
 - `TOGGLE_NODE_THEME`
-- `SET_PHASE`
 - `SET_STATUS`
 - `SET_ELEVATION`
 - `ADD_STEP_BADGES`

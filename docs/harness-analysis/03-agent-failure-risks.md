@@ -80,7 +80,6 @@ C-01을 다시 작업하거나 검증하지 마라.
 - **Risk**: 같은 값/동작을 갱신하는 경로가 2개 이상이라, 한 경로만 수정하면 경로 간 불일치.
 - **실제 근거**:
   - `input-size-w/h/radius` 값: 최소 5개 쓰기 경로 — [`useFigmaMessage.ts`](src/ui/hooks/useFigmaMessage.ts:93) (L93-95, L136-138), [`AppContext.tsx`](src/ui/context/AppContext.tsx:614) (L614-619, L634-637, L1032-1033), [`SizeSection.tsx`](src/ui/components/appearance/SizeSection.tsx:227) (L227-230), [`FigmaDesignPickerModal.tsx`](src/ui/components/modals/FigmaDesignPickerModal.tsx:56) (L56-58).
-  - `SET_PHASE` 전송: [`PhaseSection.tsx`](src/ui/components/node/PhaseSection.tsx:74)와 [`App.tsx`](src/ui/App.tsx:239) (L239, L263) 두 곳에서 각각 `parent.postMessage`.
   - `RESIZE_WINDOW` 전송: [`useAutoResize.ts`](src/ui/hooks/useAutoResize.ts:76)와 [`AppContext.tsx`](src/ui/context/AppContext.tsx:452) (L442-457) — **동일한 auto-resize 로직이 두 구현으로 중복 존재** (두 곳 다 `getPluginIdealHeight` + 35ms debounce + `lastResizeHeightRef` 유사 패턴).
   - `SET_STATUS` 전송: [`AppContext.tsx`](src/ui/context/AppContext.tsx:698) (L698)와 [`AppContext.tsx`](src/ui/context/AppContext.tsx:948) (L948, DOM `checked` 게이트).
 - **Agent가 할 수 있는 실수**: "auto-resize는 useAutoResize 훅이 담당"이라 판단하고 `AppContext.autoResizeWindow`만 수정(또는 그 반대) → 한쪽 debounce/threshold만 변경되어 창 높이 진동. `SET_PHASE` 중 한 경로만 payload 필드 추가 → 탭별 동작 차이.
@@ -198,5 +197,24 @@ C-01을 다시 작업하거나 검증하지 마라.
   - 공식 문서: [`figma-plugin-guide/api/typings-and-errors.md`](figma-plugin-guide/api/typings-and-errors.md:83) — `Error: Cannot read property of removed node` 항목.
 - **Agent가 할 수 있는 실수**: `node.remove()` 후 `node.parent`/`node.children`/`node.x` 접근, `remove()`된 노드를 배열에 담아 나중에 반복 접근.
 - **Harness 제약**: `node.remove()` 호출 시점부터 해당 노드 참조를 즉시 무효화. 제거 후 접근이 필요한 값은 `remove()` **전**에 캡처.
+
+---
+
+## R-18. 명령 반복 실행 루프 및 상태 정체 (Agent Execution Loop & Stagnation)
+
+- **Risk**: Agent가 문제 해결 또는 검증 과정에서 동일한 명령(`execute_command`/`run_command`)을 동일한 조건에서 무한 반복하거나, 실패 시 원인 분석 없이 맹목적으로 재실행하여 토큰 소모 및 무한 루프/정체(Hanging) 발생.
+- **실제 근거**:
+  - 터미널/도구 실행 환경에서 이전 실패 원인을 파악하지 않고 동일한 CLI 명령을 연속 호출하는 루프 취약점.
+  - 파일 변경 없이 동일한 검증 명령(`npm run typecheck`, 빌드 스크립트 등)을 반복 호출하거나 동일한 에러 출력에 대해 동일한 시도를 반복하는 패턴.
+- **Agent가 할 수 있는 실수**:
+  - 동일한 에러 메시지가 출력되는데도 동일한 빌드/검증 명령을 3회 이상 연속 재실행.
+  - 명령 실패 원인(권한, 파일 경로, 파라미터, 의존성 등)을 분석하지 않고 동일 명령을 무조건 재시도.
+  - 3회 연속으로 코드나 파일의 상태 변화가 전혀 없는데도 추가 명령을 실행하며 무의미한 탐색 루프 지속.
+- **Harness 제약**:
+  1. **2회 연속 실행 한도**: 동일한 명령이 동일한 목적과 동일한 조건에서 반복될 경우, 2회 연속 실행 후 추가 반복을 중단한다.
+  2. **동일 결과 반복 시 중단 및 보고**: 동일한 결과가 반복되면 추가 실행을 중단하고 현재 상태와 반복 원인을 보고한다.
+  3. **실패 원인 선 분석 원칙**: 명령이 실패한 경우 동일한 명령을 무조건 재실행하지 않는다. 먼저 실패 원인을 분석한 후 수정된 명령 또는 다른 접근을 사용한다.
+  4. **3회 무변화 시 작업 중단 및 보고**: 3회 연속으로 의미 있는 상태 변화가 없으면 작업을 중단하고 현재 상태, 마지막 실행 결과, 장애 원인을 보고한다.
+  - **정상 검증 예외**: 정상적인 검증 과정에서 의도적으로 동일한 명령을 다시 실행하는 경우(예: 코드를 수정한 후 `npm run typecheck`를 다시 실행하는 경우)는 반복 루프로 간주하지 않는다.
 
 ---

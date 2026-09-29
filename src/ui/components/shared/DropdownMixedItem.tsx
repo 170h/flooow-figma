@@ -15,7 +15,7 @@ export const DropdownCheckIcon = () => (
 
 export type DropdownMixedVariant =
   | 'icon'       // 아이콘 + 텍스트 라벨이 있는 옵션 (예: Size 높이 모드 -> 16px 체크 + 24px 대시 + "Mixed")
-  | 'chip'       // 컬러칩 + 텍스트 라벨이 있는 옵션 (예: StepBadges 배지 색상, Phase 선택 -> 16px 체크 + 컬러칩 대시 + "Mixed")
+  | 'chip'       // 컬러칩 + 텍스트 라벨이 있는 옵션 (예: StepBadges 배지 색상 -> 16px 체크 + 컬러칩 대시 + "Mixed")
   | 'icon-only'; // 아이콘(그래픽)만으로 이루어진 옵션 (예: Connect 단자 스타일 -> 16px 체크 + "Mixed" 텍스트만 표시)
 
 export interface DropdownMixedItemProps {
@@ -138,7 +138,6 @@ export function DropdownMixedItem({
 
       {showDivider && (
         <hr
-          className="phase-popover-divider"
           style={{ margin: '4px 0', border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }}
         />
       )}
