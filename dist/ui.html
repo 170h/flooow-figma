@@ -30091,7 +30091,14 @@
     return `https://${trimmed}`;
   }
   function FigmaLinkSection() {
-    const { autoResizeWindow, setLastNodeConfig, lastNodeConfig, selectedNodes, applyCurrentNodeState, uiState } = useApp();
+    const {
+      autoResizeWindow,
+      setLastNodeConfig,
+      lastNodeConfig,
+      selectedNodes,
+      applyCurrentNodeState,
+      uiState
+    } = useApp();
     const summary = useSelectionSummary();
     const isLinkAllowed = summary.isMultiFlowNode ? !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === "Screen" : selectedNodes.length === 1 ? normalizeNodeType(selectedNodes[0]?.flowNodeType) === "Screen" : normalizeNodeType(uiState.selectedNodeType) === "Screen";
     const [isOn, setIsOn] = (0, import_react8.useState)(false);
@@ -30113,7 +30120,10 @@
           const displayLink = activeLink || cachedLink;
           setUrl(displayLink);
           cachedUrlRef.current = displayLink;
-          setLastNodeConfig({ singleLinkOn: enabled, singleLinkUrl: displayLink });
+          setLastNodeConfig({
+            singleLinkOn: enabled,
+            singleLinkUrl: displayLink
+          });
         } else if (selectedNodes.length === 0) {
           setIsOn(lastNodeConfig.singleLinkOn || false);
           const link = lastNodeConfig.singleLinkUrl || "";
@@ -30131,7 +30141,15 @@
           }
         }
       }
-    }, [selectedNodes, lastNodeConfig.singleLinkOn, lastNodeConfig.singleLinkUrl, summary.hasFigmaLink.hasValue, summary.figmaLink.isMixed, summary.figmaLink.value, setLastNodeConfig]);
+    }, [
+      selectedNodes,
+      lastNodeConfig.singleLinkOn,
+      lastNodeConfig.singleLinkUrl,
+      summary.hasFigmaLink.hasValue,
+      summary.figmaLink.isMixed,
+      summary.figmaLink.value,
+      setLastNodeConfig
+    ]);
     function commitUrl(currentRawUrl) {
       const trimmed = currentRawUrl.trim();
       if (!trimmed) {
@@ -30139,7 +30157,10 @@
         cachedUrlRef.current = "";
         setLastNodeConfig({ singleLinkUrl: "" });
         setTimeout(() => {
-          applyCurrentNodeState(void 0, void 0, { figmaLink: "", clearLinkCache: true });
+          applyCurrentNodeState(void 0, void 0, {
+            figmaLink: "",
+            clearLinkCache: true
+          });
         }, 0);
         return;
       }
@@ -30148,7 +30169,10 @@
       cachedUrlRef.current = normalized;
       setLastNodeConfig({ singleLinkUrl: normalized });
       setTimeout(() => {
-        applyCurrentNodeState(void 0, void 0, { figmaLink: normalized, clearLinkCache: false });
+        applyCurrentNodeState(void 0, void 0, {
+          figmaLink: normalized,
+          clearLinkCache: false
+        });
       }, 0);
     }
     function handleToggle(checked) {
@@ -30159,7 +30183,10 @@
         cachedUrlRef.current = url;
         setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: url });
         setTimeout(() => {
-          applyCurrentNodeState(void 0, void 0, { figmaLink: "", clearLinkCache: false });
+          applyCurrentNodeState(void 0, void 0, {
+            figmaLink: "",
+            clearLinkCache: false
+          });
         }, 0);
       } else {
         const restoreUrl = url || cachedUrlRef.current;
@@ -30179,7 +30206,6 @@
     function handleKeyDown(e) {
       if (e.key === "Enter") {
         commitUrl(url);
-        inputRef.current?.blur();
       }
     }
     function handleBlur() {
@@ -30190,79 +30216,126 @@
       setUrl("");
       cachedUrlRef.current = "";
       setLastNodeConfig({ singleLinkUrl: "" });
-      applyCurrentNodeState(void 0, void 0, { figmaLink: "", clearLinkCache: true });
+      applyCurrentNodeState(void 0, void 0, {
+        figmaLink: "",
+        clearLinkCache: true
+      });
       inputRef.current?.focus();
     }
     const effectiveIsOn = isLinkAllowed && isOn;
-    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "section-block figma-link-section", style: { paddingBottom: effectiveIsOn ? "12px" : "0px" }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: `section-title${!isLinkAllowed ? " disabled" : ""}`, children: [
-          "Figma Screen Link",
-          isLinkAllowed && isLinkMixed && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-          Switch,
-          {
-            id: "toggle-single-figma-link",
-            checked: effectiveIsOn,
-            isMixed: isLinkAllowed && isLinkMixed,
-            disabled: !isLinkAllowed,
-            "data-tooltip": !isLinkAllowed ? "Figma Screen Link is disabled for this shape" : void 0,
-            onChange: handleToggle
-          }
-        )
-      ] }),
-      effectiveIsOn && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "section-body collapsible-body", id: "single-figma-link-group", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { position: "relative", display: "flex", alignItems: "center", width: "100%" }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-          "input",
-          {
-            ref: inputRef,
-            type: "text",
-            id: "single-screen-url",
-            className: "form-input",
-            style: { width: "100%", paddingRight: url ? "28px" : "10px" },
-            placeholder: isLinkMixed ? "Mixed" : "Add a Figma Screen URL",
-            value: url,
-            onChange: (e) => handleUrlChange(e.target.value),
-            onKeyDown: handleKeyDown,
-            onBlur: handleBlur
-          }
-        ),
-        url && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-          "button",
-          {
-            type: "button",
-            "aria-label": "Clear link URL",
-            onClick: handleClear,
-            style: {
-              position: "absolute",
-              right: "6px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              background: "none",
-              border: "none",
-              padding: "4px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "50%",
-              color: "#9ca3af",
-              outline: "none"
-            },
-            onMouseEnter: (e) => {
-              e.currentTarget.style.color = "#374151";
-              e.currentTarget.style.backgroundColor = "#f3f4f6";
-            },
-            onMouseLeave: (e) => {
-              e.currentTarget.style.color = "#9ca3af";
-              e.currentTarget.style.backgroundColor = "transparent";
-            },
-            children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 12 12", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { d: "M9 3L3 9M3 3L9 9", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round", strokeLinejoin: "round" }) })
-          }
-        )
-      ] }) })
-    ] });
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+      "div",
+      {
+        className: "section-block figma-link-section",
+        style: { paddingBottom: effectiveIsOn ? "12px" : "0px" },
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "section-header toggle-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: `section-title${!isLinkAllowed ? " disabled" : ""}`, children: [
+              "Figma Screen Link",
+              isLinkAllowed && isLinkMixed && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+              Switch,
+              {
+                id: "toggle-single-figma-link",
+                checked: effectiveIsOn,
+                isMixed: isLinkAllowed && isLinkMixed,
+                disabled: !isLinkAllowed,
+                "data-tooltip": !isLinkAllowed ? "Figma Screen Link is disabled for this shape" : void 0,
+                onChange: handleToggle
+              }
+            )
+          ] }),
+          effectiveIsOn && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+            "div",
+            {
+              className: "section-body collapsible-body",
+              id: "single-figma-link-group",
+              children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+                "div",
+                {
+                  style: {
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    width: "100%"
+                  },
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                      "input",
+                      {
+                        ref: inputRef,
+                        type: "text",
+                        id: "single-screen-url",
+                        className: "form-input",
+                        style: { width: "100%", paddingRight: url ? "28px" : "10px" },
+                        placeholder: isLinkMixed ? "Mixed" : "Add a Figma Screen URL",
+                        value: url,
+                        onChange: (e) => handleUrlChange(e.target.value),
+                        onKeyDown: handleKeyDown,
+                        onBlur: handleBlur
+                      }
+                    ),
+                    url && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        "aria-label": "Clear link URL",
+                        onClick: handleClear,
+                        style: {
+                          position: "absolute",
+                          right: "6px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "none",
+                          border: "none",
+                          padding: "4px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "50%",
+                          color: "#9ca3af",
+                          outline: "none"
+                        },
+                        onMouseEnter: (e) => {
+                          e.currentTarget.style.color = "#374151";
+                          e.currentTarget.style.backgroundColor = "#f3f4f6";
+                        },
+                        onMouseLeave: (e) => {
+                          e.currentTarget.style.color = "#9ca3af";
+                          e.currentTarget.style.backgroundColor = "transparent";
+                        },
+                        children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                          "svg",
+                          {
+                            width: "12",
+                            height: "12",
+                            viewBox: "0 0 12 12",
+                            fill: "none",
+                            xmlns: "http://www.w3.org/2000/svg",
+                            children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                              "path",
+                              {
+                                d: "M9 3L3 9M3 3L9 9",
+                                stroke: "currentColor",
+                                strokeWidth: "1.3",
+                                strokeLinecap: "round",
+                                strokeLinejoin: "round"
+                              }
+                            )
+                          }
+                        )
+                      }
+                    )
+                  ]
+                }
+              )
+            }
+          )
+        ]
+      }
+    );
   }
 
   // src/ui/components/appearance/StatusSection.tsx
@@ -30503,22 +30576,46 @@
     {
       pos: "TOP_LEFT",
       title: "Top-Left",
-      svg: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M15.98 7.5H9.93C9.71 6.64 8.93 6 8 6C6.9 6 6 6.9 6 8C6 8.92 6.63 9.69 7.48 9.92V16C7.48 16.28 7.7 16.5 7.98 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM7 8C7 7.45 7.45 7 8 7C8.55 7 9 7.45 9 8C9 8.55 8.55 9 8 9C7.45 9 7 8.55 7 8ZM15.48 15.5H8.48V9.94C9.19 9.76 9.75 9.21 9.93 8.5H15.48V15.5Z", fill: "currentColor" }) })
+      svg: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        "path",
+        {
+          d: "M15.98 7.5H9.93C9.71 6.64 8.93 6 8 6C6.9 6 6 6.9 6 8C6 8.92 6.63 9.69 7.48 9.92V16C7.48 16.28 7.7 16.5 7.98 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM7 8C7 7.45 7.45 7 8 7C8.55 7 9 7.45 9 8C9 8.55 8.55 9 8 9C7.45 9 7 8.55 7 8ZM15.48 15.5H8.48V9.94C9.19 9.76 9.75 9.21 9.93 8.5H15.48V15.5Z",
+          fill: "currentColor"
+        }
+      ) })
     },
     {
       pos: "TOP_RIGHT",
       title: "Top-Right",
-      svg: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M18 8C18 6.9 17.1 6 16 6C15.07 6 14.29 6.64 14.07 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H16C16.28 16.5 16.5 16.28 16.5 16V9.93C17.36 9.71 18 8.93 18 8ZM8.5 15.5V8.5H14.07C14.25 9.2 14.8 9.75 15.5 9.93V15.5H8.5ZM16 9C15.45 9 15 8.55 15 8C15 7.45 15.45 7 16 7C16.55 7 17 7.45 17 8C17 8.55 16.55 9 16 9Z", fill: "currentColor" }) })
+      svg: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        "path",
+        {
+          d: "M18 8C18 6.9 17.1 6 16 6C15.07 6 14.29 6.64 14.07 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H16C16.28 16.5 16.5 16.28 16.5 16V9.93C17.36 9.71 18 8.93 18 8ZM8.5 15.5V8.5H14.07C14.25 9.2 14.8 9.75 15.5 9.93V15.5H8.5ZM16 9C15.45 9 15 8.55 15 8C15 7.45 15.45 7 16 7C16.55 7 17 7.45 17 8C17 8.55 16.55 9 16 9Z",
+          fill: "currentColor"
+        }
+      ) })
     },
     {
       pos: "BOTTOM_LEFT",
       title: "Bottom-Left",
-      svg: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M15.98 7.5H7.98C7.7 7.5 7.48 7.72 7.48 8V14.08C6.63 14.31 6 15.08 6 16C6 17.1 6.9 18 8 18C8.93 18 9.71 17.36 9.93 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM8 17C7.45 17 7 16.55 7 16C7 15.45 7.45 15 8 15C8.55 15 9 15.45 9 16C9 16.55 8.55 17 8 17ZM15.48 15.5H9.93C9.75 14.79 9.19 14.24 8.48 14.06V8.5H15.48V15.5Z", fill: "currentColor" }) })
+      svg: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        "path",
+        {
+          d: "M15.98 7.5H7.98C7.7 7.5 7.48 7.72 7.48 8V14.08C6.63 14.31 6 15.08 6 16C6 17.1 6.9 18 8 18C8.93 18 9.71 17.36 9.93 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM8 17C7.45 17 7 16.55 7 16C7 15.45 7.45 15 8 15C8.55 15 9 15.45 9 16C9 16.55 8.55 17 8 17ZM15.48 15.5H9.93C9.75 14.79 9.19 14.24 8.48 14.06V8.5H15.48V15.5Z",
+          fill: "currentColor"
+        }
+      ) })
     },
     {
       pos: "BOTTOM_RIGHT",
       title: "Bottom-Right",
-      svg: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M16.5 14.07V8C16.5 7.72 16.28 7.5 16 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H14.07C14.29 17.36 15.07 18 16 18C17.1 18 18 17.1 18 16C18 15.07 17.36 14.29 16.5 14.07ZM14.07 15.5H8.5V8.5H15.5V14.07C14.8 14.25 14.25 14.8 14.07 15.5ZM16 17C15.45 17 15 16.55 15 16C15 15.45 15.45 15 16 15C16.55 15 17 15.45 17 16C17 16.55 16.55 17 16 17Z", fill: "currentColor" }) })
+      svg: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        "path",
+        {
+          d: "M16.5 14.07V8C16.5 7.72 16.28 7.5 16 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H14.07C14.29 17.36 15.07 18 16 18C17.1 18 18 17.1 18 16C18 15.07 17.36 14.29 16.5 14.07ZM14.07 15.5H8.5V8.5H15.5V14.07C14.8 14.25 14.25 14.8 14.07 15.5ZM16 17C15.45 17 15 16.55 15 16C15 15.45 15.45 15 16 15C16.55 15 17 15.45 17 16C17 16.55 16.55 17 16 17Z",
+          fill: "currentColor"
+        }
+      ) })
     }
   ];
   var BADGE_SHAPES = [
@@ -30567,7 +30664,10 @@
     function isHexHighSaturation(hex) {
       const clean = hex.replace("#", "");
       if (clean.length !== 6 && clean.length !== 3) return false;
-      const num = parseInt(clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean, 16);
+      const num = parseInt(
+        clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean,
+        16
+      );
       const r = (num >> 16 & 255) / 255;
       const g = (num >> 8 & 255) / 255;
       const b = (num & 255) / 255;
@@ -30582,7 +30682,10 @@
     function isHexDark(hex) {
       const clean = hex.replace("#", "");
       if (clean.length !== 6 && clean.length !== 3) return false;
-      const num = parseInt(clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean, 16);
+      const num = parseInt(
+        clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean,
+        16
+      );
       const r = (num >> 16 & 255) / 255;
       const g = (num >> 8 & 255) / 255;
       const b = (num & 255) / 255;
@@ -30637,7 +30740,9 @@
               setUIState({ selectedBadgeShape: summary.badgeShape.value });
             }
             if (!summary.badgeColorMode.isMixed && summary.badgeColorMode.value) {
-              setUIState({ selectedBadgeColorMode: summary.badgeColorMode.value });
+              setUIState({
+                selectedBadgeColorMode: summary.badgeColorMode.value
+              });
             }
           }
         } else {
@@ -30656,7 +30761,22 @@
           }
         }
       }
-    }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, summary.hasStepBadge.hasValue, lastNodeConfig.stepBadgesOn, lastNodeConfig.stepNumber, lastNodeConfig.badgeCorner, lastNodeConfig.badgeShape, lastNodeConfig.badgeColorMode, setUIState]);
+    }, [
+      selectedNodes,
+      summary.badgeCorner.isMixed,
+      summary.badgeCorner.value,
+      summary.badgeShape.isMixed,
+      summary.badgeShape.value,
+      summary.badgeColorMode.isMixed,
+      summary.badgeColorMode.value,
+      summary.hasStepBadge.hasValue,
+      lastNodeConfig.stepBadgesOn,
+      lastNodeConfig.stepNumber,
+      lastNodeConfig.badgeCorner,
+      lastNodeConfig.badgeShape,
+      lastNodeConfig.badgeColorMode,
+      setUIState
+    ]);
     (0, import_react10.useEffect)(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -30679,7 +30799,12 @@
       setIsOpen(checked);
       setLastNodeConfig({ stepBadgesOn: checked });
       if (checked) {
-        applyStepBadges(getNumberValue(), selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
+        applyStepBadges(
+          getNumberValue(),
+          selectedBadgeCorner,
+          selectedBadgeShape,
+          selectedBadgeColorMode
+        );
       } else {
         removeStepBadgesFromNodes();
       }
@@ -30691,14 +30816,24 @@
       setUIState({ selectedBadgeCorner: pos });
       setLastNodeConfig({ badgeCorner: pos });
       if (isSectionOpen && !isMultiMode) {
-        applyStepBadges(getNumberValue(), pos, selectedBadgeShape, selectedBadgeColorMode);
+        applyStepBadges(
+          getNumberValue(),
+          pos,
+          selectedBadgeShape,
+          selectedBadgeColorMode
+        );
       }
     }
     function handleShapeSelect(shape) {
       setUIState({ selectedBadgeShape: shape });
       setLastNodeConfig({ badgeShape: shape });
       if (isSectionOpen && !isMultiMode) {
-        applyStepBadges(getNumberValue(), selectedBadgeCorner, shape, selectedBadgeColorMode);
+        applyStepBadges(
+          getNumberValue(),
+          selectedBadgeCorner,
+          shape,
+          selectedBadgeColorMode
+        );
       }
     }
     function handleColorSelect(mode) {
@@ -30706,7 +30841,12 @@
       setLastNodeConfig({ badgeColorMode: mode });
       setColorDropdownOpen(false);
       if (isSectionOpen && !isMultiMode) {
-        applyStepBadges(getNumberValue(), selectedBadgeCorner, selectedBadgeShape, mode);
+        applyStepBadges(
+          getNumberValue(),
+          selectedBadgeCorner,
+          selectedBadgeShape,
+          mode
+        );
       }
     }
     function handleNumberBlurOrEnter() {
@@ -30715,7 +30855,12 @@
       setStepNumText(String(val));
       setLastNodeConfig({ stepNumber: val });
       if (isSectionOpen && !isMultiMode) {
-        applyStepBadges(val, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
+        applyStepBadges(
+          val,
+          selectedBadgeCorner,
+          selectedBadgeShape,
+          selectedBadgeColorMode
+        );
       }
     }
     function handleResetNumber() {
@@ -30723,9 +30868,16 @@
       setStepNumText("1");
       setLastNodeConfig({ stepNumber: 1 });
       if (isSectionOpen && !isMultiMode) {
-        applyStepBadges(1, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
+        applyStepBadges(
+          1,
+          selectedBadgeCorner,
+          selectedBadgeShape,
+          selectedBadgeColorMode
+        );
       }
-      const input = document.getElementById("input-step-number");
+      const input = document.getElementById(
+        "input-step-number"
+      );
       if (input) {
         input.focus();
         input.select();
@@ -30733,7 +30885,12 @@
     }
     function handleAddStepBadgesMulti() {
       const start = getNumberValue();
-      applyStepBadges(start, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
+      applyStepBadges(
+        start,
+        selectedBadgeCorner,
+        selectedBadgeShape,
+        selectedBadgeColorMode
+      );
     }
     function renderColorSwatch(mode, size = 14) {
       if (mode === "White") {
@@ -30792,263 +30949,343 @@
         }
       );
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "section-block step-badges-section", style: { paddingBottom: isSectionOpen ? "12px" : "0px" }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "section-title", children: "Step Badges" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-          Switch,
-          {
-            id: "toggle-step-badges",
-            checked: isSectionOpen,
-            isMixed: summary.isMultiFlowNode && summary.hasStepBadge.isMixed,
-            onChange: handleToggle
-          }
-        )
-      ] }),
-      isSectionOpen && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { display: "flex", gap: "8px", alignItems: "center", width: "100%" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+    return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+      "div",
+      {
+        className: "section-block step-badges-section",
+        style: { paddingBottom: isSectionOpen ? "12px" : "0px" },
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "section-header toggle-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "section-title", children: "Step Badges" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              Switch,
+              {
+                id: "toggle-step-badges",
+                checked: isSectionOpen,
+                isMixed: summary.isMultiFlowNode && summary.hasStepBadge.isMixed,
+                onChange: handleToggle
+              }
+            )
+          ] }),
+          isSectionOpen && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
             "div",
             {
               style: {
-                width: "100px",
-                height: "28px",
-                backgroundColor: "#F3F4F6",
-                borderRadius: "6px",
-                padding: "0 6px",
                 display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                flexShrink: 0,
-                boxSizing: "border-box"
+                flexDirection: "column",
+                gap: "8px",
+                marginTop: "10px"
               },
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-                  "svg",
-                  {
-                    id: "step-number-icon",
-                    "data-tooltip": isMultiMode ? "Start Number (Reset: 1)" : "Number (Reset: 1)",
-                    width: "24",
-                    height: "24",
-                    viewBox: "0 0 24 24",
-                    fill: "none",
-                    style: { color: "#111827", flexShrink: 0, cursor: "pointer" },
-                    onClick: handleResetNumber,
-                    children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-                      "path",
-                      {
-                        d: "M16 18C17.1046 18 18 17.1046 18 16V8C18 6.89543 17.1046 6 16 6H8C6.89543 6 6 6.89543 6 8V16C6 17.1046 6.89543 18 8 18H16ZM8 17C7.44772 17 7 16.5523 7 16V8C7 7.44772 7.44772 7 8 7H16C16.5523 7 17 7.44772 17 8V16C17 16.5523 16.5523 17 16 17H8ZM10.4502 14.9971C10.7249 15.0245 10.9695 14.8245 10.9971 14.5498L11.0518 14H12.5479L12.5029 14.4502C12.4755 14.7249 12.6755 14.9695 12.9502 14.9971C13.2249 15.0245 13.4695 14.8245 13.4971 14.5498L13.5518 14H14.5C14.7761 14 15 13.7761 15 13.5C15 13.2239 14.7761 13 14.5 13H13.6523L13.8525 11H14.5C14.7761 11 15 10.7761 15 10.5C15 10.2239 14.7761 10 14.5 10H13.9521L13.9971 9.5498C14.0245 9.27507 13.8245 9.03045 13.5498 9.00293C13.2751 8.97546 13.0305 9.17547 13.0029 9.4502L12.9482 10H11.4521L11.4971 9.5498C11.5245 9.27507 11.3245 9.03045 11.0498 9.00293C10.7751 8.97546 10.5305 9.17547 10.5029 9.4502L10.4482 10H9.5C9.22386 10 9 10.2239 9 10.5C9 10.7761 9.22386 11 9.5 11H10.3477L10.1475 13H9.5C9.22386 13 9 13.2239 9 13.5C9 13.7761 9.22386 14 9.5 14H10.0479L10.0029 14.4502C9.97546 14.7249 10.1755 14.9695 10.4502 14.9971ZM11.1523 13L11.3525 11H12.8477L12.6475 13H11.1523Z",
-                        fill: "currentColor"
-                      }
-                    )
-                  }
-                ),
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-                  "input",
-                  {
-                    type: "text",
-                    id: "input-step-number",
-                    value: isMixed ? "" : stepNumText,
-                    placeholder: isMixed ? "Mixed" : "1",
-                    onChange: (e) => {
-                      setIsMixed(false);
-                      setStepNumText(e.target.value.replace(/[^0-9]/g, ""));
-                    },
-                    onBlur: handleNumberBlurOrEnter,
-                    onKeyDown: (e) => {
-                      if (e.key === "Enter") {
-                        handleNumberBlurOrEnter();
-                        e.target.blur();
-                      }
-                    },
-                    style: {
-                      width: "100%",
-                      border: "none",
-                      background: "transparent",
-                      outline: "none",
-                      fontSize: "11px",
-                      fontWeight: 400,
-                      color: isMixed ? "var(--color-text-primary, #000000)" : "#111827",
-                      padding: 0
-                    }
-                  }
-                )
-              ]
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "corner-position-group", children: BADGE_CORNERS.map((c) => {
-            const active = selectedBadgeCorner === c.pos;
-            return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-              "button",
-              {
-                type: "button",
-                title: c.title,
-                onClick: () => handleCornerSelect(c.pos),
-                className: `corner-btn${active ? " active" : ""}`,
-                children: c.svg
-              },
-              c.pos
-            );
-          }) })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { display: "flex", gap: "8px", alignItems: "center", width: "100%" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
-            "div",
-            {
-              ref: dropdownRef,
-              className: "figma-dropdown-wrapper",
-              style: { width: "100px", flexShrink: 0 },
               children: [
                 /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
-                  "button",
+                  "div",
                   {
-                    type: "button",
-                    className: `figma-dropdown-btn${colorDropdownOpen ? " active" : ""}`,
-                    onClick: () => setColorDropdownOpen(!colorDropdownOpen),
+                    style: {
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                      width: "100%"
+                    },
                     children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "figma-dropdown-btn-content", children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "figma-dropdown-current-icon", children: selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 14) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(MixedDashChip, { size: 14 }) }),
-                        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "figma-dropdown-current-text", children: selectedBadgeColorMode || "Mixed" })
-                      ] }),
-                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-                        "svg",
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                        "div",
                         {
-                          className: "figma-dropdown-chevron-icon",
-                          width: "16",
-                          height: "16",
-                          viewBox: "0 0 16 16",
-                          fill: "none",
                           style: {
-                            transform: colorDropdownOpen ? "rotate(180deg)" : "none",
-                            transition: "transform 0.15s ease"
+                            width: "100px",
+                            height: "28px",
+                            backgroundColor: "#F3F4F6",
+                            borderRadius: "6px",
+                            padding: "0 6px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            flexShrink: 0,
+                            boxSizing: "border-box"
                           },
-                          children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-                            "path",
-                            {
-                              d: "M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z",
-                              fill: "currentColor"
-                            }
-                          )
+                          children: [
+                            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                              "svg",
+                              {
+                                id: "step-number-icon",
+                                "data-tooltip": isMultiMode ? "Start Number (Reset: 1)" : "Number (Reset: 1)",
+                                width: "24",
+                                height: "24",
+                                viewBox: "0 0 24 24",
+                                fill: "none",
+                                style: { color: "#111827", flexShrink: 0, cursor: "pointer" },
+                                onClick: handleResetNumber,
+                                children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                                  "path",
+                                  {
+                                    d: "M16 18C17.1046 18 18 17.1046 18 16V8C18 6.89543 17.1046 6 16 6H8C6.89543 6 6 6.89543 6 8V16C6 17.1046 6.89543 18 8 18H16ZM8 17C7.44772 17 7 16.5523 7 16V8C7 7.44772 7.44772 7 8 7H16C16.5523 7 17 7.44772 17 8V16C17 16.5523 16.5523 17 16 17H8ZM10.4502 14.9971C10.7249 15.0245 10.9695 14.8245 10.9971 14.5498L11.0518 14H12.5479L12.5029 14.4502C12.4755 14.7249 12.6755 14.9695 12.9502 14.9971C13.2249 15.0245 13.4695 14.8245 13.4971 14.5498L13.5518 14H14.5C14.7761 14 15 13.7761 15 13.5C15 13.2239 14.7761 13 14.5 13H13.6523L13.8525 11H14.5C14.7761 11 15 10.7761 15 10.5C15 10.2239 14.7761 10 14.5 10H13.9521L13.9971 9.5498C14.0245 9.27507 13.8245 9.03045 13.5498 9.00293C13.2751 8.97546 13.0305 9.17547 13.0029 9.4502L12.9482 10H11.4521L11.4971 9.5498C11.5245 9.27507 11.3245 9.03045 11.0498 9.00293C10.7751 8.97546 10.5305 9.17547 10.5029 9.4502L10.4482 10H9.5C9.22386 10 9 10.2239 9 10.5C9 10.7761 9.22386 11 9.5 11H10.3477L10.1475 13H9.5C9.22386 13 9 13.2239 9 13.5C9 13.7761 9.22386 14 9.5 14H10.0479L10.0029 14.4502C9.97546 14.7249 10.1755 14.9695 10.4502 14.9971ZM11.1523 13L11.3525 11H12.8477L12.6475 13H11.1523Z",
+                                    fill: "currentColor"
+                                  }
+                                )
+                              }
+                            ),
+                            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                              "input",
+                              {
+                                type: "text",
+                                id: "input-step-number",
+                                value: isMixed ? "" : stepNumText,
+                                placeholder: isMixed ? "Mixed" : "1",
+                                onChange: (e) => {
+                                  setIsMixed(false);
+                                  setStepNumText(e.target.value.replace(/[^0-9]/g, ""));
+                                },
+                                onBlur: handleNumberBlurOrEnter,
+                                onKeyDown: (e) => {
+                                  if (e.key === "Enter") {
+                                    handleNumberBlurOrEnter();
+                                  }
+                                },
+                                style: {
+                                  width: "100%",
+                                  border: "none",
+                                  background: "transparent",
+                                  outline: "none",
+                                  fontSize: "11px",
+                                  fontWeight: 400,
+                                  color: isMixed ? "var(--color-text-primary, #000000)" : "#111827",
+                                  padding: 0
+                                }
+                              }
+                            )
+                          ]
+                        }
+                      ),
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "corner-position-group", children: BADGE_CORNERS.map((c) => {
+                        const active = selectedBadgeCorner === c.pos;
+                        return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            title: c.title,
+                            onClick: () => handleCornerSelect(c.pos),
+                            className: `corner-btn${active ? " active" : ""}`,
+                            children: c.svg
+                          },
+                          c.pos
+                        );
+                      }) })
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                  "div",
+                  {
+                    style: {
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                      width: "100%"
+                    },
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                        "div",
+                        {
+                          ref: dropdownRef,
+                          className: "figma-dropdown-wrapper",
+                          style: { width: "100px", flexShrink: 0 },
+                          children: [
+                            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                              "button",
+                              {
+                                type: "button",
+                                className: `figma-dropdown-btn${colorDropdownOpen ? " active" : ""}`,
+                                onClick: () => setColorDropdownOpen(!colorDropdownOpen),
+                                children: [
+                                  /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "figma-dropdown-btn-content", children: [
+                                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "figma-dropdown-current-icon", children: selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 14) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(MixedDashChip, { size: 14 }) }),
+                                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "figma-dropdown-current-text", children: selectedBadgeColorMode || "Mixed" })
+                                  ] }),
+                                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                                    "svg",
+                                    {
+                                      className: "figma-dropdown-chevron-icon",
+                                      width: "16",
+                                      height: "16",
+                                      viewBox: "0 0 16 16",
+                                      fill: "none",
+                                      style: {
+                                        transform: colorDropdownOpen ? "rotate(180deg)" : "none",
+                                        transition: "transform 0.15s ease"
+                                      },
+                                      children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                                        "path",
+                                        {
+                                          d: "M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z",
+                                          fill: "currentColor"
+                                        }
+                                      )
+                                    }
+                                  )
+                                ]
+                              }
+                            ),
+                            colorDropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                              "div",
+                              {
+                                className: "figma-dropdown-menu active",
+                                style: {
+                                  position: "absolute",
+                                  bottom: "calc(100% + 4px)",
+                                  top: "auto",
+                                  left: 0,
+                                  right: 0,
+                                  width: "100%",
+                                  display: "flex",
+                                  zIndex: 1050
+                                },
+                                children: [
+                                  (isColorModeMixed || !selectedBadgeColorMode) && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                                    DropdownMixedItem,
+                                    {
+                                      variant: "chip",
+                                      chipSize: 14,
+                                      onClick: () => setColorDropdownOpen(false)
+                                    }
+                                  ),
+                                  COLOR_OPTIONS.map((opt) => {
+                                    const active = selectedBadgeColorMode === opt.id;
+                                    return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                                      "div",
+                                      {
+                                        className: `figma-dropdown-item${active ? " selected" : ""}`,
+                                        style: { width: "100%", cursor: "pointer" },
+                                        onClick: () => handleColorSelect(opt.id),
+                                        children: [
+                                          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "figma-dropdown-check-slot", children: active && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                                            "svg",
+                                            {
+                                              width: "16",
+                                              height: "16",
+                                              viewBox: "0 0 16 16",
+                                              fill: "none",
+                                              children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                                                "path",
+                                                {
+                                                  d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z",
+                                                  fill: "currentColor"
+                                                }
+                                              )
+                                            }
+                                          ) }),
+                                          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "figma-dropdown-icon-slot", children: renderColorSwatch(opt.id, 14) }),
+                                          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                                            "span",
+                                            {
+                                              className: "figma-dropdown-label",
+                                              style: {
+                                                fontSize: "11px",
+                                                fontWeight: active ? 600 : 500
+                                              },
+                                              children: opt.label
+                                            }
+                                          )
+                                        ]
+                                      },
+                                      opt.id
+                                    );
+                                  })
+                                ]
+                              }
+                            )
+                          ]
+                        }
+                      ),
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "shape-segment-group", children: BADGE_SHAPES.map((s) => {
+                        const active = selectedBadgeShape === s.id;
+                        return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: () => handleShapeSelect(s.id),
+                            className: `shape-btn${active ? " active" : ""}`,
+                            children: s.label
+                          },
+                          s.id
+                        );
+                      }) })
+                    ]
+                  }
+                ),
+                isMultiMode && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                  "div",
+                  {
+                    style: {
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      marginTop: "4px",
+                      gap: "8px"
+                    },
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                        "span",
+                        {
+                          style: {
+                            fontSize: "9px",
+                            lineHeight: "1.3",
+                            color: "var(--color-text-secondary, #6B7280)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap"
+                          },
+                          title: "Starts numbering from the start number.",
+                          children: "Starts numbering from the start number."
+                        }
+                      ),
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                        "button",
+                        {
+                          type: "button",
+                          className: "btn-add-step-badges",
+                          disabled: !isStartNumberDefined,
+                          onClick: handleAddStepBadgesMulti,
+                          title: !isStartNumberDefined ? "Please define a start number" : "Add Step Badges",
+                          children: [
+                            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                              "svg",
+                              {
+                                width: "14",
+                                height: "14",
+                                viewBox: "0 0 16 16",
+                                fill: "none",
+                                xmlns: "http://www.w3.org/2000/svg",
+                                children: [
+                                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                                    "path",
+                                    {
+                                      d: "M8 1L9.5 5.5L14 7L9.5 8.5L8 13L6.5 8.5L2 7L6.5 5.5L8 1Z",
+                                      fill: "currentColor"
+                                    }
+                                  ),
+                                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                                    "path",
+                                    {
+                                      d: "M12.5 11L13.25 12.5L14.75 13.25L13.25 14L12.5 15.5L11.75 14L10.25 13.25L11.75 12.5L12.5 11Z",
+                                      fill: "currentColor"
+                                    }
+                                  )
+                                ]
+                              }
+                            ),
+                            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "Add Step Badges" })
+                          ]
                         }
                       )
                     ]
                   }
-                ),
-                colorDropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
-                  "div",
-                  {
-                    className: "figma-dropdown-menu active",
-                    style: {
-                      position: "absolute",
-                      bottom: "calc(100% + 4px)",
-                      top: "auto",
-                      left: 0,
-                      right: 0,
-                      width: "100%",
-                      display: "flex",
-                      zIndex: 1050
-                    },
-                    children: [
-                      (isColorModeMixed || !selectedBadgeColorMode) && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-                        DropdownMixedItem,
-                        {
-                          variant: "chip",
-                          chipSize: 14,
-                          onClick: () => setColorDropdownOpen(false)
-                        }
-                      ),
-                      COLOR_OPTIONS.map((opt) => {
-                        const active = selectedBadgeColorMode === opt.id;
-                        return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
-                          "div",
-                          {
-                            className: `figma-dropdown-item${active ? " selected" : ""}`,
-                            style: { width: "100%", cursor: "pointer" },
-                            onClick: () => handleColorSelect(opt.id),
-                            children: [
-                              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "figma-dropdown-check-slot", children: active && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-                                "path",
-                                {
-                                  d: "M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z",
-                                  fill: "currentColor"
-                                }
-                              ) }) }),
-                              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "figma-dropdown-icon-slot", children: renderColorSwatch(opt.id, 14) }),
-                              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "figma-dropdown-label", style: { fontSize: "11px", fontWeight: active ? 600 : 500 }, children: opt.label })
-                            ]
-                          },
-                          opt.id
-                        );
-                      })
-                    ]
-                  }
                 )
               ]
             }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "shape-segment-group", children: BADGE_SHAPES.map((s) => {
-            const active = selectedBadgeShape === s.id;
-            return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-              "button",
-              {
-                type: "button",
-                onClick: () => handleShapeSelect(s.id),
-                className: `shape-btn${active ? " active" : ""}`,
-                children: s.label
-              },
-              s.id
-            );
-          }) })
-        ] }),
-        isMultiMode && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
-          "div",
-          {
-            style: {
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              width: "100%",
-              marginTop: "4px",
-              gap: "8px"
-            },
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-                "span",
-                {
-                  style: {
-                    fontSize: "9px",
-                    lineHeight: "1.3",
-                    color: "var(--color-text-secondary, #6B7280)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap"
-                  },
-                  title: "Starts numbering from the start number.",
-                  children: "Starts numbering from the start number."
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
-                "button",
-                {
-                  type: "button",
-                  className: "btn-add-step-badges",
-                  disabled: !isStartNumberDefined,
-                  onClick: handleAddStepBadgesMulti,
-                  title: !isStartNumberDefined ? "Please define a start number" : "Add Step Badges",
-                  children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M8 1L9.5 5.5L14 7L9.5 8.5L8 13L6.5 8.5L2 7L6.5 5.5L8 1Z", fill: "currentColor" }),
-                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M12.5 11L13.25 12.5L14.75 13.25L13.25 14L12.5 15.5L11.75 14L10.25 13.25L11.75 12.5L12.5 11Z", fill: "currentColor" })
-                    ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "Add Step Badges" })
-                  ]
-                }
-              )
-            ]
-          }
-        )
-      ] })
-    ] });
+          )
+        ]
+      }
+    );
   }
 
   // src/ui/components/node/NodePanel.tsx
@@ -31570,12 +31807,15 @@
       return true;
     });
     const isMoreDisabled = !activeStylePreset || Boolean(activeStylePreset.isDefault) || DEFAULT_STYLE_PRESET_IDS.has(activeStylePreset.id);
-    const applyFillColor = (0, import_react12.useCallback)((newColorHex) => {
-      const formatted = newColorHex.startsWith("#") ? newColorHex : `#${newColorHex}`;
-      setUIState({ selectedColor: formatted });
-      setLastNodeConfig({ color: formatted });
-      applyCurrentNodeState(void 0, { colorHex: formatted });
-    }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
+    const applyFillColor = (0, import_react12.useCallback)(
+      (newColorHex) => {
+        const formatted = newColorHex.startsWith("#") ? newColorHex : `#${newColorHex}`;
+        setUIState({ selectedColor: formatted });
+        setLastNodeConfig({ color: formatted });
+        applyCurrentNodeState(void 0, { colorHex: formatted });
+      },
+      [setUIState, setLastNodeConfig, applyCurrentNodeState]
+    );
     const applyFillNone = (0, import_react12.useCallback)(() => {
       setUIState({ selectedColor: "None" });
       setLastNodeConfig({ color: "None" });
@@ -31583,7 +31823,9 @@
     }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
     const handleFillChipClick = () => {
       if (isFillNone) {
-        const restoreColor = lastValidFillRef.current && !["none", "transparent"].includes(lastValidFillRef.current.toLowerCase()) ? lastValidFillRef.current : "#FFFFFF";
+        const restoreColor = lastValidFillRef.current && !["none", "transparent"].includes(
+          lastValidFillRef.current.toLowerCase()
+        ) ? lastValidFillRef.current : "#FFFFFF";
         applyFillColor(restoreColor);
       } else {
         applyFillNone();
@@ -31594,19 +31836,36 @@
       setLastNodeConfig({ strokeWeight: 0 });
       applyCurrentNodeState(void 0, { strokeWeight: 0 });
     }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
-    const applyStrokeColor = (0, import_react12.useCallback)((newStrokeHex, explicitWeight) => {
-      const formatted = newStrokeHex.startsWith("#") ? newStrokeHex : `#${newStrokeHex}`;
-      const targetWeight = explicitWeight !== void 0 ? explicitWeight : effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5;
-      setUIState({ selectedStrokeColor: formatted, selectedStrokeWeight: targetWeight });
-      setLastNodeConfig({ strokeColor: formatted, strokeWeight: targetWeight });
-      applyCurrentNodeState(void 0, { strokeColor: formatted, strokeWeight: targetWeight });
-    }, [effectiveStrokeWeight, setUIState, setLastNodeConfig, applyCurrentNodeState]);
-    const applyStrokeWeight = (0, import_react12.useCallback)((newWeight) => {
-      const validWeight = Math.max(0, Math.round(newWeight * 10) / 10);
-      setUIState({ selectedStrokeWeight: validWeight });
-      setLastNodeConfig({ strokeWeight: validWeight });
-      applyCurrentNodeState(void 0, { strokeWeight: validWeight });
-    }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
+    const applyStrokeColor = (0, import_react12.useCallback)(
+      (newStrokeHex, explicitWeight) => {
+        const formatted = newStrokeHex.startsWith("#") ? newStrokeHex : `#${newStrokeHex}`;
+        const targetWeight = explicitWeight !== void 0 ? explicitWeight : effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5;
+        setUIState({
+          selectedStrokeColor: formatted,
+          selectedStrokeWeight: targetWeight
+        });
+        setLastNodeConfig({ strokeColor: formatted, strokeWeight: targetWeight });
+        applyCurrentNodeState(void 0, {
+          strokeColor: formatted,
+          strokeWeight: targetWeight
+        });
+      },
+      [
+        effectiveStrokeWeight,
+        setUIState,
+        setLastNodeConfig,
+        applyCurrentNodeState
+      ]
+    );
+    const applyStrokeWeight = (0, import_react12.useCallback)(
+      (newWeight) => {
+        const validWeight = Math.max(0, Math.round(newWeight * 10) / 10);
+        setUIState({ selectedStrokeWeight: validWeight });
+        setLastNodeConfig({ strokeWeight: validWeight });
+        applyCurrentNodeState(void 0, { strokeWeight: validWeight });
+      },
+      [setUIState, setLastNodeConfig, applyCurrentNodeState]
+    );
     const handleStrokeIconClick = () => {
       if (isStrokeNone) {
         const restoreColor = effectiveStrokeColor && effectiveStrokeColor.toLowerCase() !== "none" ? effectiveStrokeColor : "#000000";
@@ -31652,7 +31911,10 @@
       const val = rawVal.replace(/[^0-9A-Fa-f]/g, "").slice(0, 6).toUpperCase();
       setStrokeInput(val);
       if (val.length === 6) {
-        applyStrokeColor(`#${val}`, effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5);
+        applyStrokeColor(
+          `#${val}`,
+          effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5
+        );
       }
     };
     const handleStrokeCommit = () => {
@@ -31660,7 +31922,10 @@
         applyStrokeNone();
       } else if (strokeInput.length === 6 || strokeInput.length === 3) {
         const fullHex = strokeInput.length === 3 ? strokeInput.split("").map((c) => c + c).join("") : strokeInput;
-        applyStrokeColor(`#${fullHex.toUpperCase()}`, effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5);
+        applyStrokeColor(
+          `#${fullHex.toUpperCase()}`,
+          effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5
+        );
       } else {
         if (isStrokeNone) {
           setStrokeInput("None");
@@ -31681,7 +31946,6 @@
     const handleWeightKeyDown = (e) => {
       if (e.key === "Enter") {
         handleWeightCommit();
-        e.target.blur();
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         const current = parseFloat(weightInput) || 0;
@@ -31752,10 +32016,35 @@
       /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "section-header", children: [
         /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "section-title", children: [
           "Style",
-          isNodeColorMixed && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+          isNodeColorMixed && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+            "span",
+            {
+              style: {
+                fontSize: "11px",
+                color: "var(--figma-color-text-tertiary, #999)",
+                marginLeft: "6px",
+                fontWeight: "normal"
+              },
+              children: "(Mixed)"
+            }
+          )
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "section-actions", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "btn-action-icon", title: "Add style", onClick: () => setActiveModal("add-style"), children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("path", { d: "M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z", fill: "currentColor" }) }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+            "button",
+            {
+              className: "btn-action-icon",
+              title: "Add style",
+              onClick: () => setActiveModal("add-style"),
+              children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+                "path",
+                {
+                  d: "M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z",
+                  fill: "currentColor"
+                }
+              ) })
+            }
+          ),
           /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
             "button",
             {
@@ -31801,7 +32090,7 @@
                   }
                 },
                 onBlur: handleFillCommit,
-                onKeyDown: (e) => e.key === "Enter" && (handleFillCommit(), e.target.blur()),
+                onKeyDown: (e) => e.key === "Enter" && handleFillCommit(),
                 spellCheck: false,
                 autoComplete: "off"
               }
@@ -31850,7 +32139,7 @@
                   }
                 },
                 onBlur: handleStrokeCommit,
-                onKeyDown: (e) => e.key === "Enter" && (handleStrokeCommit(), e.target.blur()),
+                onKeyDown: (e) => e.key === "Enter" && handleStrokeCommit(),
                 spellCheck: false,
                 autoComplete: "off"
               }
@@ -31895,7 +32184,9 @@
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "swatches-grid", id: "style-swatches", children: stylePresets.map((preset) => {
-          const isSelected = Boolean(activeStylePreset && activeStylePreset.id === preset.id);
+          const isSelected = Boolean(
+            activeStylePreset && activeStylePreset.id === preset.id
+          );
           const hasBorder = preset.strokeWeight > 0;
           const isPresetFillNone = preset.fillColor.toLowerCase() === "none" || preset.fillColor.toLowerCase() === "transparent";
           return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
@@ -35133,7 +35424,7 @@
                                 min: 0,
                                 max: 50,
                                 value: strokeWeight,
-                                onChange: (e) => setStrokeWeight(parseInt(e.target.value, 10) || 0),
+                                onChange: (e) => setStrokeWeight(parseFloat(e.target.value) || 0),
                                 onKeyDown: (e) => e.key === "Enter" && handleSave(),
                                 style: {
                                   width: "100%",
@@ -35741,7 +36032,7 @@
                             min: 0,
                             max: 50,
                             value: strokeWeight,
-                            onChange: (e) => handleWeightChange(parseInt(e.target.value, 10) || 0),
+                            onChange: (e) => handleWeightChange(parseFloat(e.target.value) || 0),
                             onKeyDown: (e) => e.key === "Enter" && handleSave(),
                             style: {
                               width: "100%",

@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useApp } from '../../context/AppContext';
-import { useSelectionSummary } from '../../hooks/useSelectionSummary';
-import { DropdownMixedItem } from '../shared/DropdownMixedItem';
-import { COLOR_MIXED_ICON, MixedDashChip } from '../shared/icons';
-import { Switch } from '../shared/Switch';
+import React, { useState, useEffect, useRef } from "react";
+import { useApp } from "../../context/AppContext";
+import { useSelectionSummary } from "../../hooks/useSelectionSummary";
+import { DropdownMixedItem } from "../shared/DropdownMixedItem";
+import { COLOR_MIXED_ICON, MixedDashChip } from "../shared/icons";
+import { Switch } from "../shared/Switch";
 
-type BadgeColorMode = 'White' | 'Black' | 'Style';
+type BadgeColorMode = "White" | "Black" | "Style";
 
 /**
  * ⚠️ [CRITICAL RULE - DO NOT MODIFY ICONS]
@@ -15,53 +15,65 @@ type BadgeColorMode = 'White' | 'Black' | 'Style';
  */
 const BADGE_CORNERS = [
   {
-    pos: 'TOP_LEFT',
-    title: 'Top-Left',
+    pos: "TOP_LEFT",
+    title: "Top-Left",
     svg: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M15.98 7.5H9.93C9.71 6.64 8.93 6 8 6C6.9 6 6 6.9 6 8C6 8.92 6.63 9.69 7.48 9.92V16C7.48 16.28 7.7 16.5 7.98 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM7 8C7 7.45 7.45 7 8 7C8.55 7 9 7.45 9 8C9 8.55 8.55 9 8 9C7.45 9 7 8.55 7 8ZM15.48 15.5H8.48V9.94C9.19 9.76 9.75 9.21 9.93 8.5H15.48V15.5Z" fill="currentColor"/>
+        <path
+          d="M15.98 7.5H9.93C9.71 6.64 8.93 6 8 6C6.9 6 6 6.9 6 8C6 8.92 6.63 9.69 7.48 9.92V16C7.48 16.28 7.7 16.5 7.98 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM7 8C7 7.45 7.45 7 8 7C8.55 7 9 7.45 9 8C9 8.55 8.55 9 8 9C7.45 9 7 8.55 7 8ZM15.48 15.5H8.48V9.94C9.19 9.76 9.75 9.21 9.93 8.5H15.48V15.5Z"
+          fill="currentColor"
+        />
       </svg>
     ),
   },
   {
-    pos: 'TOP_RIGHT',
-    title: 'Top-Right',
+    pos: "TOP_RIGHT",
+    title: "Top-Right",
     svg: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M18 8C18 6.9 17.1 6 16 6C15.07 6 14.29 6.64 14.07 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H16C16.28 16.5 16.5 16.28 16.5 16V9.93C17.36 9.71 18 8.93 18 8ZM8.5 15.5V8.5H14.07C14.25 9.2 14.8 9.75 15.5 9.93V15.5H8.5ZM16 9C15.45 9 15 8.55 15 8C15 7.45 15.45 7 16 7C16.55 7 17 7.45 17 8C17 8.55 16.55 9 16 9Z" fill="currentColor"/>
+        <path
+          d="M18 8C18 6.9 17.1 6 16 6C15.07 6 14.29 6.64 14.07 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H16C16.28 16.5 16.5 16.28 16.5 16V9.93C17.36 9.71 18 8.93 18 8ZM8.5 15.5V8.5H14.07C14.25 9.2 14.8 9.75 15.5 9.93V15.5H8.5ZM16 9C15.45 9 15 8.55 15 8C15 7.45 15.45 7 16 7C16.55 7 17 7.45 17 8C17 8.55 16.55 9 16 9Z"
+          fill="currentColor"
+        />
       </svg>
     ),
   },
   {
-    pos: 'BOTTOM_LEFT',
-    title: 'Bottom-Left',
+    pos: "BOTTOM_LEFT",
+    title: "Bottom-Left",
     svg: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M15.98 7.5H7.98C7.7 7.5 7.48 7.72 7.48 8V14.08C6.63 14.31 6 15.08 6 16C6 17.1 6.9 18 8 18C8.93 18 9.71 17.36 9.93 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM8 17C7.45 17 7 16.55 7 16C7 15.45 7.45 15 8 15C8.55 15 9 15.45 9 16C9 16.55 8.55 17 8 17ZM15.48 15.5H9.93C9.75 14.79 9.19 14.24 8.48 14.06V8.5H15.48V15.5Z" fill="currentColor"/>
+        <path
+          d="M15.98 7.5H7.98C7.7 7.5 7.48 7.72 7.48 8V14.08C6.63 14.31 6 15.08 6 16C6 17.1 6.9 18 8 18C8.93 18 9.71 17.36 9.93 16.5H15.98C16.26 16.5 16.48 16.28 16.48 16V8C16.48 7.72 16.26 7.5 15.98 7.5ZM8 17C7.45 17 7 16.55 7 16C7 15.45 7.45 15 8 15C8.55 15 9 15.45 9 16C9 16.55 8.55 17 8 17ZM15.48 15.5H9.93C9.75 14.79 9.19 14.24 8.48 14.06V8.5H15.48V15.5Z"
+          fill="currentColor"
+        />
       </svg>
     ),
   },
   {
-    pos: 'BOTTOM_RIGHT',
-    title: 'Bottom-Right',
+    pos: "BOTTOM_RIGHT",
+    title: "Bottom-Right",
     svg: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M16.5 14.07V8C16.5 7.72 16.28 7.5 16 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H14.07C14.29 17.36 15.07 18 16 18C17.1 18 18 17.1 18 16C18 15.07 17.36 14.29 16.5 14.07ZM14.07 15.5H8.5V8.5H15.5V14.07C14.8 14.25 14.25 14.8 14.07 15.5ZM16 17C15.45 17 15 16.55 15 16C15 15.45 15.45 15 16 15C16.55 15 17 15.45 17 16C17 16.55 16.55 17 16 17Z" fill="currentColor"/>
+        <path
+          d="M16.5 14.07V8C16.5 7.72 16.28 7.5 16 7.5H8C7.72 7.5 7.5 7.72 7.5 8V16C7.5 16.28 7.72 16.5 8 16.5H14.07C14.29 17.36 15.07 18 16 18C17.1 18 18 17.1 18 16C18 15.07 17.36 14.29 16.5 14.07ZM14.07 15.5H8.5V8.5H15.5V14.07C14.8 14.25 14.25 14.8 14.07 15.5ZM16 17C15.45 17 15 16.55 15 16C15 15.45 15.45 15 16 15C16.55 15 17 15.45 17 16C17 16.55 16.55 17 16 17Z"
+          fill="currentColor"
+        />
       </svg>
     ),
   },
 ] as const;
 
 const BADGE_SHAPES = [
-  { id: 'Square', label: 'Square' },
-  { id: 'Circle', label: 'Circle' },
-  { id: 'RoundBox', label: 'Round Box' },
+  { id: "Square", label: "Square" },
+  { id: "Circle", label: "Circle" },
+  { id: "RoundBox", label: "Round Box" },
 ] as const;
 
 const COLOR_OPTIONS: { id: BadgeColorMode; label: string }[] = [
-  { id: 'Style', label: 'Style' },
-  { id: 'White', label: 'White' },
-  { id: 'Black', label: 'Black' },
+  { id: "Style", label: "Style" },
+  { id: "White", label: "White" },
+  { id: "Black", label: "Black" },
 ];
 
 /**
@@ -96,7 +108,7 @@ export function StepBadgesSection() {
 
   const isSectionOpen = isOpen;
   const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
-  const [stepNumText, setStepNumText] = useState('1');
+  const [stepNumText, setStepNumText] = useState("1");
   const [isMixed, setIsMixed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -105,47 +117,82 @@ export function StepBadgesSection() {
   const isColorModeMixed = isMultiMode && summary.badgeColorMode.isMixed;
 
   // start number가 정의되어 있는지 여부 (빈 값이 아니고, Mixed가 아니며 유효한 숫자)
-  const isStartNumberDefined = !isMixed && stepNumText.trim() !== '' && !isNaN(parseInt(stepNumText, 10));
-  const selectedBadgeCorner = isCornerMixed ? undefined : (summary.isMultiFlowNode && summary.badgeCorner.value ? summary.badgeCorner.value : (uiState.selectedBadgeCorner || 'TOP_LEFT'));
-  const selectedBadgeShape = isShapeMixed ? undefined : (summary.isMultiFlowNode && summary.badgeShape.value ? summary.badgeShape.value : (uiState.selectedBadgeShape || 'Square'));
-  const selectedBadgeColorMode: BadgeColorMode | undefined = isColorModeMixed ? undefined : (summary.isMultiFlowNode && summary.badgeColorMode.value ? (summary.badgeColorMode.value as BadgeColorMode) : (uiState.selectedBadgeColorMode || 'Style'));
+  const isStartNumberDefined =
+    !isMixed && stepNumText.trim() !== "" && !isNaN(parseInt(stepNumText, 10));
+  const selectedBadgeCorner = isCornerMixed
+    ? undefined
+    : summary.isMultiFlowNode && summary.badgeCorner.value
+      ? summary.badgeCorner.value
+      : uiState.selectedBadgeCorner || "TOP_LEFT";
+  const selectedBadgeShape = isShapeMixed
+    ? undefined
+    : summary.isMultiFlowNode && summary.badgeShape.value
+      ? summary.badgeShape.value
+      : uiState.selectedBadgeShape || "Square";
+  const selectedBadgeColorMode: BadgeColorMode | undefined = isColorModeMixed
+    ? undefined
+    : summary.isMultiFlowNode && summary.badgeColorMode.value
+      ? (summary.badgeColorMode.value as BadgeColorMode)
+      : uiState.selectedBadgeColorMode || "Style";
 
-function isHexHighSaturation(hex: string): boolean {
-  const clean = hex.replace('#', '');
-  if (clean.length !== 6 && clean.length !== 3) return false;
-  const num = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16);
-  const r = ((num >> 16) & 255) / 255;
-  const g = ((num >> 8) & 255) / 255;
-  const b = (num & 255) / 255;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const delta = max - min;
-  if (delta < 0.15) return false;
-  const l = (max + min) / 2;
-  const s = l > 0 && l < 1 ? delta / (1 - Math.abs(2 * l - 1)) : 0;
-  return s >= 0.25;
-}
+  function isHexHighSaturation(hex: string): boolean {
+    const clean = hex.replace("#", "");
+    if (clean.length !== 6 && clean.length !== 3) return false;
+    const num = parseInt(
+      clean.length === 3
+        ? clean
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : clean,
+      16,
+    );
+    const r = ((num >> 16) & 255) / 255;
+    const g = ((num >> 8) & 255) / 255;
+    const b = (num & 255) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+    if (delta < 0.15) return false;
+    const l = (max + min) / 2;
+    const s = l > 0 && l < 1 ? delta / (1 - Math.abs(2 * l - 1)) : 0;
+    return s >= 0.25;
+  }
 
-function isHexDark(hex: string): boolean {
-  const clean = hex.replace('#', '');
-  if (clean.length !== 6 && clean.length !== 3) return false;
-  const num = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16);
-  const r = ((num >> 16) & 255) / 255;
-  const g = ((num >> 8) & 255) / 255;
-  const b = (num & 255) / 255;
-  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-  return lum < 0.6;
-}
+  function isHexDark(hex: string): boolean {
+    const clean = hex.replace("#", "");
+    if (clean.length !== 6 && clean.length !== 3) return false;
+    const num = parseInt(
+      clean.length === 3
+        ? clean
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : clean,
+      16,
+    );
+    const r = ((num >> 16) & 255) / 255;
+    const g = ((num >> 8) & 255) / 255;
+    const b = (num & 255) / 255;
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    return lum < 0.6;
+  }
 
   // 현재 노드의 배경색 및 보더색 추출 (Style / White 모드 스와치 표시용)
   const firstNode = selectedNodes[0];
-  const nodeBgColorHex = firstNode?.fillColorHex || '#E11D48';
-  const hasNodeStroke = (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
+  const nodeBgColorHex = firstNode?.fillColorHex || "#E11D48";
+  const hasNodeStroke =
+    (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
 
   // 선택된 노드의 상태 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   useEffect(() => {
     const isUserLocked = Date.now() - userActionLockRef.current < 600;
-    const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : (selectedNodes.length > 1 ? 'MULTI' : null);
+    const currentNodeId =
+      selectedNodes.length === 1
+        ? selectedNodes[0]?.id
+        : selectedNodes.length > 1
+          ? "MULTI"
+          : null;
     const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
     prevSelectedNodeIdRef.current = currentNodeId;
 
@@ -159,7 +206,7 @@ function isHexDark(hex: string): boolean {
             setStepNumText(String(node.stepNumber));
           } else {
             setIsOpen(false);
-            setStepNumText('1');
+            setStepNumText("1");
           }
           if (node.badgeCorner) {
             setUIState({ selectedBadgeCorner: node.badgeCorner });
@@ -174,14 +221,17 @@ function isHexDark(hex: string): boolean {
           // 복수 선택
           const hasBadges = summary.hasStepBadge.hasValue;
           setIsOpen(hasBadges);
-          const stepNums = selectedNodes.map(n => n.stepNumber).filter(n => n !== undefined);
-          const allSame = stepNums.length > 0 && stepNums.every(v => v === stepNums[0]);
+          const stepNums = selectedNodes
+            .map((n) => n.stepNumber)
+            .filter((n) => n !== undefined);
+          const allSame =
+            stepNums.length > 0 && stepNums.every((v) => v === stepNums[0]);
           if (allSame) {
             setIsMixed(false);
             setStepNumText(String(stepNums[0]));
           } else {
             setIsMixed(true);
-            setStepNumText('');
+            setStepNumText("");
           }
 
           if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
@@ -191,16 +241,21 @@ function isHexDark(hex: string): boolean {
             setUIState({ selectedBadgeShape: summary.badgeShape.value });
           }
           if (!summary.badgeColorMode.isMixed && summary.badgeColorMode.value) {
-            setUIState({ selectedBadgeColorMode: summary.badgeColorMode.value as BadgeColorMode });
+            setUIState({
+              selectedBadgeColorMode: summary.badgeColorMode
+                .value as BadgeColorMode,
+            });
           }
         }
       } else {
         // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원 및 번호 +1 증가 적용
         setIsOpen(Boolean(lastNodeConfig.stepBadgesOn));
         setIsMixed(false);
-        const nextStepNum = (typeof lastNodeConfig.stepNumber === 'number' && lastNodeConfig.stepNumber > 0)
-          ? lastNodeConfig.stepNumber + 1
-          : 1;
+        const nextStepNum =
+          typeof lastNodeConfig.stepNumber === "number" &&
+          lastNodeConfig.stepNumber > 0
+            ? lastNodeConfig.stepNumber + 1
+            : 1;
         setStepNumText(String(nextStepNum));
         if (lastNodeConfig.badgeCorner) {
           setUIState({ selectedBadgeCorner: lastNodeConfig.badgeCorner });
@@ -213,20 +268,38 @@ function isHexDark(hex: string): boolean {
         }
       }
     }
-  }, [selectedNodes, summary.badgeCorner.isMixed, summary.badgeCorner.value, summary.badgeShape.isMixed, summary.badgeShape.value, summary.badgeColorMode.isMixed, summary.badgeColorMode.value, summary.hasStepBadge.hasValue, lastNodeConfig.stepBadgesOn, lastNodeConfig.stepNumber, lastNodeConfig.badgeCorner, lastNodeConfig.badgeShape, lastNodeConfig.badgeColorMode, setUIState]);
+  }, [
+    selectedNodes,
+    summary.badgeCorner.isMixed,
+    summary.badgeCorner.value,
+    summary.badgeShape.isMixed,
+    summary.badgeShape.value,
+    summary.badgeColorMode.isMixed,
+    summary.badgeColorMode.value,
+    summary.hasStepBadge.hasValue,
+    lastNodeConfig.stepBadgesOn,
+    lastNodeConfig.stepNumber,
+    lastNodeConfig.badgeCorner,
+    lastNodeConfig.badgeShape,
+    lastNodeConfig.badgeColorMode,
+    setUIState,
+  ]);
 
   // 드롭다운 외부 클릭 닫기
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setColorDropdownOpen(false);
       }
     }
     if (colorDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [colorDropdownOpen]);
 
@@ -240,7 +313,12 @@ function isHexDark(hex: string): boolean {
     setIsOpen(checked);
     setLastNodeConfig({ stepBadgesOn: checked });
     if (checked) {
-      applyStepBadges(getNumberValue(), selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
+      applyStepBadges(
+        getNumberValue(),
+        selectedBadgeCorner,
+        selectedBadgeShape,
+        selectedBadgeColorMode,
+      );
     } else {
       removeStepBadgesFromNodes();
     }
@@ -253,7 +331,12 @@ function isHexDark(hex: string): boolean {
     setUIState({ selectedBadgeCorner: pos });
     setLastNodeConfig({ badgeCorner: pos });
     if (isSectionOpen && !isMultiMode) {
-      applyStepBadges(getNumberValue(), pos, selectedBadgeShape, selectedBadgeColorMode);
+      applyStepBadges(
+        getNumberValue(),
+        pos,
+        selectedBadgeShape,
+        selectedBadgeColorMode,
+      );
     }
   }
 
@@ -261,7 +344,12 @@ function isHexDark(hex: string): boolean {
     setUIState({ selectedBadgeShape: shape });
     setLastNodeConfig({ badgeShape: shape });
     if (isSectionOpen && !isMultiMode) {
-      applyStepBadges(getNumberValue(), selectedBadgeCorner, shape, selectedBadgeColorMode);
+      applyStepBadges(
+        getNumberValue(),
+        selectedBadgeCorner,
+        shape,
+        selectedBadgeColorMode,
+      );
     }
   }
 
@@ -270,7 +358,12 @@ function isHexDark(hex: string): boolean {
     setLastNodeConfig({ badgeColorMode: mode });
     setColorDropdownOpen(false);
     if (isSectionOpen && !isMultiMode) {
-      applyStepBadges(getNumberValue(), selectedBadgeCorner, selectedBadgeShape, mode);
+      applyStepBadges(
+        getNumberValue(),
+        selectedBadgeCorner,
+        selectedBadgeShape,
+        mode,
+      );
     }
   }
 
@@ -280,19 +373,31 @@ function isHexDark(hex: string): boolean {
     setStepNumText(String(val));
     setLastNodeConfig({ stepNumber: val });
     if (isSectionOpen && !isMultiMode) {
-      applyStepBadges(val, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
+      applyStepBadges(
+        val,
+        selectedBadgeCorner,
+        selectedBadgeShape,
+        selectedBadgeColorMode,
+      );
     }
   }
 
   // 스텝 배지 기본값(1) 리셋 핸들러
   function handleResetNumber() {
     setIsMixed(false);
-    setStepNumText('1');
+    setStepNumText("1");
     setLastNodeConfig({ stepNumber: 1 });
     if (isSectionOpen && !isMultiMode) {
-      applyStepBadges(1, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
+      applyStepBadges(
+        1,
+        selectedBadgeCorner,
+        selectedBadgeShape,
+        selectedBadgeColorMode,
+      );
     }
-    const input = document.getElementById('input-step-number') as HTMLInputElement | null;
+    const input = document.getElementById(
+      "input-step-number",
+    ) as HTMLInputElement | null;
     if (input) {
       input.focus();
       input.select();
@@ -302,12 +407,17 @@ function isHexDark(hex: string): boolean {
   // 복수 선택 시 하단 보라색 버튼 클릭: 순차 부여
   function handleAddStepBadgesMulti() {
     const start = getNumberValue();
-    applyStepBadges(start, selectedBadgeCorner, selectedBadgeShape, selectedBadgeColorMode);
+    applyStepBadges(
+      start,
+      selectedBadgeCorner,
+      selectedBadgeShape,
+      selectedBadgeColorMode,
+    );
   }
 
   // 컬러 스와치 렌더러 (피그마 UI3 공식 표준 컬러칩 규격: 14x14, R:2px)
   function renderColorSwatch(mode: BadgeColorMode, size = 14) {
-    if (mode === 'White') {
+    if (mode === "White") {
       return (
         <span
           className="figma-color-chip"
@@ -315,17 +425,17 @@ function isHexDark(hex: string): boolean {
             width: size,
             height: size,
             borderRadius: 2,
-            backgroundColor: '#FFFFFF',
-            border: 'none',
-            boxShadow: 'inset 0 0 0 1px var(--color-chip-border)',
-            display: 'inline-block',
+            backgroundColor: "#FFFFFF",
+            border: "none",
+            boxShadow: "inset 0 0 0 1px var(--color-chip-border)",
+            display: "inline-block",
             flexShrink: 0,
-            boxSizing: 'border-box',
+            boxSizing: "border-box",
           }}
         />
       );
     }
-    if (mode === 'Black') {
+    if (mode === "Black") {
       return (
         <span
           className="figma-color-chip"
@@ -333,12 +443,12 @@ function isHexDark(hex: string): boolean {
             width: size,
             height: size,
             borderRadius: 2,
-            backgroundColor: '#18181B',
-            border: 'none',
-            boxShadow: 'inset 0 0 0 1px var(--color-chip-border)',
-            display: 'inline-block',
+            backgroundColor: "#18181B",
+            border: "none",
+            boxShadow: "inset 0 0 0 1px var(--color-chip-border)",
+            display: "inline-block",
             flexShrink: 0,
-            boxSizing: 'border-box',
+            boxSizing: "border-box",
           }}
         />
       );
@@ -352,18 +462,25 @@ function isHexDark(hex: string): boolean {
           height: size,
           borderRadius: 2,
           backgroundColor: nodeBgColorHex,
-          border: hasNodeStroke ? `${Math.min(firstNode?.strokeWeight || 1, 2)}px solid ${firstNode?.strokeColorHex}` : 'none',
-          boxShadow: hasNodeStroke ? undefined : 'inset 0 0 0 1px var(--color-chip-border)',
-          display: 'inline-block',
+          border: hasNodeStroke
+            ? `${Math.min(firstNode?.strokeWeight || 1, 2)}px solid ${firstNode?.strokeColorHex}`
+            : "none",
+          boxShadow: hasNodeStroke
+            ? undefined
+            : "inset 0 0 0 1px var(--color-chip-border)",
+          display: "inline-block",
           flexShrink: 0,
-          boxSizing: 'border-box',
+          boxSizing: "border-box",
         }}
       />
     );
   }
 
   return (
-    <div className="section-block step-badges-section" style={{ paddingBottom: isSectionOpen ? '12px' : '0px' }}>
+    <div
+      className="section-block step-badges-section"
+      style={{ paddingBottom: isSectionOpen ? "12px" : "0px" }}
+    >
       {/* 상단 헤더: Step Badges + 보라색 토글 스위치 */}
       <div className="section-header toggle-row">
         <span className="section-title">Step Badges</span>
@@ -376,32 +493,48 @@ function isHexDark(hex: string): boolean {
       </div>
 
       {isSectionOpen && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            marginTop: "10px",
+          }}
+        >
           {/* Row 1: [#] [숫자 or Mixed] (w: 100) + 코너 위치 4버튼 (w: 220) */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
             {/* 좌측 Numeric Input */}
             <div
               style={{
-                width: '100px',
-                height: '28px',
-                backgroundColor: '#F3F4F6',
-                borderRadius: '6px',
-                padding: '0 6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
+                width: "100px",
+                height: "28px",
+                backgroundColor: "#F3F4F6",
+                borderRadius: "6px",
+                padding: "0 6px",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
                 flexShrink: 0,
-                boxSizing: 'border-box',
+                boxSizing: "border-box",
               }}
             >
               <svg
                 id="step-number-icon"
-                data-tooltip={isMultiMode ? 'Start Number (Reset: 1)' : 'Number (Reset: 1)'}
+                data-tooltip={
+                  isMultiMode ? "Start Number (Reset: 1)" : "Number (Reset: 1)"
+                }
                 width="24"
                 height="24"
                 viewBox="0 0 24 24"
                 fill="none"
-                style={{ color: '#111827', flexShrink: 0, cursor: 'pointer' }}
+                style={{ color: "#111827", flexShrink: 0, cursor: "pointer" }}
                 onClick={handleResetNumber}
               >
                 <path
@@ -412,27 +545,28 @@ function isHexDark(hex: string): boolean {
               <input
                 type="text"
                 id="input-step-number"
-                value={isMixed ? '' : stepNumText}
-                placeholder={isMixed ? 'Mixed' : '1'}
-                onChange={e => {
+                value={isMixed ? "" : stepNumText}
+                placeholder={isMixed ? "Mixed" : "1"}
+                onChange={(e) => {
                   setIsMixed(false);
-                  setStepNumText(e.target.value.replace(/[^0-9]/g, ''));
+                  setStepNumText(e.target.value.replace(/[^0-9]/g, ""));
                 }}
                 onBlur={handleNumberBlurOrEnter}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
                     handleNumberBlurOrEnter();
-                    (e.target as HTMLInputElement).blur();
                   }
                 }}
                 style={{
-                  width: '100%',
-                  border: 'none',
-                  background: 'transparent',
-                  outline: 'none',
-                  fontSize: '11px',
+                  width: "100%",
+                  border: "none",
+                  background: "transparent",
+                  outline: "none",
+                  fontSize: "11px",
                   fontWeight: 400,
-                  color: isMixed ? 'var(--color-text-primary, #000000)' : '#111827',
+                  color: isMixed
+                    ? "var(--color-text-primary, #000000)"
+                    : "#111827",
                   padding: 0,
                 }}
               />
@@ -440,7 +574,7 @@ function isHexDark(hex: string): boolean {
 
             {/* 우측 Corner Position Controls (4버튼) */}
             <div className="corner-position-group">
-              {BADGE_CORNERS.map(c => {
+              {BADGE_CORNERS.map((c) => {
                 const active = selectedBadgeCorner === c.pos;
                 return (
                   <button
@@ -448,7 +582,7 @@ function isHexDark(hex: string): boolean {
                     type="button"
                     title={c.title}
                     onClick={() => handleCornerSelect(c.pos)}
-                    className={`corner-btn${active ? ' active' : ''}`}
+                    className={`corner-btn${active ? " active" : ""}`}
                   >
                     {c.svg}
                   </button>
@@ -458,24 +592,35 @@ function isHexDark(hex: string): boolean {
           </div>
 
           {/* Row 2: 컬러 드롭다운 (w: 100) + 셰이프 선택 (Square, Circle, Round Box) */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
             {/* 좌측 Color Dropdown (피그마 기본 표준 드롭다운 컴포넌트) */}
             <div
               ref={dropdownRef}
               className="figma-dropdown-wrapper"
-              style={{ width: '100px', flexShrink: 0 }}
+              style={{ width: "100px", flexShrink: 0 }}
             >
               <button
                 type="button"
-                className={`figma-dropdown-btn${colorDropdownOpen ? ' active' : ''}`}
+                className={`figma-dropdown-btn${colorDropdownOpen ? " active" : ""}`}
                 onClick={() => setColorDropdownOpen(!colorDropdownOpen)}
               >
                 <div className="figma-dropdown-btn-content">
                   <span className="figma-dropdown-current-icon">
-                    {selectedBadgeColorMode ? renderColorSwatch(selectedBadgeColorMode, 14) : <MixedDashChip size={14} />}
+                    {selectedBadgeColorMode ? (
+                      renderColorSwatch(selectedBadgeColorMode, 14)
+                    ) : (
+                      <MixedDashChip size={14} />
+                    )}
                   </span>
                   <span className="figma-dropdown-current-text">
-                    {selectedBadgeColorMode || 'Mixed'}
+                    {selectedBadgeColorMode || "Mixed"}
                   </span>
                 </div>
                 <svg
@@ -485,8 +630,8 @@ function isHexDark(hex: string): boolean {
                   viewBox="0 0 16 16"
                   fill="none"
                   style={{
-                    transform: colorDropdownOpen ? 'rotate(180deg)' : 'none',
-                    transition: 'transform 0.15s ease',
+                    transform: colorDropdownOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.15s ease",
                   }}
                 >
                   <path
@@ -501,13 +646,13 @@ function isHexDark(hex: string): boolean {
                 <div
                   className="figma-dropdown-menu active"
                   style={{
-                    position: 'absolute',
-                    bottom: 'calc(100% + 4px)',
-                    top: 'auto',
+                    position: "absolute",
+                    bottom: "calc(100% + 4px)",
+                    top: "auto",
                     left: 0,
                     right: 0,
-                    width: '100%',
-                    display: 'flex',
+                    width: "100%",
+                    display: "flex",
                     zIndex: 1050,
                   }}
                 >
@@ -519,19 +664,24 @@ function isHexDark(hex: string): boolean {
                       onClick={() => setColorDropdownOpen(false)}
                     />
                   )}
-                  {COLOR_OPTIONS.map(opt => {
+                  {COLOR_OPTIONS.map((opt) => {
                     const active = selectedBadgeColorMode === opt.id;
                     return (
                       <div
                         key={opt.id}
-                        className={`figma-dropdown-item${active ? ' selected' : ''}`}
-                        style={{ width: '100%', cursor: 'pointer' }}
+                        className={`figma-dropdown-item${active ? " selected" : ""}`}
+                        style={{ width: "100%", cursor: "pointer" }}
                         onClick={() => handleColorSelect(opt.id)}
                       >
                         {/* 선두 체크 슬롯 (선택된 항목일 때 체크 아이콘 16x16) */}
                         <span className="figma-dropdown-check-slot">
                           {active && (
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 16 16"
+                              fill="none"
+                            >
                               <path
                                 d="M11.0839 4.22264C11.2371 3.99289 11.5475 3.93082 11.7773 4.08396C12.007 4.23714 12.0691 4.54756 11.916 4.77732L7.91596 10.7773C7.83287 10.902 7.69784 10.9833 7.54877 10.998C7.39988 11.0126 7.25223 10.9593 7.14643 10.8535L4.14643 7.85349C3.9512 7.65823 3.95118 7.34171 4.14643 7.14646C4.34168 6.95122 4.6582 6.95124 4.85346 7.14646L7.42182 9.71482L11.0839 4.22264Z"
                                 fill="currentColor"
@@ -544,7 +694,13 @@ function isHexDark(hex: string): boolean {
                           {renderColorSwatch(opt.id, 14)}
                         </span>
                         {/* 라벨 */}
-                        <span className="figma-dropdown-label" style={{ fontSize: '11px', fontWeight: active ? 600 : 500 }}>
+                        <span
+                          className="figma-dropdown-label"
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: active ? 600 : 500,
+                          }}
+                        >
                           {opt.label}
                         </span>
                       </div>
@@ -556,14 +712,14 @@ function isHexDark(hex: string): boolean {
 
             {/* 우측 Shape Segmented Controls (Square, Circle, Round Box) */}
             <div className="shape-segment-group">
-              {BADGE_SHAPES.map(s => {
+              {BADGE_SHAPES.map((s) => {
                 const active = selectedBadgeShape === s.id;
                 return (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => handleShapeSelect(s.id)}
-                    className={`shape-btn${active ? ' active' : ''}`}
+                    className={`shape-btn${active ? " active" : ""}`}
                   >
                     {s.label}
                   </button>
@@ -576,22 +732,22 @@ function isHexDark(hex: string): boolean {
           {isMultiMode && (
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                marginTop: '4px',
-                gap: '8px',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                width: "100%",
+                marginTop: "4px",
+                gap: "8px",
               }}
             >
               <span
                 style={{
-                  fontSize: '9px',
-                  lineHeight: '1.3',
-                  color: 'var(--color-text-secondary, #6B7280)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  fontSize: "9px",
+                  lineHeight: "1.3",
+                  color: "var(--color-text-secondary, #6B7280)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
                 title="Starts numbering from the start number."
               >
@@ -602,12 +758,28 @@ function isHexDark(hex: string): boolean {
                 className="btn-add-step-badges"
                 disabled={!isStartNumberDefined}
                 onClick={handleAddStepBadgesMulti}
-                title={!isStartNumberDefined ? 'Please define a start number' : 'Add Step Badges'}
+                title={
+                  !isStartNumberDefined
+                    ? "Please define a start number"
+                    : "Add Step Badges"
+                }
               >
                 {/* 반짝이/별 아이콘 */}
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 1L9.5 5.5L14 7L9.5 8.5L8 13L6.5 8.5L2 7L6.5 5.5L8 1Z" fill="currentColor" />
-                  <path d="M12.5 11L13.25 12.5L14.75 13.25L13.25 14L12.5 15.5L11.75 14L10.25 13.25L11.75 12.5L12.5 11Z" fill="currentColor" />
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M8 1L9.5 5.5L14 7L9.5 8.5L8 13L6.5 8.5L2 7L6.5 5.5L8 1Z"
+                    fill="currentColor"
+                  />
+                  <path
+                    d="M12.5 11L13.25 12.5L14.75 13.25L13.25 14L12.5 15.5L11.75 14L10.25 13.25L11.75 12.5L12.5 11Z"
+                    fill="currentColor"
+                  />
                 </svg>
                 <span>Add Step Badges</span>
               </button>

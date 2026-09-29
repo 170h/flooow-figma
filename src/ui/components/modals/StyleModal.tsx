@@ -404,7 +404,7 @@ export function StyleModal({
                     max={50}
                     value={strokeWeight}
                     onChange={(e) =>
-                      setStrokeWeight(parseInt(e.target.value, 10) || 0)
+                      setStrokeWeight(parseFloat(e.target.value) || 0)
                     }
                     onKeyDown={(e) => e.key === "Enter" && handleSave()}
                     style={{

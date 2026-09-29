@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useApp, StylePreset } from '../../context/AppContext';
-import { useSelectionSummary } from '../../hooks/useSelectionSummary';
-import { StrokeColorIcon, FillColorIcon } from '../shared/icons';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useApp, StylePreset } from "../../context/AppContext";
+import { useSelectionSummary } from "../../hooks/useSelectionSummary";
+import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
 
 /**
  * 기본 스타일 프리셋 ID 목록 (첫 번째: 흰색 + 1.5px 블랙 보더, 두 번째: 블랙 + 0px 보더)
  * 기본 스타일은 수정 및 삭제가 불가능하여 More(···) 버튼이 비활성화됩니다.
  */
-const DEFAULT_STYLE_PRESET_IDS = new Set(['style-white', 'style-black']);
+const DEFAULT_STYLE_PRESET_IDS = new Set(["style-white", "style-black"]);
 
 /**
  * 피그마 UI3 공식 24×24px 컬러 팔레트 SVG 아이콘
@@ -64,91 +64,121 @@ export function StyleSection() {
 
   // Mixed 상태 판별
   const isFillMixed = summary.isMultiFlowNode ? summary.color.isMixed : false;
-  const isStrokeMixed = summary.isMultiFlowNode ? summary.strokeColor.isMixed : false;
-  const isWeightMixed = summary.isMultiFlowNode ? summary.strokeWeight.isMixed : false;
+  const isStrokeMixed = summary.isMultiFlowNode
+    ? summary.strokeColor.isMixed
+    : false;
+  const isWeightMixed = summary.isMultiFlowNode
+    ? summary.strokeWeight.isMixed
+    : false;
 
   // 유효한 현재 색상 및 두께 계산
-  const effectiveFillColor = (summary.isMultiFlowNode
-    ? summary.color.value
-    : (summary.isSingleFlowNode ? summary.color.value : uiState.selectedColor)
-  ) || uiState.selectedColor || '#FFFFFF';
+  const effectiveFillColor =
+    (summary.isMultiFlowNode
+      ? summary.color.value
+      : summary.isSingleFlowNode
+        ? summary.color.value
+        : uiState.selectedColor) ||
+    uiState.selectedColor ||
+    "#FFFFFF";
 
-  const effectiveStrokeColor = (summary.isMultiFlowNode
-    ? summary.strokeColor.value
-    : (summary.isSingleFlowNode ? summary.strokeColor.value : uiState.selectedStrokeColor)
-  ) || uiState.selectedStrokeColor || '#000000';
+  const effectiveStrokeColor =
+    (summary.isMultiFlowNode
+      ? summary.strokeColor.value
+      : summary.isSingleFlowNode
+        ? summary.strokeColor.value
+        : uiState.selectedStrokeColor) ||
+    uiState.selectedStrokeColor ||
+    "#000000";
 
   const rawWeight = summary.isMultiFlowNode
     ? summary.strokeWeight.value
-    : (summary.isSingleFlowNode ? summary.strokeWeight.value : uiState.selectedStrokeWeight);
-  const effectiveStrokeWeight = typeof rawWeight === 'number'
-    ? rawWeight
-    : (typeof uiState.selectedStrokeWeight === 'number' ? uiState.selectedStrokeWeight : 1.5);
+    : summary.isSingleFlowNode
+      ? summary.strokeWeight.value
+      : uiState.selectedStrokeWeight;
+  const effectiveStrokeWeight =
+    typeof rawWeight === "number"
+      ? rawWeight
+      : typeof uiState.selectedStrokeWeight === "number"
+        ? uiState.selectedStrokeWeight
+        : 1.5;
 
   // 보더 미적용(None) 상태 판별 (두께가 0이거나 색상이 비어있는 경우)
-  const isStrokeNone = !isStrokeMixed && (effectiveStrokeWeight === 0 || !effectiveStrokeColor || effectiveStrokeColor.toLowerCase() === 'none');
+  const isStrokeNone =
+    !isStrokeMixed &&
+    (effectiveStrokeWeight === 0 ||
+      !effectiveStrokeColor ||
+      effectiveStrokeColor.toLowerCase() === "none");
 
   // 배경 미적용(None/투명) 상태 판별
-  const isFillNone = !isFillMixed && (effectiveFillColor.toLowerCase() === 'none' || effectiveFillColor.toLowerCase() === 'transparent');
+  const isFillNone =
+    !isFillMixed &&
+    (effectiveFillColor.toLowerCase() === "none" ||
+      effectiveFillColor.toLowerCase() === "transparent");
 
   // 직전 유효 컬러 기억 (투명 해제 시 복원용)
-  const lastValidFillRef = useRef<string>('#FFFFFF');
+  const lastValidFillRef = useRef<string>("#FFFFFF");
   useEffect(() => {
-    if (effectiveFillColor && !['none', 'transparent'].includes(effectiveFillColor.toLowerCase())) {
+    if (
+      effectiveFillColor &&
+      !["none", "transparent"].includes(effectiveFillColor.toLowerCase())
+    ) {
       lastValidFillRef.current = effectiveFillColor;
     }
   }, [effectiveFillColor]);
 
   // 로컬 텍스트 입력 상태
-  const [fillInput, setFillInput] = useState('');
-  const [strokeInput, setStrokeInput] = useState('');
-  const [weightInput, setWeightInput] = useState('');
+  const [fillInput, setFillInput] = useState("");
+  const [strokeInput, setStrokeInput] = useState("");
+  const [weightInput, setWeightInput] = useState("");
 
   // 외부 선택 변경 또는 상태 변경 시 로컬 인풋 동기화
   useEffect(() => {
     if (isFillMixed) {
-      setFillInput('');
+      setFillInput("");
     } else if (isFillNone) {
-      setFillInput('None');
+      setFillInput("None");
     } else {
-      setFillInput(effectiveFillColor.replace('#', '').toUpperCase());
+      setFillInput(effectiveFillColor.replace("#", "").toUpperCase());
     }
   }, [isFillMixed, isFillNone, effectiveFillColor]);
 
   useEffect(() => {
     if (isStrokeMixed) {
-      setStrokeInput('');
+      setStrokeInput("");
     } else if (isStrokeNone) {
-      setStrokeInput('None');
+      setStrokeInput("None");
     } else {
-      setStrokeInput(effectiveStrokeColor.replace('#', '').toUpperCase());
+      setStrokeInput(effectiveStrokeColor.replace("#", "").toUpperCase());
     }
   }, [isStrokeMixed, isStrokeNone, effectiveStrokeColor]);
 
   useEffect(() => {
     if (isWeightMixed) {
-      setWeightInput('');
+      setWeightInput("");
     } else {
       setWeightInput(String(effectiveStrokeWeight));
     }
   }, [isWeightMixed, effectiveStrokeWeight]);
 
   // 다중 노드 선택 시 전체 스타일 Mixed 여부 판별
-  const isNodeColorMixed = summary.isMultiFlowNode && (
-    summary.color.isMixed ||
-    summary.strokeWeight.isMixed ||
-    summary.strokeColor.isMixed
-  );
+  const isNodeColorMixed =
+    summary.isMultiFlowNode &&
+    (summary.color.isMixed ||
+      summary.strokeWeight.isMixed ||
+      summary.strokeColor.isMixed);
 
   // 현재 선택된 컬러 및 보더와 일치하는 프리셋 탐색
   const activeStylePreset = isNodeColorMixed
     ? undefined
     : stylePresets.find((p) => {
-        const matchFill = p.fillColor.toLowerCase() === effectiveFillColor.toLowerCase();
+        const matchFill =
+          p.fillColor.toLowerCase() === effectiveFillColor.toLowerCase();
         if (!matchFill) return false;
         if (p.strokeWeight !== effectiveStrokeWeight) return false;
         if (p.strokeWeight > 0) {
-          if (p.strokeColor.toLowerCase() !== effectiveStrokeColor.toLowerCase()) {
+          if (
+            p.strokeColor.toLowerCase() !== effectiveStrokeColor.toLowerCase()
+          ) {
             return false;
           }
         }
@@ -156,31 +186,41 @@ export function StyleSection() {
       });
 
   // 기본 스타일이거나 일치하는 프리셋이 없으면 수정/삭제 불가 (모어 버튼 비활성화)
-  const isMoreDisabled = !activeStylePreset ||
+  const isMoreDisabled =
+    !activeStylePreset ||
     Boolean(activeStylePreset.isDefault) ||
     DEFAULT_STYLE_PRESET_IDS.has(activeStylePreset.id);
 
   // ---- 색상 및 두께 변경 액션 ----
 
-  const applyFillColor = useCallback((newColorHex: string) => {
-    const formatted = newColorHex.startsWith('#') ? newColorHex : `#${newColorHex}`;
-    setUIState({ selectedColor: formatted });
-    setLastNodeConfig({ color: formatted });
-    applyCurrentNodeState(undefined, { colorHex: formatted });
-  }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
+  const applyFillColor = useCallback(
+    (newColorHex: string) => {
+      const formatted = newColorHex.startsWith("#")
+        ? newColorHex
+        : `#${newColorHex}`;
+      setUIState({ selectedColor: formatted });
+      setLastNodeConfig({ color: formatted });
+      applyCurrentNodeState(undefined, { colorHex: formatted });
+    },
+    [setUIState, setLastNodeConfig, applyCurrentNodeState],
+  );
 
   const applyFillNone = useCallback(() => {
-    setUIState({ selectedColor: 'None' });
-    setLastNodeConfig({ color: 'None' });
-    applyCurrentNodeState(undefined, { colorHex: 'None' });
+    setUIState({ selectedColor: "None" });
+    setLastNodeConfig({ color: "None" });
+    applyCurrentNodeState(undefined, { colorHex: "None" });
   }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
 
   // Fill 칩 클릭 핸들러 (클릭 시 배경 끄기/None 토글)
   const handleFillChipClick = () => {
     if (isFillNone) {
-      const restoreColor = (lastValidFillRef.current && !['none', 'transparent'].includes(lastValidFillRef.current.toLowerCase()))
-        ? lastValidFillRef.current
-        : '#FFFFFF';
+      const restoreColor =
+        lastValidFillRef.current &&
+        !["none", "transparent"].includes(
+          lastValidFillRef.current.toLowerCase(),
+        )
+          ? lastValidFillRef.current
+          : "#FFFFFF";
       applyFillColor(restoreColor);
     } else {
       applyFillNone();
@@ -193,29 +233,52 @@ export function StyleSection() {
     applyCurrentNodeState(undefined, { strokeWeight: 0 });
   }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
 
-  const applyStrokeColor = useCallback((newStrokeHex: string, explicitWeight?: number) => {
-    const formatted = newStrokeHex.startsWith('#') ? newStrokeHex : `#${newStrokeHex}`;
-    const targetWeight = explicitWeight !== undefined
-      ? explicitWeight
-      : (effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5);
-    setUIState({ selectedStrokeColor: formatted, selectedStrokeWeight: targetWeight });
-    setLastNodeConfig({ strokeColor: formatted, strokeWeight: targetWeight });
-    applyCurrentNodeState(undefined, { strokeColor: formatted, strokeWeight: targetWeight });
-  }, [effectiveStrokeWeight, setUIState, setLastNodeConfig, applyCurrentNodeState]);
+  const applyStrokeColor = useCallback(
+    (newStrokeHex: string, explicitWeight?: number) => {
+      const formatted = newStrokeHex.startsWith("#")
+        ? newStrokeHex
+        : `#${newStrokeHex}`;
+      const targetWeight =
+        explicitWeight !== undefined
+          ? explicitWeight
+          : effectiveStrokeWeight > 0
+            ? effectiveStrokeWeight
+            : 1.5;
+      setUIState({
+        selectedStrokeColor: formatted,
+        selectedStrokeWeight: targetWeight,
+      });
+      setLastNodeConfig({ strokeColor: formatted, strokeWeight: targetWeight });
+      applyCurrentNodeState(undefined, {
+        strokeColor: formatted,
+        strokeWeight: targetWeight,
+      });
+    },
+    [
+      effectiveStrokeWeight,
+      setUIState,
+      setLastNodeConfig,
+      applyCurrentNodeState,
+    ],
+  );
 
-  const applyStrokeWeight = useCallback((newWeight: number) => {
-    const validWeight = Math.max(0, Math.round(newWeight * 10) / 10);
-    setUIState({ selectedStrokeWeight: validWeight });
-    setLastNodeConfig({ strokeWeight: validWeight });
-    applyCurrentNodeState(undefined, { strokeWeight: validWeight });
-  }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
+  const applyStrokeWeight = useCallback(
+    (newWeight: number) => {
+      const validWeight = Math.max(0, Math.round(newWeight * 10) / 10);
+      setUIState({ selectedStrokeWeight: validWeight });
+      setLastNodeConfig({ strokeWeight: validWeight });
+      applyCurrentNodeState(undefined, { strokeWeight: validWeight });
+    },
+    [setUIState, setLastNodeConfig, applyCurrentNodeState],
+  );
 
   // 보더 아이콘 클릭 핸들러 (클릭 시 보더 끄기/None 토글)
   const handleStrokeIconClick = () => {
     if (isStrokeNone) {
-      const restoreColor = (effectiveStrokeColor && effectiveStrokeColor.toLowerCase() !== 'none')
-        ? effectiveStrokeColor
-        : '#000000';
+      const restoreColor =
+        effectiveStrokeColor && effectiveStrokeColor.toLowerCase() !== "none"
+          ? effectiveStrokeColor
+          : "#000000";
       applyStrokeColor(restoreColor, 1.5);
     } else {
       applyStrokeNone();
@@ -225,12 +288,15 @@ export function StyleSection() {
   // Fill 인풋 핸들러
   const handleFillChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value;
-    if (rawVal.toLowerCase() === 'none') {
-      setFillInput('None');
+    if (rawVal.toLowerCase() === "none") {
+      setFillInput("None");
       applyFillNone();
       return;
     }
-    const val = rawVal.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6).toUpperCase();
+    const val = rawVal
+      .replace(/[^0-9A-Fa-f]/g, "")
+      .slice(0, 6)
+      .toUpperCase();
     setFillInput(val);
     if (val.length === 6) {
       applyFillColor(`#${val}`);
@@ -238,18 +304,22 @@ export function StyleSection() {
   };
 
   const handleFillCommit = () => {
-    if (fillInput.trim().toLowerCase() === 'none' || fillInput.trim() === '') {
+    if (fillInput.trim().toLowerCase() === "none" || fillInput.trim() === "") {
       applyFillNone();
     } else if (fillInput.length === 6 || fillInput.length === 3) {
-      const fullHex = fillInput.length === 3
-        ? fillInput.split('').map((c) => c + c).join('')
-        : fillInput;
+      const fullHex =
+        fillInput.length === 3
+          ? fillInput
+              .split("")
+              .map((c) => c + c)
+              .join("")
+          : fillInput;
       applyFillColor(`#${fullHex.toUpperCase()}`);
     } else {
       if (isFillNone) {
-        setFillInput('None');
+        setFillInput("None");
       } else {
-        setFillInput(effectiveFillColor.replace('#', '').toUpperCase());
+        setFillInput(effectiveFillColor.replace("#", "").toUpperCase());
       }
     }
   };
@@ -257,31 +327,47 @@ export function StyleSection() {
   // Stroke 인풋 핸들러
   const handleStrokeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value;
-    if (rawVal.toLowerCase() === 'none') {
-      setStrokeInput('None');
+    if (rawVal.toLowerCase() === "none") {
+      setStrokeInput("None");
       applyStrokeNone();
       return;
     }
-    const val = rawVal.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6).toUpperCase();
+    const val = rawVal
+      .replace(/[^0-9A-Fa-f]/g, "")
+      .slice(0, 6)
+      .toUpperCase();
     setStrokeInput(val);
     if (val.length === 6) {
-      applyStrokeColor(`#${val}`, effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5);
+      applyStrokeColor(
+        `#${val}`,
+        effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5,
+      );
     }
   };
 
   const handleStrokeCommit = () => {
-    if (strokeInput.trim().toLowerCase() === 'none' || strokeInput.trim() === '') {
+    if (
+      strokeInput.trim().toLowerCase() === "none" ||
+      strokeInput.trim() === ""
+    ) {
       applyStrokeNone();
     } else if (strokeInput.length === 6 || strokeInput.length === 3) {
-      const fullHex = strokeInput.length === 3
-        ? strokeInput.split('').map((c) => c + c).join('')
-        : strokeInput;
-      applyStrokeColor(`#${fullHex.toUpperCase()}`, effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5);
+      const fullHex =
+        strokeInput.length === 3
+          ? strokeInput
+              .split("")
+              .map((c) => c + c)
+              .join("")
+          : strokeInput;
+      applyStrokeColor(
+        `#${fullHex.toUpperCase()}`,
+        effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5,
+      );
     } else {
       if (isStrokeNone) {
-        setStrokeInput('None');
+        setStrokeInput("None");
       } else {
-        setStrokeInput(effectiveStrokeColor.replace('#', '').toUpperCase());
+        setStrokeInput(effectiveStrokeColor.replace("#", "").toUpperCase());
       }
     }
   };
@@ -293,23 +379,24 @@ export function StyleSection() {
 
   const handleWeightCommit = () => {
     const parsed = parseFloat(weightInput);
-    const validWeight = isNaN(parsed) ? 0 : Math.max(0, Math.round(parsed * 10) / 10);
+    const validWeight = isNaN(parsed)
+      ? 0
+      : Math.max(0, Math.round(parsed * 10) / 10);
     setWeightInput(String(validWeight));
     applyStrokeWeight(validWeight);
   };
 
   const handleWeightKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleWeightCommit();
-      (e.target as HTMLInputElement).blur();
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       const current = parseFloat(weightInput) || 0;
       const step = e.shiftKey ? 5 : 1;
       const next = Math.max(0, current + step);
       setWeightInput(String(next));
       applyStrokeWeight(next);
-    } else if (e.key === 'ArrowDown') {
+    } else if (e.key === "ArrowDown") {
       e.preventDefault();
       const current = parseFloat(weightInput) || 0;
       const step = e.shiftKey ? 5 : 1;
@@ -329,12 +416,16 @@ export function StyleSection() {
   // 하단 스와치 프리셋 선택
   function selectStylePreset(preset: StylePreset) {
     setSelectedStylePresetId(preset.id);
-    const isPresetFillNone = preset.fillColor.toLowerCase() === 'none' || preset.fillColor.toLowerCase() === 'transparent';
+    const isPresetFillNone =
+      preset.fillColor.toLowerCase() === "none" ||
+      preset.fillColor.toLowerCase() === "transparent";
     const connectorColor = isPresetFillNone
-      ? (preset.strokeWeight > 0 ? preset.strokeColor : '#000000')
-      : (preset.fillColor.toLowerCase() === '#ffffff' && preset.strokeWeight > 0
+      ? preset.strokeWeight > 0
         ? preset.strokeColor
-        : preset.fillColor);
+        : "#000000"
+      : preset.fillColor.toLowerCase() === "#ffffff" && preset.strokeWeight > 0
+        ? preset.strokeColor
+        : preset.fillColor;
     setUIState({
       selectedColor: preset.fillColor,
       selectedStrokeWeight: preset.strokeWeight,
@@ -357,7 +448,7 @@ export function StyleSection() {
   function toggleStyleMoreMenu(e: React.MouseEvent) {
     e.stopPropagation();
     if (isMoreDisabled) return;
-    if (contextMenuOpen && contextMenuTarget === 'style') {
+    if (contextMenuOpen && contextMenuTarget === "style") {
       setContextMenuOpen(false);
       return;
     }
@@ -366,11 +457,14 @@ export function StyleSection() {
     if (rect) {
       const popoverHeight = 58;
       const spaceBelow = window.innerHeight - rect.bottom;
-      const top = spaceBelow >= popoverHeight + 8 ? rect.bottom + 4 : Math.max(8, rect.top - popoverHeight - 4);
+      const top =
+        spaceBelow >= popoverHeight + 8
+          ? rect.bottom + 4
+          : Math.max(8, rect.top - popoverHeight - 4);
       const left = Math.max(8, rect.right - 72);
       setContextMenuPos({ top, left });
     }
-    setContextMenuTarget('style');
+    setContextMenuTarget("style");
     if (activeStylePreset) {
       setSelectedStylePresetId(activeStylePreset.id);
     }
@@ -384,20 +478,40 @@ export function StyleSection() {
         <span className="section-title">
           Style
           {isNodeColorMixed && (
-            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
+            <span
+              style={{
+                fontSize: "11px",
+                color: "var(--figma-color-text-tertiary, #999)",
+                marginLeft: "6px",
+                fontWeight: "normal",
+              }}
+            >
               (Mixed)
             </span>
           )}
         </span>
         <div className="section-actions">
-          <button className="btn-action-icon" title="Add style" onClick={() => setActiveModal('add-style')}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z" fill="currentColor"/></svg>
+          <button
+            className="btn-action-icon"
+            title="Add style"
+            onClick={() => setActiveModal("add-style")}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z"
+                fill="currentColor"
+              />
+            </svg>
           </button>
           <button
             id="btn-style-more"
             ref={btnMoreRef}
-            className={`btn-action-icon btn-more-icon${isMoreDisabled ? ' disabled' : ''}${contextMenuOpen && contextMenuTarget === 'style' ? ' active' : ''}`}
-            title={isMoreDisabled ? '기본 스타일은 수정 또는 삭제할 수 없습니다' : 'More options'}
+            className={`btn-action-icon btn-more-icon${isMoreDisabled ? " disabled" : ""}${contextMenuOpen && contextMenuTarget === "style" ? " active" : ""}`}
+            title={
+              isMoreDisabled
+                ? "기본 스타일은 수정 또는 삭제할 수 없습니다"
+                : "More options"
+            }
             disabled={isMoreDisabled}
             onClick={toggleStyleMoreMenu}
           >
@@ -421,23 +535,31 @@ export function StyleSection() {
               isNone={isFillNone}
               isMixed={isFillMixed}
               onClick={handleFillChipClick}
-              title={isFillMixed ? 'Fill color (Mixed)' : (isFillNone ? '배경 켜기' : '배경 끄기 (None)')}
+              title={
+                isFillMixed
+                  ? "Fill color (Mixed)"
+                  : isFillNone
+                    ? "배경 켜기"
+                    : "배경 끄기 (None)"
+              }
             />
 
             {/* Hex 인풋 (None일 때 None 표시) */}
             <input
               type="text"
-              className={`style-text-input${isFillNone ? ' is-none' : ''}`}
-              value={isFillMixed ? '' : (isFillNone ? 'None' : fillInput)}
-              placeholder={isFillMixed ? 'Mixed' : (isFillNone ? 'None' : 'FFFFFF')}
+              className={`style-text-input${isFillNone ? " is-none" : ""}`}
+              value={isFillMixed ? "" : isFillNone ? "None" : fillInput}
+              placeholder={
+                isFillMixed ? "Mixed" : isFillNone ? "None" : "FFFFFF"
+              }
               onChange={handleFillChange}
               onFocus={(e) => {
-                if (isFillNone || e.target.value === 'None') {
+                if (isFillNone || e.target.value === "None") {
                   e.target.select();
                 }
               }}
               onBlur={handleFillCommit}
-              onKeyDown={(e) => e.key === 'Enter' && (handleFillCommit(), (e.target as HTMLInputElement).blur())}
+              onKeyDown={(e) => e.key === "Enter" && handleFillCommit()}
               spellCheck={false}
               autoComplete="off"
             />
@@ -447,7 +569,7 @@ export function StyleSection() {
               type="button"
               className="style-palette-action-btn"
               title="Fill color picker"
-              onClick={() => setActiveModal('fill-color')}
+              onClick={() => setActiveModal("fill-color")}
             >
               {PALETTE_ICON_SVG}
             </button>
@@ -459,7 +581,13 @@ export function StyleSection() {
             <button
               type="button"
               className="style-stroke-btn"
-              title={isStrokeMixed ? 'Stroke color (Mixed)' : (isStrokeNone ? '보더 켜기' : '보더 끄기 (None)')}
+              title={
+                isStrokeMixed
+                  ? "Stroke color (Mixed)"
+                  : isStrokeNone
+                    ? "보더 켜기"
+                    : "보더 끄기 (None)"
+              }
               onClick={handleStrokeIconClick}
             >
               <StrokeColorIcon
@@ -473,17 +601,19 @@ export function StyleSection() {
             {/* Hex 인풋 (None일 때 None 표시) */}
             <input
               type="text"
-              className={`style-text-input${isStrokeNone ? ' is-none' : ''}`}
-              value={isStrokeMixed ? '' : (isStrokeNone ? 'None' : strokeInput)}
-              placeholder={isStrokeMixed ? 'Mixed' : (isStrokeNone ? 'None' : '000000')}
+              className={`style-text-input${isStrokeNone ? " is-none" : ""}`}
+              value={isStrokeMixed ? "" : isStrokeNone ? "None" : strokeInput}
+              placeholder={
+                isStrokeMixed ? "Mixed" : isStrokeNone ? "None" : "000000"
+              }
               onChange={handleStrokeChange}
               onFocus={(e) => {
-                if (isStrokeNone || e.target.value === 'None') {
+                if (isStrokeNone || e.target.value === "None") {
                   e.target.select();
                 }
               }}
               onBlur={handleStrokeCommit}
-              onKeyDown={(e) => e.key === 'Enter' && (handleStrokeCommit(), (e.target as HTMLInputElement).blur())}
+              onKeyDown={(e) => e.key === "Enter" && handleStrokeCommit()}
               spellCheck={false}
               autoComplete="off"
             />
@@ -493,7 +623,7 @@ export function StyleSection() {
               type="button"
               className="style-palette-action-btn"
               title="Stroke color picker"
-              onClick={() => setActiveModal('stroke-color')}
+              onClick={() => setActiveModal("stroke-color")}
             >
               {PALETTE_ICON_SVG}
             </button>
@@ -505,7 +635,11 @@ export function StyleSection() {
             <button
               type="button"
               className="style-weight-action-btn"
-              title={isWeightMixed ? 'Stroke width (Mixed)' : `Stroke width (Toggle: 0 / 1.5)`}
+              title={
+                isWeightMixed
+                  ? "Stroke width (Mixed)"
+                  : `Stroke width (Toggle: 0 / 1.5)`
+              }
               onClick={toggleStrokeWeight}
             >
               {STROKE_WEIGHT_ICON_SVG}
@@ -516,8 +650,8 @@ export function StyleSection() {
               type="text"
               inputMode="decimal"
               className="style-weight-num-input"
-              value={isWeightMixed ? '' : weightInput}
-              placeholder={isWeightMixed ? 'Mixed' : '0'}
+              value={isWeightMixed ? "" : weightInput}
+              placeholder={isWeightMixed ? "Mixed" : "0"}
               onChange={handleWeightChange}
               onBlur={handleWeightCommit}
               onKeyDown={handleWeightKeyDown}
@@ -530,28 +664,36 @@ export function StyleSection() {
         {/* 3. 하단 스타일 스와치 그리드 */}
         <div className="swatches-grid" id="style-swatches">
           {stylePresets.map((preset) => {
-            const isSelected = Boolean(activeStylePreset && activeStylePreset.id === preset.id);
+            const isSelected = Boolean(
+              activeStylePreset && activeStylePreset.id === preset.id,
+            );
             const hasBorder = preset.strokeWeight > 0;
-            const isPresetFillNone = preset.fillColor.toLowerCase() === 'none' || preset.fillColor.toLowerCase() === 'transparent';
+            const isPresetFillNone =
+              preset.fillColor.toLowerCase() === "none" ||
+              preset.fillColor.toLowerCase() === "transparent";
             return (
               <div
                 key={preset.id}
-                className={`swatch-item${isSelected ? ' selected' : ''}${isPresetFillNone ? ' is-none' : ''}`}
+                className={`swatch-item${isSelected ? " selected" : ""}${isPresetFillNone ? " is-none" : ""}`}
                 style={{
-                  backgroundColor: isPresetFillNone ? 'transparent' : preset.fillColor,
+                  backgroundColor: isPresetFillNone
+                    ? "transparent"
+                    : preset.fillColor,
                   backgroundImage: isPresetFillNone
-                    ? 'repeating-conic-gradient(var(--checker-light, #e1e1e1) 0% 25%, var(--checker-dark, #ffffff) 0% 50%) 50% / 6px 6px'
+                    ? "repeating-conic-gradient(var(--checker-light, #e1e1e1) 0% 25%, var(--checker-dark, #ffffff) 0% 50%) 50% / 6px 6px"
                     : undefined,
-                  border: hasBorder ? `${preset.strokeWeight}px solid ${preset.strokeColor}` : 'none',
-                  boxSizing: 'border-box',
+                  border: hasBorder
+                    ? `${preset.strokeWeight}px solid ${preset.strokeColor}`
+                    : "none",
+                  boxSizing: "border-box",
                   // 보더가 있는 카드는 기본 inset shadow가 겹치지 않도록 방지
-                  boxShadow: hasBorder && !isSelected ? 'none' : undefined,
-                  position: 'relative',
-                  overflow: 'hidden',
+                  boxShadow: hasBorder && !isSelected ? "none" : undefined,
+                  position: "relative",
+                  overflow: "hidden",
                 }}
                 data-color={preset.fillColor}
                 data-style-id={preset.id}
-                title={`배경: ${preset.fillColor}${hasBorder ? `, 보더: ${preset.strokeWeight}px ${preset.strokeColor}` : ', 보더: 없음'}`}
+                title={`배경: ${preset.fillColor}${hasBorder ? `, 보더: ${preset.strokeWeight}px ${preset.strokeColor}` : ", 보더: 없음"}`}
                 onClick={() => selectStylePreset(preset)}
               >
                 {isPresetFillNone && (
@@ -561,7 +703,7 @@ export function StyleSection() {
                     height="100%"
                     viewBox="0 0 20 20"
                     fill="none"
-                    style={{ position: 'absolute', top: 0, left: 0 }}
+                    style={{ position: "absolute", top: 0, left: 0 }}
                   >
                     <line
                       x1="18.5"
