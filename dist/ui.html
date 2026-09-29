@@ -31613,7 +31613,7 @@
                 id: "input-size-radius",
                 defaultValue: typeof selectedNodes[0]?.cornerRadius === "number" ? selectedNodes[0].cornerRadius : lastNodeConfig.cornerRadius || 0,
                 min: 0,
-                max: 20,
+                max: 999,
                 placeholder: isRMixed ? "Mixed" : void 0,
                 onChange: handleRChange,
                 onBlur: triggerApply,
@@ -32805,6 +32805,17 @@
       if (selectEl) selectEl.value = formatted;
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
+    const clampAndSyncStrokeWeight = () => {
+      if (!isWeightMixed && weightInput.trim() !== "") {
+        const parsed = parseFloat(weightInput);
+        if (!isNaN(parsed)) {
+          const clamped = Math.max(0.5, Math.min(10, parsed));
+          setWeightInput(String(clamped));
+          const inputEl = document.getElementById("input-stroke-weight");
+          if (inputEl) inputEl.value = String(clamped);
+        }
+      }
+    };
     const handleResetStrokeWeight = () => {
       setIsWeightMixed(false);
       setWeightInput("1.5");
@@ -33116,28 +33127,12 @@
                 onFocus: (e) => e.currentTarget.select(),
                 onClick: (e) => e.currentTarget.select(),
                 onBlur: () => {
-                  if (!isWeightMixed && weightInput.trim() !== "") {
-                    const parsed = parseFloat(weightInput);
-                    if (!isNaN(parsed)) {
-                      const clamped = Math.max(0.5, Math.min(10, parsed));
-                      setWeightInput(String(clamped));
-                      const inputEl = document.getElementById("input-stroke-weight");
-                      if (inputEl) inputEl.value = String(clamped);
-                    }
-                  }
+                  clampAndSyncStrokeWeight();
                   applyCurrentConnectorState();
                 },
                 onKeyDown: (e) => {
                   if (e.key === "Enter") {
-                    if (!isWeightMixed && weightInput.trim() !== "") {
-                      const parsed = parseFloat(weightInput);
-                      if (!isNaN(parsed)) {
-                        const clamped = Math.max(0.5, Math.min(10, parsed));
-                        setWeightInput(String(clamped));
-                        const inputEl = document.getElementById("input-stroke-weight");
-                        if (inputEl) inputEl.value = String(clamped);
-                      }
-                    }
+                    clampAndSyncStrokeWeight();
                     applyCurrentConnectorState();
                   }
                 }

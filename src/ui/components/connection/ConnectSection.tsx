@@ -578,6 +578,19 @@ export function ConnectSection() {
     setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
+  // 두께 입력값 clamp 및 동기화 헬퍼 (C-25)
+  const clampAndSyncStrokeWeight = () => {
+    if (!isWeightMixed && weightInput.trim() !== '') {
+      const parsed = parseFloat(weightInput);
+      if (!isNaN(parsed)) {
+        const clamped = Math.max(0.5, Math.min(10, parsed));
+        setWeightInput(String(clamped));
+        const inputEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+        if (inputEl) inputEl.value = String(clamped);
+      }
+    }
+  };
+
   // 두께 기본값(1.5) 리셋 핸들러
   const handleResetStrokeWeight = () => {
     setIsWeightMixed(false);
@@ -901,28 +914,12 @@ export function ConnectSection() {
               onFocus={(e) => e.currentTarget.select()}
               onClick={(e) => e.currentTarget.select()}
               onBlur={() => {
-                if (!isWeightMixed && weightInput.trim() !== '') {
-                  const parsed = parseFloat(weightInput);
-                  if (!isNaN(parsed)) {
-                    const clamped = Math.max(0.5, Math.min(10, parsed));
-                    setWeightInput(String(clamped));
-                    const inputEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-                    if (inputEl) inputEl.value = String(clamped);
-                  }
-                }
+                clampAndSyncStrokeWeight();
                 applyCurrentConnectorState();
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  if (!isWeightMixed && weightInput.trim() !== '') {
-                    const parsed = parseFloat(weightInput);
-                    if (!isNaN(parsed)) {
-                      const clamped = Math.max(0.5, Math.min(10, parsed));
-                      setWeightInput(String(clamped));
-                      const inputEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-                      if (inputEl) inputEl.value = String(clamped);
-                    }
-                  }
+                  clampAndSyncStrokeWeight();
                   applyCurrentConnectorState();
                 }
               }}
