@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Switch } from '../shared/Switch';
 
@@ -11,6 +11,15 @@ export function LabelSection() {
   const { lastConnectorConfig, setLastConnectorConfig, applyCurrentConnectorState, autoResizeWindow } = useApp();
   const [isOn, setIsOn] = useState(lastConnectorConfig.labelOn || false);
   const [labelText, setLabelText] = useState(lastConnectorConfig.labelText || 'Text');
+  const labelDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (labelDebounceRef.current) {
+        clearTimeout(labelDebounceRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setIsOn(lastConnectorConfig.labelOn || false);
@@ -20,6 +29,7 @@ export function LabelSection() {
   }, [lastConnectorConfig.labelOn, lastConnectorConfig.labelText]);
 
   function handleToggle(checked: boolean) {
+    if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
     setIsOn(checked);
     setLastConnectorConfig({ labelOn: checked });
     autoResizeWindow();
@@ -27,6 +37,7 @@ export function LabelSection() {
   }
 
   function handlePresetClick(val: string) {
+    if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
     setLabelText(val);
     setLastConnectorConfig({ labelText: val });
     setTimeout(() => applyCurrentConnectorState(), 0);
@@ -35,7 +46,10 @@ export function LabelSection() {
   function handleTextChange(val: string) {
     setLabelText(val);
     setLastConnectorConfig({ labelText: val });
-    setTimeout(() => applyCurrentConnectorState(), 0);
+    if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
+    labelDebounceRef.current = setTimeout(() => {
+      applyCurrentConnectorState();
+    }, 300);
   }
 
   return (

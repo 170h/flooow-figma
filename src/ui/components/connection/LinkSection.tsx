@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Switch } from '../shared/Switch';
 
@@ -6,8 +6,29 @@ import { Switch } from '../shared/Switch';
  * Link 섹션 - 토글 + URL 입력
  */
 export function LinkSection() {
-  const { setLastConnectorConfig, autoResizeWindow } = useApp();
-  const [isOn, setIsOn] = useState(false);
+  const { lastConnectorConfig, setLastConnectorConfig, autoResizeWindow } = useApp();
+  const [isOn, setIsOn] = useState(lastConnectorConfig.linkOn || false);
+  const [url, setUrl] = useState(lastConnectorConfig.linkUrl || '');
+
+  useEffect(() => {
+    const nextOn = lastConnectorConfig.linkOn || false;
+    const nextUrl = lastConnectorConfig.linkUrl || '';
+    setIsOn(nextOn);
+    setUrl(nextUrl);
+
+    const toggleEl = document.getElementById('toggle-conn-link') as HTMLInputElement | null;
+    if (toggleEl && toggleEl.checked !== nextOn) {
+      toggleEl.checked = nextOn;
+    }
+    const urlEl = document.getElementById('input-conn-link-url') as HTMLInputElement | null;
+    if (urlEl && urlEl.value !== nextUrl) {
+      urlEl.value = nextUrl;
+    }
+    const groupEl = document.getElementById('conn-link-group');
+    if (groupEl) {
+      groupEl.classList.toggle('active', nextOn);
+    }
+  }, [lastConnectorConfig.linkOn, lastConnectorConfig.linkUrl]);
 
   function handleToggle(checked: boolean) {
     setIsOn(checked);
@@ -15,6 +36,11 @@ export function LinkSection() {
     const el = document.getElementById('conn-link-group');
     if (el) el.classList.toggle('active', checked);
     autoResizeWindow();
+  }
+
+  function handleUrlChange(val: string) {
+    setUrl(val);
+    setLastConnectorConfig({ linkUrl: val.trim() });
   }
 
   return (
@@ -29,9 +55,14 @@ export function LinkSection() {
       </div>
       <div className="section-body">
         <div className={`collapsible-content${isOn ? ' active' : ''}`} id="conn-link-group">
-          <input type="text" id="input-conn-link-url" className="form-input"
+          <input
+            type="text"
+            id="input-conn-link-url"
+            className="form-input"
             placeholder="Add a URL"
-            onChange={e => setLastConnectorConfig({ linkUrl: e.target.value.trim() })} />
+            value={url}
+            onChange={e => handleUrlChange(e.target.value)}
+          />
         </div>
       </div>
     </div>

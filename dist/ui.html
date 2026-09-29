@@ -4915,7 +4915,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useReducer(reducer, initialArg, init);
           }
-          function useRef17(initialValue) {
+          function useRef19(initialValue) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useRef(initialValue);
           }
@@ -5709,7 +5709,7 @@
           exports.useLayoutEffect = useLayoutEffect;
           exports.useMemo = useMemo4;
           exports.useReducer = useReducer;
-          exports.useRef = useRef17;
+          exports.useRef = useRef19;
           exports.useState = useState18;
           exports.useSyncExternalStore = useSyncExternalStore;
           exports.useTransition = useTransition;
@@ -28951,7 +28951,9 @@
         const endTerm = endTermEl?.value || "ARROW";
         const startOff = parseFloat(startOffEl?.value || "0") || 0;
         const endOff = parseFloat(endOffEl?.value || "0") || 0;
-        const figmaLink = linkToggleEl?.checked && linkUrlEl ? linkUrlEl.value.trim() : "";
+        const isLinkOn = linkToggleEl ? linkToggleEl.checked : lastConnectorConfigRef.current.linkOn || false;
+        const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : lastConnectorConfigRef.current.linkUrl || "";
+        const figmaLink = isLinkOn ? rawLinkUrl : "";
         const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
         parent.postMessage({
           pluginMessage: {
@@ -33573,6 +33575,14 @@
     const { lastConnectorConfig, setLastConnectorConfig, applyCurrentConnectorState, autoResizeWindow } = useApp();
     const [isOn, setIsOn] = (0, import_react14.useState)(lastConnectorConfig.labelOn || false);
     const [labelText, setLabelText] = (0, import_react14.useState)(lastConnectorConfig.labelText || "Text");
+    const labelDebounceRef = (0, import_react14.useRef)(null);
+    (0, import_react14.useEffect)(() => {
+      return () => {
+        if (labelDebounceRef.current) {
+          clearTimeout(labelDebounceRef.current);
+        }
+      };
+    }, []);
     (0, import_react14.useEffect)(() => {
       setIsOn(lastConnectorConfig.labelOn || false);
       if (lastConnectorConfig.labelText !== void 0) {
@@ -33580,12 +33590,14 @@
       }
     }, [lastConnectorConfig.labelOn, lastConnectorConfig.labelText]);
     function handleToggle(checked) {
+      if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
       setIsOn(checked);
       setLastConnectorConfig({ labelOn: checked });
       autoResizeWindow();
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
     function handlePresetClick(val) {
+      if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
       setLabelText(val);
       setLastConnectorConfig({ labelText: val });
       setTimeout(() => applyCurrentConnectorState(), 0);
@@ -33593,7 +33605,10 @@
     function handleTextChange(val) {
       setLabelText(val);
       setLastConnectorConfig({ labelText: val });
-      setTimeout(() => applyCurrentConnectorState(), 0);
+      if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
+      labelDebounceRef.current = setTimeout(() => {
+        applyCurrentConnectorState();
+      }, 300);
     }
     return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-block", style: { paddingBottom: isOn ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-header toggle-row", children: [
@@ -36205,6 +36220,14 @@
     function handleContextDelete() {
       setContextMenuOpen(false);
     }
+    const titleDebounceRef = (0, import_react24.useRef)(null);
+    (0, import_react24.useEffect)(() => {
+      return () => {
+        if (titleDebounceRef.current) {
+          clearTimeout(titleDebounceRef.current);
+        }
+      };
+    }, []);
     function renderTitleBanner() {
       if (isSingleFigjam) {
         return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "figjam-title-label", children: "Figjam object" });
@@ -36239,6 +36262,7 @@
         }
         return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("span", { id: "multi-selection-text", children: selText }) });
       }
+      const activeNodeId = nodeCount === 1 ? selectedNodes[0]?.id || "single" : "none";
       return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
         "input",
         {
@@ -36249,10 +36273,11 @@
           defaultValue: nodeCount === 1 ? selectedNodes[0]?.title || selectedNodes[0]?.name || "Screen" : "Screen",
           placeholder: "Enter node title",
           onInput: () => {
-            clearTimeout(window._titleDebounce);
-            window._titleDebounce = setTimeout(() => applyCurrentNodeState(), 400);
+            if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
+            titleDebounceRef.current = setTimeout(() => applyCurrentNodeState(), 400);
           }
-        }
+        },
+        activeNodeId
       ) });
     }
     return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, children: [

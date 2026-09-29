@@ -804,7 +804,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const endTerm = endTermEl?.value || 'ARROW';
       const startOff = parseFloat(startOffEl?.value || '0') || 0;
       const endOff = parseFloat(endOffEl?.value || '0') || 0;
-      const figmaLink = (linkToggleEl?.checked && linkUrlEl) ? linkUrlEl.value.trim() : '';
+      const isLinkOn = linkToggleEl ? linkToggleEl.checked : (lastConnectorConfigRef.current.linkOn || false);
+      const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : (lastConnectorConfigRef.current.linkUrl || '');
+      const figmaLink = isLinkOn ? rawLinkUrl : '';
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
 
       parent.postMessage({

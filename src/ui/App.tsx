@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useApp } from './context/AppContext';
 import { useFigmaMessage } from './hooks/useFigmaMessage';
 import { useAutoResize } from './hooks/useAutoResize';
@@ -229,6 +229,16 @@ export function App() {
     setContextMenuOpen(false);
   }
 
+  const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (titleDebounceRef.current) {
+        clearTimeout(titleDebounceRef.current);
+      }
+    };
+  }, []);
+
   // 타이틀 배너 렌더링
   function renderTitleBanner() {
     // 0-1. 피그잼 단일 오브젝트 선택: 'Figjam object' (라벨 텍스트)
@@ -281,10 +291,12 @@ export function App() {
         </div>
       );
     }
-    // 3. 단일 노드 or 0개: 타이틀 입력
+    // 3. 단일 노드 or 0개: 타이틀 입력 (노드 ID를 key로 부여하여 선택 변경 시 defaultValue 갱신)
+    const activeNodeId = nodeCount === 1 ? (selectedNodes[0]?.id || 'single') : 'none';
     return (
       <div id="single-title-wrap" style={{ width: '100%' }}>
         <input
+          key={activeNodeId}
           type="text"
           id="node-title-input"
           className="node-title-input"
@@ -292,8 +304,8 @@ export function App() {
           defaultValue={nodeCount === 1 ? (selectedNodes[0]?.title || selectedNodes[0]?.name || 'Screen') : 'Screen'}
           placeholder="Enter node title"
           onInput={() => {
-            clearTimeout((window as any)._titleDebounce);
-            (window as any)._titleDebounce = setTimeout(() => applyCurrentNodeState(), 400);
+            if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
+            titleDebounceRef.current = setTimeout(() => applyCurrentNodeState(), 400);
           }}
         />
       </div>

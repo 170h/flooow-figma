@@ -3938,6 +3938,9 @@
         payload.startOffset,
         payload.endOffset
       );
+      if (payload.figmaLink) {
+        connector.setPluginData("figma_link", payload.figmaLink);
+      }
       figma.currentPage.selection = [connector];
       handleSelectionChange();
       notify(`\uC5F0\uACB0 \uC644\uB8CC${payload.label ? ` (\uB77C\uBCA8: "${payload.label}")` : ""}`, "success");
