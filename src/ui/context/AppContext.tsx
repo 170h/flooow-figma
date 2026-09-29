@@ -566,7 +566,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [setLastNodeConfig]);
 
   const addSizePreset = useCallback((preset: Omit<SizePreset, 'id'>) => {
-    const newId = `size-${Date.now()}`;
+    const newId = `size-${crypto.randomUUID()}`;
     const newPreset: SizePreset = {
       ...preset,
       id: newId,
@@ -618,7 +618,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [sizePresets, savePresets, showToast]);
 
   const addStylePreset = useCallback((preset: Omit<StylePreset, 'id'>) => {
-    const newId = `style-${Date.now()}`;
+    const newId = `style-${crypto.randomUUID()}`;
     const newPreset: StylePreset = {
       ...preset,
       id: newId,

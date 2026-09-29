@@ -4957,7 +4957,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useDeferredValue(value);
           }
-          function useId() {
+          function useId2() {
             var dispatcher = resolveDispatcher();
             return dispatcher.useId();
           }
@@ -5703,7 +5703,7 @@
           exports.useDebugValue = useDebugValue;
           exports.useDeferredValue = useDeferredValue;
           exports.useEffect = useEffect18;
-          exports.useId = useId;
+          exports.useId = useId2;
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
           exports.useLayoutEffect = useLayoutEffect;
@@ -28739,7 +28739,7 @@
       });
     }, [setLastNodeConfig]);
     const addSizePreset = (0, import_react2.useCallback)((preset) => {
-      const newId = `size-${Date.now()}`;
+      const newId = `size-${crypto.randomUUID()}`;
       const newPreset = {
         ...preset,
         id: newId
@@ -28787,7 +28787,7 @@
       showToast(`"${target?.name || "\uC0AC\uC774\uC988"}" \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
     }, [sizePresets, savePresets, showToast]);
     const addStylePreset = (0, import_react2.useCallback)((preset) => {
-      const newId = `style-${Date.now()}`;
+      const newId = `style-${crypto.randomUUID()}`;
       const newPreset = {
         ...preset,
         id: newId
@@ -29723,7 +29723,7 @@
   }) => {
     const formattedColor = color.startsWith("#") ? color : `#${color}`;
     const fillColor = isNone ? "none" : isMixed ? "#999999" : formattedColor;
-    const [maskId] = (0, import_react5.useState)(() => `stroke-mask-${Math.random().toString(36).slice(2, 8)}`);
+    const maskId = (0, import_react5.useId)();
     return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
       "span",
       {

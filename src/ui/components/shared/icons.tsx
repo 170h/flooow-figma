@@ -4,7 +4,7 @@
  * 각 아이콘은 React 컴포넌트(named export)로 제공됩니다.
  * 사용법: import { IcPlus, IcMore } from '../shared/icons';
  */
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 
 // ─── 공통 UI 아이콘 ─────────────────────────────────────────────────────────
 
@@ -146,34 +146,43 @@ export const IcLineDotted = () => (
 );
 
 /** 라우팅 — Orthogonal (직각) */
-export const IcRoutingOrthogonal = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <g clipPath="url(#ic_orth)">
-      <path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/>
-    </g>
-    <defs><clipPath id="ic_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>
-  </svg>
-);
+export const IcRoutingOrthogonal = () => {
+  const clipId = useId();
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <g clipPath={`url(#${clipId})`}>
+        <path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/>
+      </g>
+      <defs><clipPath id={clipId}><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>
+    </svg>
+  );
+};
 
 /** 라우팅 — S-Curve */
-export const IcRoutingSCurve = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <g clipPath="url(#ic_sc)">
-      <path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/>
-    </g>
-    <defs><clipPath id="ic_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>
-  </svg>
-);
+export const IcRoutingSCurve = () => {
+  const clipId = useId();
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <g clipPath={`url(#${clipId})`}>
+        <path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/>
+      </g>
+      <defs><clipPath id={clipId}><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>
+    </svg>
+  );
+};
 
 /** 라우팅 — Curved (부드러운 곡선) */
-export const IcRoutingCurved = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <g clipPath="url(#ic_cv)">
-      <path d="M6.3999 18.1C6.1299 18.1 5.8999 17.88 5.8999 17.61C5.8999 17.33 6.1199 17.11 6.3999 17.1C10.4799 17.06 10.9599 14.69 11.5099 11.94C12.0699 9.17002 12.7099 6.02002 17.5899 5.90002H17.5999C17.8699 5.90002 18.0899 6.12002 18.0999 6.39002C18.0999 6.67002 17.8899 6.90002 17.6099 6.90002C13.5299 7.00002 13.0399 9.38002 12.4899 12.14C11.9299 14.91 11.2899 18.05 6.4099 18.1H6.3999Z" fill="currentColor"/>
-    </g>
-    <defs><clipPath id="ic_cv"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>
-  </svg>
-);
+export const IcRoutingCurved = () => {
+  const clipId = useId();
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <g clipPath={`url(#${clipId})`}>
+        <path d="M6.3999 18.1C6.1299 18.1 5.8999 17.88 5.8999 17.61C5.8999 17.33 6.1199 17.11 6.3999 17.1C10.4799 17.06 10.9599 14.69 11.5099 11.94C12.0699 9.17002 12.7099 6.02002 17.5899 5.90002H17.5999C17.8699 5.90002 18.0899 6.12002 18.0999 6.39002C18.0999 6.67002 17.8899 6.90002 17.6099 6.90002C13.5299 7.00002 13.0399 9.38002 12.4899 12.14C11.9299 14.91 11.2899 18.05 6.4099 18.1H6.3999Z" fill="currentColor"/>
+      </g>
+      <defs><clipPath id={clipId}><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>
+    </svg>
+  );
+};
 
 /** 라우팅 — Straight (직선) */
 export const IcRoutingStraight = () => (
@@ -291,7 +300,7 @@ export const StrokeColorIcon = ({
 }) => {
   const formattedColor = color.startsWith('#') ? color : `#${color}`;
   const fillColor = isNone ? 'none' : isMixed ? '#999999' : formattedColor;
-  const [maskId] = useState(() => `stroke-mask-${Math.random().toString(36).slice(2, 8)}`);
+  const maskId = useId();
 
   return (
     <span
