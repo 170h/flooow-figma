@@ -491,8 +491,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ? overrideTitle
       : (currentTitleVal || (effectiveNodeType === 'Screen' ? 'Screen' : effectiveNodeType));
     const title = rawTitle.slice(0, 32);
-    const isDescOn = isDescAllowed && (descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false));
-    const desc = isDescOn ? (descEl?.value.trim() || '') : '';
+    const rawDesc = descEl?.value.trim() || '';
+    const isDescOn = descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false);
+    // isDescAllowed와 상관없이 입력되어 있던 설명 데이터를 보존하여 전달 (사용자가 직접 지운 경우에만 빈값)
+    const desc = isDescAllowed ? (isDescOn ? rawDesc : '') : rawDesc;
     const w = overrideSize?.width !== undefined
       ? overrideSize.width
       : (!isDescAllowed && spec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250));
@@ -502,10 +504,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const radius = overrideSize?.cornerRadius !== undefined
       ? overrideSize.cornerRadius
       : (!isDescAllowed && spec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0));
-    const isLinkOn = isDescAllowed && (singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn);
+    const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
     const rawFigmaUrl = linkOverrides?.figmaLink !== undefined
       ? linkOverrides.figmaLink
-      : ((isLinkOn && urlEl) ? urlEl.value.trim() : '');
+      : (urlEl ? urlEl.value.trim() : '');
     const figmaUrl = rawFigmaUrl ? (
       /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}`
     ) : '';
@@ -533,6 +535,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       strokeColor: finalStrokeColor,
       elevationOn: isElevOn,
       elevation: selectedElevation,
+      singleLinkOn: isLinkOn,
       singleLinkUrl: figmaUrl,
       sizeMode,
       descriptionOn: isDescOn,
@@ -882,10 +885,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newConfig: Partial<LastNodeConfig> = {
       width: w, height: h, cornerRadius: radius,
       nodeType: selectedNodeType, color: selectedColor,
+      strokeWeight: lastNodeConfigRef.current.strokeWeight,
+      strokeColor: lastNodeConfigRef.current.strokeColor,
+      sizeMode: lastNodeConfigRef.current.sizeMode || 'fixed',
       elevationOn: isElevOn, elevation: selectedElevation,
       statusOn: statusToggleEl?.checked || false, status: selectedStatus,
       stepBadgesOn: isStepOn,
-      stepNumber: targetStepNum,
+      stepNumber: isStepOn ? targetStepNum + 1 : targetStepNum,
       badgeCorner: selectedBadgeCorner,
       badgeShape: selectedBadgeShape,
       badgeColorMode: uiStateRef.current.selectedBadgeColorMode,
@@ -929,6 +935,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             figmaLink: figmaUrl,
             nodeType: selectedNodeType,
             colorHex: selectedColor,
+            strokeWeight: lastNodeConfigRef.current.strokeWeight !== undefined ? lastNodeConfigRef.current.strokeWeight : 1.5,
+            strokeColor: lastNodeConfigRef.current.strokeColor,
+            sizeMode: (lastNodeConfigRef.current.sizeMode as any) || 'fixed',
             elevation: isElevOn ? selectedElevation : undefined,
             status: (!isDescAllowed || !statusToggleEl?.checked) ? undefined : selectedStatus,
             badgeNumber: isStepOn ? targetStepNum : undefined,
@@ -981,23 +990,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (newIsConnSel) {
       setCurrentTab('connection');
     } else if (count === 0) {
-      // 바탕화면 클릭 (신규 생성 모드): 항상 node 탭이 기본 (플러그인 노드의 이전 스타일 캐시는 유지)
+      // 바탕화면 클릭 (신규 생성 모드): 항상 node 탭이 기본 (플러그인 노드의 이전 속성 캐시를 유지하여 UI 동기화)
       setCurrentTab('node');
+      setUIState({
+        selectedNodeType: lastNodeConfigRef.current.nodeType || 'Screen',
+        selectedColor: lastNodeConfigRef.current.color || '#ffffff',
+        selectedStrokeWeight: lastNodeConfigRef.current.strokeWeight,
+        selectedStrokeColor: lastNodeConfigRef.current.strokeColor,
+        selectedElevation: lastNodeConfigRef.current.elevation ?? 0,
+        selectedStatus: lastNodeConfigRef.current.status || 'draft',
+        selectedBadgeCorner: lastNodeConfigRef.current.badgeCorner || 'TOP_LEFT',
+        selectedBadgeShape: lastNodeConfigRef.current.badgeShape || 'Square',
+        selectedBadgeColorMode: lastNodeConfigRef.current.badgeColorMode || 'Style',
+      });
     } else {
       // 일반 노드 선택: 이전 노드에서 마지막으로 선택했던 탭으로 복원
       const targetTab = lastNodeTabRef.current || 'node';
       setCurrentTab(targetTab);
 
-      // 플러그인으로 생성된 플로우 노드(isFlowNode === true)인 경우에만 스타일(색상, 보더) 캐시 동기화
+      // 플러그인으로 생성된 플로우 노드(isFlowNode === true)인 경우에만 스타일 및 속성 캐시 동기화
       const flowNodes = nodes.filter(n => n && n.isFlowNode);
       if (flowNodes.length > 0) {
         const first = flowNodes[0];
         const eOn = Boolean(first.elevationOn);
         const eLevel = typeof first.elevation === 'number' ? first.elevation : 0;
-        const colorUpdates: Partial<UIState> = { selectedElevation: eLevel };
         const nodeRadius = typeof first.cornerRadius === 'number' ? first.cornerRadius : 0;
         const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
         if (rEl) rEl.value = String(nodeRadius);
+
+        const nodeTypeVal = first.flowNodeType || 'Screen';
+        const hasStatus = Boolean(first.status);
+        const hasDesc = Boolean(first.description && first.description.trim());
+        const linkVal = first.figmaLink || first.cachedFigmaLink || '';
+        const hasLink = Boolean(linkVal);
+
+        const colorUpdates: Partial<UIState> = {
+          selectedElevation: eLevel,
+          selectedNodeType: nodeTypeVal,
+        };
+        if (first.status) colorUpdates.selectedStatus = first.status;
 
         const hasStep = first.stepNumber !== undefined;
         const stepConfigUpdates: Partial<LastNodeConfig> = {};
@@ -1012,6 +1043,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           colorUpdates.selectedBadgeShape = first.badgeShape || lastNodeConfigRef.current.badgeShape || 'Square';
           colorUpdates.selectedBadgeColorMode = first.badgeColorMode || lastNodeConfigRef.current.badgeColorMode || 'Style';
         }
+
+        const baseConfigUpdates: Partial<LastNodeConfig> = {
+          nodeType: nodeTypeVal,
+          width: first.width,
+          height: first.height,
+          cornerRadius: nodeRadius,
+          sizeMode: first.sizeMode || 'fixed',
+          elevationOn: eOn,
+          elevation: eLevel,
+          statusOn: hasStatus,
+          status: first.status || lastNodeConfigRef.current.status || 'draft',
+          descriptionOn: hasDesc,
+          singleLinkOn: hasLink,
+          singleLinkUrl: linkVal,
+          ...stepConfigUpdates,
+        };
 
         if (first.fillColorHex) {
           colorUpdates.selectedColor = first.fillColorHex;
@@ -1034,21 +1081,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setSelectedStylePresetId(matchedId);
 
           setLastNodeConfig({
-            elevationOn: eOn,
-            elevation: eLevel,
+            ...baseConfigUpdates,
             color: first.fillColorHex,
             strokeWeight: first.strokeWeight,
             strokeColor: first.strokeColorHex,
-            cornerRadius: nodeRadius,
-            ...stepConfigUpdates,
           });
         } else {
-          setLastNodeConfig({
-            elevationOn: eOn,
-            elevation: eLevel,
-            cornerRadius: nodeRadius,
-            ...stepConfigUpdates,
-          });
+          setLastNodeConfig(baseConfigUpdates);
         }
         setUIState(colorUpdates);
       }

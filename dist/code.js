@@ -3128,6 +3128,15 @@
       card.setPluginData("schema_version", "2");
       card.setPluginData("node_theme", theme);
       card.setPluginData("node_type", nodeType);
+      if (!isShapeNode) {
+        if (description) card.setPluginData("node_desc", description);
+        card.setPluginData("screen_width", String(width));
+        card.setPluginData("screen_height", String(height));
+        card.setPluginData("screen_corner_radius", String(cornerRadius));
+        card.setPluginData("screen_size_mode", payload.sizeMode || "fixed");
+      } else if (payload.description) {
+        card.setPluginData("node_desc", payload.description);
+      }
       if (!isShapeNode && payload.status) {
         card.setPluginData("workflow_status", payload.status);
         if (STATUS_CONFIG[payload.status]) {
@@ -3275,8 +3284,14 @@
       const existingShapeVector = card.children.find(
         (c) => (c.name === "ShapeVector" || c.name === "DiamondShape") && c.type === "VECTOR"
       );
-      const targetW = isShapeNode ? payload.width ? Math.max(50, payload.width) : spec.width : isChangingToScreen ? payload.width || spec.width : payload.width ? Math.max(50, payload.width) : card.width;
-      const targetH = isShapeNode ? payload.height ? Math.max(50, payload.height) : spec.height : isChangingToScreen ? payload.height || spec.height : payload.height ? Math.max(50, payload.height) : card.height;
+      const savedScreenW = safeGetPluginData2(card, "screen_width");
+      const savedScreenH = safeGetPluginData2(card, "screen_height");
+      const savedScreenR = safeGetPluginData2(card, "screen_corner_radius");
+      const restoredScreenW = savedScreenW ? parseInt(savedScreenW, 10) : spec.width;
+      const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
+      const restoredScreenR = savedScreenR !== "" && savedScreenR !== void 0 ? parseInt(savedScreenR, 10) : spec.cornerRadius ?? 0;
+      const targetW = isShapeNode ? payload.width ? Math.max(50, payload.width) : spec.width : isChangingToScreen ? payload.width || restoredScreenW : payload.width ? Math.max(50, payload.width) : card.width;
+      const targetH = isShapeNode ? payload.height ? Math.max(50, payload.height) : spec.height : isChangingToScreen ? payload.height || restoredScreenH : payload.height ? Math.max(50, payload.height) : card.height;
       const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
       if (vectorPathData) {
         card.fills = [];
@@ -3293,7 +3308,7 @@
           existingShapeVector.remove();
         }
         const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
-        const targetRadius = isChangingToScreen ? typeof payload.cornerRadius === "number" ? payload.cornerRadius : defaultRadius : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius;
+        const targetRadius = isChangingToScreen ? typeof payload.cornerRadius === "number" ? payload.cornerRadius : restoredScreenR : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius;
         card.cornerRadius = targetRadius;
         card.fills = isFillNone ? [] : [{ type: "SOLID", color: bgColor }];
         card.strokes = cardStrokes;
@@ -3309,12 +3324,10 @@
           (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
         );
         if (existingStatusBadge) existingStatusBadge.remove();
-        card.setPluginData("workflow_status", "");
         const existingLinkBadge = card.children.find(
           (c) => safeGetPluginData2(c, "is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
         );
         if (existingLinkBadge) existingLinkBadge.remove();
-        card.setPluginData("figma_link", "");
       }
       let titleText = card.findOne(
         (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
@@ -3440,10 +3453,14 @@
           titleText.fills = [titleFill];
         }
       }
+      const prevDescription = safeGetPluginData2(card, "node_desc") || "";
+      const prevStatus = safeGetPluginData2(card, "workflow_status") || "";
+      const prevFigmaLink = safeGetPluginData2(card, "figma_link") || safeGetPluginData2(card, "cached_figma_link") || "";
+      const effectiveDesc = isShapeNode ? "" : (payload.description !== void 0 && payload.description !== "" ? payload.description : isChangingToScreen ? prevDescription : payload.description ?? prevDescription).trim();
       let descText = card.children.find(
         (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
       );
-      if (isShapeNode || !description) {
+      if (isShapeNode || !effectiveDesc) {
         if (descText) {
           descText.remove();
           descText = void 0;
@@ -3466,8 +3483,8 @@
         }
         descText.textAutoResize = "HEIGHT";
         const currentH = payload.height || card.height;
-        await updateDescTextTruncation(card, descText, currentH, description);
-        await safeSetCharacters(descText, description);
+        await updateDescTextTruncation(card, descText, currentH, effectiveDesc);
+        await safeSetCharacters(descText, effectiveDesc);
         const hasExistingDescFill = descText.fills === figma.mixed || Array.isArray(descText.fills) && descText.fills.length > 0;
         if (!hasExistingDescFill || payload.colorHex) {
           descText.fills = [descFill];
@@ -3489,8 +3506,10 @@
       let statusBadge = !isShapeNode ? card.children.find(
         (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
       ) : void 0;
-      const hasStatus = Boolean(statusBadge || !isShapeNode && payload.status && STATUS_CONFIG[payload.status]);
-      const hasLink = !isShapeNode && Boolean(payload.figmaLink && payload.figmaLink.trim());
+      const effectiveStatus = !isShapeNode ? payload.status ? payload.status : isChangingToScreen ? prevStatus : payload.status ?? prevStatus : "";
+      const hasStatus = Boolean(statusBadge || !isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]);
+      const effectiveLink = !isShapeNode ? payload.figmaLink !== void 0 && payload.figmaLink !== "" ? payload.figmaLink : (isChangingToScreen ? prevFigmaLink : payload.figmaLink ?? prevFigmaLink) || "" : "";
+      const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
       const hasBottomBar = hasStatus || hasLink;
       if (isShapeNode) {
         const hPad = nodeType === "Decision" ? 24 : 12;
@@ -3503,7 +3522,7 @@
         card.itemSpacing = 0;
       } else {
         card.itemSpacing = 8;
-        if (!description && !hasBottomBar) {
+        if (!effectiveDesc && !hasBottomBar) {
           card.paddingLeft = 16;
           card.paddingRight = 16;
           card.paddingTop = 14;
@@ -3519,14 +3538,42 @@
           card.counterAxisAlignItems = "MIN";
         }
       }
-      if (!isShapeNode && statusBadge) {
+      if (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]) {
+        if (!statusBadge) {
+          statusBadge = figma.createFrame();
+          statusBadge.name = "StatusBadge";
+          statusBadge.layoutMode = "HORIZONTAL";
+          statusBadge.primaryAxisSizingMode = "AUTO";
+          statusBadge.counterAxisSizingMode = "AUTO";
+          statusBadge.primaryAxisAlignItems = "CENTER";
+          statusBadge.counterAxisAlignItems = "CENTER";
+          statusBadge.paddingLeft = 9;
+          statusBadge.paddingRight = 9;
+          statusBadge.paddingTop = 3;
+          statusBadge.paddingBottom = 3;
+          statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+            typeof card.cornerRadius === "number" ? card.cornerRadius : 0
+          );
+          statusBadge.setPluginData("is_status_badge", "true");
+          const badgeText = figma.createText();
+          badgeText.name = "StatusText";
+          badgeText.fontName = { family: "Inter", style: "Bold" };
+          badgeText.fontSize = 9;
+          badgeText.textAutoResize = "WIDTH_AND_HEIGHT";
+          badgeText.locked = true;
+          statusBadge.appendChild(badgeText);
+          statusBadge.layoutPositioning = "ABSOLUTE";
+          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+          statusBadge.locked = true;
+          card.appendChild(statusBadge);
+        }
         statusBadge.paddingLeft = 9;
         statusBadge.paddingRight = 9;
         statusBadge.cornerRadius = getStatusBadgeCornerRadius(
           typeof card.cornerRadius === "number" ? card.cornerRadius : 0
         );
         statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-        const currentStatus = payload.status || safeGetPluginData2(card, "workflow_status");
+        const currentStatus = effectiveStatus;
         if (currentStatus && STATUS_CONFIG[currentStatus]) {
           const { badgeBg, badgeTextColor } = getStatusBadgeColors(currentStatus, bgColor, isDark);
           statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
@@ -3539,7 +3586,7 @@
         }
       }
       if (!isShapeNode) {
-        await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark, payload.clearLinkCache);
+        await updateFigmaLinkBadge(card, effectiveLink, isBgDark, payload.clearLinkCache);
       }
       const existingStepBadge = card.children.find(
         (c) => c.name.startsWith("[Step]") || safeGetPluginData2(c, "is_step_badge") === "true"
@@ -3632,10 +3679,34 @@
       card.setPluginData("is_flow_node", "true");
       card.setPluginData("schema_version", "2");
       card.setPluginData("node_title", "");
-      card.setPluginData("node_desc", "");
       card.setPluginData("node_tag", "");
       card.setPluginData("node_width", "");
       card.setPluginData("node_height", "");
+      if (!isShapeNode) {
+        card.setPluginData("node_desc", effectiveDesc);
+        if (effectiveStatus) card.setPluginData("workflow_status", effectiveStatus);
+        if (effectiveLink) card.setPluginData("figma_link", effectiveLink);
+        card.setPluginData("screen_width", String(finalW));
+        card.setPluginData("screen_height", String(finalH));
+        card.setPluginData("screen_corner_radius", String(card.cornerRadius || 0));
+        card.setPluginData("screen_size_mode", payload.sizeMode || card.getPluginData("size_mode") || "fixed");
+      } else {
+        if (payload.description) {
+          card.setPluginData("node_desc", payload.description);
+        } else if (prevDescription) {
+          card.setPluginData("node_desc", prevDescription);
+        }
+        if (payload.status) {
+          card.setPluginData("workflow_status", payload.status);
+        } else if (prevStatus) {
+          card.setPluginData("workflow_status", prevStatus);
+        }
+        if (payload.figmaLink) {
+          card.setPluginData("figma_link", payload.figmaLink);
+        } else if (prevFigmaLink) {
+          card.setPluginData("figma_link", prevFigmaLink);
+        }
+      }
       if (payload.theme) card.setPluginData("node_theme", payload.theme);
       card.setPluginData("node_type", nodeType);
       if (typeof payload.elevation === "number") {

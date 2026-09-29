@@ -134,12 +134,6 @@ export function TypeSection() {
       if (wEl) wEl.value = String(spec.width);
       if (hEl) hEl.value = String(spec.height);
       if (rEl) rEl.value = String(spec.cornerRadius ?? 0);
-      if (!spec.allowDescription) {
-        if (descToggleEl) descToggleEl.checked = false;
-        if (descInputEl) descInputEl.value = '';
-        if (linkToggleEl) linkToggleEl.checked = false;
-        if (linkInputEl) linkInputEl.value = '';
-      }
     }
 
     const targetSize = spec ? {
@@ -154,8 +148,6 @@ export function TypeSection() {
       width: spec?.width,
       height: spec?.height,
       cornerRadius: spec?.cornerRadius ?? 0,
-      descriptionOn: spec ? (spec.allowDescription ? (lastNodeConfig.descriptionOn ?? false) : false) : false,
-      singleLinkOn: spec ? (spec.allowFigmaLink ? (lastNodeConfig.singleLinkOn ?? false) : false) : false,
     });
 
     // 디폴트 규격(크기, 모서리 곡률, 타이틀)을 명시적으로 전달하여 레이스 컨디션 없이 즉시 적용

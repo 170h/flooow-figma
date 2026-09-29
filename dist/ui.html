@@ -28682,13 +28682,14 @@
       const currentTitleVal = titleEl?.value.trim();
       const rawTitle = overrideTitle !== void 0 ? overrideTitle : currentTitleVal || (effectiveNodeType === "Screen" ? "Screen" : effectiveNodeType);
       const title = rawTitle.slice(0, 32);
-      const isDescOn = isDescAllowed && (descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false);
-      const desc = isDescOn ? descEl?.value.trim() || "" : "";
+      const rawDesc = descEl?.value.trim() || "";
+      const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
+      const desc = isDescAllowed ? isDescOn ? rawDesc : "" : rawDesc;
       const w = overrideSize?.width !== void 0 ? overrideSize.width : !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
       const h = overrideSize?.height !== void 0 ? overrideSize.height : !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
       const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
-      const isLinkOn = isDescAllowed && (singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn);
-      const rawFigmaUrl = linkOverrides?.figmaLink !== void 0 ? linkOverrides.figmaLink : isLinkOn && urlEl ? urlEl.value.trim() : "";
+      const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
+      const rawFigmaUrl = linkOverrides?.figmaLink !== void 0 ? linkOverrides.figmaLink : urlEl ? urlEl.value.trim() : "";
       const figmaUrl = rawFigmaUrl ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}` : "";
       const elevToggleEl = document.getElementById("toggle-elevation");
       const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
@@ -28707,6 +28708,7 @@
         strokeColor: finalStrokeColor,
         elevationOn: isElevOn,
         elevation: selectedElevation,
+        singleLinkOn: isLinkOn,
         singleLinkUrl: figmaUrl,
         sizeMode,
         descriptionOn: isDescOn
@@ -29030,12 +29032,15 @@
         cornerRadius: radius,
         nodeType: selectedNodeType,
         color: selectedColor,
+        strokeWeight: lastNodeConfigRef.current.strokeWeight,
+        strokeColor: lastNodeConfigRef.current.strokeColor,
+        sizeMode: lastNodeConfigRef.current.sizeMode || "fixed",
         elevationOn: isElevOn,
         elevation: selectedElevation,
         statusOn: statusToggleEl?.checked || false,
         status: selectedStatus,
         stepBadgesOn: isStepOn,
-        stepNumber: targetStepNum,
+        stepNumber: isStepOn ? targetStepNum + 1 : targetStepNum,
         badgeCorner: selectedBadgeCorner,
         badgeShape: selectedBadgeShape,
         badgeColorMode: uiStateRef.current.selectedBadgeColorMode,
@@ -29078,6 +29083,9 @@
               figmaLink: figmaUrl,
               nodeType: selectedNodeType,
               colorHex: selectedColor,
+              strokeWeight: lastNodeConfigRef.current.strokeWeight !== void 0 ? lastNodeConfigRef.current.strokeWeight : 1.5,
+              strokeColor: lastNodeConfigRef.current.strokeColor,
+              sizeMode: lastNodeConfigRef.current.sizeMode || "fixed",
               elevation: isElevOn ? selectedElevation : void 0,
               status: !isDescAllowed || !statusToggleEl?.checked ? void 0 : selectedStatus,
               badgeNumber: isStepOn ? targetStepNum : void 0,
@@ -29111,6 +29119,17 @@
         setCurrentTab("connection");
       } else if (count === 0) {
         setCurrentTab("node");
+        setUIState({
+          selectedNodeType: lastNodeConfigRef.current.nodeType || "Screen",
+          selectedColor: lastNodeConfigRef.current.color || "#ffffff",
+          selectedStrokeWeight: lastNodeConfigRef.current.strokeWeight,
+          selectedStrokeColor: lastNodeConfigRef.current.strokeColor,
+          selectedElevation: lastNodeConfigRef.current.elevation ?? 0,
+          selectedStatus: lastNodeConfigRef.current.status || "draft",
+          selectedBadgeCorner: lastNodeConfigRef.current.badgeCorner || "TOP_LEFT",
+          selectedBadgeShape: lastNodeConfigRef.current.badgeShape || "Square",
+          selectedBadgeColorMode: lastNodeConfigRef.current.badgeColorMode || "Style"
+        });
       } else {
         const targetTab = lastNodeTabRef.current || "node";
         setCurrentTab(targetTab);
@@ -29119,10 +29138,19 @@
           const first = flowNodes[0];
           const eOn = Boolean(first.elevationOn);
           const eLevel = typeof first.elevation === "number" ? first.elevation : 0;
-          const colorUpdates = { selectedElevation: eLevel };
           const nodeRadius = typeof first.cornerRadius === "number" ? first.cornerRadius : 0;
           const rEl = document.getElementById("input-size-radius");
           if (rEl) rEl.value = String(nodeRadius);
+          const nodeTypeVal = first.flowNodeType || "Screen";
+          const hasStatus = Boolean(first.status);
+          const hasDesc = Boolean(first.description && first.description.trim());
+          const linkVal = first.figmaLink || first.cachedFigmaLink || "";
+          const hasLink = Boolean(linkVal);
+          const colorUpdates = {
+            selectedElevation: eLevel,
+            selectedNodeType: nodeTypeVal
+          };
+          if (first.status) colorUpdates.selectedStatus = first.status;
           const hasStep = first.stepNumber !== void 0;
           const stepConfigUpdates = {};
           if (hasStep && typeof first.stepNumber === "number") {
@@ -29135,6 +29163,21 @@
             colorUpdates.selectedBadgeShape = first.badgeShape || lastNodeConfigRef.current.badgeShape || "Square";
             colorUpdates.selectedBadgeColorMode = first.badgeColorMode || lastNodeConfigRef.current.badgeColorMode || "Style";
           }
+          const baseConfigUpdates = {
+            nodeType: nodeTypeVal,
+            width: first.width,
+            height: first.height,
+            cornerRadius: nodeRadius,
+            sizeMode: first.sizeMode || "fixed",
+            elevationOn: eOn,
+            elevation: eLevel,
+            statusOn: hasStatus,
+            status: first.status || lastNodeConfigRef.current.status || "draft",
+            descriptionOn: hasDesc,
+            singleLinkOn: hasLink,
+            singleLinkUrl: linkVal,
+            ...stepConfigUpdates
+          };
           if (first.fillColorHex) {
             colorUpdates.selectedColor = first.fillColorHex;
             colorUpdates.selectedStrokeWeight = first.strokeWeight;
@@ -29153,21 +29196,13 @@
             colorUpdates.selectedStylePresetId = matchedId;
             setSelectedStylePresetId(matchedId);
             setLastNodeConfig({
-              elevationOn: eOn,
-              elevation: eLevel,
+              ...baseConfigUpdates,
               color: first.fillColorHex,
               strokeWeight: first.strokeWeight,
-              strokeColor: first.strokeColorHex,
-              cornerRadius: nodeRadius,
-              ...stepConfigUpdates
+              strokeColor: first.strokeColorHex
             });
           } else {
-            setLastNodeConfig({
-              elevationOn: eOn,
-              elevation: eLevel,
-              cornerRadius: nodeRadius,
-              ...stepConfigUpdates
-            });
+            setLastNodeConfig(baseConfigUpdates);
           }
           setUIState(colorUpdates);
         }
@@ -29582,12 +29617,6 @@
         if (wEl) wEl.value = String(spec.width);
         if (hEl) hEl.value = String(spec.height);
         if (rEl) rEl.value = String(spec.cornerRadius ?? 0);
-        if (!spec.allowDescription) {
-          if (descToggleEl) descToggleEl.checked = false;
-          if (descInputEl) descInputEl.value = "";
-          if (linkToggleEl) linkToggleEl.checked = false;
-          if (linkInputEl) linkInputEl.value = "";
-        }
       }
       const targetSize = spec ? {
         width: spec.width,
@@ -29599,9 +29628,7 @@
         nodeType: type,
         width: spec?.width,
         height: spec?.height,
-        cornerRadius: spec?.cornerRadius ?? 0,
-        descriptionOn: spec ? spec.allowDescription ? lastNodeConfig.descriptionOn ?? false : false : false,
-        singleLinkOn: spec ? spec.allowFigmaLink ? lastNodeConfig.singleLinkOn ?? false : false : false
+        cornerRadius: spec?.cornerRadius ?? 0
       });
       applyCurrentNodeState(void 0, void 0, void 0, type, targetSize, targetTitle);
     }

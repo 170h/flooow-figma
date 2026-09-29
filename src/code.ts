@@ -2415,6 +2415,15 @@ async function createFlowNode(payload: FlowNodePayload) {
     card.setPluginData('schema_version', '2');
     card.setPluginData('node_theme', theme);
     card.setPluginData('node_type', nodeType);
+    if (!isShapeNode) {
+      if (description) card.setPluginData('node_desc', description);
+      card.setPluginData('screen_width', String(width));
+      card.setPluginData('screen_height', String(height));
+      card.setPluginData('screen_corner_radius', String(cornerRadius));
+      card.setPluginData('screen_size_mode', payload.sizeMode || 'fixed');
+    } else if (payload.description) {
+      card.setPluginData('node_desc', payload.description);
+    }
     if (!isShapeNode && payload.status) {
       card.setPluginData('workflow_status', payload.status);
       if (STATUS_CONFIG[payload.status]) {
@@ -2588,12 +2597,20 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && c.type === 'VECTOR'
     ) as VectorNode | undefined;
 
+    // 이전에 저장된 Screen 전용 치수 및 데이터 확인
+    const savedScreenW = safeGetPluginData(card, 'screen_width');
+    const savedScreenH = safeGetPluginData(card, 'screen_height');
+    const savedScreenR = safeGetPluginData(card, 'screen_corner_radius');
+    const restoredScreenW = savedScreenW ? parseInt(savedScreenW, 10) : spec.width;
+    const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
+    const restoredScreenR = savedScreenR !== '' && savedScreenR !== undefined ? parseInt(savedScreenR, 10) : (spec.cornerRadius ?? 0);
+
     const targetW = isShapeNode
       ? (payload.width ? Math.max(50, payload.width) : spec.width)
-      : (isChangingToScreen ? (payload.width || spec.width) : (payload.width ? Math.max(50, payload.width) : card.width));
+      : (isChangingToScreen ? (payload.width || restoredScreenW) : (payload.width ? Math.max(50, payload.width) : card.width));
     const targetH = isShapeNode
       ? (payload.height ? Math.max(50, payload.height) : spec.height)
-      : (isChangingToScreen ? (payload.height || spec.height) : (payload.height ? Math.max(50, payload.height) : card.height));
+      : (isChangingToScreen ? (payload.height || restoredScreenH) : (payload.height ? Math.max(50, payload.height) : card.height));
     const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
 
     if (vectorPathData) {
@@ -2613,7 +2630,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
       const defaultRadius = spec.cornerRadius !== undefined ? spec.cornerRadius : 0;
       const targetRadius = isChangingToScreen
-        ? (typeof payload.cornerRadius === 'number' ? payload.cornerRadius : defaultRadius)
+        ? (typeof payload.cornerRadius === 'number' ? payload.cornerRadius : restoredScreenR)
         : (typeof payload.cornerRadius === 'number' ? Math.max(0, payload.cornerRadius) : defaultRadius);
       card.cornerRadius = targetRadius;
       card.fills = isFillNone ? [] : [{ type: 'SOLID', color: bgColor }];
@@ -2628,19 +2645,17 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     card.counterAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
     card.primaryAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
 
-    // shape 노드로 전환된 경우 불필요한 배지 및 상태 제거
+    // shape 노드로 전환된 경우 카드 캔버스 상의 배지만 분리 (pluginData 데이터는 보존)
     if (isShapeNode) {
       const existingStatusBadge = card.children.find(
         (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
       );
       if (existingStatusBadge) existingStatusBadge.remove();
-      card.setPluginData('workflow_status', '');
 
       const existingLinkBadge = card.children.find(
         (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
       );
       if (existingLinkBadge) existingLinkBadge.remove();
-      card.setPluginData('figma_link', '');
     }
 
     // 헤더 행 및 타이틀 텍스트 갱신 (도형 노드는 Header 없이 직속 자식으로 정중앙 배치)
@@ -2745,12 +2760,23 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
     }
 
-    // 설명 텍스트 갱신 (isShapeNode이거나 설명이 없는 경우 제거)
+    const prevDescription = safeGetPluginData(card, 'node_desc') || '';
+    const prevStatus = (safeGetPluginData(card, 'workflow_status') || '') as WorkflowStatus;
+    const prevFigmaLink = safeGetPluginData(card, 'figma_link') || safeGetPluginData(card, 'cached_figma_link') || '';
+
+    // 복원할 유효 설명: Screen 복귀 시 이전 설명 복원, 단 사용자가 직접 빈칸으로 수정한 경우는 제외
+    const effectiveDesc = isShapeNode
+      ? ''
+      : (payload.description !== undefined && payload.description !== ''
+          ? payload.description
+          : (isChangingToScreen ? prevDescription : (payload.description ?? prevDescription))).trim();
+
+    // 설명 텍스트 갱신 (isShapeNode이거나 설명이 없는 경우 카드에서 제거하되 pluginData는 보존)
     let descText = card.children.find(
       (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
     ) as TextNode | undefined;
 
-    if (isShapeNode || !description) {
+    if (isShapeNode || !effectiveDesc) {
       if (descText) {
         descText.remove();
         descText = undefined;
@@ -2775,9 +2801,9 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       descText.textAutoResize = 'HEIGHT';
 
       const currentH = payload.height || card.height;
-      await updateDescTextTruncation(card, descText, currentH, description);
+      await updateDescTextTruncation(card, descText, currentH, effectiveDesc);
 
-      await safeSetCharacters(descText, description);
+      await safeSetCharacters(descText, effectiveDesc);
       const hasExistingDescFill = descText.fills === figma.mixed || (Array.isArray(descText.fills) && descText.fills.length > 0);
       if (!hasExistingDescFill || payload.colorHex) {
         descText.fills = [descFill];
@@ -2800,8 +2826,18 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     let statusBadge = !isShapeNode ? (card.children.find(
       (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
     ) as FrameNode | undefined) : undefined;
-    const hasStatus = Boolean(statusBadge || (!isShapeNode && payload.status && STATUS_CONFIG[payload.status]));
-    const hasLink = !isShapeNode && Boolean(payload.figmaLink && payload.figmaLink.trim());
+    const effectiveStatus = (!isShapeNode
+      ? (payload.status
+          ? payload.status
+          : (isChangingToScreen ? prevStatus : (payload.status ?? prevStatus)))
+      : '') as WorkflowStatus;
+    const hasStatus = Boolean(statusBadge || (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]));
+    const effectiveLink = !isShapeNode
+      ? (payload.figmaLink !== undefined && payload.figmaLink !== ''
+          ? payload.figmaLink
+          : (isChangingToScreen ? prevFigmaLink : (payload.figmaLink ?? prevFigmaLink)) || '')
+      : '';
+    const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
     const hasBottomBar = hasStatus || hasLink;
 
     if (isShapeNode) {
@@ -2815,7 +2851,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.itemSpacing = 0;
     } else {
       card.itemSpacing = 8;
-      if (!description && !hasBottomBar) {
+      if (!effectiveDesc && !hasBottomBar) {
         card.paddingLeft = 16;
         card.paddingRight = 16;
         card.paddingTop = 14;
@@ -2832,7 +2868,38 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
     }
 
-    if (!isShapeNode && statusBadge) {
+    if (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]) {
+      if (!statusBadge) {
+        statusBadge = figma.createFrame();
+        statusBadge.name = 'StatusBadge';
+        statusBadge.layoutMode = 'HORIZONTAL';
+        statusBadge.primaryAxisSizingMode = 'AUTO';
+        statusBadge.counterAxisSizingMode = 'AUTO';
+        statusBadge.primaryAxisAlignItems = 'CENTER';
+        statusBadge.counterAxisAlignItems = 'CENTER';
+        statusBadge.paddingLeft = 9;
+        statusBadge.paddingRight = 9;
+        statusBadge.paddingTop = 3;
+        statusBadge.paddingBottom = 3;
+        statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+          typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
+        );
+        statusBadge.setPluginData('is_status_badge', 'true');
+
+        const badgeText = figma.createText();
+        badgeText.name = 'StatusText';
+        badgeText.fontName = { family: 'Inter', style: 'Bold' };
+        badgeText.fontSize = 9;
+        badgeText.textAutoResize = 'WIDTH_AND_HEIGHT';
+        badgeText.locked = true;
+        statusBadge.appendChild(badgeText);
+
+        statusBadge.layoutPositioning = 'ABSOLUTE';
+        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+        statusBadge.locked = true;
+        card.appendChild(statusBadge);
+      }
+
       statusBadge.paddingLeft = 9;
       statusBadge.paddingRight = 9;
       statusBadge.cornerRadius = getStatusBadgeCornerRadius(
@@ -2841,7 +2908,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
 
       // 노드 배경색 변화에 따른 상태 뱃지 컬러 동기화
-      const currentStatus = (payload.status || safeGetPluginData(card, 'workflow_status')) as WorkflowStatus;
+      const currentStatus = effectiveStatus;
       if (currentStatus && STATUS_CONFIG[currentStatus]) {
         const { badgeBg, badgeTextColor } = getStatusBadgeColors(currentStatus, bgColor, isDark);
         statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
@@ -2856,7 +2923,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
     // Figma Screen Link 펜 아이콘 뱃지(하단 왼쪽) 갱신 (Screen 등에서만)
     if (!isShapeNode) {
-      await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark, payload.clearLinkCache);
+      await updateFigmaLinkBadge(card, effectiveLink, isBgDark, payload.clearLinkCache);
     }
 
     // 기존 스텝 뱃지가 존재하는 경우 노드 색상/보더 변화에 맞춰 컬러 동기화
@@ -2963,10 +3030,36 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     card.setPluginData('is_flow_node', 'true');
     card.setPluginData('schema_version', '2');
     card.setPluginData('node_title', '');
-    card.setPluginData('node_desc', '');
     card.setPluginData('node_tag', '');
     card.setPluginData('node_width', '');
     card.setPluginData('node_height', '');
+
+    // 노드 속성 및 데이터 개별 기억/보존
+    if (!isShapeNode) {
+      card.setPluginData('node_desc', effectiveDesc);
+      if (effectiveStatus) card.setPluginData('workflow_status', effectiveStatus);
+      if (effectiveLink) card.setPluginData('figma_link', effectiveLink);
+      card.setPluginData('screen_width', String(finalW));
+      card.setPluginData('screen_height', String(finalH));
+      card.setPluginData('screen_corner_radius', String(card.cornerRadius || 0));
+      card.setPluginData('screen_size_mode', payload.sizeMode || card.getPluginData('size_mode') || 'fixed');
+    } else {
+      if (payload.description) {
+        card.setPluginData('node_desc', payload.description);
+      } else if (prevDescription) {
+        card.setPluginData('node_desc', prevDescription);
+      }
+      if (payload.status) {
+        card.setPluginData('workflow_status', payload.status);
+      } else if (prevStatus) {
+        card.setPluginData('workflow_status', prevStatus);
+      }
+      if (payload.figmaLink) {
+        card.setPluginData('figma_link', payload.figmaLink);
+      } else if (prevFigmaLink) {
+        card.setPluginData('figma_link', prevFigmaLink);
+      }
+    }
     if (payload.theme) card.setPluginData('node_theme', payload.theme);
     card.setPluginData('node_type', nodeType);
     if (typeof payload.elevation === 'number') {
