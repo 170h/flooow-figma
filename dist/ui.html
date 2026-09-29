@@ -29216,7 +29216,7 @@
           const flowNodes = nodes.filter((n) => n && n.isFlowNode);
           const first = flowNodes[0] || nodes[0];
           if (first) {
-            if (first.elevationOn || first.elevation !== void 0 && first.elevation !== null && first.elevation >= 0) {
+            if (first.elevationOn || first.elevation !== void 0 && first.elevation !== null && first.elevation > 0) {
               setActiveAppearanceSection("elevation");
             } else {
               setActiveAppearanceSection(null);
@@ -29495,7 +29495,7 @@
       elevation: getCommonProperty(flowNodes, (n) => n.elevation),
       elevationOn: getCommonProperty(flowNodes, (n) => n.elevationOn !== void 0 ? Boolean(n.elevationOn) : void 0),
       status: getCommonProperty(flowNodes, (n) => n.status),
-      statusOn: getCommonProperty(flowNodes, (n) => Boolean(n.status)),
+      statusOn: getCommonProperty(flowNodes, (n) => n.status ? true : void 0),
       nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || n.nodeType)),
       width: getCommonProperty(flowNodes, (n) => n.width),
       height: getCommonProperty(flowNodes, (n) => n.height),
@@ -29507,9 +29507,9 @@
       badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape),
       badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode),
       description: getCommonProperty(flowNodes, (n) => n.description),
-      hasDescription: getCommonProperty(flowNodes, (n) => Boolean(n.description && n.description.trim().length > 0)),
+      hasDescription: getCommonProperty(flowNodes, (n) => n.description && n.description.trim().length > 0 ? true : void 0),
       figmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink),
-      hasFigmaLink: getCommonProperty(flowNodes, (n) => Boolean(n.figmaLink && n.figmaLink.trim().length > 0)),
+      hasFigmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink && n.figmaLink.trim().length > 0 ? true : void 0),
       // 커넥터 노드 속성 요약
       connectorColor: getCommonProperty(connectorNodes, (n) => n.connectorColorHex || n.strokeColorHex, caseInsensitiveEqual),
       connectorStrokeWeight: getCommonProperty(connectorNodes, (n) => {

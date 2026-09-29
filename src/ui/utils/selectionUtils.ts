@@ -129,7 +129,7 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     elevation: getCommonProperty(flowNodes, (n) => n.elevation),
     elevationOn: getCommonProperty(flowNodes, (n) => (n.elevationOn !== undefined ? Boolean(n.elevationOn) : undefined)),
     status: getCommonProperty(flowNodes, (n) => n.status),
-    statusOn: getCommonProperty(flowNodes, (n) => Boolean(n.status)),
+    statusOn: getCommonProperty(flowNodes, (n) => (n.status ? true : undefined)),
     nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || n.nodeType)),
     width: getCommonProperty(flowNodes, (n) => n.width),
     height: getCommonProperty(flowNodes, (n) => n.height),
@@ -141,9 +141,9 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape),
     badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode),
     description: getCommonProperty(flowNodes, (n) => n.description),
-    hasDescription: getCommonProperty(flowNodes, (n) => Boolean(n.description && n.description.trim().length > 0)),
+    hasDescription: getCommonProperty(flowNodes, (n) => (n.description && n.description.trim().length > 0 ? true : undefined)),
     figmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink),
-    hasFigmaLink: getCommonProperty(flowNodes, (n) => Boolean(n.figmaLink && n.figmaLink.trim().length > 0)),
+    hasFigmaLink: getCommonProperty(flowNodes, (n) => (n.figmaLink && n.figmaLink.trim().length > 0 ? true : undefined)),
 
     // 커넥터 노드 속성 요약
     connectorColor: getCommonProperty(connectorNodes, (n) => n.connectorColorHex || n.strokeColorHex, caseInsensitiveEqual),

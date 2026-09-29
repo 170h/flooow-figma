@@ -1105,7 +1105,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const flowNodes = nodes.filter(n => n && n.isFlowNode);
         const first = flowNodes[0] || nodes[0];
         if (first) {
-          if (first.elevationOn || (first.elevation !== undefined && first.elevation !== null && first.elevation >= 0)) {
+          if (first.elevationOn || (first.elevation !== undefined && first.elevation !== null && first.elevation > 0)) {
             setActiveAppearanceSection('elevation');
           } else {
             setActiveAppearanceSection(null);
