@@ -1,0 +1,24 @@
+{
+  "protocol_source": "src/types.ts",
+  "ui_to_core": {
+    "union": "PluginAction",
+    "core_switch_file": "src/code.ts",
+    "known_unhandled": ["CREATE_CONNECTORS", "CREATE_TEMPLATE"]
+  },
+  "core_to_ui": {
+    "union": "CoreToUIMessage",
+    "ui_receive_file": "src/ui/hooks/useFigmaMessage.ts",
+    "known_undeclared": ["INIT_DONE", "READY", "SWITCH_TAB"],
+    "known_unsent": ["TOAST"],
+    "known_unreceived": [
+      "STATUS_LIST_UPDATED",
+      "UI3_VARIABLES_EXTRACTED",
+      "SETTINGS_LOADED",
+      "TOAST"
+    ]
+  },
+  "no_op_actions": ["UNDO", "REDO"],
+  "round_trip": {
+    "NOTIFY": "UI→Core→figma.notify (UI 토스트 컴포넌트 직접 구현 금지)"
+  }
+}

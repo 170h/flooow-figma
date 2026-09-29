@@ -1,0 +1,23 @@
+{
+  "forbidden_patterns": [
+    "**/temp_*",
+    "**/*_new.*",
+    "**/*_old.*",
+    "**/*_backup.*",
+    "**/*.bak"
+  ],
+  "ignored_directories": [
+    ".git",
+    "node_modules",
+    "dist",
+    ".agents",
+    "harness-starter-kit"
+  ],
+  "protected_files": [
+    "src/types.ts",
+    "src/code.ts",
+    "src/customConnector.ts",
+    "src/ui/context/AppContext.tsx"
+  ],
+  "do_not_edit": ["dist/**", "src/ui.html", "package-lock.json"]
+}

@@ -9,9 +9,18 @@
     "build:inject": "node scripts/build-ui.mjs",
     "build:all": "npm run build && npm run build:ui && npm run build:inject",
     "watch": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es2020 --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:protocol": "node scripts/check-protocol.mjs",
+    "check:constraints": "node scripts/check-constraints.mjs",
+    "verify": "npm run typecheck && npm run build:all && npm run check:protocol && npm run check:constraints"
   },
-  "keywords": ["figma", "plugin", "workflow", "user-flow", "status-tracker"],
+  "keywords": [
+    "figma",
+    "plugin",
+    "workflow",
+    "user-flow",
+    "status-tracker"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {

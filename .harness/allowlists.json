@@ -1,0 +1,65 @@
+{
+  "dom_id_registry": [
+    "plugin-root",
+    "root",
+    "node-title-input",
+    "node-description-input",
+    "toggle-description",
+    "input-size-w",
+    "input-size-h",
+    "input-size-radius",
+    "single-screen-url",
+    "toggle-single-figma-link",
+    "select-size-mode",
+    "size-mode-val-fixed",
+    "size-mode-val-hug",
+    "toggle-elevation",
+    "toggle-status",
+    "toggle-step-badges",
+    "input-step-number",
+    "toggle-conn-label",
+    "input-conn-label",
+    "conn-line-color",
+    "input-stroke-weight",
+    "select-start-terminal",
+    "select-end-terminal",
+    "input-start-offset",
+    "input-end-offset",
+    "toggle-conn-link",
+    "input-conn-link-url",
+    "conn-link-group",
+    "conn-anchor-preview-box",
+    "preview-node-1-text",
+    "preview-node-2-text"
+  ],
+  "dom_access_files": [
+    "src/ui/hooks/useAutoResize.ts",
+    "src/ui/hooks/useFigmaMessage.ts",
+    "src/ui/index.tsx",
+    "src/ui/context/AppContext.tsx",
+    "src/ui/components/node/TypeSection.tsx",
+    "src/ui/components/node/DescriptionSection.tsx",
+    "src/ui/components/connection/LinkSection.tsx",
+    "src/ui/components/connection/ConnectionPanel.tsx",
+    "src/ui/components/connection/ConnectSection.tsx",
+    "src/ui/components/modals/FigmaDesignPickerModal.tsx",
+    "src/ui/components/appearance/StepBadgesSection.tsx",
+    "src/ui/components/appearance/SizeSection.tsx"
+  ],
+  "dispatch_event_sites": [
+    {
+      "file": "src/ui/components/appearance/SizeSection.tsx",
+      "target": "select-size-mode",
+      "paired_handler": "select-size-mode onChange"
+    }
+  ],
+  "post_message_ui_to_core_files": [
+    "src/ui/hooks/useAutoResize.ts",
+    "src/ui/hooks/useFigmaMessage.ts",
+    "src/ui/components/node/PhaseSection.tsx",
+    "src/ui/context/AppContext.tsx",
+    "src/ui/App.tsx"
+  ],
+  "post_message_core_to_ui": { "file": "src/code.ts", "function": "postToUI" },
+  "client_storage_keys": ["figma_token", "figma_file_url"]
+}
