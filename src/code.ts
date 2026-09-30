@@ -2339,8 +2339,8 @@ async function createFlowNode(payload: FlowNodePayload) {
     card.maxHeight = height;
 
     if (isShapeNode) {
-      // Process, Connector, Decision, Terminator: 디스크립션 없이 타이틀만 정중앙 정렬
-      const hPad = nodeType === 'Decision' ? 24 : (nodeType === 'Connector' ? 18 : 12);
+      // Process, Circle, Decision, Terminator: 디스크립션 없이 타이틀만 정중앙 정렬
+      const hPad = nodeType === 'Decision' ? 24 : (nodeType === 'Circle' || nodeType === 'Connector' ? 18 : 12);
       card.paddingLeft = hPad;
       card.paddingRight = hPad;
       card.paddingTop = 12;
@@ -3292,6 +3292,11 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       const isShapeNode = !spec.allowDescription;
       const isChangingToScreen = prevNodeType !== 'Screen' && nodeType === 'Screen';
 
+      // 기존 자식 ShapeVector 탐색 (Circle, Decision, Terminator 등)
+      const existingShapeVector = card.children.find(
+        (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && (c.type === 'VECTOR' || c.type === 'FRAME')
+      ) as (VectorNode | FrameNode) | undefined;
+
       // 2. 테마 및 색상
       const prevTheme = (safeGetPluginData(card, 'node_theme') as 'light' | 'dark') || 'light';
       const isDark = prevTheme === 'dark';
@@ -3305,11 +3310,17 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
           bgColor = hexToRgbColor(patch.colorHex);
         }
       } else {
-        const currentFill = card.fills;
-        if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === 'SOLID') {
-          bgColor = currentFill[0].color;
-        } else if (!Array.isArray(currentFill) || currentFill.length === 0) {
-          isFillNone = true;
+        // Shape 노드는 Frame의 fills가 비어있으므로 자식 ShapeVector의 fills를 우선 판독
+        if (isShapeNode && existingShapeVector && 'fills' in existingShapeVector && Array.isArray(existingShapeVector.fills) && existingShapeVector.fills.length > 0 && existingShapeVector.fills[0].type === 'SOLID') {
+          bgColor = existingShapeVector.fills[0].color;
+          isFillNone = false;
+        } else {
+          const currentFill = card.fills;
+          if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === 'SOLID') {
+            bgColor = currentFill[0].color;
+          } else if (!Array.isArray(currentFill) || currentFill.length === 0) {
+            isFillNone = true;
+          }
         }
       }
 
@@ -3323,9 +3334,11 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
 
       const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
-      // 3. Fills 적용 (patch.colorHex가 제공된 경우에만)
+      // 3. Fills 적용 (patch.colorHex가 제공된 경우에만, 단 Shape 노드는 card.fills를 비워둠)
       if (patch.colorHex !== undefined) {
-        if (isFillNone) {
+        if (isShapeNode) {
+          card.fills = [];
+        } else if (isFillNone) {
           card.fills = [];
         } else {
           card.fills = [{ type: 'SOLID', color: bgColor }];
@@ -3336,18 +3349,40 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       if (card.layoutMode !== 'VERTICAL') {
         card.layoutMode = 'VERTICAL';
       }
-      let cardStrokeWeight = typeof card.strokeWeight === 'number' ? card.strokeWeight : 1.5;
+
+      // Shape 노드는 card.strokeWeight가 0이므로 자식 ShapeVector의 속성을 우선 판독
+      let existingStrokeWeight = 1.5;
+      let existingStrokeColor: RGB | null = null;
+      if (isShapeNode && existingShapeVector) {
+        if ('strokeWeight' in existingShapeVector && typeof existingShapeVector.strokeWeight === 'number') {
+          existingStrokeWeight = existingShapeVector.strokeWeight;
+        }
+        if ('strokes' in existingShapeVector && Array.isArray(existingShapeVector.strokes) && existingShapeVector.strokes.length > 0 && existingShapeVector.strokes[0]?.type === 'SOLID') {
+          existingStrokeColor = existingShapeVector.strokes[0].color;
+        }
+      } else {
+        if (typeof card.strokeWeight === 'number') {
+          existingStrokeWeight = card.strokeWeight;
+        }
+        if (Array.isArray(card.strokes) && card.strokes.length > 0 && card.strokes[0]?.type === 'SOLID') {
+          existingStrokeColor = card.strokes[0].color;
+        }
+      }
+
+      let cardStrokeWeight = existingStrokeWeight;
       if (patch.strokeWeight !== undefined || patch.strokeColor !== undefined) {
         cardStrokeWeight = patch.strokeWeight !== undefined ? clampStrokeWeight(patch.strokeWeight) : cardStrokeWeight;
-        if (cardStrokeWeight === 0) {
-          card.strokes = [];
-        } else {
-          const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : (Array.isArray(card.strokes) && card.strokes[0]?.type === 'SOLID' ? card.strokes[0].color : borderColor);
-          card.strokes = [{ type: 'SOLID', color: strokeCol }];
-          card.strokeWeight = cardStrokeWeight;
-          card.strokeAlign = 'INSIDE';
-          if ('strokesIncludedInLayout' in card) {
-            card.strokesIncludedInLayout = true;
+        if (!isShapeNode) {
+          if (cardStrokeWeight === 0) {
+            card.strokes = [];
+          } else {
+            const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : (existingStrokeColor || borderColor);
+            card.strokes = [{ type: 'SOLID', color: strokeCol }];
+            card.strokeWeight = cardStrokeWeight;
+            card.strokeAlign = 'INSIDE';
+            if ('strokesIncludedInLayout' in card) {
+              card.strokesIncludedInLayout = true;
+            }
           }
         }
       }
@@ -3725,14 +3760,32 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
 
       // 14. Shape 커스텀 벡터 교체/생성
       const shapeVec = card.children.find(
-        (c) => c.name === 'ShapeVector' || c.name === 'DiamondShape'
+        (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && (c.type === 'VECTOR' || c.type === 'FRAME')
       ) as (VectorNode | FrameNode) | undefined;
-      if (shapeVec) {
-        shapeVec.remove();
-      }
-      if (isShapeNode) {
-        const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : borderColor;
-        attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
+
+      if (!isShapeNode) {
+        // Shape 노드가 아닌데(예: Screen) 이전 ShapeVector가 남아있다면 제거
+        if (shapeVec) {
+          shapeVec.remove();
+        }
+      } else {
+        // Shape 노드인 경우: 기존 ShapeVector가 없거나, 실제 Shape 외관/치수 속성이 변경된 경우에만 재생성
+        const shouldRecreateShapeVector = !shapeVec ||
+          patch.nodeType !== undefined ||
+          patch.width !== undefined ||
+          patch.height !== undefined ||
+          patch.colorHex !== undefined ||
+          patch.strokeWeight !== undefined ||
+          patch.strokeColor !== undefined;
+
+        if (shouldRecreateShapeVector) {
+          if (shapeVec) {
+            shapeVec.remove();
+          }
+          const defaultStrokeCol = existingStrokeColor || borderColor;
+          const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : defaultStrokeCol;
+          attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
+        }
       }
 
       // 15. 스텝 배지 위치 재동기화
@@ -5081,6 +5134,7 @@ function getStepBadgeCoordinates(
 ): { x: number; y: number; constraints: Constraints } {
   // 기본 직사각형(Screen, Process, Branch 등): 코너 꼭짓점 기준 중심(-11px 오프셋)
   if (
+    nodeType !== 'Circle' &&
     nodeType !== 'Connector' &&
     nodeType !== 'Decision' &&
     nodeType !== 'Terminator'
@@ -5099,7 +5153,7 @@ function getStepBadgeCoordinates(
 
   // 1. 원 (Circle / Connector): 중심 (cardW/2, cardH/2), 반경 rx, ry
   // 각 4분면 45도(π/4) 지점의 타원/원주 상 좌표에 배지의 중심이 오도록 배치
-  if (nodeType === 'Connector') {
+  if (nodeType === 'Circle' || nodeType === 'Connector') {
     const rx = cardW / 2;
     const ry = cardH / 2;
     const cos45 = Math.SQRT1_2; // 약 0.7071

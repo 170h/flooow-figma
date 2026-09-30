@@ -41,8 +41,8 @@ function getCtaLabel(
     return 'Connect';
   }
   if (nodeCount >= 2) return 'Apply to All';
-  if (nodeCount === 1) return 'Update';
-  return 'Create';
+  if (nodeCount === 1) return 'Apply';
+  return 'Create Node';
 }
 
 // ============================================================
@@ -77,6 +77,8 @@ export function App() {
     hasMultiDraft,
     updateMultiDraft,
     isApplyingMultiDraft,
+    canUndo,
+    handleUndo,
   } = useApp();
 
   // SizeModal onSave 핸들러 (매 렌더마다 새 함수 생성 방지)
@@ -398,8 +400,20 @@ export function App() {
       {/* 4. 푸터: connection 탭이 아닐 때 CTA 버튼 노출 (FigJam 단일 선택 포함) */}
       {currentTab !== 'connection' && (() => {
         const isCtaDisabled = isFigjamSelected || (nodeCount >= 2 && (!hasMultiDraft || isApplyingMultiDraft));
+        const showUndo = ctaLabel === 'Apply' || ctaLabel === 'Apply to All';
         return (
           <footer className="app-footer">
+            {showUndo && (
+              <button
+                id="btn-undo"
+                className="btn-cta-secondary"
+                type="button"
+                disabled={!canUndo}
+                onClick={handleUndo}
+              >
+                Undo
+              </button>
+            )}
             <button
               id="btn-main-cta"
               className={`btn-cta-primary${isCtaDisabled ? ' disabled' : ''}`}

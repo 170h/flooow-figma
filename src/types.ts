@@ -80,13 +80,14 @@ export type MagnetPosition = 'TOP' | 'BOTTOM' | 'LEFT' | 'RIGHT';
 export type DiagramNodeType =
   | 'Screen'
   | 'Process'
-  | 'Connector'
+  | 'Circle'
   | 'Decision'
   | 'Terminator'
   | 'Branch'
   // 레거시 호환 및 특수 타입
+  | 'Connector'
   | 'Square'
-  | 'Circle'
+  | 'Rectangle'
   | 'Diamond'
   | 'Pill'
   | 'Action'
@@ -109,16 +110,17 @@ export function normalizeNodeType(type?: string): DiagramNodeType {
       return 'Screen';
     case 'process':
     case 'square':
+    case 'rectangle':
     case 'action':
     case 'error':
     case 'true':
     case 'false':
       return 'Process';
-    case 'connector':
     case 'circle':
+    case 'connector':
     case 'system':
     case 'database':
-      return 'Connector';
+      return 'Circle';
     case 'decision':
     case 'diamond':
       return 'Decision';
@@ -130,7 +132,7 @@ export function normalizeNodeType(type?: string): DiagramNodeType {
     case 'subflow':
       return 'Branch';
     case 'bridge':
-      return 'Bridge';
+      return 'Branch';
     default:
       return (type as DiagramNodeType) || 'Screen';
   }
@@ -150,20 +152,21 @@ export interface NodeTypeShapeSpec {
 export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
   Screen: { width: 250, height: 100, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
   Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+  Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
   Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
   Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
   Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-  // 레거시 별칭
+  // 레거시 별칭 호환
+  Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
   Square: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+  Rectangle: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
   Diamond: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
   Pill: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
   Action: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
   System: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
   Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
   Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
+  Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
 };
 
 /**
@@ -279,10 +282,11 @@ export function getNodeCategory(node: any): NodeCategory {
     case 'Screen':
       return 'Screen';
     case 'Process':
+    case 'Circle':
+    case 'Connector':
     case 'Decision':
     case 'Terminator':
       return 'Shape';
-    case 'Connector':
     case 'Branch':
     case 'Bridge':
       return 'Bridge';
@@ -342,13 +346,13 @@ export function computeOptionSwitchState(
 
   if (supportedNodes.length === 0) {
     return {
-      state: 'MIXED_DISABLED',
+      state: 'OFF',
       supportedCount: 0,
       unsupportedCount: unsupportedNodes.length,
       supportedNodes: [],
       unsupportedNodes,
       checked: false,
-      isMixed: true,
+      isMixed: false,
       disabled: true,
       isOpen: false,
     };

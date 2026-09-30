@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
-import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload } from '../../types';
+import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload } from '../../types';
 import { NODE_TYPE_SHAPE_SPECS, normalizeNodeType } from '../../types';
 
 // ============================================================
@@ -15,6 +15,15 @@ import { NODE_TYPE_SHAPE_SPECS, normalizeNodeType } from '../../types';
 // ============================================================
 
 export type MultiNodeDraft = NodePatchPayload;
+
+export interface UndoSnapshot {
+  type: 'single' | 'batch';
+  singlePayload?: UpdateNodePayload;
+  batchItems?: Array<{
+    nodeId: string;
+    patch: NodePatchPayload;
+  }>;
+}
 
 export interface SizePreset {
   id: string;
@@ -255,6 +264,8 @@ export interface AppContextValue {
   clearMultiDraft: () => void;
   clearMultiDraftKeys: (keys: (keyof MultiNodeDraft)[]) => void;
   isApplyingMultiDraft: boolean;
+  canUndo: boolean;
+  handleUndo: () => void;
 }
 
 // ============================================================
@@ -381,6 +392,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const isApplyingMultiDraftRef = useRef(false);
   const applyTimeoutRef = useRef<number | null>(null);
 
+  const showToast = useCallback((msg: string, level = 'info') => {
+    if (!msg) return;
+    parent.postMessage({ pluginMessage: { type: 'NOTIFY', message: msg, level } }, '*');
+  }, []);
+
+  // 1회성 Undo 스냅샷 상태 관리 (가장 최근의 Apply 또는 Apply to All 1회만 되돌림)
+  const [lastAppliedSnapshot, setLastAppliedSnapshot] = useState<UndoSnapshot | null>(null);
+  const lastAppliedSnapshotRef = useRef<UndoSnapshot | null>(null);
+  const canUndo = Boolean(lastAppliedSnapshot);
+
+  const handleUndo = useCallback(() => {
+    const snapshot = lastAppliedSnapshotRef.current;
+    if (!snapshot) return;
+
+    if (snapshot.type === 'single' && snapshot.singlePayload) {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'UPDATE_FLOW_NODE',
+          payload: snapshot.singlePayload,
+        }
+      }, '*');
+      showToast('작업이 되돌려졌습니다.', 'info');
+    } else if (snapshot.type === 'batch' && snapshot.batchItems && snapshot.batchItems.length > 0) {
+      const patchGroups = new Map<string, { nodeIds: string[]; patch: NodePatchPayload }>();
+      snapshot.batchItems.forEach(item => {
+        const key = JSON.stringify(item.patch);
+        const existing = patchGroups.get(key);
+        if (existing) {
+          existing.nodeIds.push(item.nodeId);
+        } else {
+          patchGroups.set(key, { nodeIds: [item.nodeId], patch: item.patch });
+        }
+      });
+      patchGroups.forEach(({ nodeIds, patch }) => {
+        parent.postMessage({
+          pluginMessage: {
+            type: 'BATCH_UPDATE_FLOW_NODES',
+            payload: { nodeIds, patch }
+          }
+        }, '*');
+      });
+      showToast('작업이 되돌려졌습니다.', 'info');
+    }
+
+    setLastAppliedSnapshot(null);
+    lastAppliedSnapshotRef.current = null;
+  }, [showToast]);
+
   const applyMultiDraft = useCallback(() => {
     const nodes = selectedNodesRef.current;
     if (isApplyingMultiDraftRef.current) return;
@@ -408,6 +467,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (!hasField) return;
 
+    // 다중 노드 Apply to All 실행 전 원래 상태 스냅샷 캡처
+    const targetNodes = nodes.filter(n => n && draftSortedIds.includes(n.id));
+    const batchItems: Array<{ nodeId: string; patch: NodePatchPayload }> = targetNodes.map(node => {
+      const origPatch: NodePatchPayload = {};
+      (Object.keys(patch) as Array<keyof NodePatchPayload>).forEach(k => {
+        if (k === 'nodeType') origPatch.nodeType = (node.flowNodeType || (node.nodeType === 'FRAME' ? 'Screen' : node.nodeType)) as DiagramNodeType;
+        else if (k === 'colorHex') origPatch.colorHex = node.fillColorHex || '#FFFFFF';
+        else if (k === 'strokeColor') origPatch.strokeColor = node.strokeColorHex;
+        else if (k === 'strokeWeight') origPatch.strokeWeight = node.strokeWeight;
+        else if (k === 'width') origPatch.width = node.width;
+        else if (k === 'height') origPatch.height = node.height;
+        else if (k === 'cornerRadius') origPatch.cornerRadius = node.cornerRadius;
+        else if (k === 'elevation') origPatch.elevation = node.elevation !== undefined && node.elevation !== null ? node.elevation : null;
+        else if (k === 'status') origPatch.status = (node.status as WorkflowStatus) || '';
+        else if (k === 'description') origPatch.description = node.description || '';
+        else if (k === 'figmaLink') origPatch.figmaLink = node.figmaLink || '';
+        else if (k === 'badgeOn') origPatch.badgeOn = node.stepNumber !== undefined;
+        else if (k === 'badgeNumber') origPatch.badgeNumber = node.stepNumber;
+        else if (k === 'badgeCorner') origPatch.badgeCorner = node.badgeCorner as BadgePosition | undefined;
+        else if (k === 'badgeShape') origPatch.badgeShape = node.badgeShape as BadgeShape | undefined;
+        else if (k === 'badgeColorMode') origPatch.badgeColorMode = node.badgeColorMode as 'White' | 'Black' | 'Style' | undefined;
+      });
+      return { nodeId: node.id, patch: origPatch };
+    });
+
+    const newSnapshot: UndoSnapshot = {
+      type: 'batch',
+      batchItems,
+    };
+    setLastAppliedSnapshot(newSnapshot);
+    lastAppliedSnapshotRef.current = newSnapshot;
+
     isApplyingMultiDraftRef.current = true;
     setIsApplyingMultiDraft(true);
 
@@ -431,7 +522,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setIsApplyingMultiDraft(false);
       }
     }, 5000);
-  }, [hasMultiDraft]);
+  }, [hasMultiDraft, showToast]);
 
   const loadDesignFrames = useCallback(() => {
     parent.postMessage({ pluginMessage: { type: 'GET_DESIGN_FRAMES' } }, '*');
@@ -510,11 +601,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setLastConnectorConfig = useCallback((partial: Partial<LastConnectorConfig>) => {
     lastConnectorConfigRef.current = { ...lastConnectorConfigRef.current, ...partial };
     setLastConnectorConfigRaw(prev => ({ ...prev, ...partial }));
-  }, []);
-
-  const showToast = useCallback((msg: string, level = 'info') => {
-    if (!msg) return;
-    parent.postMessage({ pluginMessage: { type: 'NOTIFY', message: msg, level } }, '*');
   }, []);
 
   const lastResizeHeightRef = useRef(0);
@@ -1090,6 +1176,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLastNodeConfig(newConfig);
 
     if (nodes.length === 1) {
+      const targetNode = nodes[0];
+      const prevSinglePayload: UpdateNodePayload = {
+        nodeId: targetNode.id,
+        title: targetNode.title || targetNode.name || '',
+        description: targetNode.description || '',
+        width: targetNode.width,
+        height: targetNode.height,
+        cornerRadius: targetNode.cornerRadius,
+        theme: targetNode.theme || 'light',
+        figmaLink: targetNode.figmaLink || '',
+        nodeType: (targetNode.flowNodeType || (targetNode.nodeType === 'FRAME' ? 'Screen' : targetNode.nodeType)) as DiagramNodeType,
+        colorHex: targetNode.fillColorHex,
+        elevation: targetNode.elevation !== undefined && targetNode.elevation !== null ? targetNode.elevation : null,
+      };
+      const newSnapshot: UndoSnapshot = {
+        type: 'single',
+        singlePayload: prevSinglePayload,
+      };
+      setLastAppliedSnapshot(newSnapshot);
+      lastAppliedSnapshotRef.current = newSnapshot;
+
       parent.postMessage({
         pluginMessage: {
           type: 'UPDATE_FLOW_NODE',
@@ -1281,13 +1388,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           colorUpdates.selectedStylePresetId = matchedId;
           setSelectedStylePresetId(matchedId);
 
-          setLastNodeConfig({
-            ...baseConfigUpdates,
-            color: first.fillColorHex,
-            strokeWeight: first.strokeWeight,
-            strokeColor: first.strokeColorHex,
-          });
-        } else {
+          if (nodes.length === 1) {
+            setLastNodeConfig({
+              ...baseConfigUpdates,
+              color: first.fillColorHex,
+              strokeWeight: first.strokeWeight,
+              strokeColor: first.strokeColorHex,
+            });
+          }
+        } else if (nodes.length === 1) {
           setLastNodeConfig(baseConfigUpdates);
         }
         setUIState(colorUpdates);
@@ -1304,16 +1413,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!isUserLocked || isDifferentNode) {
       if (nodes.length > 0) {
         const flowNodes = nodes.filter(n => n && n.isFlowNode);
-        const first = flowNodes[0] || nodes[0];
-        if (first) {
-          const hasElevation = first.elevation !== undefined && first.elevation !== null
-            ? first.elevation >= 0
-            : Boolean(first.elevationOn);
-          if (hasElevation) {
-            setActiveAppearanceSection('elevation');
-          } else {
-            setActiveAppearanceSection(null);
-          }
+        const hasAnyElevation = flowNodes.some(n =>
+          n.elevation !== undefined && n.elevation !== null
+            ? n.elevation >= 0
+            : Boolean(n.elevationOn)
+        );
+        if (hasAnyElevation) {
+          setActiveAppearanceSection('elevation');
+        } else {
+          setActiveAppearanceSection(null);
         }
       } else {
         const hasElevation = Boolean(lastNodeConfigRef.current.elevationOn);
@@ -1382,6 +1490,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     clearMultiDraft,
     clearMultiDraftKeys,
     isApplyingMultiDraft,
+    canUndo,
+    handleUndo,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -2614,7 +2614,7 @@
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm, 5px);
       font-size: 11px;
-      font-weight: var(--font-weight-strong);
+      font-weight: var(--font-weight-default, 450);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -28512,16 +28512,17 @@
         return "Screen";
       case "process":
       case "square":
+      case "rectangle":
       case "action":
       case "error":
       case "true":
       case "false":
         return "Process";
-      case "connector":
       case "circle":
+      case "connector":
       case "system":
       case "database":
-        return "Connector";
+        return "Circle";
       case "decision":
       case "diamond":
         return "Decision";
@@ -28533,7 +28534,7 @@
       case "subflow":
         return "Branch";
       case "bridge":
-        return "Bridge";
+        return "Branch";
       default:
         return type || "Screen";
     }
@@ -28541,20 +28542,21 @@
   var NODE_TYPE_SHAPE_SPECS = {
     Screen: { width: 250, height: 100, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
     Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-    Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-    Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-    // 레거시 별칭
+    // 레거시 별칭 호환
+    Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Square: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-    Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Rectangle: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Diamond: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Pill: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Action: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     System: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-    Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false }
+    Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
+    Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false }
   };
   var OPTION_CAPABILITY_MATRIX = {
     Screen: {
@@ -28626,10 +28628,11 @@
       case "Screen":
         return "Screen";
       case "Process":
+      case "Circle":
+      case "Connector":
       case "Decision":
       case "Terminator":
         return "Shape";
-      case "Connector":
       case "Branch":
       case "Bridge":
         return "Bridge";
@@ -28647,13 +28650,13 @@
     const unsupportedNodes = validNodes.filter((n) => !supportsOption(n, option));
     if (supportedNodes.length === 0) {
       return {
-        state: "MIXED_DISABLED",
+        state: "OFF",
         supportedCount: 0,
         unsupportedCount: unsupportedNodes.length,
         supportedNodes: [],
         unsupportedNodes,
         checked: false,
-        isMixed: true,
+        isMixed: false,
         disabled: true,
         isOpen: false
       };
@@ -28846,6 +28849,48 @@
     const [isApplyingMultiDraft, setIsApplyingMultiDraft] = (0, import_react2.useState)(false);
     const isApplyingMultiDraftRef = (0, import_react2.useRef)(false);
     const applyTimeoutRef = (0, import_react2.useRef)(null);
+    const showToast = (0, import_react2.useCallback)((msg, level = "info") => {
+      if (!msg) return;
+      parent.postMessage({ pluginMessage: { type: "NOTIFY", message: msg, level } }, "*");
+    }, []);
+    const [lastAppliedSnapshot, setLastAppliedSnapshot] = (0, import_react2.useState)(null);
+    const lastAppliedSnapshotRef = (0, import_react2.useRef)(null);
+    const canUndo = Boolean(lastAppliedSnapshot);
+    const handleUndo = (0, import_react2.useCallback)(() => {
+      const snapshot = lastAppliedSnapshotRef.current;
+      if (!snapshot) return;
+      if (snapshot.type === "single" && snapshot.singlePayload) {
+        parent.postMessage({
+          pluginMessage: {
+            type: "UPDATE_FLOW_NODE",
+            payload: snapshot.singlePayload
+          }
+        }, "*");
+        showToast("\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.", "info");
+      } else if (snapshot.type === "batch" && snapshot.batchItems && snapshot.batchItems.length > 0) {
+        const patchGroups = /* @__PURE__ */ new Map();
+        snapshot.batchItems.forEach((item) => {
+          const key = JSON.stringify(item.patch);
+          const existing = patchGroups.get(key);
+          if (existing) {
+            existing.nodeIds.push(item.nodeId);
+          } else {
+            patchGroups.set(key, { nodeIds: [item.nodeId], patch: item.patch });
+          }
+        });
+        patchGroups.forEach(({ nodeIds, patch }) => {
+          parent.postMessage({
+            pluginMessage: {
+              type: "BATCH_UPDATE_FLOW_NODES",
+              payload: { nodeIds, patch }
+            }
+          }, "*");
+        });
+        showToast("\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.", "info");
+      }
+      setLastAppliedSnapshot(null);
+      lastAppliedSnapshotRef.current = null;
+    }, [showToast]);
     const applyMultiDraft = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       if (isApplyingMultiDraftRef.current) return;
@@ -28865,6 +28910,35 @@
         }
       });
       if (!hasField) return;
+      const targetNodes = nodes.filter((n) => n && draftSortedIds.includes(n.id));
+      const batchItems = targetNodes.map((node) => {
+        const origPatch = {};
+        Object.keys(patch).forEach((k) => {
+          if (k === "nodeType") origPatch.nodeType = node.flowNodeType || (node.nodeType === "FRAME" ? "Screen" : node.nodeType);
+          else if (k === "colorHex") origPatch.colorHex = node.fillColorHex || "#FFFFFF";
+          else if (k === "strokeColor") origPatch.strokeColor = node.strokeColorHex;
+          else if (k === "strokeWeight") origPatch.strokeWeight = node.strokeWeight;
+          else if (k === "width") origPatch.width = node.width;
+          else if (k === "height") origPatch.height = node.height;
+          else if (k === "cornerRadius") origPatch.cornerRadius = node.cornerRadius;
+          else if (k === "elevation") origPatch.elevation = node.elevation !== void 0 && node.elevation !== null ? node.elevation : null;
+          else if (k === "status") origPatch.status = node.status || "";
+          else if (k === "description") origPatch.description = node.description || "";
+          else if (k === "figmaLink") origPatch.figmaLink = node.figmaLink || "";
+          else if (k === "badgeOn") origPatch.badgeOn = node.stepNumber !== void 0;
+          else if (k === "badgeNumber") origPatch.badgeNumber = node.stepNumber;
+          else if (k === "badgeCorner") origPatch.badgeCorner = node.badgeCorner;
+          else if (k === "badgeShape") origPatch.badgeShape = node.badgeShape;
+          else if (k === "badgeColorMode") origPatch.badgeColorMode = node.badgeColorMode;
+        });
+        return { nodeId: node.id, patch: origPatch };
+      });
+      const newSnapshot = {
+        type: "batch",
+        batchItems
+      };
+      setLastAppliedSnapshot(newSnapshot);
+      lastAppliedSnapshotRef.current = newSnapshot;
       isApplyingMultiDraftRef.current = true;
       setIsApplyingMultiDraft(true);
       parent.postMessage({
@@ -28885,7 +28959,7 @@
           setIsApplyingMultiDraft(false);
         }
       }, 5e3);
-    }, [hasMultiDraft]);
+    }, [hasMultiDraft, showToast]);
     const loadDesignFrames = (0, import_react2.useCallback)(() => {
       parent.postMessage({ pluginMessage: { type: "GET_DESIGN_FRAMES" } }, "*");
     }, []);
@@ -28972,10 +29046,6 @@
     const setLastConnectorConfig = (0, import_react2.useCallback)((partial) => {
       lastConnectorConfigRef.current = { ...lastConnectorConfigRef.current, ...partial };
       setLastConnectorConfigRaw((prev) => ({ ...prev, ...partial }));
-    }, []);
-    const showToast = (0, import_react2.useCallback)((msg, level = "info") => {
-      if (!msg) return;
-      parent.postMessage({ pluginMessage: { type: "NOTIFY", message: msg, level } }, "*");
     }, []);
     const lastResizeHeightRef = (0, import_react2.useRef)(0);
     const resizeTimerRef = (0, import_react2.useRef)(null);
@@ -29464,6 +29534,26 @@
       };
       setLastNodeConfig(newConfig);
       if (nodes.length === 1) {
+        const targetNode = nodes[0];
+        const prevSinglePayload = {
+          nodeId: targetNode.id,
+          title: targetNode.title || targetNode.name || "",
+          description: targetNode.description || "",
+          width: targetNode.width,
+          height: targetNode.height,
+          cornerRadius: targetNode.cornerRadius,
+          theme: targetNode.theme || "light",
+          figmaLink: targetNode.figmaLink || "",
+          nodeType: targetNode.flowNodeType || (targetNode.nodeType === "FRAME" ? "Screen" : targetNode.nodeType),
+          colorHex: targetNode.fillColorHex,
+          elevation: targetNode.elevation !== void 0 && targetNode.elevation !== null ? targetNode.elevation : null
+        };
+        const newSnapshot = {
+          type: "single",
+          singlePayload: prevSinglePayload
+        };
+        setLastAppliedSnapshot(newSnapshot);
+        lastAppliedSnapshotRef.current = newSnapshot;
         parent.postMessage({
           pluginMessage: {
             type: "UPDATE_FLOW_NODE",
@@ -29612,13 +29702,15 @@
             const matchedId = matchedPreset ? matchedPreset.id : null;
             colorUpdates.selectedStylePresetId = matchedId;
             setSelectedStylePresetId(matchedId);
-            setLastNodeConfig({
-              ...baseConfigUpdates,
-              color: first.fillColorHex,
-              strokeWeight: first.strokeWeight,
-              strokeColor: first.strokeColorHex
-            });
-          } else {
+            if (nodes.length === 1) {
+              setLastNodeConfig({
+                ...baseConfigUpdates,
+                color: first.fillColorHex,
+                strokeWeight: first.strokeWeight,
+                strokeColor: first.strokeColorHex
+              });
+            }
+          } else if (nodes.length === 1) {
             setLastNodeConfig(baseConfigUpdates);
           }
           setUIState(colorUpdates);
@@ -29631,14 +29723,13 @@
       if (!isUserLocked || isDifferentNode) {
         if (nodes.length > 0) {
           const flowNodes = nodes.filter((n) => n && n.isFlowNode);
-          const first = flowNodes[0] || nodes[0];
-          if (first) {
-            const hasElevation = first.elevation !== void 0 && first.elevation !== null ? first.elevation >= 0 : Boolean(first.elevationOn);
-            if (hasElevation) {
-              setActiveAppearanceSection("elevation");
-            } else {
-              setActiveAppearanceSection(null);
-            }
+          const hasAnyElevation = flowNodes.some(
+            (n) => n.elevation !== void 0 && n.elevation !== null ? n.elevation >= 0 : Boolean(n.elevationOn)
+          );
+          if (hasAnyElevation) {
+            setActiveAppearanceSection("elevation");
+          } else {
+            setActiveAppearanceSection(null);
           }
         } else {
           const hasElevation = Boolean(lastNodeConfigRef.current.elevationOn);
@@ -29705,7 +29796,9 @@
       updateMultiDraft,
       clearMultiDraft,
       clearMultiDraftKeys,
-      isApplyingMultiDraft
+      isApplyingMultiDraft,
+      canUndo,
+      handleUndo
     };
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppContext.Provider, { value, children });
   }
@@ -29951,16 +30044,16 @@
   function ScreenIcon() {
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "48", height: "48", viewBox: "0 0 48 48", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { transform: "translate(7, 11)", d: "M6 0V2H32V24H2V6H0V0H6ZM6 6H2.95996V23.04H31.04V2.95996H6V6ZM1 1V5H5V1H1Z", fill: "currentColor" }) });
   }
-  function SquareIcon() {
+  function ProcessIcon() {
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "26", height: "26", viewBox: "0 0 26 26", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M25 1V25H1V1H25ZM26 0H0V26H26V0Z", fill: "currentColor" }) });
   }
   function CircleIcon() {
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "28", height: "28", viewBox: "0 0 28 28", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M14 1C21.17 1 27 6.83 27 14C27 21.17 21.17 27 14 27C6.83 27 1 21.17 1 14C1 6.83 6.83 1 14 1ZM14 0C6.27 0 0 6.27 0 14C0 21.73 6.27 28 14 28C21.73 28 28 21.73 28 14C28 6.27 21.73 0 14 0Z", fill: "currentColor" }) });
   }
-  function DiamondIcon() {
+  function DecisionIcon() {
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "32", height: "32", viewBox: "0 0 32 32", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M16 1.41L30.59 16L16 30.59L1.41 16L16 1.41ZM16 0L0 16L16 32L32 16L16 0Z", fill: "currentColor" }) });
   }
-  function PillIcon() {
+  function TerminatorIcon() {
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "32", height: "24", viewBox: "0 0 32 24", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M20.19 1C26.15 1 31 5.85 31 11.81V12.2C31 18.16 26.15 23.01 20.19 23.01H11.8C5.84 23.01 0.99 18.16 0.99 12.2V11.81C1 5.85 5.85 1 11.81 1H20.2H20.19ZM20.19 0H11.8C5.31 0 0 5.31 0 11.81V12.2C0 18.69 5.31 24.01 11.81 24.01H20.2C26.69 24.01 32.01 18.7 32.01 12.2V11.81C32.01 5.32 26.7 0 20.2 0H20.19Z", fill: "currentColor" }) });
   }
   function BranchIcon() {
@@ -29968,10 +30061,10 @@
   }
   var NODE_TYPE_OPTIONS = [
     { type: "Screen", label: "Screen", tooltip: "Screen", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ScreenIcon, {}) },
-    { type: "Process", label: "Process", tooltip: "Process", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SquareIcon, {}) },
-    { type: "Connector", label: "Connector", tooltip: "Connector", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CircleIcon, {}) },
-    { type: "Decision", label: "Decision", tooltip: "Decision", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(DiamondIcon, {}) },
-    { type: "Terminator", label: "Terminator", tooltip: "Terminator", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(PillIcon, {}) },
+    { type: "Process", label: "Process", tooltip: "Process", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ProcessIcon, {}) },
+    { type: "Circle", label: "Circle", tooltip: "Circle", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CircleIcon, {}) },
+    { type: "Decision", label: "Decision", tooltip: "Decision", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(DecisionIcon, {}) },
+    { type: "Terminator", label: "Terminator", tooltip: "Terminator", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TerminatorIcon, {}) },
     { type: "Branch", label: "Branch", tooltip: "Branch", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(BranchIcon, {}) }
   ];
   function TypeSection() {
@@ -30353,12 +30446,7 @@
     const [copied, setCopied] = (0, import_react7.useState)(false);
     const timerRef = (0, import_react7.useRef)(null);
     const debounceTimerRef = (0, import_react7.useRef)(null);
-    const [isOn, setIsOn] = (0, import_react7.useState)(() => {
-      if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], "description")) {
-        return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
-      }
-      return Boolean(lastNodeConfig.descriptionOn);
-    });
+    const [isOn, setIsOn] = (0, import_react7.useState)(null);
     const [hasText, setHasText] = (0, import_react7.useState)(() => {
       if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], "description")) {
         return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
@@ -30406,7 +30494,7 @@
     const isTypeDrafted = multiDraft.nodeType !== void 0;
     const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "description") : true;
     const isDescDrafted = multiDraft.description !== void 0;
-    const effectiveIsOpen = !isDraftAllowed ? false : isDescDrafted ? Boolean(multiDraft.description) : rawOptionState.disabled ? false : rawOptionState.state === "MIXED_ACTIVE" ? true : isOn;
+    const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isDescDrafted ? Boolean(multiDraft.description) : isOn !== null ? isOn : rawOptionState.isOpen;
     const effectiveState = (0, import_react7.useMemo)(() => {
       if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
         return {
@@ -30440,22 +30528,22 @@
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
       const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
       prevSelectedNodeIdRef.current = currentNodeId;
+      if (isDifferentNode) {
+        setIsOn(null);
+      }
       if (!isUserLocked || isDifferentNode) {
         if (rawOptionState.supportedCount > 0) {
           const supported = rawOptionState.supportedNodes;
           if (supported.length === 1) {
             const node = supported[0];
             const hasDesc = Boolean(node && node.description && node.description.trim());
-            setIsOn(hasDesc);
             setHasText(hasDesc);
             setLastNodeConfig({ descriptionOn: hasDesc });
           } else {
             const onCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
-            setIsOn(onCount > 0);
             setHasText(onCount > 0);
           }
         } else {
-          setIsOn(false);
           setHasText(false);
         }
       }
@@ -30627,7 +30715,7 @@
       multiDraft,
       updateMultiDraft
     } = useApp();
-    const [isOn, setIsOn] = (0, import_react8.useState)(false);
+    const [isOn, setIsOn] = (0, import_react8.useState)(null);
     const [url, setUrl] = (0, import_react8.useState)("");
     const cachedUrlRef = (0, import_react8.useRef)("");
     const userActionLockRef = (0, import_react8.useRef)(0);
@@ -30672,7 +30760,7 @@
     const isTypeDrafted = multiDraft.nodeType !== void 0;
     const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "figmaLink") : true;
     const isLinkDrafted = multiDraft.figmaLink !== void 0;
-    const effectiveIsOpen = !isDraftAllowed ? false : isLinkDrafted ? Boolean(multiDraft.figmaLink) : rawOptionState.disabled ? false : rawOptionState.state === "MIXED_ACTIVE" ? true : isOn;
+    const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isLinkDrafted ? Boolean(multiDraft.figmaLink) : isOn !== null ? isOn : rawOptionState.isOpen;
     const effectiveState = (0, import_react8.useMemo)(() => {
       if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
         return {
@@ -30693,6 +30781,15 @@
           isOpen: on
         };
       }
+      if (isOn !== null) {
+        return {
+          state: isOn ? "ON" : "OFF",
+          checked: isOn,
+          isMixed: false,
+          disabled: rawOptionState.disabled,
+          isOpen: isOn
+        };
+      }
       return {
         state: rawOptionState.state,
         checked: rawOptionState.checked,
@@ -30700,12 +30797,15 @@
         disabled: rawOptionState.disabled,
         isOpen: effectiveIsOpen
       };
-    }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, effectiveIsOpen]);
+    }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, effectiveIsOpen, isOn]);
     (0, import_react8.useEffect)(() => {
       const isUserLocked = Date.now() - userActionLockRef.current < 600;
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
       const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
       prevSelectedNodeIdRef.current = currentNodeId;
+      if (isDifferentNode) {
+        setIsOn(null);
+      }
       if (!isUserLocked || isDifferentNode) {
         if (rawOptionState.supportedCount > 0) {
           const supported = rawOptionState.supportedNodes;
@@ -30713,18 +30813,14 @@
             const node = supported[0];
             const activeLink = node.figmaLink || "";
             const cachedLink = node.cachedFigmaLink || activeLink || "";
-            const enabled = Boolean(activeLink);
-            setIsOn(enabled);
             const displayLink = activeLink || cachedLink;
             setUrl(displayLink);
             cachedUrlRef.current = displayLink;
             setLastNodeConfig({
-              singleLinkOn: enabled,
+              singleLinkOn: Boolean(activeLink),
               singleLinkUrl: displayLink
             });
           } else {
-            const onCount = supported.filter((n) => Boolean(n.figmaLink && n.figmaLink.trim())).length;
-            setIsOn(onCount > 0);
             const firstLink = supported[0]?.figmaLink || "";
             const allSame = supported.every((n) => (n.figmaLink || "") === firstLink);
             if (allSame && firstLink) {
@@ -30735,7 +30831,6 @@
             }
           }
         } else {
-          setIsOn(false);
           setUrl("");
         }
       }
@@ -30998,12 +31093,7 @@
       updateMultiDraft
     } = useApp();
     const summary = useSelectionSummary();
-    const [isOpen, setIsOpen] = (0, import_react9.useState)(() => {
-      if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], "status")) {
-        return Boolean(selectedNodes[0]?.status);
-      }
-      return Boolean(lastNodeConfig.statusOn);
-    });
+    const [isOpen, setIsOpen] = (0, import_react9.useState)(null);
     const userActionLockRef = import_react9.default.useRef(0);
     const prevSelectedNodeIdRef = import_react9.default.useRef(null);
     const { selectedStatus } = uiState;
@@ -31044,34 +31134,31 @@
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
       const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
       prevSelectedNodeIdRef.current = currentNodeId;
+      if (isDifferentNode) {
+        setIsOpen(null);
+      }
       if (!isUserLocked || isDifferentNode) {
         if (rawOptionState.supportedCount > 0) {
           const supported = rawOptionState.supportedNodes;
           if (supported.length === 1) {
             const node = supported[0];
-            const hasStatus = Boolean(node && node.status);
-            setIsOpen(hasStatus);
             if (node && node.status) {
               setUIState({ selectedStatus: node.status });
             }
           } else {
-            const onCount = supported.filter((n) => Boolean(n.status)).length;
-            setIsOpen(onCount > 0);
             const firstStatus = supported.find((n) => n.status)?.status;
             const allSame = supported.every((n) => n.status === firstStatus);
             if (allSame && firstStatus) {
               setUIState({ selectedStatus: firstStatus });
             }
           }
-        } else {
-          setIsOpen(false);
         }
       }
     }, [rawOptionState, selectedNodes, setUIState]);
     const isTypeDrafted = multiDraft.nodeType !== void 0;
     const isDraftAllowed = isTypeDrafted ? normalizeNodeType(multiDraft.nodeType) === "Screen" : true;
     const isStatusDrafted = multiDraft.status !== void 0;
-    const effectiveIsOpen = !isDraftAllowed ? false : isStatusDrafted ? Boolean(multiDraft.status) : rawOptionState.disabled ? false : isOpen;
+    const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isStatusDrafted ? Boolean(multiDraft.status) : isOpen !== null ? isOpen : rawOptionState.isOpen;
     const effectiveState = import_react9.default.useMemo(() => {
       if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
         return {
@@ -31400,12 +31487,7 @@
     } = useApp();
     const summary = useSelectionSummary();
     const isMultiMode = summary.isMultiFlowNode;
-    const [isOpen, setIsOpen] = (0, import_react10.useState)(() => {
-      if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
-        return selectedNodes[0]?.stepNumber !== void 0;
-      }
-      return Boolean(lastNodeConfig.stepBadgesOn);
-    });
+    const [isOpen, setIsOpen] = (0, import_react10.useState)(null);
     const userActionLockRef = (0, import_react10.useRef)(0);
     const prevSelectedNodeIdRef = (0, import_react10.useRef)(null);
     const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react10.useState)(false);
@@ -31463,7 +31545,7 @@
     const isTypeDrafted = multiDraft.nodeType !== void 0;
     const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "stepBadge") : true;
     const isBadgeOnDrafted = multiDraft.badgeOn !== void 0;
-    const effectiveIsOpen = !isDraftAllowed ? false : isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : rawOptionState.disabled ? false : isOpen;
+    const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : isOpen !== null ? isOpen : rawOptionState.isOpen;
     const effectiveState = import_react10.default.useMemo(() => {
       if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
         return {
@@ -31484,6 +31566,15 @@
           isOpen: on
         };
       }
+      if (isOpen !== null) {
+        return {
+          state: isOpen ? "ON" : "OFF",
+          checked: isOpen,
+          isMixed: false,
+          disabled: rawOptionState.disabled,
+          isOpen
+        };
+      }
       return {
         state: rawOptionState.state,
         checked: rawOptionState.checked,
@@ -31498,6 +31589,9 @@
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
       const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
       prevSelectedNodeIdRef.current = currentNodeId;
+      if (isDifferentNode) {
+        setIsOpen(null);
+      }
       if (!isUserLocked || isDifferentNode) {
         if (rawOptionState.supportedCount > 0) {
           const supported = rawOptionState.supportedNodes;
@@ -31505,10 +31599,8 @@
             setIsMixed(false);
             const node = supported[0];
             if (node.stepNumber !== void 0) {
-              setIsOpen(true);
               setStepNumText(String(node.stepNumber));
             } else {
-              setIsOpen(false);
               setStepNumText("1");
             }
             if (node.badgeCorner) {
@@ -31521,8 +31613,6 @@
               setUIState({ selectedBadgeColorMode: node.badgeColorMode });
             }
           } else {
-            const onCount = supported.filter((n) => n.stepNumber !== void 0 && n.stepNumber !== null).length;
-            setIsOpen(onCount > 0);
             const validNums = supported.map((n) => n.stepNumber).filter((n) => typeof n === "number" && !isNaN(n) && n > 0);
             if (validNums.length > 0) {
               const minNum = Math.min(...validNums);
@@ -31547,12 +31637,10 @@
           }
         } else {
           if (selectedNodes.length === 0) {
-            setIsOpen(Boolean(lastNodeConfig.stepBadgesOn));
             setIsMixed(false);
             const nextStepNum = typeof lastNodeConfig.stepNumber === "number" && lastNodeConfig.stepNumber > 0 ? lastNodeConfig.stepNumber + 1 : 1;
             setStepNumText(String(nextStepNum));
           } else {
-            setIsOpen(false);
             setIsMixed(false);
           }
         }
@@ -33418,6 +33506,7 @@
   function ElevationSection() {
     const {
       uiState,
+      lastNodeConfig,
       setLastNodeConfig,
       applyElevationToNodes,
       activeAppearanceSection,
@@ -33428,7 +33517,16 @@
       updateMultiDraft
     } = useApp();
     const summary = useSelectionSummary();
-    const isSectionOpen = activeAppearanceSection === "elevation";
+    const [isOpen, setIsOpen] = import_react13.default.useState(null);
+    const prevSelectedNodeIdRef = import_react13.default.useRef(null);
+    import_react13.default.useEffect(() => {
+      const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
+      const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+      prevSelectedNodeIdRef.current = currentNodeId;
+      if (isDifferentNode) {
+        setIsOpen(null);
+      }
+    }, [selectedNodes]);
     const rawOptionState = import_react13.default.useMemo(() => {
       if (selectedNodes.length === 0) {
         const creationType = uiState.selectedNodeType || "Screen";
@@ -33446,16 +33544,17 @@
             isOpen: false
           };
         }
+        const on = Boolean(uiState.selectedElevation !== void 0 && uiState.selectedElevation !== null ? uiState.selectedElevation >= 0 : lastNodeConfig.elevationOn);
         return {
-          state: isSectionOpen ? "ON" : "OFF",
+          state: on ? "ON" : "OFF",
           supportedCount: 1,
           unsupportedCount: 0,
           supportedNodes: [],
           unsupportedNodes: [],
-          checked: isSectionOpen,
+          checked: on,
           isMixed: false,
           disabled: false,
-          isOpen: isSectionOpen
+          isOpen: on
         };
       }
       return computeOptionSwitchState(
@@ -33463,11 +33562,11 @@
         "elevation",
         (n) => Boolean(n.elevation !== void 0 && n.elevation !== null ? n.elevation >= 0 : n.elevationOn)
       );
-    }, [selectedNodes, uiState.selectedNodeType, isSectionOpen]);
+    }, [selectedNodes, uiState.selectedNodeType, uiState.selectedElevation, lastNodeConfig.elevationOn]);
     const isTypeDrafted = multiDraft.nodeType !== void 0;
     const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "elevation") : true;
     const isElevationDrafted = multiDraft.elevation !== void 0;
-    const effectiveIsOpen = !isDraftAllowed ? false : isElevationDrafted ? typeof multiDraft.elevation === "number" : rawOptionState.disabled ? false : isSectionOpen;
+    const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isElevationDrafted ? typeof multiDraft.elevation === "number" : isOpen !== null ? isOpen : rawOptionState.isOpen;
     const effectiveState = import_react13.default.useMemo(() => {
       if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
         return {
@@ -33504,9 +33603,10 @@
       const firstLevel = supported[0]?.elevation;
       return supported.some((n) => n.elevation !== firstLevel);
     }, [isElevationDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
-    const currentLevel = isElevationDrafted ? typeof multiDraft.elevation === "number" ? multiDraft.elevation : void 0 : isElevationMixed ? void 0 : summary.isMultiFlowNode ? summary.elevation.value : typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
+    const currentLevel = isElevationDrafted ? typeof multiDraft.elevation === "number" ? multiDraft.elevation : void 0 : isElevationMixed ? void 0 : rawOptionState.supportedNodes.length === 1 ? typeof rawOptionState.supportedNodes[0]?.elevation === "number" ? rawOptionState.supportedNodes[0].elevation : uiState.selectedElevation ?? 0 : summary.isMultiFlowNode ? summary.elevation.value : typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
     function handleToggle(checked) {
       if (effectiveState.disabled) return;
+      setIsOpen(checked);
       if (selectedNodes.length >= 2) {
         if (checked) {
           setActiveAppearanceSection("elevation");
@@ -33540,6 +33640,7 @@
     }
     function selectElevation(level) {
       if (effectiveState.disabled) return;
+      setIsOpen(true);
       setActiveAppearanceSection("elevation");
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ elevation: level });
@@ -33602,8 +33703,6 @@
       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(SizeSection, {}),
       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("hr", { className: "section-divider" }),
       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(StyleSection, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("hr", { className: "section-divider" }),
-      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(StepBadgesSection, {}),
       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("hr", { className: "section-divider" }),
       /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(ElevationSection, {})
     ] });
@@ -37374,8 +37473,8 @@
       return "Connect";
     }
     if (nodeCount >= 2) return "Apply to All";
-    if (nodeCount === 1) return "Update";
-    return "Create";
+    if (nodeCount === 1) return "Apply";
+    return "Create Node";
   }
   function App() {
     useFigmaMessage();
@@ -37408,7 +37507,9 @@
       multiDraft,
       hasMultiDraft,
       updateMultiDraft,
-      isApplyingMultiDraft
+      isApplyingMultiDraft,
+      canUndo,
+      handleUndo
     } = useApp();
     const handleAddSizeSave = (0, import_react25.useCallback)((preset) => {
       addSizePreset(preset);
@@ -37619,17 +37720,31 @@
       ] }) }),
       currentTab !== "connection" && (() => {
         const isCtaDisabled = isFigjamSelected || nodeCount >= 2 && (!hasMultiDraft || isApplyingMultiDraft);
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
-          "button",
-          {
-            id: "btn-main-cta",
-            className: `btn-cta-primary${isCtaDisabled ? " disabled" : ""}`,
-            type: "button",
-            disabled: isCtaDisabled,
-            onClick: isFigjamSelected ? void 0 : handleMainAction,
-            children: ctaLabel
-          }
-        ) });
+        const showUndo = ctaLabel === "Apply" || ctaLabel === "Apply to All";
+        return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("footer", { className: "app-footer", children: [
+          showUndo && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+            "button",
+            {
+              id: "btn-undo",
+              className: "btn-cta-secondary",
+              type: "button",
+              disabled: !canUndo,
+              onClick: handleUndo,
+              children: "Undo"
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+            "button",
+            {
+              id: "btn-main-cta",
+              className: `btn-cta-primary${isCtaDisabled ? " disabled" : ""}`,
+              type: "button",
+              disabled: isCtaDisabled,
+              onClick: isFigjamSelected ? void 0 : handleMainAction,
+              children: ctaLabel
+            }
+          )
+        ] });
       })(),
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
       activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(

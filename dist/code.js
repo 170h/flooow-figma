@@ -67,16 +67,17 @@
         return "Screen";
       case "process":
       case "square":
+      case "rectangle":
       case "action":
       case "error":
       case "true":
       case "false":
         return "Process";
-      case "connector":
       case "circle":
+      case "connector":
       case "system":
       case "database":
-        return "Connector";
+        return "Circle";
       case "decision":
       case "diamond":
         return "Decision";
@@ -88,7 +89,7 @@
       case "subflow":
         return "Branch";
       case "bridge":
-        return "Bridge";
+        return "Branch";
       default:
         return type || "Screen";
     }
@@ -96,20 +97,21 @@
   var NODE_TYPE_SHAPE_SPECS = {
     Screen: { width: 250, height: 100, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
     Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-    Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-    Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-    // 레거시 별칭
+    // 레거시 별칭 호환
+    Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Square: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-    Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Rectangle: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Diamond: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Pill: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Action: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     System: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-    Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false }
+    Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
+    Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false }
   };
   var OPTION_CAPABILITY_MATRIX = {
     Screen: {
@@ -181,10 +183,11 @@
       case "Screen":
         return "Screen";
       case "Process":
+      case "Circle":
+      case "Connector":
       case "Decision":
       case "Terminator":
         return "Shape";
-      case "Connector":
       case "Branch":
       case "Bridge":
         return "Bridge";
@@ -3216,7 +3219,7 @@
       card.minHeight = height;
       card.maxHeight = height;
       if (isShapeNode) {
-        const hPad = nodeType === "Decision" ? 24 : nodeType === "Connector" ? 18 : 12;
+        const hPad = nodeType === "Decision" ? 24 : nodeType === "Circle" || nodeType === "Connector" ? 18 : 12;
         card.paddingLeft = hPad;
         card.paddingRight = hPad;
         card.paddingTop = 12;
@@ -4039,6 +4042,9 @@
         const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
         const isShapeNode = !spec.allowDescription;
         const isChangingToScreen = prevNodeType !== "Screen" && nodeType === "Screen";
+        const existingShapeVector = card.children.find(
+          (c) => (c.name === "ShapeVector" || c.name === "DiamondShape") && (c.type === "VECTOR" || c.type === "FRAME")
+        );
         const prevTheme = safeGetPluginData2(card, "node_theme") || "light";
         const isDark = prevTheme === "dark";
         let isFillNone = false;
@@ -4049,11 +4055,16 @@
             bgColor = hexToRgbColor(patch.colorHex);
           }
         } else {
-          const currentFill = card.fills;
-          if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === "SOLID") {
-            bgColor = currentFill[0].color;
-          } else if (!Array.isArray(currentFill) || currentFill.length === 0) {
-            isFillNone = true;
+          if (isShapeNode && existingShapeVector && "fills" in existingShapeVector && Array.isArray(existingShapeVector.fills) && existingShapeVector.fills.length > 0 && existingShapeVector.fills[0].type === "SOLID") {
+            bgColor = existingShapeVector.fills[0].color;
+            isFillNone = false;
+          } else {
+            const currentFill = card.fills;
+            if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === "SOLID") {
+              bgColor = currentFill[0].color;
+            } else if (!Array.isArray(currentFill) || currentFill.length === 0) {
+              isFillNone = true;
+            }
           }
         }
         const { titleFill, descFill, isBgDark } = isFillNone ? {
@@ -4063,7 +4074,9 @@
         } : getTextFillsByBackground(bgColor, isDark);
         const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
         if (patch.colorHex !== void 0) {
-          if (isFillNone) {
+          if (isShapeNode) {
+            card.fills = [];
+          } else if (isFillNone) {
             card.fills = [];
           } else {
             card.fills = [{ type: "SOLID", color: bgColor }];
@@ -4072,18 +4085,37 @@
         if (card.layoutMode !== "VERTICAL") {
           card.layoutMode = "VERTICAL";
         }
-        let cardStrokeWeight = typeof card.strokeWeight === "number" ? card.strokeWeight : 1.5;
+        let existingStrokeWeight = 1.5;
+        let existingStrokeColor = null;
+        if (isShapeNode && existingShapeVector) {
+          if ("strokeWeight" in existingShapeVector && typeof existingShapeVector.strokeWeight === "number") {
+            existingStrokeWeight = existingShapeVector.strokeWeight;
+          }
+          if ("strokes" in existingShapeVector && Array.isArray(existingShapeVector.strokes) && existingShapeVector.strokes.length > 0 && existingShapeVector.strokes[0]?.type === "SOLID") {
+            existingStrokeColor = existingShapeVector.strokes[0].color;
+          }
+        } else {
+          if (typeof card.strokeWeight === "number") {
+            existingStrokeWeight = card.strokeWeight;
+          }
+          if (Array.isArray(card.strokes) && card.strokes.length > 0 && card.strokes[0]?.type === "SOLID") {
+            existingStrokeColor = card.strokes[0].color;
+          }
+        }
+        let cardStrokeWeight = existingStrokeWeight;
         if (patch.strokeWeight !== void 0 || patch.strokeColor !== void 0) {
           cardStrokeWeight = patch.strokeWeight !== void 0 ? clampStrokeWeight(patch.strokeWeight) : cardStrokeWeight;
-          if (cardStrokeWeight === 0) {
-            card.strokes = [];
-          } else {
-            const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : Array.isArray(card.strokes) && card.strokes[0]?.type === "SOLID" ? card.strokes[0].color : borderColor;
-            card.strokes = [{ type: "SOLID", color: strokeCol }];
-            card.strokeWeight = cardStrokeWeight;
-            card.strokeAlign = "INSIDE";
-            if ("strokesIncludedInLayout" in card) {
-              card.strokesIncludedInLayout = true;
+          if (!isShapeNode) {
+            if (cardStrokeWeight === 0) {
+              card.strokes = [];
+            } else {
+              const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : existingStrokeColor || borderColor;
+              card.strokes = [{ type: "SOLID", color: strokeCol }];
+              card.strokeWeight = cardStrokeWeight;
+              card.strokeAlign = "INSIDE";
+              if ("strokesIncludedInLayout" in card) {
+                card.strokesIncludedInLayout = true;
+              }
             }
           }
         }
@@ -4433,14 +4465,22 @@
           linkBadge.y = card.height - linkBadge.height - 10;
         }
         const shapeVec = card.children.find(
-          (c) => c.name === "ShapeVector" || c.name === "DiamondShape"
+          (c) => (c.name === "ShapeVector" || c.name === "DiamondShape") && (c.type === "VECTOR" || c.type === "FRAME")
         );
-        if (shapeVec) {
-          shapeVec.remove();
-        }
-        if (isShapeNode) {
-          const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : borderColor;
-          attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
+        if (!isShapeNode) {
+          if (shapeVec) {
+            shapeVec.remove();
+          }
+        } else {
+          const shouldRecreateShapeVector = !shapeVec || patch.nodeType !== void 0 || patch.width !== void 0 || patch.height !== void 0 || patch.colorHex !== void 0 || patch.strokeWeight !== void 0 || patch.strokeColor !== void 0;
+          if (shouldRecreateShapeVector) {
+            if (shapeVec) {
+              shapeVec.remove();
+            }
+            const defaultStrokeCol = existingStrokeColor || borderColor;
+            const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : defaultStrokeCol;
+            attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
+          }
         }
         const curStepBadge = card.children.find(
           (c) => c.name.startsWith("[Step]") || safeGetPluginData2(c, "is_step_badge") === "true"
@@ -5517,7 +5557,7 @@
     stepBadge.constraints = badgeCoords.constraints;
   }
   function getStepBadgeCoordinates(nodeType, cardW, cardH, bw, bh, corner) {
-    if (nodeType !== "Connector" && nodeType !== "Decision" && nodeType !== "Terminator") {
+    if (nodeType !== "Circle" && nodeType !== "Connector" && nodeType !== "Decision" && nodeType !== "Terminator") {
       const offset = 11;
       if (corner === "TOP_RIGHT") {
         return { x: cardW - bw + offset, y: -offset, constraints: { horizontal: "MAX", vertical: "MIN" } };
@@ -5529,7 +5569,7 @@
         return { x: -offset, y: -offset, constraints: { horizontal: "MIN", vertical: "MIN" } };
       }
     }
-    if (nodeType === "Connector") {
+    if (nodeType === "Circle" || nodeType === "Connector") {
       const rx = cardW / 2;
       const ry = cardH / 2;
       const cos45 = Math.SQRT1_2;

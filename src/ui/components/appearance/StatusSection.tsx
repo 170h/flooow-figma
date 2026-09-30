@@ -40,12 +40,7 @@ export function StatusSection() {
   } = useApp();
   const summary = useSelectionSummary();
 
-  const [isOpen, setIsOpen] = useState(() => {
-    if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], 'status')) {
-      return Boolean(selectedNodes[0]?.status);
-    }
-    return Boolean(lastNodeConfig.statusOn);
-  });
+  const [isOpen, setIsOpen] = useState<boolean | null>(null);
 
   const userActionLockRef = React.useRef<number>(0);
   const prevSelectedNodeIdRef = React.useRef<string | null>(null);
@@ -93,27 +88,25 @@ export function StatusSection() {
     const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
     prevSelectedNodeIdRef.current = currentNodeId;
 
+    if (isDifferentNode) {
+      setIsOpen(null);
+    }
+
     if (!isUserLocked || isDifferentNode) {
       if (rawOptionState.supportedCount > 0) {
         const supported = rawOptionState.supportedNodes;
         if (supported.length === 1) {
           const node = supported[0];
-          const hasStatus = Boolean(node && node.status);
-          setIsOpen(hasStatus);
           if (node && node.status) {
             setUIState({ selectedStatus: node.status });
           }
         } else {
-          const onCount = supported.filter((n) => Boolean(n.status)).length;
-          setIsOpen(onCount > 0);
           const firstStatus = supported.find((n) => n.status)?.status;
           const allSame = supported.every((n) => n.status === firstStatus);
           if (allSame && firstStatus) {
             setUIState({ selectedStatus: firstStatus });
           }
         }
-      } else {
-        setIsOpen(false);
       }
     }
   }, [rawOptionState, selectedNodes, setUIState]);
@@ -123,9 +116,11 @@ export function StatusSection() {
   const isDraftAllowed = isTypeDrafted ? normalizeNodeType(multiDraft.nodeType) === 'Screen' : true;
 
   const isStatusDrafted = multiDraft.status !== undefined;
-  const effectiveIsOpen = !isDraftAllowed
+  const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled
     ? false
-    : (isStatusDrafted ? Boolean(multiDraft.status) : (rawOptionState.disabled ? false : isOpen));
+    : (isStatusDrafted
+        ? Boolean(multiDraft.status)
+        : (isOpen !== null ? isOpen : rawOptionState.isOpen));
 
   const effectiveState = React.useMemo(() => {
     if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {

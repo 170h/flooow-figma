@@ -15,9 +15,9 @@ function ScreenIcon() {
 }
 
 /**
- * 2. Square 아이콘 (1027415-4988 공식 SVG)
+ * 2. Process 아이콘 (1027415-4988 공식 SVG)
  */
-function SquareIcon() {
+function ProcessIcon() {
   return (
     <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M25 1V25H1V1H25ZM26 0H0V26H26V0Z" fill="currentColor" />
@@ -37,9 +37,9 @@ function CircleIcon() {
 }
 
 /**
- * 4. Diamond 아이콘 (1027415-4982 공식 SVG)
+ * 4. Decision 아이콘 (1027415-4982 공식 SVG)
  */
-function DiamondIcon() {
+function DecisionIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M16 1.41L30.59 16L16 30.59L1.41 16L16 1.41ZM16 0L0 16L16 32L32 16L16 0Z" fill="currentColor" />
@@ -48,9 +48,9 @@ function DiamondIcon() {
 }
 
 /**
- * 5. Pill 아이콘 (1027415-4979 공식 SVG)
+ * 5. Terminator 아이콘 (1027415-4979 공식 SVG)
  */
-function PillIcon() {
+function TerminatorIcon() {
   return (
     <svg width="32" height="24" viewBox="0 0 32 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M20.19 1C26.15 1 31 5.85 31 11.81V12.2C31 18.16 26.15 23.01 20.19 23.01H11.8C5.84 23.01 0.99 18.16 0.99 12.2V11.81C1 5.85 5.85 1 11.81 1H20.2H20.19ZM20.19 0H11.8C5.31 0 0 5.31 0 11.81V12.2C0 18.69 5.31 24.01 11.81 24.01H20.2C26.69 24.01 32.01 18.7 32.01 12.2V11.81C32.01 5.32 26.7 0 20.2 0H20.19Z" fill="currentColor" />
@@ -78,10 +78,10 @@ interface NodeTypeOption {
 
 const NODE_TYPE_OPTIONS: NodeTypeOption[] = [
   { type: 'Screen', label: 'Screen', tooltip: 'Screen', icon: <ScreenIcon /> },
-  { type: 'Process', label: 'Process', tooltip: 'Process', icon: <SquareIcon /> },
-  { type: 'Connector', label: 'Connector', tooltip: 'Connector', icon: <CircleIcon /> },
-  { type: 'Decision', label: 'Decision', tooltip: 'Decision', icon: <DiamondIcon /> },
-  { type: 'Terminator', label: 'Terminator', tooltip: 'Terminator', icon: <PillIcon /> },
+  { type: 'Process', label: 'Process', tooltip: 'Process', icon: <ProcessIcon /> },
+  { type: 'Circle', label: 'Circle', tooltip: 'Circle', icon: <CircleIcon /> },
+  { type: 'Decision', label: 'Decision', tooltip: 'Decision', icon: <DecisionIcon /> },
+  { type: 'Terminator', label: 'Terminator', tooltip: 'Terminator', icon: <TerminatorIcon /> },
   { type: 'Branch', label: 'Branch', tooltip: 'Branch', icon: <BranchIcon /> },
 ];
 

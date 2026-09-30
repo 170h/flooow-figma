@@ -107,12 +107,7 @@ export function StepBadgesSection() {
   const summary = useSelectionSummary();
   const isMultiMode = summary.isMultiFlowNode;
 
-  const [isOpen, setIsOpen] = useState(() => {
-    if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
-      return selectedNodes[0]?.stepNumber !== undefined;
-    }
-    return Boolean(lastNodeConfig.stepBadgesOn);
-  });
+  const [isOpen, setIsOpen] = useState<boolean | null>(null);
 
   const userActionLockRef = useRef<number>(0);
   const prevSelectedNodeIdRef = useRef<string | null>(null);
@@ -207,9 +202,9 @@ export function StepBadgesSection() {
     : true;
 
   const isBadgeOnDrafted = multiDraft.badgeOn !== undefined;
-  const effectiveIsOpen = !isDraftAllowed
+  const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled
     ? false
-    : (isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : (rawOptionState.disabled ? false : isOpen));
+    : (isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : (isOpen !== null ? isOpen : rawOptionState.isOpen));
 
   const effectiveState = React.useMemo(() => {
     if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {
@@ -229,6 +224,15 @@ export function StepBadgesSection() {
         isMixed: false,
         disabled: false,
         isOpen: on,
+      };
+    }
+    if (isOpen !== null) {
+      return {
+        state: (isOpen ? 'ON' : 'OFF') as OptionSwitchState,
+        checked: isOpen,
+        isMixed: false,
+        disabled: rawOptionState.disabled,
+        isOpen: isOpen,
       };
     }
     return {
@@ -254,6 +258,10 @@ export function StepBadgesSection() {
     const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
     prevSelectedNodeIdRef.current = currentNodeId;
 
+    if (isDifferentNode) {
+      setIsOpen(null);
+    }
+
     if (!isUserLocked || isDifferentNode) {
       if (rawOptionState.supportedCount > 0) {
         const supported = rawOptionState.supportedNodes;
@@ -261,10 +269,8 @@ export function StepBadgesSection() {
           setIsMixed(false);
           const node = supported[0];
           if (node.stepNumber !== undefined) {
-            setIsOpen(true);
             setStepNumText(String(node.stepNumber));
           } else {
-            setIsOpen(false);
             setStepNumText("1");
           }
           if (node.badgeCorner) {
@@ -278,8 +284,6 @@ export function StepBadgesSection() {
           }
         } else {
           // 복수 선택 (지원 노드들만 기준)
-          const onCount = supported.filter((n) => n.stepNumber !== undefined && n.stepNumber !== null).length;
-          setIsOpen(onCount > 0);
           const validNums = supported
             .map((n) => n.stepNumber)
             .filter((n): n is number => typeof n === "number" && !isNaN(n) && n > 0);
@@ -310,7 +314,6 @@ export function StepBadgesSection() {
       } else {
         if (selectedNodes.length === 0) {
           // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원
-          setIsOpen(Boolean(lastNodeConfig.stepBadgesOn));
           setIsMixed(false);
           const nextStepNum =
             typeof lastNodeConfig.stepNumber === "number" &&
@@ -320,7 +323,6 @@ export function StepBadgesSection() {
           setStepNumText(String(nextStepNum));
         } else {
           // 미지원 노드만 선택된 경우: 접힘
-          setIsOpen(false);
           setIsMixed(false);
         }
       }

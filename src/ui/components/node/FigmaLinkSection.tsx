@@ -38,7 +38,7 @@ export function FigmaLinkSection() {
     updateMultiDraft,
   } = useApp();
 
-  const [isOn, setIsOn] = useState(false);
+  const [isOn, setIsOn] = useState<boolean | null>(null);
   const [url, setUrl] = useState("");
   const cachedUrlRef = useRef<string>("");
   const userActionLockRef = useRef<number>(0);
@@ -90,9 +90,11 @@ export function FigmaLinkSection() {
     : true;
 
   const isLinkDrafted = multiDraft.figmaLink !== undefined;
-  const effectiveIsOpen = !isDraftAllowed
+  const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled
     ? false
-    : (isLinkDrafted ? Boolean(multiDraft.figmaLink) : (rawOptionState.disabled ? false : (rawOptionState.state === "MIXED_ACTIVE" ? true : isOn)));
+    : (isLinkDrafted
+        ? Boolean(multiDraft.figmaLink)
+        : (isOn !== null ? isOn : rawOptionState.isOpen));
 
   const effectiveState = useMemo(() => {
     if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
@@ -114,6 +116,15 @@ export function FigmaLinkSection() {
         isOpen: on,
       };
     }
+    if (isOn !== null) {
+      return {
+        state: (isOn ? "ON" : "OFF") as OptionSwitchState,
+        checked: isOn,
+        isMixed: false,
+        disabled: rawOptionState.disabled,
+        isOpen: isOn,
+      };
+    }
     return {
       state: rawOptionState.state,
       checked: rawOptionState.checked,
@@ -121,7 +132,7 @@ export function FigmaLinkSection() {
       disabled: rawOptionState.disabled,
       isOpen: effectiveIsOpen,
     };
-  }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, effectiveIsOpen]);
+  }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, effectiveIsOpen, isOn]);
 
   // 노드 선택 대상이 실제로 변경되었을 때만 figmaLink / cachedLink 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   useEffect(() => {
@@ -135,6 +146,10 @@ export function FigmaLinkSection() {
     const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
     prevSelectedNodeIdRef.current = currentNodeId;
 
+    if (isDifferentNode) {
+      setIsOn(null);
+    }
+
     if (!isUserLocked || isDifferentNode) {
       if (rawOptionState.supportedCount > 0) {
         const supported = rawOptionState.supportedNodes;
@@ -142,18 +157,14 @@ export function FigmaLinkSection() {
           const node = supported[0];
           const activeLink = node.figmaLink || "";
           const cachedLink = node.cachedFigmaLink || activeLink || "";
-          const enabled = Boolean(activeLink);
-          setIsOn(enabled);
           const displayLink = activeLink || cachedLink;
           setUrl(displayLink);
           cachedUrlRef.current = displayLink;
           setLastNodeConfig({
-            singleLinkOn: enabled,
+            singleLinkOn: Boolean(activeLink),
             singleLinkUrl: displayLink,
           });
         } else {
-          const onCount = supported.filter((n) => Boolean(n.figmaLink && n.figmaLink.trim())).length;
-          setIsOn(onCount > 0);
           const firstLink = supported[0]?.figmaLink || "";
           const allSame = supported.every((n) => (n.figmaLink || "") === firstLink);
           if (allSame && firstLink) {
@@ -164,7 +175,6 @@ export function FigmaLinkSection() {
           }
         }
       } else {
-        setIsOn(false);
         setUrl("");
       }
     }

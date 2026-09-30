@@ -31,12 +31,7 @@ export function DescriptionSection() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [isOn, setIsOn] = useState(() => {
-    if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], 'description')) {
-      return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
-    }
-    return Boolean(lastNodeConfig.descriptionOn);
-  });
+  const [isOn, setIsOn] = useState<boolean | null>(null);
 
   // 복사 버튼 활성화 여부 (입력된 텍스트 존재 여부 실시간 추적)
   const [hasText, setHasText] = useState(() => {
@@ -94,9 +89,11 @@ export function DescriptionSection() {
     : true;
 
   const isDescDrafted = multiDraft.description !== undefined;
-  const effectiveIsOpen = !isDraftAllowed
+  const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled
     ? false
-    : (isDescDrafted ? Boolean(multiDraft.description) : (rawOptionState.disabled ? false : (rawOptionState.state === 'MIXED_ACTIVE' ? true : isOn)));
+    : (isDescDrafted
+        ? Boolean(multiDraft.description)
+        : (isOn !== null ? isOn : rawOptionState.isOpen));
 
   const effectiveState = useMemo(() => {
     if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {
@@ -136,22 +133,23 @@ export function DescriptionSection() {
     const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
     prevSelectedNodeIdRef.current = currentNodeId;
 
+    if (isDifferentNode) {
+      setIsOn(null);
+    }
+
     if (!isUserLocked || isDifferentNode) {
       if (rawOptionState.supportedCount > 0) {
         const supported = rawOptionState.supportedNodes;
         if (supported.length === 1) {
           const node = supported[0];
           const hasDesc = Boolean(node && node.description && node.description.trim());
-          setIsOn(hasDesc);
           setHasText(hasDesc);
           setLastNodeConfig({ descriptionOn: hasDesc });
         } else {
           const onCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
-          setIsOn(onCount > 0);
           setHasText(onCount > 0);
         }
       } else {
-        setIsOn(false);
         setHasText(false);
       }
     }

@@ -25,6 +25,7 @@ const ELEVATION_LEVELS = [
 export function ElevationSection() {
   const {
     uiState,
+    lastNodeConfig,
     setLastNodeConfig,
     applyElevationToNodes,
     activeAppearanceSection,
@@ -36,7 +37,18 @@ export function ElevationSection() {
   } = useApp();
   const summary = useSelectionSummary();
 
-  const isSectionOpen = activeAppearanceSection === 'elevation';
+  const [isOpen, setIsOpen] = React.useState<boolean | null>(null);
+  const prevSelectedNodeIdRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : (selectedNodes.length > 1 ? 'MULTI' : null);
+    const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+    prevSelectedNodeIdRef.current = currentNodeId;
+
+    if (isDifferentNode) {
+      setIsOpen(null);
+    }
+  }, [selectedNodes]);
 
   // Option Capability Matrix 기반 스위치 상태 산출
   const rawOptionState = React.useMemo(() => {
@@ -56,16 +68,17 @@ export function ElevationSection() {
           isOpen: false,
         };
       }
+      const on = Boolean(uiState.selectedElevation !== undefined && uiState.selectedElevation !== null ? uiState.selectedElevation >= 0 : lastNodeConfig.elevationOn);
       return {
-        state: (isSectionOpen ? 'ON' : 'OFF') as OptionSwitchState,
+        state: (on ? 'ON' : 'OFF') as OptionSwitchState,
         supportedCount: 1,
         unsupportedCount: 0,
         supportedNodes: [],
         unsupportedNodes: [],
-        checked: isSectionOpen,
+        checked: on,
         isMixed: false,
         disabled: false,
-        isOpen: isSectionOpen,
+        isOpen: on,
       };
     }
     return computeOptionSwitchState(
@@ -73,7 +86,7 @@ export function ElevationSection() {
       'elevation',
       (n) => Boolean(n.elevation !== undefined && n.elevation !== null ? n.elevation >= 0 : n.elevationOn)
     );
-  }, [selectedNodes, uiState.selectedNodeType, isSectionOpen]);
+  }, [selectedNodes, uiState.selectedNodeType, uiState.selectedElevation, lastNodeConfig.elevationOn]);
 
   const isTypeDrafted = multiDraft.nodeType !== undefined;
   const isDraftAllowed = isTypeDrafted
@@ -81,11 +94,11 @@ export function ElevationSection() {
     : true;
 
   const isElevationDrafted = multiDraft.elevation !== undefined;
-  const effectiveIsOpen = !isDraftAllowed
+  const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled
     ? false
     : (isElevationDrafted
         ? (typeof multiDraft.elevation === 'number')
-        : (rawOptionState.disabled ? false : isSectionOpen));
+        : (isOpen !== null ? isOpen : rawOptionState.isOpen));
 
   const effectiveState = React.useMemo(() => {
     if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {
@@ -130,12 +143,15 @@ export function ElevationSection() {
     ? (typeof multiDraft.elevation === 'number' ? multiDraft.elevation : undefined)
     : (isElevationMixed
         ? undefined
-        : (summary.isMultiFlowNode
-            ? summary.elevation.value
-            : (typeof uiState.selectedElevation === 'number' ? uiState.selectedElevation : 0)));
+        : (rawOptionState.supportedNodes.length === 1
+            ? (typeof rawOptionState.supportedNodes[0]?.elevation === 'number' ? rawOptionState.supportedNodes[0].elevation : (uiState.selectedElevation ?? 0))
+            : (summary.isMultiFlowNode
+                ? summary.elevation.value
+                : (typeof uiState.selectedElevation === 'number' ? uiState.selectedElevation : 0))));
 
   function handleToggle(checked: boolean) {
     if (effectiveState.disabled) return;
+    setIsOpen(checked);
     if (selectedNodes.length >= 2) {
       if (checked) {
         setActiveAppearanceSection('elevation');
@@ -172,6 +188,7 @@ export function ElevationSection() {
 
   function selectElevation(level: number) {
     if (effectiveState.disabled) return;
+    setIsOpen(true);
     setActiveAppearanceSection('elevation');
 
     if (selectedNodes.length >= 2) {
