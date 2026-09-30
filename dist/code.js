@@ -3298,8 +3298,8 @@
       const restoredScreenW = savedScreenW ? parseInt(savedScreenW, 10) : spec.width;
       const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
       const restoredScreenR = savedScreenR !== "" && savedScreenR !== void 0 ? parseInt(savedScreenR, 10) : spec.cornerRadius ?? 0;
-      const targetW = isShapeNode ? payload.width ? Math.max(50, payload.width) : spec.width : isChangingToScreen ? payload.width || restoredScreenW : payload.width ? Math.max(50, payload.width) : card.width;
-      const targetH = isShapeNode ? payload.height ? Math.max(50, payload.height) : spec.height : isChangingToScreen ? payload.height || restoredScreenH : payload.height ? Math.max(50, payload.height) : card.height;
+      const targetW = isShapeNode ? payload.width ? Math.max(50, payload.width) : spec.width : isChangingToScreen ? restoredScreenW || (payload.width ? Math.max(50, payload.width) : spec.width) : payload.width ? Math.max(50, payload.width) : card.width;
+      const targetH = isShapeNode ? payload.height ? Math.max(50, payload.height) : spec.height : isChangingToScreen ? restoredScreenH || (payload.height ? Math.max(50, payload.height) : spec.height) : payload.height ? Math.max(50, payload.height) : card.height;
       const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
       if (vectorPathData) {
         card.fills = [];
@@ -3316,7 +3316,7 @@
           existingShapeVector.remove();
         }
         const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
-        const targetRadius = isChangingToScreen ? typeof payload.cornerRadius === "number" ? payload.cornerRadius : restoredScreenR : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius;
+        const targetRadius = isChangingToScreen ? savedScreenR !== "" && savedScreenR !== void 0 ? restoredScreenR : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius;
         card.cornerRadius = targetRadius;
         card.fills = isFillNone ? [] : [{ type: "SOLID", color: bgColor }];
         card.strokes = cardStrokes;

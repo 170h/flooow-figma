@@ -2613,12 +2613,14 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
     const restoredScreenR = savedScreenR !== '' && savedScreenR !== undefined ? parseInt(savedScreenR, 10) : (spec.cornerRadius ?? 0);
 
+    // Screen 복귀 시: 이전에 저장된 screen_width/height를 payload 기본값보다 우선 복원
+    // payload.width=250 같은 타입 기본값이 truthy여서 사용자 설정값(300 등)을 덮어쓰던 버그 수정
     const targetW = isShapeNode
       ? (payload.width ? Math.max(50, payload.width) : spec.width)
-      : (isChangingToScreen ? (payload.width || restoredScreenW) : (payload.width ? Math.max(50, payload.width) : card.width));
+      : (isChangingToScreen ? (restoredScreenW || (payload.width ? Math.max(50, payload.width) : spec.width)) : (payload.width ? Math.max(50, payload.width) : card.width));
     const targetH = isShapeNode
       ? (payload.height ? Math.max(50, payload.height) : spec.height)
-      : (isChangingToScreen ? (payload.height || restoredScreenH) : (payload.height ? Math.max(50, payload.height) : card.height));
+      : (isChangingToScreen ? (restoredScreenH || (payload.height ? Math.max(50, payload.height) : spec.height)) : (payload.height ? Math.max(50, payload.height) : card.height));
     const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
 
     if (vectorPathData) {
@@ -2637,8 +2639,10 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         existingShapeVector.remove();
       }
       const defaultRadius = spec.cornerRadius !== undefined ? spec.cornerRadius : 0;
+      // Screen 복귀 시: savedScreenR에 실제 저장값이 있으면 restoredScreenR 우선 사용
+      // payload.cornerRadius=0(Screen 기본값)이 number이므로 기존 코드는 항상 payload를 사용 → 버그
       const targetRadius = isChangingToScreen
-        ? (typeof payload.cornerRadius === 'number' ? payload.cornerRadius : restoredScreenR)
+        ? (savedScreenR !== '' && savedScreenR !== undefined ? restoredScreenR : (typeof payload.cornerRadius === 'number' ? Math.max(0, payload.cornerRadius) : defaultRadius))
         : (typeof payload.cornerRadius === 'number' ? Math.max(0, payload.cornerRadius) : defaultRadius);
       card.cornerRadius = targetRadius;
       card.fills = isFillNone ? [] : [{ type: 'SOLID', color: bgColor }];
