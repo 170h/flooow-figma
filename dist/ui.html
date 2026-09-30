@@ -28535,7 +28535,7 @@
     }
   }
   var NODE_TYPE_SHAPE_SPECS = {
-    Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
+    Screen: { width: 250, height: 100, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
     Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
@@ -28552,9 +28552,9 @@
     Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false }
   };
   var SCREEN_NODE_CONSTRAINTS = {
-    MIN_WIDTH: 49,
+    MIN_WIDTH: 140,
     MAX_WIDTH: 800,
-    MIN_HEIGHT: 49,
+    MIN_HEIGHT: 100,
     MAX_HEIGHT: 600,
     MIN_CORNER_RADIUS: 0,
     MAX_CORNER_RADIUS: 20,
@@ -28587,7 +28587,7 @@
   // src/ui/context/AppContext.tsx
   var import_jsx_runtime = __toESM(require_jsx_runtime());
   var DEFAULT_SIZE_PRESETS = [
-    { id: "default", name: "Default", w: 250, h: 90, radius: 0, sizeMode: "fixed", isDefault: true },
+    { id: "default", name: "Default", w: 250, h: 100, radius: 0, sizeMode: "fixed", isDefault: true },
     { id: "square", name: "Square", w: 180, h: 180, radius: 0, sizeMode: "fixed", isDefault: true },
     { id: "web", name: "Web", w: 320, h: 180, radius: 0, sizeMode: "fixed", isDefault: true },
     { id: "mobile", name: "Mobile", w: 160, h: 280, radius: 0, sizeMode: "fixed", isDefault: true }
@@ -28606,7 +28606,7 @@
   var DEFAULT_LAST_NODE_CONFIG = {
     nodeType: "Screen",
     width: 250,
-    height: 90,
+    height: 100,
     cornerRadius: 0,
     sizeMode: "fixed",
     color: "#ffffff",
@@ -28887,7 +28887,7 @@
       const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
       const desc = isDescAllowed ? isDescOn ? rawDesc : "" : rawDesc;
       const w = overrideSize?.width !== void 0 ? overrideSize.width : isScreen ? parseInt(wEl?.value || "", 10) || firstNode?.width || lastNodeConfigRef.current.width || 250 : !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
-      const h = overrideSize?.height !== void 0 ? overrideSize.height : isScreen ? parseInt(hEl?.value || "", 10) || firstNode?.height || lastNodeConfigRef.current.height || 90 : !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
+      const h = overrideSize?.height !== void 0 ? overrideSize.height : isScreen ? parseInt(hEl?.value || "", 10) || firstNode?.height || lastNodeConfigRef.current.height || 100 : !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "100", 10) || 100;
       const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : isScreen ? rEl?.value !== void 0 && rEl?.value !== "" && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : firstNode?.cornerRadius ?? (lastNodeConfigRef.current.cornerRadius ?? 0) : !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
       const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
       const rawFigmaUrl = linkOverrides?.figmaLink !== void 0 ? linkOverrides.figmaLink : urlEl ? urlEl.value.trim() : "";
@@ -29258,7 +29258,7 @@
       const desc = isDescOn ? descEl?.value.trim() || "" : "";
       const effectiveDesc = isDescAllowed ? desc : "";
       const w = !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
-      const h = !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
+      const h = !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "100", 10) || 100;
       let radius = !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
       if (radius > 999) {
         radius = 999;
@@ -29643,13 +29643,13 @@
                 if (titleEl) titleEl.value = "Screen";
                 if (descEl) descEl.value = "";
                 if (descToggleEl) descToggleEl.checked = false;
-                if (fixedValEl) fixedValEl.textContent = "90";
+                if (fixedValEl) fixedValEl.textContent = "100";
                 if (linkToggleEl) linkToggleEl.checked = false;
                 if (linkUrlEl) linkUrlEl.value = "";
                 setLastNodeConfig({
                   nodeType: "Screen",
                   width: 250,
-                  height: 90,
+                  height: 100,
                   cornerRadius: 0,
                   descriptionOn: false,
                   singleLinkOn: false,
@@ -31845,7 +31845,7 @@
         } else {
           const first = validNodes[0];
           let nodeW = typeof first?.width === "number" ? first.width : lastNodeConfig.width || 250;
-          let nodeH = typeof first?.height === "number" ? first.height : lastNodeConfig.height || 90;
+          let nodeH = typeof first?.height === "number" ? first.height : lastNodeConfig.height || 100;
           let nodeR = typeof first?.cornerRadius === "number" ? first.cornerRadius : lastNodeConfig.cornerRadius ?? 0;
           if (!isDifferentNode && pendingSizeRef.current && pendingSizeRef.current.nodeId === currentNodeId) {
             const pending = pendingSizeRef.current;
@@ -31876,7 +31876,7 @@
         }
       } else {
         const defW = lastNodeConfig.width || 250;
-        const defH = lastNodeConfig.height || 90;
+        const defH = lastNodeConfig.height || 100;
         const defR = lastNodeConfig.cornerRadius ?? 0;
         if (!isFocusedRef.current.w) setWidthInput(String(defW));
         if (!isFocusedRef.current.h) setHeightInput(String(defH));
@@ -31924,7 +31924,7 @@
         updateMultiDraft({ width: validW, sizeMode: "fixed" });
         return;
       }
-      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
+      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 100;
       const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
       const targetNodeId = selectedNodes[0]?.id || "NONE";
       pendingSizeRef.current = {
@@ -31970,7 +31970,7 @@
       if (!isSizeAllowed) return;
       const raw = explicitVal !== void 0 ? explicitVal : heightInput;
       const parsed = parseInt(raw, 10);
-      let validH = isNaN(parsed) ? lastNodeConfig.height || 90 : parsed;
+      let validH = isNaN(parsed) ? lastNodeConfig.height || 100 : parsed;
       if (validH < SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT) {
         validH = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
         showToast(`\uCD5C\uC18C \uB192\uC774\uB294 ${SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT}px\uC785\uB2C8\uB2E4.`, "warning");
@@ -32011,13 +32011,13 @@
         e.target.blur();
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
+        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 100);
         const step = e.shiftKey ? 10 : 1;
         const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT, current + step);
         commitH(String(next));
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
+        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 100);
         const step = e.shiftKey ? 10 : 1;
         const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, current - step);
         commitH(String(next));
@@ -32046,7 +32046,7 @@
         return;
       }
       const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
-      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
+      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 100;
       const targetNodeId = selectedNodes[0]?.id || "NONE";
       pendingSizeRef.current = {
         nodeId: targetNodeId,
@@ -34660,7 +34660,7 @@
     function handleSave() {
       const finalName = name.trim() || "Custom";
       const finalW = clampScreenWidth(w || 250);
-      const finalH = clampScreenHeight(h || 90);
+      const finalH = clampScreenHeight(h || 100);
       const finalRadius = clampScreenCornerRadius(radius || 0);
       onSave({ name: finalName, w: finalW, h: finalH, radius: finalRadius, sizeMode });
       onClose();

@@ -112,7 +112,7 @@ export function SizeModal({
   function handleSave() {
     const finalName = name.trim() || 'Custom';
     const finalW = clampScreenWidth(w || 250);
-    const finalH = clampScreenHeight(h || 90);
+    const finalH = clampScreenHeight(h || 100);
     const finalRadius = clampScreenCornerRadius(radius || 0);
     onSave({ name: finalName, w: finalW, h: finalH, radius: finalRadius, sizeMode });
     onClose();

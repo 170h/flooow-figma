@@ -804,7 +804,8 @@ function isHeaderFrame(c: SceneNode): boolean {
   if (c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true') return false;
   if (c.name === 'StatusBadge' || safeGetPluginData(c, 'is_status_badge') === 'true') return false;
   if (c.name === 'FigmaLinkBadge' || safeGetPluginData(c, 'is_figma_link_badge') === 'true') return false;
-  return (c as FrameNode).layoutMode === 'HORIZONTAL';
+  const lm = (c as FrameNode).layoutMode;
+  return lm === 'HORIZONTAL' || lm === 'VERTICAL';
 }
 
 // 카드의 전체 내용(헤더 + 패딩 + 설명 텍스트 전체 + 상태 뱃지 여백)을 모두 수용하기 위한 최소 Hug 높이 정밀 산출
@@ -1519,37 +1520,27 @@ async function handleSelectionChange() {
       if (frameNode.strokeAlign !== 'INSIDE') {
         try { frameNode.strokeAlign = 'INSIDE'; } catch (_) {}
       }
-      if ('strokesIncludedInLayout' in frameNode && !frameNode.strokesIncludedInLayout) {
+      if ('strokesIncludedInLayout' in frameNode && frameNode.layoutMode !== 'NONE' && !frameNode.strokesIncludedInLayout) {
         try { frameNode.strokesIncludedInLayout = true; } catch (_) {}
       }
       const header = frameNode.children.find(isHeaderFrame) as FrameNode | undefined;
       if (header) {
-        const pl = typeof frameNode.paddingLeft === 'number' ? frameNode.paddingLeft : 16;
-        const pr = typeof frameNode.paddingRight === 'number' ? frameNode.paddingRight : 16;
-        const strokeOffset = (typeof frameNode.strokeWeight === 'number' ? frameNode.strokeWeight : 0) * 2;
-        const availW = Math.max(10, frameNode.width - pl - pr - strokeOffset);
+        if (header.layoutMode !== 'VERTICAL') {
+          try { header.layoutMode = 'VERTICAL'; } catch (_) {}
+        }
         if (header.layoutAlign !== 'STRETCH') {
           try { header.layoutAlign = 'STRETCH'; } catch (_) {}
         }
-        if (header.primaryAxisSizingMode !== 'FIXED') {
-          try { header.primaryAxisSizingMode = 'FIXED'; } catch (_) {}
+        if (header.primaryAxisSizingMode !== 'AUTO') {
+          try { header.primaryAxisSizingMode = 'AUTO'; } catch (_) {}
         }
         if (header.counterAxisSizingMode !== 'AUTO') {
           try { header.counterAxisSizingMode = 'AUTO'; } catch (_) {}
         }
-        if (Math.abs(header.width - availW) > 1) {
-          try { header.resize(availW, header.height || 18); } catch (_) {}
-        }
         const tText = header.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
         if (tText) {
-          if (tText.layoutGrow !== 1) {
-            try { tText.layoutGrow = 1; } catch (_) {}
-          }
           if (tText.layoutAlign !== 'STRETCH') {
             try { tText.layoutAlign = 'STRETCH'; } catch (_) {}
-          }
-          if (Math.abs(tText.width - availW) > 1) {
-            try { tText.resize(availW, tText.height || 18); } catch (_) {}
           }
           if (tText.textAutoResize !== 'HEIGHT') {
             try { tText.textAutoResize = 'HEIGHT'; } catch (_) {}
@@ -1878,31 +1869,24 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
         textNode.maxLines = 3;
       }
     } else {
-      const pCard = flowNode as FrameNode | undefined;
-      const pl = (pCard && typeof pCard.paddingLeft === 'number') ? pCard.paddingLeft : 16;
-      const pr = (pCard && typeof pCard.paddingRight === 'number') ? pCard.paddingRight : 16;
-      const curW = pCard ? Math.max(50, pCard.width - pl - pr) : Math.max(50, textNode.width);
-
       if (textNode.parent && textNode.parent.type === 'FRAME' && textNode.parent.name === 'Header') {
         const headerFrame = textNode.parent as FrameNode;
+        if (headerFrame.layoutMode !== 'VERTICAL') {
+          try { headerFrame.layoutMode = 'VERTICAL'; } catch (_) {}
+        }
         headerFrame.layoutAlign = 'STRETCH';
-        headerFrame.resize(curW, headerFrame.height || 18);
-        headerFrame.primaryAxisSizingMode = 'FIXED';
+        headerFrame.primaryAxisSizingMode = 'AUTO';
         headerFrame.counterAxisSizingMode = 'AUTO';
         headerFrame.primaryAxisAlignItems = 'MIN';
         headerFrame.counterAxisAlignItems = 'MIN';
       }
 
-      try { textNode.resize(curW, textNode.height || 18); } catch (_) {}
       if (textNode.textAutoResize !== 'HEIGHT') {
         textNode.textAutoResize = 'HEIGHT';
       }
       textNode.textAlignHorizontal = 'LEFT';
       textNode.textAlignVertical = 'TOP';
       try { textNode.lineHeight = { value: 18, unit: 'PIXELS' }; } catch (_) {}
-      if (textNode.layoutGrow !== 1) {
-        textNode.layoutGrow = 1;
-      }
       textNode.layoutAlign = 'STRETCH';
       textNode.textTruncation = 'DISABLED';
       textNode.maxLines = null;
@@ -1936,8 +1920,8 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   const status = (shape.getPluginData('workflow_status') as WorkflowStatus) || undefined;
   const stepStr = shape.getPluginData('step_number');
   const stepNumber = stepStr ? parseInt(stepStr, 10) : undefined;
-  const width = Math.max(120, Math.round(shape.width));
-  const height = Math.max(50, Math.round(shape.height));
+  const width = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, Math.round(shape.width));
+  const height = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(shape.height));
   const x = shape.x;
   const y = shape.y;
   const parent = shape.parent || figma.currentPage;
@@ -1954,6 +1938,9 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.name = title;
   card.x = x;
   card.y = y;
+  card.layoutMode = 'VERTICAL';
+  card.primaryAxisSizingMode = 'FIXED';
+  card.counterAxisSizingMode = 'FIXED';
   card.resize(width, height);
   card.cornerRadius = 0; // 완전 직각
   card.strokeWeight = 1.5;
@@ -1964,10 +1951,6 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
     card.strokesIncludedInLayout = true;
   }
   card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
-
-  card.layoutMode = 'VERTICAL';
-  card.primaryAxisSizingMode = 'FIXED';
-  card.counterAxisSizingMode = 'FIXED';
   const hasShapeStatus = Boolean(status && STATUS_CONFIG[status]);
   card.paddingTop = 14;
   card.paddingBottom = hasShapeStatus ? 36 : 16;
@@ -1984,18 +1967,15 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.maxHeight = height;
 
   // 헤더 행 (타이틀 수용 공간)
-  const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
-  const availW = Math.max(10, width - card.paddingLeft - card.paddingRight - strokeOffset);
   const headerRow = figma.createFrame();
   headerRow.name = 'Header';
-  headerRow.layoutMode = 'HORIZONTAL';
+  headerRow.layoutMode = 'VERTICAL';
   headerRow.layoutAlign = 'STRETCH';
-  headerRow.resize(availW, 18);
-  headerRow.primaryAxisSizingMode = 'FIXED';
+  headerRow.primaryAxisSizingMode = 'AUTO';
   headerRow.counterAxisSizingMode = 'AUTO';
   headerRow.primaryAxisAlignItems = 'MIN';
   headerRow.counterAxisAlignItems = 'MIN';
-  headerRow.itemSpacing = 8;
+  headerRow.itemSpacing = 0;
   headerRow.fills = [];
 
   const titleText = figma.createText();
@@ -2005,16 +1985,14 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   titleText.lineHeight = { value: 18, unit: 'PIXELS' };
   titleText.characters = title;
   titleText.fills = [titleFill];
-  titleText.layoutGrow = 1;
-  titleText.layoutAlign = 'STRETCH';
-  titleText.resize(availW, 18);
+  titleText.textAlignHorizontal = 'LEFT';
+  titleText.textAlignVertical = 'TOP';
   titleText.textAutoResize = 'HEIGHT';
   titleText.textTruncation = 'DISABLED';
   titleText.maxLines = null;
-  titleText.textAlignHorizontal = 'LEFT';
-  titleText.textAlignVertical = 'TOP';
   titleText.setPluginData('node_role', 'title');
   headerRow.appendChild(titleText);
+  titleText.layoutAlign = 'STRETCH';
 
   card.appendChild(headerRow);
 
@@ -2323,6 +2301,10 @@ async function createFlowNode(payload: FlowNodePayload) {
     // 1. 메인 카드 프레임
     const card = figma.createFrame();
     card.name = title;
+    card.layoutMode = 'VERTICAL';
+    card.primaryAxisSizingMode = 'FIXED';
+    card.counterAxisSizingMode = 'FIXED';
+    card.resize(width, height);
     card.cornerRadius = cornerRadius;
     const cardStrokes: Paint[] = typeof payload.strokeWeight === 'number' && payload.strokeWeight === 0
       ? []
@@ -2347,11 +2329,6 @@ async function createFlowNode(payload: FlowNodePayload) {
       }
     }
     card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
-
-    card.layoutMode = 'VERTICAL';
-    card.primaryAxisSizingMode = 'FIXED';
-    card.counterAxisSizingMode = 'FIXED';
-    card.resize(width, height);
 
     // 캔버스 기즈모 리사이즈 원천 차단 (현재 크기로 min/max 완전 고정)
     card.minWidth = width;
@@ -2424,18 +2401,15 @@ async function createFlowNode(payload: FlowNodePayload) {
       card.counterAxisAlignItems = 'MIN';
 
       // 2. 헤더 행 (타이틀 수용 공간)
-      const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
-      const availW = Math.max(10, width - card.paddingLeft - card.paddingRight - strokeOffset);
       const headerRow = figma.createFrame();
       headerRow.name = 'Header';
-      headerRow.layoutMode = 'HORIZONTAL';
+      headerRow.layoutMode = 'VERTICAL';
       headerRow.layoutAlign = 'STRETCH';
-      headerRow.resize(availW, 18);
-      headerRow.primaryAxisSizingMode = 'FIXED';
+      headerRow.primaryAxisSizingMode = 'AUTO';
       headerRow.counterAxisSizingMode = 'AUTO';
       headerRow.primaryAxisAlignItems = 'MIN';
       headerRow.counterAxisAlignItems = 'MIN';
-      headerRow.itemSpacing = 8;
+      headerRow.itemSpacing = 0;
       headerRow.fills = [];
 
       // 3. 타이틀 텍스트 (13px Bold 고정, 글자 수 길어지면 자동 줄바꿈)
@@ -2446,8 +2420,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       titleText.lineHeight = { value: 18, unit: 'PIXELS' };
       titleText.characters = title;
       titleText.fills = [titleFill];
-      titleText.layoutGrow = 1;
-      titleText.layoutAlign = 'STRETCH';
+      titleText.textAutoResize = 'HEIGHT';
 
       let effectiveCreateW = width;
       if (!isShapeNode && payload.sizeMode === 'fit') {
@@ -2462,21 +2435,14 @@ async function createFlowNode(payload: FlowNodePayload) {
         const measuredTitleW = Math.ceil(measureText.width);
         measureText.remove();
 
-        effectiveCreateW = Math.max(49, measuredTitleW + card.paddingLeft + card.paddingRight + strokeOffset);
-        const contentW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - strokeOffset);
-        headerRow.resize(contentW, 18);
-        titleText.resize(contentW, 18);
-        titleText.textAutoResize = 'HEIGHT';
+        effectiveCreateW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, measuredTitleW + card.paddingLeft + card.paddingRight);
         card.counterAxisSizingMode = 'FIXED';
         card.primaryAxisSizingMode = 'AUTO';
-        card.minHeight = 49;
+        card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
         card.minWidth = effectiveCreateW;
         card.maxWidth = effectiveCreateW;
-        card.resize(effectiveCreateW, Math.max(49, card.height));
+        card.resize(effectiveCreateW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, card.height));
         card.setPluginData('size_mode', 'fit');
-      } else {
-        titleText.resize(availW, 18);
-        titleText.textAutoResize = 'HEIGHT';
       }
 
       titleText.textTruncation = 'DISABLED';
@@ -2485,6 +2451,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       titleText.textAlignVertical = 'TOP';
       titleText.setPluginData('node_role', 'title');
       headerRow.appendChild(titleText);
+      titleText.layoutAlign = 'STRETCH';
 
       card.appendChild(headerRow);
 
@@ -2501,7 +2468,8 @@ async function createFlowNode(payload: FlowNodePayload) {
         card.appendChild(descText);
 
         descText.layoutAlign = 'STRETCH';
-        const descAvailW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - strokeOffset);
+        const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+        const descAvailW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - descStrokeOffset);
         descText.resize(descAvailW, descText.height);
         descText.textAutoResize = 'HEIGHT';
         if (!isShapeNode && payload.sizeMode === 'fit') {
@@ -2760,6 +2728,12 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const hasStatus = Boolean(existingStatusBadgeOnCard || (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]));
     const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
     const hasBottomBar = hasStatus || hasLink;
+    // 카드 레이아웃 모드 및 정렬 방향 선행 보장 (Auto Layout이 켜져 있어야 strokesIncludedInLayout 설정 가능)
+    if (card.layoutMode !== 'VERTICAL') {
+      card.layoutMode = 'VERTICAL';
+    }
+    card.counterAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
+    card.primaryAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
 
     const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
 
@@ -2791,13 +2765,6 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         card.strokesIncludedInLayout = true;
       }
     }
-
-    // 카드 레이아웃 모드 및 정렬 방향 보장
-    if (card.layoutMode !== 'VERTICAL') {
-      card.layoutMode = 'VERTICAL';
-    }
-    card.counterAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
-    card.primaryAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
 
     if (!isShapeNode) {
       // Screen 노드의 최종 크기 및 Auto Layout 속성(패딩, 간격, 정렬)을 자식 구성 전에 최우선 확정
@@ -2882,26 +2849,21 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       // Screen 노드 등: Header 프레임 내에 titleText 배치
       const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
       const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
-      const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
-      const effectiveW = fitW !== undefined ? fitW : targetW;
-      const availW = Math.max(10, effectiveW - pl - pr - strokeOffset);
 
       let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
       if (!headerRow) {
         headerRow = figma.createFrame();
         headerRow.name = 'Header';
-        headerRow.layoutMode = 'HORIZONTAL';
-        headerRow.layoutAlign = 'STRETCH';
-        headerRow.itemSpacing = 8;
         headerRow.fills = [];
         card.insertChild(0, headerRow);
       }
+      headerRow.layoutMode = 'VERTICAL';
       headerRow.layoutAlign = 'STRETCH';
-      headerRow.resize(availW, headerRow.height || 18);
-      headerRow.primaryAxisSizingMode = 'FIXED';
+      headerRow.primaryAxisSizingMode = 'AUTO';
       headerRow.counterAxisSizingMode = 'AUTO';
       headerRow.primaryAxisAlignItems = 'MIN';
       headerRow.counterAxisAlignItems = 'MIN';
+      headerRow.itemSpacing = 0;
 
       if (!titleText) {
         titleText = figma.createText();
@@ -2917,7 +2879,6 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       titleText.lineHeight = { value: 18, unit: 'PIXELS' };
       titleText.textAlignHorizontal = 'LEFT';
       titleText.textAlignVertical = 'TOP';
-      titleText.layoutGrow = 1;
       titleText.layoutAlign = 'STRETCH';
 
       if (!isShapeNode && payload.sizeMode === 'fit') {
@@ -2932,20 +2893,14 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         const measuredTitleW = Math.ceil(measureText.width);
         measureText.remove();
 
-        fitW = Math.max(49, measuredTitleW + pl + pr + strokeOffset);
-        const contentW = Math.max(10, fitW - pl - pr - strokeOffset);
+        fitW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, measuredTitleW + pl + pr);
 
-        headerRow.resize(contentW, headerRow.height || 18);
-        titleText.resize(contentW, titleText.height || 18);
         titleText.textAutoResize = 'HEIGHT';
         await safeSetCharacters(titleText, effectiveTitle);
-        try { titleText.resize(contentW, titleText.height); } catch (_) {}
       } else {
-        titleText.resize(availW, titleText.height || 18);
         titleText.textAutoResize = 'HEIGHT';
         titleText.fontName = { family: 'Inter', style: 'Bold' };
         titleText.characters = effectiveTitle;
-        try { titleText.resize(availW, titleText.height); } catch (_) {}
       }
 
       titleText.textTruncation = 'DISABLED';
@@ -3144,15 +3099,16 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       if (descText) {
         descText.maxLines = null;
       }
-      if (card.width !== finalW) {
+      const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : null;
+      if (card.width !== finalW || (minH !== null && card.height < minH)) {
         card.counterAxisSizingMode = 'FIXED';
-        card.resize(finalW, card.height);
+        card.resize(finalW, minH !== null ? Math.max(minH, card.height) : card.height);
       }
       card.counterAxisSizingMode = 'FIXED';
       card.primaryAxisSizingMode = 'AUTO';
       card.minWidth = finalW;
       card.maxWidth = finalW;
-      card.minHeight = null;
+      card.minHeight = minH;
       card.maxHeight = null;
       card.setPluginData('size_mode', 'hug');
     } else if (isFit) {
@@ -3162,11 +3118,12 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
       card.counterAxisSizingMode = 'FIXED';
       card.primaryAxisSizingMode = 'AUTO';
-      card.minHeight = 49;
+      const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
+      card.minHeight = minH;
       card.maxHeight = null;
       card.minWidth = finalW;
       card.maxWidth = finalW;
-      card.resize(finalW, Math.max(49, card.height));
+      card.resize(finalW, Math.max(minH, card.height));
       card.setPluginData('size_mode', 'fit');
     } else {
       card.primaryAxisSizingMode = 'FIXED';
@@ -3364,6 +3321,9 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       }
 
       // 4. Strokes 적용 (patch.strokeWeight 또는 patch.strokeColor가 제공된 경우)
+      if (card.layoutMode !== 'VERTICAL') {
+        card.layoutMode = 'VERTICAL';
+      }
       let cardStrokeWeight = typeof card.strokeWeight === 'number' ? card.strokeWeight : 1.5;
       if (patch.strokeWeight !== undefined || patch.strokeColor !== undefined) {
         cardStrokeWeight = patch.strokeWeight !== undefined ? clampStrokeWeight(patch.strokeWeight) : cardStrokeWeight;
@@ -3395,9 +3355,6 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         card.name = effectiveTitle;
       }
 
-      if (card.layoutMode !== 'VERTICAL') {
-        card.layoutMode = 'VERTICAL';
-      }
       card.clipsContent = false;
 
       // 6. 치수(Size) 계산: patch에 있으면 적용, 없으면 기존 치수 보존
@@ -3453,11 +3410,21 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       }
       if (!headerRow) {
         headerRow = figma.createFrame();
-        headerRow.name = 'HeaderRow';
-        headerRow.layoutMode = 'HORIZONTAL';
-        headerRow.primaryAxisSizingMode = 'FIXED';
+        headerRow.name = 'Header';
+        headerRow.fills = [];
+        headerRow.layoutMode = 'VERTICAL';
+        headerRow.layoutAlign = 'STRETCH';
+        headerRow.primaryAxisSizingMode = 'AUTO';
         headerRow.counterAxisSizingMode = 'AUTO';
+        headerRow.primaryAxisAlignItems = 'MIN';
+        headerRow.counterAxisAlignItems = 'MIN';
+        headerRow.itemSpacing = 0;
         card.appendChild(headerRow);
+      } else {
+        headerRow.layoutMode = 'VERTICAL';
+        headerRow.layoutAlign = 'STRETCH';
+        headerRow.primaryAxisSizingMode = 'AUTO';
+        headerRow.counterAxisSizingMode = 'AUTO';
       }
       if (!titleText) {
         titleText = figma.createText();
@@ -3466,15 +3433,16 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         titleText.fontSize = 13;
         titleText.setPluginData('node_role', 'title');
         headerRow.appendChild(titleText);
+      } else if (titleText.parent !== headerRow) {
+        headerRow.appendChild(titleText);
       }
       titleText.lineHeight = { value: 18, unit: 'PIXELS' };
       titleText.textAlignHorizontal = isShapeNode ? 'CENTER' : 'LEFT';
       titleText.textAlignVertical = 'TOP';
-      titleText.layoutGrow = 1;
       titleText.layoutAlign = 'STRETCH';
+      titleText.textAutoResize = 'HEIGHT';
       titleText.textTruncation = 'DISABLED';
       let fitW: number | undefined;
-      const strokeOffset = cardStrokeWeight * 2;
 
       if (!isShapeNode && effectiveSizeMode === 'fit') {
         const measureText = figma.createText();
@@ -3488,18 +3456,12 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         const measuredTitleW = Math.ceil(measureText.width);
         measureText.remove();
 
-        fitW = Math.max(49, measuredTitleW + pl + pr + strokeOffset);
-        const contentW = Math.max(10, fitW - pl - pr - strokeOffset);
+        fitW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, measuredTitleW + pl + pr);
 
-        headerRow.resize(contentW, headerRow.height || 18);
-        titleText.resize(contentW, titleText.height || 18);
         titleText.textAutoResize = 'HEIGHT';
         await safeSetCharacters(titleText, effectiveTitle);
-        try { titleText.resize(contentW, titleText.height); } catch (_) {}
       } else {
-        const availW = Math.max(10, targetW - pl - pr - strokeOffset);
-        headerRow.resize(availW, headerRow.height || 18);
-        titleText.resize(availW, titleText.height || 18);
+        titleText.textAutoResize = 'HEIGHT';
       }
       if (patch.colorHex !== undefined) {
         titleText.fills = [titleFill];
@@ -3683,15 +3645,16 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         if (descText) {
           descText.maxLines = null;
         }
-        if (card.width !== finalW) {
+        const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : null;
+        if (card.width !== finalW || (minH !== null && card.height < minH)) {
           card.counterAxisSizingMode = 'FIXED';
-          card.resize(finalW, card.height);
+          card.resize(finalW, minH !== null ? Math.max(minH, card.height) : card.height);
         }
         card.counterAxisSizingMode = 'FIXED';
         card.primaryAxisSizingMode = 'AUTO';
         card.minWidth = finalW;
         card.maxWidth = finalW;
-        card.minHeight = null;
+        card.minHeight = minH;
         card.maxHeight = null;
         card.setPluginData('size_mode', 'hug');
       } else if (isFit) {
@@ -3701,11 +3664,12 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         }
         card.counterAxisSizingMode = 'FIXED';
         card.primaryAxisSizingMode = 'AUTO';
-        card.minHeight = 49;
+        const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
+        card.minHeight = minH;
         card.maxHeight = null;
         card.minWidth = finalW;
         card.maxWidth = finalW;
-        card.resize(finalW, Math.max(49, card.height));
+        card.resize(finalW, Math.max(minH, card.height));
         card.setPluginData('size_mode', 'fit');
       } else {
         card.primaryAxisSizingMode = 'FIXED';
@@ -3865,10 +3829,6 @@ async function resizeNode(nodeId: string, width: number, height: number) {
         try { title.maxLines = 3; } catch (_) {}
       } else {
         try { title.maxHeight = null; } catch (_) {}
-        const pl = typeof frame.paddingLeft === 'number' ? frame.paddingLeft : 16;
-        const pr = typeof frame.paddingRight === 'number' ? frame.paddingRight : 16;
-        const strokeOffset = (typeof frame.strokeWeight === 'number' ? frame.strokeWeight : 0) * 2;
-        const curW = Math.max(10, w - pl - pr - strokeOffset);
 
         if (isShape) {
           if (title.textAutoResize !== 'HEIGHT') {
@@ -3879,14 +3839,19 @@ async function resizeNode(nodeId: string, width: number, height: number) {
         } else {
           const headerRow = frame.children.find(isHeaderFrame) as FrameNode | undefined;
           if (headerRow) {
+            headerRow.layoutMode = 'VERTICAL';
             headerRow.layoutAlign = 'STRETCH';
-            headerRow.resize(curW, headerRow.height || 18);
-            headerRow.primaryAxisSizingMode = 'FIXED';
+            headerRow.primaryAxisSizingMode = 'AUTO';
             headerRow.counterAxisSizingMode = 'AUTO';
             headerRow.primaryAxisAlignItems = 'MIN';
             headerRow.counterAxisAlignItems = 'MIN';
           }
-          try { title.resize(curW, title.height || 18); } catch (_) {}
+          if (title.layoutGrow !== 0) {
+            try { title.layoutGrow = 0; } catch (_) {}
+          }
+          if (title.layoutAlign !== 'STRETCH') {
+            try { title.layoutAlign = 'STRETCH'; } catch (_) {}
+          }
           title.textAutoResize = 'HEIGHT';
           title.textTruncation = 'DISABLED';
           title.maxLines = null;

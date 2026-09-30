@@ -145,7 +145,7 @@ export interface NodeTypeShapeSpec {
 }
 
 export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
-  Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
+  Screen: { width: 250, height: 100, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
   Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
   Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
   Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
@@ -164,14 +164,14 @@ export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
 
 /**
  * 스크린(Screen) 노드 치수 및 코너 라운드 제약 상수
- * - 최소 크기: 49 x 49
+ * - 최소 크기: 140 x 100
  * - 최대 크기: 800 x 600
  * - 코너 라운드: 0 ~ 20
  */
 export const SCREEN_NODE_CONSTRAINTS = {
-  MIN_WIDTH: 49,
+  MIN_WIDTH: 140,
   MAX_WIDTH: 800,
-  MIN_HEIGHT: 49,
+  MIN_HEIGHT: 100,
   MAX_HEIGHT: 600,
   MIN_CORNER_RADIUS: 0,
   MAX_CORNER_RADIUS: 20,

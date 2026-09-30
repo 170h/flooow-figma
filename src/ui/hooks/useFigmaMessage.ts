@@ -113,14 +113,14 @@ export function useFigmaMessage() {
               if (titleEl) titleEl.value = 'Screen';
               if (descEl) descEl.value = '';
               if (descToggleEl) descToggleEl.checked = false;
-              if (fixedValEl) fixedValEl.textContent = '90';
+              if (fixedValEl) fixedValEl.textContent = '100';
               if (linkToggleEl) linkToggleEl.checked = false;
               if (linkUrlEl) linkUrlEl.value = '';
 
               setLastNodeConfig({
                 nodeType: 'Screen',
                 width: 250,
-                height: 90,
+                height: 100,
                 cornerRadius: 0,
                 descriptionOn: false,
                 singleLinkOn: false,

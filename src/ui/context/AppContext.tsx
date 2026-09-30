@@ -27,7 +27,7 @@ export interface SizePreset {
 }
 
 export const DEFAULT_SIZE_PRESETS: SizePreset[] = [
-  { id: 'default', name: 'Default', w: 250, h: 90, radius: 0, sizeMode: 'fixed', isDefault: true },
+  { id: 'default', name: 'Default', w: 250, h: 100, radius: 0, sizeMode: 'fixed', isDefault: true },
   { id: 'square', name: 'Square', w: 180, h: 180, radius: 0, sizeMode: 'fixed', isDefault: true },
   { id: 'web', name: 'Web', w: 320, h: 180, radius: 0, sizeMode: 'fixed', isDefault: true },
   { id: 'mobile', name: 'Mobile', w: 160, h: 280, radius: 0, sizeMode: 'fixed', isDefault: true },
@@ -263,7 +263,7 @@ export interface AppContextValue {
 const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
   nodeType: 'Screen',
   width: 250,
-  height: 90,
+  height: 100,
   cornerRadius: 0,
   sizeMode: 'fixed',
   color: '#ffffff',
@@ -611,8 +611,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const h = overrideSize?.height !== undefined
       ? overrideSize.height
       : (isScreen
-          ? (parseInt(hEl?.value || '', 10) || firstNode?.height || lastNodeConfigRef.current.height || 90)
-          : (!isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90)));
+          ? (parseInt(hEl?.value || '', 10) || firstNode?.height || lastNodeConfigRef.current.height || 100)
+          : (!isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '100', 10) || 100)));
     const radius = overrideSize?.cornerRadius !== undefined
       ? overrideSize.cornerRadius
       : (isScreen
@@ -1027,7 +1027,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const effectiveDesc = isDescAllowed ? desc : '';
 
     const w = !isDescAllowed && spec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250);
-    const h = !isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90);
+    const h = !isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '100', 10) || 100);
     let radius = !isDescAllowed && spec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0);
     if (radius > 999) {
       radius = 999;
