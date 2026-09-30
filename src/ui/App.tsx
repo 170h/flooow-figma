@@ -40,7 +40,7 @@ function getCtaLabel(
   if (currentTab === 'connection') {
     return 'Connect';
   }
-  if (nodeCount >= 2) return 'Update All';
+  if (nodeCount >= 2) return 'Apply to All';
   if (nodeCount === 1) return 'Update';
   return 'Create';
 }
@@ -73,6 +73,10 @@ export function App() {
     sizePresets,
     addSizePreset,
     updateSizePreset,
+    multiDraft,
+    hasMultiDraft,
+    updateMultiDraft,
+    isApplyingMultiDraft,
   } = useApp();
 
   // SizeModal onSave 핸들러 (매 렌더마다 새 함수 생성 방지)
@@ -150,9 +154,12 @@ export function App() {
         !target.disabled
       ) {
         newlyFocusedInput = target;
-        // Tab 키 등 포커스 진입 시 전체 선택
+        // Tab 키 등 포커스 진입 시 전체 선택 (빈 값이거나 Mixed 상태일 때는 select 방지)
         requestAnimationFrame(() => {
-          target.select();
+          const isMixedOrEmpty = target.value === '' || target.placeholder === 'Mixed';
+          if (!isMixedOrEmpty) {
+            target.select();
+          }
         });
       } else {
         newlyFocusedInput = null;
@@ -167,9 +174,12 @@ export function App() {
         !target.readOnly &&
         !target.disabled
       ) {
-        // 새로 포커스된 순간 마우스 클릭 시 전체 선택 보장 (이후 동일 인풋 재클릭 시에는 정상 커서 이동 가능)
+        // 새로 포커스된 순간 마우스 클릭 시 전체 선택 보장 (빈 값이거나 Mixed 상태일 때는 select 방지)
         if (newlyFocusedInput === target) {
-          target.select();
+          const isMixedOrEmpty = target.value === '' || target.placeholder === 'Mixed';
+          if (!isMixedOrEmpty) {
+            target.select();
+          }
           newlyFocusedInput = null;
         }
       }
@@ -386,19 +396,22 @@ export function App() {
       </main>
 
       {/* 4. 푸터: connection 탭이 아닐 때 CTA 버튼 노출 (FigJam 단일 선택 포함) */}
-      {currentTab !== 'connection' && (
-        <footer className="app-footer">
-          <button
-            id="btn-main-cta"
-            className={`btn-cta-primary${isFigjamSelected ? ' disabled' : ''}`}
-            type="button"
-            disabled={isFigjamSelected}
-            onClick={isFigjamSelected ? undefined : handleMainAction}
-          >
-            {ctaLabel}
-          </button>
-        </footer>
-      )}
+      {currentTab !== 'connection' && (() => {
+        const isCtaDisabled = isFigjamSelected || (nodeCount >= 2 && (!hasMultiDraft || isApplyingMultiDraft));
+        return (
+          <footer className="app-footer">
+            <button
+              id="btn-main-cta"
+              className={`btn-cta-primary${isCtaDisabled ? ' disabled' : ''}`}
+              type="button"
+              disabled={isCtaDisabled}
+              onClick={isFigjamSelected ? undefined : handleMainAction}
+            >
+              {ctaLabel}
+            </button>
+          </footer>
+        );
+      })()}
 
       {/* 팝오버 레이어 */}
       <ContextMenu onEdit={handleContextEdit} onDelete={handleContextDelete} />
@@ -486,40 +499,56 @@ export function App() {
         );
       })()}
       {activeModal === 'fill-color' && (() => {
-        const isFillMixed = summary.isMultiFlowNode ? summary.color.isMixed : false;
-        const currentFill = (summary.isMultiFlowNode
-          ? summary.color.value
-          : (summary.isSingleFlowNode ? summary.color.value : uiState.selectedColor)
-        ) || uiState.selectedColor || '#FFFFFF';
+        const isFillMixed = summary.isMultiFlowNode
+          ? (multiDraft.colorHex !== undefined ? false : summary.color.isMixed)
+          : false;
+        const currentFill = multiDraft.colorHex !== undefined
+          ? multiDraft.colorHex
+          : ((summary.isMultiFlowNode
+              ? summary.color.value
+              : (summary.isSingleFlowNode ? summary.color.value : uiState.selectedColor)
+            ) || uiState.selectedColor || '#FFFFFF');
 
         return (
           <FillColorModal
             initialColor={currentFill}
             isMixed={isFillMixed}
             onApply={(colorHex) => {
-              setUIState({ selectedColor: colorHex });
-              setLastNodeConfig({ color: colorHex });
-              applyCurrentNodeState(undefined, { colorHex });
+              if (selectedNodes.length >= 2) {
+                updateMultiDraft({ colorHex });
+              } else {
+                setUIState({ selectedColor: colorHex });
+                setLastNodeConfig({ color: colorHex });
+                applyCurrentNodeState(undefined, { colorHex });
+              }
             }}
             onClose={() => setActiveModal('none')}
           />
         );
       })()}
       {activeModal === 'stroke-color' && (() => {
-        const isStrokeMixed = summary.isMultiFlowNode ? summary.strokeColor.isMixed : false;
-        const isWeightMixed = summary.isMultiFlowNode ? summary.strokeWeight.isMixed : false;
+        const isStrokeMixed = summary.isMultiFlowNode
+          ? (multiDraft.strokeColor !== undefined ? false : summary.strokeColor.isMixed)
+          : false;
+        const isWeightMixed = summary.isMultiFlowNode
+          ? (multiDraft.strokeWeight !== undefined ? false : summary.strokeWeight.isMixed)
+          : false;
 
-        const currentStrokeColor = (summary.isMultiFlowNode
-          ? summary.strokeColor.value
-          : (summary.isSingleFlowNode ? summary.strokeColor.value : uiState.selectedStrokeColor)
-        ) || uiState.selectedStrokeColor || '#000000';
+        const currentStrokeColor = multiDraft.strokeColor !== undefined
+          ? multiDraft.strokeColor
+          : ((summary.isMultiFlowNode
+              ? summary.strokeColor.value
+              : (summary.isSingleFlowNode ? summary.strokeColor.value : uiState.selectedStrokeColor)
+            ) || uiState.selectedStrokeColor || '#000000');
 
         const rawWeight = summary.isMultiFlowNode
           ? summary.strokeWeight.value
           : (summary.isSingleFlowNode ? summary.strokeWeight.value : uiState.selectedStrokeWeight);
-        const currentStrokeWeight = typeof rawWeight === 'number'
-          ? rawWeight
-          : (typeof uiState.selectedStrokeWeight === 'number' ? uiState.selectedStrokeWeight : 1.5);
+        const currentStrokeWeight = multiDraft.strokeWeight !== undefined
+          ? multiDraft.strokeWeight
+          : (typeof rawWeight === 'number'
+              ? rawWeight
+              : (typeof uiState.selectedStrokeWeight === 'number' ? uiState.selectedStrokeWeight : 1.5));
 
         return (
           <StrokeColorModal
@@ -528,9 +557,13 @@ export function App() {
             isColorMixed={isStrokeMixed}
             isWeightMixed={isWeightMixed}
             onApply={(strokeColor, strokeWeight) => {
-              setUIState({ selectedStrokeColor: strokeColor, selectedStrokeWeight: strokeWeight });
-              setLastNodeConfig({ strokeColor, strokeWeight });
-              applyCurrentNodeState(undefined, { strokeColor, strokeWeight });
+              if (selectedNodes.length >= 2) {
+                updateMultiDraft({ strokeColor, strokeWeight });
+              } else {
+                setUIState({ selectedStrokeColor: strokeColor, selectedStrokeWeight: strokeWeight });
+                setLastNodeConfig({ strokeColor, strokeWeight });
+                applyCurrentNodeState(undefined, { strokeColor, strokeWeight });
+              }
             }}
             onClose={() => setActiveModal('none')}
           />

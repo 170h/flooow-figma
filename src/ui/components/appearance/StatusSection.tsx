@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { Switch } from '../shared/Switch';
+import { normalizeNodeType, type WorkflowStatus } from '../../../types';
 
 const STATUSES = [
   { id: 'draft', label: 'Draft', color: '#9CA3AF' },
@@ -26,7 +27,9 @@ export function StatusSection() {
     setLastNodeConfig,
     applyStatusToNode,
     selectedNodes,
-    autoResizeWindow
+    autoResizeWindow,
+    multiDraft,
+    updateMultiDraft,
   } = useApp();
   const summary = useSelectionSummary();
 
@@ -43,11 +46,20 @@ export function StatusSection() {
   const { selectedStatus } = uiState;
 
   // Screen 타입일 때만 Status 허용 (DescriptionSection의 isDescriptionAllowed 패턴과 동일)
-  const isStatusAllowed = summary.isMultiFlowNode
-    ? (!summary.nodeType.isMixed && summary.nodeType.value === 'Screen')
-    : (selectedNodes.length === 1
-        ? selectedNodes[0]?.flowNodeType === 'Screen'
-        : uiState.selectedNodeType === 'Screen');
+  const isStatusAllowed = (() => {
+    if (multiDraft.nodeType !== undefined) {
+      return normalizeNodeType(multiDraft.nodeType) === 'Screen';
+    }
+    if (summary.isMultiFlowNode) {
+      return !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === 'Screen';
+    }
+    if (selectedNodes.length === 1) {
+      const rawType = selectedNodes[0]?.flowNodeType || (selectedNodes[0]?.nodeType === 'FRAME' ? 'Screen' : selectedNodes[0]?.nodeType);
+      return normalizeNodeType(rawType) === 'Screen';
+    }
+    const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
+    return normalizeNodeType(creationType) === 'Screen';
+  })();
 
   // 선택된 노드의 상태와 UI 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   React.useEffect(() => {
@@ -76,12 +88,30 @@ export function StatusSection() {
     }
   }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, summary.statusOn.hasValue, selectedNodes, lastNodeConfig.statusOn, setUIState]);
 
-  const isStatusMixed = summary.isMultiFlowNode && summary.status.isMixed;
-  const activeStatus = isStatusMixed ? undefined : (summary.isMultiFlowNode ? summary.status.value : selectedStatus);
+  const isStatusDrafted = multiDraft.status !== undefined;
+  const effectiveIsOpen = isStatusDrafted ? Boolean(multiDraft.status) : isOpen;
+  const isStatusMixed = isStatusDrafted ? false : (summary.isMultiFlowNode && summary.status.isMixed);
+  const activeStatus = isStatusDrafted
+    ? (multiDraft.status || undefined)
+    : (isStatusMixed ? undefined : (summary.isMultiFlowNode ? summary.status.value : selectedStatus));
 
   function handleToggle(checked: boolean) {
     userActionLockRef.current = Date.now();
     setIsOpen(checked);
+
+    if (selectedNodes.length >= 2) {
+      if (checked) {
+        const targetStatus = activeStatus || selectedStatus || 'draft';
+        updateMultiDraft({ status: targetStatus as WorkflowStatus });
+      } else {
+        updateMultiDraft({ status: '' as WorkflowStatus });
+      }
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
+      return;
+    }
+
     setLastNodeConfig({ statusOn: checked });
     if (checked) {
       const targetStatus = activeStatus || selectedStatus || 'draft';
@@ -97,6 +127,15 @@ export function StatusSection() {
   function selectStatus(status: string) {
     userActionLockRef.current = Date.now();
     setIsOpen(true);
+
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ status: status as WorkflowStatus });
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
+      return;
+    }
+
     setUIState({ selectedStatus: status });
     setLastNodeConfig({ status, statusOn: true });
     applyStatusToNode(status);
@@ -108,26 +147,21 @@ export function StatusSection() {
   return (
     <div
       className="section-block"
-      style={{ paddingBottom: isOpen && isStatusAllowed ? '12px' : '0px' }}
+      style={{ paddingBottom: effectiveIsOpen && isStatusAllowed ? '12px' : '0px' }}
     >
       <div className="section-header toggle-row">
         <span className={`section-title${!isStatusAllowed ? ' disabled' : ''}`}>
           Status
-          {summary.isMultiFlowNode && (summary.statusOn.isMixed || isStatusMixed) && (
-            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
-              (Mixed)
-            </span>
-          )}
         </span>
         <Switch
           id="toggle-status"
-          checked={isOpen && isStatusAllowed}
-          isMixed={summary.isMultiFlowNode && summary.statusOn.isMixed}
+          checked={effectiveIsOpen && isStatusAllowed}
+          isMixed={isStatusAllowed && !isStatusDrafted && (summary.statusOn.isMixed || isStatusMixed)}
           onChange={handleToggle}
           disabled={!isStatusAllowed}
         />
       </div>
-      {isOpen && isStatusAllowed && (
+      {effectiveIsOpen && isStatusAllowed && (
         <div className="section-body" style={{ marginTop: '6px' }}>
           <div className="chip-group active" id="status-options" style={{ display: 'flex' }}>
             {STATUSES.map(s => {

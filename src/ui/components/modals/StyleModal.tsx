@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { useApp } from "../../context/AppContext";
 import { ColorWheelField } from "../shared/ColorWheelField";
 import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
+import { SCREEN_NODE_CONSTRAINTS, clampStrokeWeight } from "../../../types";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -145,7 +146,7 @@ export function StyleModal({
             .join("")
         : strokeHex
     }`;
-    const finalStrokeWeight = Math.max(0, strokeWeight);
+    const finalStrokeWeight = clampStrokeWeight(strokeWeight);
 
     if (mode === "edit" && editingPresetId) {
       updateStylePreset(editingPresetId, {
@@ -400,11 +401,11 @@ export function StyleModal({
                   <input
                     type="number"
                     className="prefix-input"
-                    min={0}
-                    max={50}
+                    min={SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT}
+                    max={SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT}
                     value={strokeWeight}
                     onChange={(e) =>
-                      setStrokeWeight(parseFloat(e.target.value) || 0)
+                      setStrokeWeight(clampStrokeWeight(parseFloat(e.target.value) || 0))
                     }
                     onKeyDown={(e) => e.key === "Enter" && handleSave()}
                     style={{

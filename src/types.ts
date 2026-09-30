@@ -162,6 +162,63 @@ export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
   Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
 };
 
+/**
+ * 스크린(Screen) 노드 치수 및 코너 라운드 제약 상수
+ * - 최소 크기: 49 x 49
+ * - 최대 크기: 800 x 600
+ * - 코너 라운드: 0 ~ 20
+ */
+export const SCREEN_NODE_CONSTRAINTS = {
+  MIN_WIDTH: 49,
+  MAX_WIDTH: 800,
+  MIN_HEIGHT: 49,
+  MAX_HEIGHT: 600,
+  MIN_CORNER_RADIUS: 0,
+  MAX_CORNER_RADIUS: 20,
+  MIN_STROKE_WEIGHT: 0,
+  MAX_STROKE_WEIGHT: 10,
+} as const;
+
+export const {
+  MIN_WIDTH: SCREEN_MIN_WIDTH,
+  MAX_WIDTH: SCREEN_MAX_WIDTH,
+  MIN_HEIGHT: SCREEN_MIN_HEIGHT,
+  MAX_HEIGHT: SCREEN_MAX_HEIGHT,
+  MIN_CORNER_RADIUS: SCREEN_MIN_CORNER_RADIUS,
+  MAX_CORNER_RADIUS: SCREEN_MAX_CORNER_RADIUS,
+  MIN_STROKE_WEIGHT: SCREEN_MIN_STROKE_WEIGHT,
+  MAX_STROKE_WEIGHT: SCREEN_MAX_STROKE_WEIGHT,
+} = SCREEN_NODE_CONSTRAINTS;
+
+/**
+ * Screen 노드의 너비를 [49, 800] 범위로 클램핑합니다.
+ */
+export function clampScreenWidth(w: number): number {
+  return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_WIDTH, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, w));
+}
+
+/**
+ * Screen 노드의 높이를 [49, 600] 범위로 클램핑합니다.
+ */
+export function clampScreenHeight(h: number): number {
+  return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, h));
+}
+
+/**
+ * Screen 노드의 코너 라운드를 [0, 20] 범위로 클램핑합니다.
+ */
+export function clampScreenCornerRadius(r: number): number {
+  return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS, r));
+}
+
+/**
+ * 노드의 스트로크 두께를 [0, 10] 범위로 클램핑합니다.
+ */
+export function clampStrokeWeight(sw: number): number {
+  return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT, sw));
+}
+
+
 // 스텝 배지 코너 위치 및 형태
 export type BadgePosition = 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT';
 export type BadgeShape = 'Square' | 'Circle' | 'RoundBox';
@@ -271,10 +328,40 @@ export interface DesignFrameItem {
   cornerRadius: number;
 }
 
+// 다중 선택(Multi Selection) 일괄 부분 업데이트 페이로드
+export interface NodePatchPayload {
+  nodeType?: DiagramNodeType;
+  width?: number;
+  height?: number;
+  cornerRadius?: number;
+  sizeMode?: 'fixed' | 'hug' | 'fit';
+  colorHex?: string;
+  strokeWeight?: number;
+  strokeColor?: string;
+  elevation?: number | null;
+  status?: WorkflowStatus | '';
+  description?: string;
+  descriptionOn?: boolean;
+  figmaLink?: string;
+  clearLinkCache?: boolean;
+  badgeNumber?: number;
+  badgeCorner?: BadgePosition;
+  badgeShape?: BadgeShape;
+  badgeColorMode?: 'White' | 'Black' | 'Style';
+  badgeOn?: boolean;
+}
+
 // 메시지 액션 타입
 export type PluginAction =
   | { type: 'CREATE_FLOW_NODE'; payload: FlowNodePayload }
   | { type: 'UPDATE_FLOW_NODE'; payload: UpdateNodePayload }
+  | {
+      type: 'BATCH_UPDATE_FLOW_NODES';
+      payload: {
+        nodeIds: string[];
+        patch: NodePatchPayload;
+      };
+    }
   | { type: 'CONNECT_POINTS'; payload: ConnectPointsPayload }
   | { type: 'AUTO_CONNECT_SELECTED'; label?: string }
   | { type: 'UPDATE_CONNECTOR_LABEL'; connectorId: string; label: string }

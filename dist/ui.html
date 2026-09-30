@@ -1074,7 +1074,7 @@
     /* ============================================================ */
     .numeric-inputs-row {
       display: grid;
-      grid-template-columns: 65px 65px 65px minmax(0, 1fr);
+      grid-template-columns: 61px 61px 61px minmax(0, 1fr);
       gap: 6px;
       align-items: center;
       width: 100%;
@@ -1088,8 +1088,8 @@
       border: 1px solid transparent;
       border-radius: var(--radius-sm);
       height: 28px;
-      padding: 0 4px 0 6px;
-      gap: 3px;
+      padding: 0 4px 0 0;
+      gap: 0;
       box-sizing: border-box;
       width: 100%;
       min-width: 0;
@@ -1110,8 +1110,14 @@
 
     .input-scrubber-box span,
     .input-scrubber-box .scrubber-label {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
       color: var(--color-text-secondary);
-      font-weight: 500;
+      font-weight: var(--font-weight-strong, 550);
       font-size: 11px;
       line-height: 1;
       cursor: default;
@@ -1125,11 +1131,7 @@
       color: var(--color-text-secondary);
       flex-shrink: 0;
       cursor: default;
-    }
-
-    .input-scrubber-box:has(svg) {
-      padding: 0 4px 0 0;
-      gap: 0;
+      display: block;
     }
 
     .input-scrubber-box input {
@@ -1405,10 +1407,11 @@
       width: 180px;
     }
 
-    /* Size 등 래퍼 기준 드롭다운: 버튼과 동일한 100% 폭 */
+    /* Size 드롭다운 메뉴: 버튼 너비에 종속되지 않고 메뉴 항목들이 시원하게 잘 보이도록 우측 기준 확장 */
     .size-mode-menu-popover {
-      width: 100%;
-      left: 0;
+      width: max-content;
+      min-width: 152px;
+      left: auto;
       right: 0;
     }
 
@@ -2642,7 +2645,7 @@
       border: none;
       border-radius: var(--radius-sm, 5px);
       font-size: 11px;
-      font-weight: var(--font-weight-strong);
+      font-weight: var(--font-weight-default, 450);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -28548,6 +28551,38 @@
     Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false }
   };
+  var SCREEN_NODE_CONSTRAINTS = {
+    MIN_WIDTH: 49,
+    MAX_WIDTH: 800,
+    MIN_HEIGHT: 49,
+    MAX_HEIGHT: 600,
+    MIN_CORNER_RADIUS: 0,
+    MAX_CORNER_RADIUS: 20,
+    MIN_STROKE_WEIGHT: 0,
+    MAX_STROKE_WEIGHT: 10
+  };
+  var {
+    MIN_WIDTH: SCREEN_MIN_WIDTH,
+    MAX_WIDTH: SCREEN_MAX_WIDTH,
+    MIN_HEIGHT: SCREEN_MIN_HEIGHT,
+    MAX_HEIGHT: SCREEN_MAX_HEIGHT,
+    MIN_CORNER_RADIUS: SCREEN_MIN_CORNER_RADIUS,
+    MAX_CORNER_RADIUS: SCREEN_MAX_CORNER_RADIUS,
+    MIN_STROKE_WEIGHT: SCREEN_MIN_STROKE_WEIGHT,
+    MAX_STROKE_WEIGHT: SCREEN_MAX_STROKE_WEIGHT
+  } = SCREEN_NODE_CONSTRAINTS;
+  function clampScreenWidth(w) {
+    return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_WIDTH, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, w));
+  }
+  function clampScreenHeight(h) {
+    return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, h));
+  }
+  function clampScreenCornerRadius(r) {
+    return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS, r));
+  }
+  function clampStrokeWeight(sw) {
+    return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT, sw));
+  }
 
   // src/ui/context/AppContext.tsx
   var import_jsx_runtime = __toESM(require_jsx_runtime());
@@ -28636,6 +28671,64 @@
     const [selectedSizePresetId, setSelectedSizePresetId] = (0, import_react2.useState)("default");
     const [selectedStylePresetId, setSelectedStylePresetId] = (0, import_react2.useState)("style-white");
     const [designFrames, setDesignFrames] = (0, import_react2.useState)([]);
+    const [multiDraft, setMultiDraftRaw] = (0, import_react2.useState)({});
+    const multiDraftRef = (0, import_react2.useRef)({});
+    const multiDraftSelectionRef = (0, import_react2.useRef)([]);
+    const updateMultiDraft = (0, import_react2.useCallback)((partial) => {
+      setMultiDraftRaw((prev) => {
+        const next = { ...prev, ...partial };
+        multiDraftRef.current = next;
+        return next;
+      });
+    }, []);
+    const clearMultiDraft = (0, import_react2.useCallback)(() => {
+      multiDraftRef.current = {};
+      setMultiDraftRaw({});
+    }, []);
+    const hasMultiDraft = Object.keys(multiDraft).length > 0;
+    const [isApplyingMultiDraft, setIsApplyingMultiDraft] = (0, import_react2.useState)(false);
+    const isApplyingMultiDraftRef = (0, import_react2.useRef)(false);
+    const applyTimeoutRef = (0, import_react2.useRef)(null);
+    const applyMultiDraft = (0, import_react2.useCallback)(() => {
+      const nodes = selectedNodesRef.current;
+      if (isApplyingMultiDraftRef.current) return;
+      if (!nodes || nodes.length < 2) return;
+      if (!hasMultiDraft) return;
+      const currentSortedIds = nodes.map((n) => n?.id).filter(Boolean).sort();
+      const draftSortedIds = multiDraftSelectionRef.current;
+      const isIdSetMatch = currentSortedIds.length === draftSortedIds.length && currentSortedIds.every((id, idx) => id === draftSortedIds[idx]);
+      if (!isIdSetMatch) return;
+      const rawDraft = multiDraftRef.current;
+      const patch = {};
+      let hasField = false;
+      Object.keys(rawDraft).forEach((key) => {
+        if (rawDraft[key] !== void 0) {
+          patch[key] = rawDraft[key];
+          hasField = true;
+        }
+      });
+      if (!hasField) return;
+      isApplyingMultiDraftRef.current = true;
+      setIsApplyingMultiDraft(true);
+      parent.postMessage({
+        pluginMessage: {
+          type: "BATCH_UPDATE_FLOW_NODES",
+          payload: {
+            nodeIds: [...draftSortedIds],
+            patch
+          }
+        }
+      }, "*");
+      if (applyTimeoutRef.current !== null) {
+        window.clearTimeout(applyTimeoutRef.current);
+      }
+      applyTimeoutRef.current = window.setTimeout(() => {
+        if (isApplyingMultiDraftRef.current) {
+          isApplyingMultiDraftRef.current = false;
+          setIsApplyingMultiDraft(false);
+        }
+      }, 5e3);
+    }, [hasMultiDraft]);
     const loadDesignFrames = (0, import_react2.useCallback)(() => {
       parent.postMessage({ pluginMessage: { type: "GET_DESIGN_FRAMES" } }, "*");
     }, []);
@@ -29133,6 +29226,10 @@
         }
         return;
       }
+      if (nodes.length >= 2) {
+        applyMultiDraft();
+        return;
+      }
       const titleEl = document.getElementById("node-title-input");
       const descEl = document.getElementById("node-description-input");
       const wEl = document.getElementById("input-size-w");
@@ -29217,18 +29314,7 @@
           }
         }, "*");
       } else if (nodes.length >= 2) {
-        nodes.forEach((node) => {
-          parent.postMessage({
-            pluginMessage: {
-              type: "UPDATE_FLOW_NODE",
-              payload: { nodeId: node.id, title: node.title || title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: node.theme || getCurrentUITheme(), figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
-            }
-          }, "*");
-        });
-        if (statusToggleEl?.checked && selectedStatus) {
-          parent.postMessage({ pluginMessage: { type: "SET_STATUS", status: selectedStatus } }, "*");
-        }
-        showToast(`${nodes.length}\uAC1C \uB178\uB4DC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+        return;
       } else {
         parent.postMessage({
           pluginMessage: {
@@ -29256,13 +29342,29 @@
           }
         }, "*");
       }
-    }, [applyCurrentConnectorState, setLastNodeConfig, showToast]);
+    }, [applyCurrentConnectorState, applyMultiDraft, setLastNodeConfig, showToast]);
     const handleSelectionChange = (0, import_react2.useCallback)((count, nodes, meta) => {
+      if (isApplyingMultiDraftRef.current) {
+        if (applyTimeoutRef.current !== null) {
+          window.clearTimeout(applyTimeoutRef.current);
+          applyTimeoutRef.current = null;
+        }
+        clearMultiDraft();
+        isApplyingMultiDraftRef.current = false;
+        setIsApplyingMultiDraft(false);
+      }
       const prevIds = (selectedNodesRef.current || []).map((n) => n?.id).filter(Boolean);
       const newIds = (nodes || []).map((n) => n?.id).filter(Boolean);
       const isSelectionChanged = prevIds.length !== newIds.length || prevIds.some((id, idx) => id !== newIds[idx]);
       if (isSelectionChanged) {
         closeAllPopovers();
+      }
+      const sortedNewIds = [...newIds].sort();
+      const sortedPrevDraftIds = multiDraftSelectionRef.current;
+      const isDraftSelectionChanged = sortedNewIds.length !== sortedPrevDraftIds.length || sortedNewIds.some((id, idx) => id !== sortedPrevDraftIds[idx]);
+      if (isDraftSelectionChanged) {
+        clearMultiDraft();
+        multiDraftSelectionRef.current = sortedNewIds;
       }
       setSelectedNodes(nodes);
       selectedNodesRef.current = nodes;
@@ -29390,7 +29492,7 @@
           }
         }
       }
-    }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState]);
+    }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState, clearMultiDraft]);
     const value = {
       selectedNodes,
       setSelectedNodes,
@@ -29440,7 +29542,12 @@
       handleSelectionChange,
       closeAllPopovers,
       showToast,
-      autoResizeWindow
+      autoResizeWindow,
+      multiDraft,
+      hasMultiDraft,
+      updateMultiDraft,
+      clearMultiDraft,
+      isApplyingMultiDraft
     };
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppContext.Provider, { value, children });
   }
@@ -29710,11 +29817,20 @@
     { type: "Branch", label: "Branch", tooltip: "Branch", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(BranchIcon, {}) }
   ];
   function TypeSection() {
-    const { uiState, setUIState, applyCurrentNodeState, setLastNodeConfig, lastNodeConfig } = useApp();
+    const {
+      uiState,
+      setUIState,
+      applyCurrentNodeState,
+      setLastNodeConfig,
+      lastNodeConfig,
+      selectedNodes,
+      multiDraft,
+      updateMultiDraft
+    } = useApp();
     const summary = useSelectionSummary();
     const { selectedNodeType } = uiState;
-    const isTypeMixed = summary.isMultiFlowNode && summary.nodeType.isMixed;
-    const currentRawType = isTypeMixed ? void 0 : summary.isSingleFlowNode || summary.isMultiFlowNode ? summary.nodeType.value : selectedNodeType;
+    const isTypeMixed = multiDraft.nodeType !== void 0 ? false : summary.isMultiFlowNode && summary.nodeType.isMixed;
+    const currentRawType = multiDraft.nodeType !== void 0 ? multiDraft.nodeType : isTypeMixed ? void 0 : summary.isSingleFlowNode || summary.isMultiFlowNode ? summary.nodeType.value : selectedNodeType;
     const activeType = currentRawType ? normalizeNodeType(currentRawType) : void 0;
     const DEFAULT_TYPE_TITLES = /* @__PURE__ */ new Set([
       "Screen",
@@ -29733,6 +29849,10 @@
       "Capsule"
     ]);
     function selectNodeType(type) {
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ nodeType: type });
+        return;
+      }
       const spec = NODE_TYPE_SHAPE_SPECS[type];
       const titleInputEl = document.getElementById("node-title-input");
       const wEl = document.getElementById("input-size-w");
@@ -30068,7 +30188,9 @@
       lastNodeConfig,
       setLastNodeConfig,
       autoResizeWindow,
-      uiState
+      uiState,
+      multiDraft,
+      updateMultiDraft
     } = useApp();
     const summary = useSelectionSummary();
     const isDescriptionAllowed = summary.isMultiFlowNode ? !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === "Screen" : selectedNodes.length === 1 ? normalizeNodeType(selectedNodes[0]?.flowNodeType) === "Screen" : normalizeNodeType(uiState.selectedNodeType) === "Screen";
@@ -30108,8 +30230,28 @@
         }
       }
     }, [selectedNodes, lastNodeConfig.descriptionOn, summary.hasDescription.hasValue, setLastNodeConfig]);
+    const isDescDrafted = multiDraft.description !== void 0;
+    const effectiveIsDescMixed = isDescDrafted ? false : isDescMixed;
+    const isDescSectionOpen = isDescriptionAllowed && (isDescDrafted ? Boolean(multiDraft.description) : effectiveIsDescMixed ? false : isOn);
+    const effectiveIsOn = isDescriptionAllowed && (isDescDrafted ? Boolean(multiDraft.description) : isOn);
+    const effectiveHasText = isDescDrafted ? Boolean(multiDraft.description?.trim()) : selectedNodes.length >= 2 ? effectiveIsDescMixed ? false : Boolean(summary.description.value?.trim()) : hasText;
     function handleToggle(checked) {
       setIsOn(checked);
+      if (selectedNodes.length >= 2) {
+        if (!checked) {
+          setHasText(false);
+          const ta = document.getElementById("node-description-input");
+          if (ta) ta.value = "";
+          updateMultiDraft({ description: "" });
+        } else {
+          const ta = document.getElementById("node-description-input");
+          const val = ta?.value.trim() || "";
+          setHasText(Boolean(val));
+          updateMultiDraft({ description: val });
+        }
+        autoResizeWindow();
+        return;
+      }
       setLastNodeConfig({ descriptionOn: checked });
       if (!checked) {
         setHasText(false);
@@ -30129,6 +30271,13 @@
     function handleInput(e) {
       const val = e.target.value;
       setHasText(Boolean(val.trim()));
+      if (selectedNodes.length >= 2) {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = setTimeout(() => {
+          updateMultiDraft({ description: val });
+        }, 300);
+        return;
+      }
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => applyCurrentNodeState(), 400);
     }
@@ -30168,24 +30317,23 @@
       }
       document.body.removeChild(ta);
     }
-    const defaultDescValue = summary.isMultiFlowNode ? isDescMixed ? "" : summary.description.value || "" : selectedNodes.length === 1 ? selectedNodes[0]?.description || "" : "";
-    const effectiveIsOn = isDescriptionAllowed && isOn;
-    const descPlaceholder = isDescMixed ? "Mixed" : "Add a description";
-    return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-block", style: { paddingBottom: effectiveIsOn ? "12px" : "0px" }, children: [
+    const defaultDescValue = isDescDrafted ? multiDraft.description || "" : summary.isMultiFlowNode ? effectiveIsDescMixed ? "" : summary.description.value || "" : selectedNodes.length === 1 ? selectedNodes[0]?.description || "" : "";
+    const descPlaceholder = effectiveIsDescMixed ? "Mixed" : "Add a description";
+    return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-block", style: { paddingBottom: isDescSectionOpen ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-header toggle-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: `section-title${!isDescriptionAllowed ? " disabled" : ""}`, children: [
           "Description",
-          isDescriptionAllowed && isDescMixed && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
+          isDescriptionAllowed && effectiveIsDescMixed && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-actions", children: [
-          effectiveIsOn && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          isDescSectionOpen && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
             "button",
             {
               id: "btn-copy-desc",
               type: "button",
-              className: `btn-action-icon${copied ? " copied" : ""}${!hasText ? " disabled" : ""}`,
-              title: copied ? "\uBCF5\uC0AC \uC644\uB8CC" : hasText ? "Copy" : "\uC785\uB825\uB41C \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
-              disabled: !hasText,
+              className: `btn-action-icon${copied ? " copied" : ""}${!effectiveHasText ? " disabled" : ""}`,
+              title: copied ? "\uBCF5\uC0AC \uC644\uB8CC" : effectiveHasText ? "Copy" : "\uC785\uB825\uB41C \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+              disabled: !effectiveHasText,
               onClick: copyDescription,
               children: copied ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(IcCheckLarge, {}) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(IcCopy, {})
             }
@@ -30194,16 +30342,16 @@
             Switch,
             {
               id: "toggle-description",
-              checked: effectiveIsOn,
-              isMixed: isDescriptionAllowed && isDescMixed,
-              disabled: !isDescriptionAllowed,
+              checked: isDescSectionOpen,
+              isMixed: isDescriptionAllowed && effectiveIsDescMixed,
+              disabled: !isDescriptionAllowed || selectedNodes.length >= 2 && effectiveIsDescMixed,
               "data-tooltip": !isDescriptionAllowed ? "Description is disabled for this shape" : void 0,
               onChange: handleToggle
             }
           )
         ] })
       ] }),
-      effectiveIsOn && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "section-body collapsible-body", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      isDescSectionOpen && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "section-body collapsible-body", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
         "textarea",
         {
           id: "node-description-input",
@@ -30236,7 +30384,9 @@
       lastNodeConfig,
       selectedNodes,
       applyCurrentNodeState,
-      uiState
+      uiState,
+      multiDraft,
+      updateMultiDraft
     } = useApp();
     const summary = useSelectionSummary();
     const isLinkAllowed = summary.isMultiFlowNode ? !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === "Screen" : selectedNodes.length === 1 ? normalizeNodeType(selectedNodes[0]?.flowNodeType) === "Screen" : normalizeNodeType(uiState.selectedNodeType) === "Screen";
@@ -30289,11 +30439,19 @@
       summary.figmaLink.value,
       setLastNodeConfig
     ]);
+    const isLinkDrafted = multiDraft.figmaLink !== void 0;
+    const displayUrl = isLinkDrafted ? multiDraft.figmaLink || "" : url;
+    const effectiveIsOn = isLinkAllowed && (isLinkDrafted ? Boolean(multiDraft.figmaLink) : isOn);
+    const effectiveIsLinkMixed = isLinkDrafted ? false : isLinkMixed;
     function commitUrl(currentRawUrl) {
       const trimmed = currentRawUrl.trim();
       if (!trimmed) {
         setUrl("");
         cachedUrlRef.current = "";
+        if (selectedNodes.length >= 2) {
+          updateMultiDraft({ figmaLink: "", clearLinkCache: true });
+          return;
+        }
         setLastNodeConfig({ singleLinkUrl: "" });
         setTimeout(() => {
           applyCurrentNodeState(void 0, void 0, {
@@ -30306,6 +30464,10 @@
       const normalized = normalizeUrl(trimmed);
       setUrl(normalized);
       cachedUrlRef.current = normalized;
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ figmaLink: normalized, clearLinkCache: false });
+        return;
+      }
       setLastNodeConfig({ singleLinkUrl: normalized });
       setTimeout(() => {
         applyCurrentNodeState(void 0, void 0, {
@@ -30318,6 +30480,22 @@
       if (!isLinkAllowed) return;
       setIsOn(checked);
       autoResizeWindow();
+      if (selectedNodes.length >= 2) {
+        if (!checked) {
+          cachedUrlRef.current = displayUrl;
+          updateMultiDraft({ figmaLink: "", clearLinkCache: false });
+        } else {
+          const restoreUrl = displayUrl || cachedUrlRef.current;
+          if (restoreUrl.trim()) {
+            commitUrl(restoreUrl);
+          } else {
+            setTimeout(() => {
+              inputRef.current?.focus();
+            }, 60);
+          }
+        }
+        return;
+      }
       if (!checked) {
         cachedUrlRef.current = url;
         setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: url });
@@ -30344,16 +30522,24 @@
     }
     function handleKeyDown(e) {
       if (e.key === "Enter") {
-        commitUrl(url);
+        commitUrl(displayUrl);
       }
     }
     function handleBlur() {
-      commitUrl(url);
+      commitUrl(displayUrl);
     }
     function handleClear(e) {
       e.stopPropagation();
       setUrl("");
       cachedUrlRef.current = "";
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({
+          figmaLink: "",
+          clearLinkCache: true
+        });
+        inputRef.current?.focus();
+        return;
+      }
       setLastNodeConfig({ singleLinkUrl: "" });
       applyCurrentNodeState(void 0, void 0, {
         figmaLink: "",
@@ -30361,7 +30547,6 @@
       });
       inputRef.current?.focus();
     }
-    const effectiveIsOn = isLinkAllowed && isOn;
     return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
       "div",
       {
@@ -30371,14 +30556,14 @@
           /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "section-header toggle-row", children: [
             /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: `section-title${!isLinkAllowed ? " disabled" : ""}`, children: [
               "Figma Screen Link",
-              isLinkAllowed && isLinkMixed && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
+              isLinkAllowed && effectiveIsLinkMixed && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
               Switch,
               {
                 id: "toggle-single-figma-link",
                 checked: effectiveIsOn,
-                isMixed: isLinkAllowed && isLinkMixed,
+                isMixed: isLinkAllowed && effectiveIsLinkMixed,
                 disabled: !isLinkAllowed,
                 "data-tooltip": !isLinkAllowed ? "Figma Screen Link is disabled for this shape" : void 0,
                 onChange: handleToggle
@@ -30407,15 +30592,15 @@
                         type: "text",
                         id: "single-screen-url",
                         className: "form-input",
-                        style: { width: "100%", paddingRight: url ? "28px" : "10px" },
-                        placeholder: isLinkMixed ? "Mixed" : "Add a Figma Screen URL",
-                        value: url,
+                        style: { width: "100%", paddingRight: displayUrl ? "28px" : "10px" },
+                        placeholder: effectiveIsLinkMixed ? "Mixed" : "Add a Figma Screen URL",
+                        value: displayUrl,
                         onChange: (e) => handleUrlChange(e.target.value),
                         onKeyDown: handleKeyDown,
                         onBlur: handleBlur
                       }
                     ),
-                    url && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                    displayUrl && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
                       "button",
                       {
                         type: "button",
@@ -30498,7 +30683,9 @@
       setLastNodeConfig,
       applyStatusToNode,
       selectedNodes,
-      autoResizeWindow
+      autoResizeWindow,
+      multiDraft,
+      updateMultiDraft
     } = useApp();
     const summary = useSelectionSummary();
     const [isOpen, setIsOpen] = (0, import_react9.useState)(() => {
@@ -30510,7 +30697,20 @@
     const userActionLockRef = import_react9.default.useRef(0);
     const prevSelectedNodeIdRef = import_react9.default.useRef(null);
     const { selectedStatus } = uiState;
-    const isStatusAllowed = summary.isMultiFlowNode ? !summary.nodeType.isMixed && summary.nodeType.value === "Screen" : selectedNodes.length === 1 ? selectedNodes[0]?.flowNodeType === "Screen" : uiState.selectedNodeType === "Screen";
+    const isStatusAllowed = (() => {
+      if (multiDraft.nodeType !== void 0) {
+        return normalizeNodeType(multiDraft.nodeType) === "Screen";
+      }
+      if (summary.isMultiFlowNode) {
+        return !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === "Screen";
+      }
+      if (selectedNodes.length === 1) {
+        const rawType = selectedNodes[0]?.flowNodeType || (selectedNodes[0]?.nodeType === "FRAME" ? "Screen" : selectedNodes[0]?.nodeType);
+        return normalizeNodeType(rawType) === "Screen";
+      }
+      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
+      return normalizeNodeType(creationType) === "Screen";
+    })();
     import_react9.default.useEffect(() => {
       const isUserLocked = Date.now() - userActionLockRef.current < 600;
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
@@ -30535,11 +30735,25 @@
         }
       }
     }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, summary.statusOn.hasValue, selectedNodes, lastNodeConfig.statusOn, setUIState]);
-    const isStatusMixed = summary.isMultiFlowNode && summary.status.isMixed;
-    const activeStatus = isStatusMixed ? void 0 : summary.isMultiFlowNode ? summary.status.value : selectedStatus;
+    const isStatusDrafted = multiDraft.status !== void 0;
+    const effectiveIsOpen = isStatusDrafted ? Boolean(multiDraft.status) : isOpen;
+    const isStatusMixed = isStatusDrafted ? false : summary.isMultiFlowNode && summary.status.isMixed;
+    const activeStatus = isStatusDrafted ? multiDraft.status || void 0 : isStatusMixed ? void 0 : summary.isMultiFlowNode ? summary.status.value : selectedStatus;
     function handleToggle(checked) {
       userActionLockRef.current = Date.now();
       setIsOpen(checked);
+      if (selectedNodes.length >= 2) {
+        if (checked) {
+          const targetStatus = activeStatus || selectedStatus || "draft";
+          updateMultiDraft({ status: targetStatus });
+        } else {
+          updateMultiDraft({ status: "" });
+        }
+        requestAnimationFrame(() => {
+          autoResizeWindow();
+        });
+        return;
+      }
       setLastNodeConfig({ statusOn: checked });
       if (checked) {
         const targetStatus = activeStatus || selectedStatus || "draft";
@@ -30554,6 +30768,13 @@
     function selectStatus(status) {
       userActionLockRef.current = Date.now();
       setIsOpen(true);
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ status });
+        requestAnimationFrame(() => {
+          autoResizeWindow();
+        });
+        return;
+      }
       setUIState({ selectedStatus: status });
       setLastNodeConfig({ status, statusOn: true });
       applyStatusToNode(status);
@@ -30565,25 +30786,22 @@
       "div",
       {
         className: "section-block",
-        style: { paddingBottom: isOpen && isStatusAllowed ? "12px" : "0px" },
+        style: { paddingBottom: effectiveIsOpen && isStatusAllowed ? "12px" : "0px" },
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-header toggle-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: `section-title${!isStatusAllowed ? " disabled" : ""}`, children: [
-              "Status",
-              summary.isMultiFlowNode && (summary.statusOn.isMixed || isStatusMixed) && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
-            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: `section-title${!isStatusAllowed ? " disabled" : ""}`, children: "Status" }),
             /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
               Switch,
               {
                 id: "toggle-status",
-                checked: isOpen && isStatusAllowed,
-                isMixed: summary.isMultiFlowNode && summary.statusOn.isMixed,
+                checked: effectiveIsOpen && isStatusAllowed,
+                isMixed: isStatusAllowed && !isStatusDrafted && (summary.statusOn.isMixed || isStatusMixed),
                 onChange: handleToggle,
                 disabled: !isStatusAllowed
               }
             )
           ] }),
-          isOpen && isStatusAllowed && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "section-body", style: { marginTop: "6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "chip-group active", id: "status-options", style: { display: "flex" }, children: STATUSES.map((s) => {
+          effectiveIsOpen && isStatusAllowed && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "section-body", style: { marginTop: "6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "chip-group active", id: "status-options", style: { display: "flex" }, children: STATUSES.map((s) => {
             const isChipActive = !isStatusMixed && activeStatus === s.id;
             return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
               "button",
@@ -30785,7 +31003,9 @@
       applyStepBadges,
       removeStepBadgesFromNodes,
       selectedNodes,
-      autoResizeWindow
+      autoResizeWindow,
+      multiDraft,
+      updateMultiDraft
     } = useApp();
     const summary = useSelectionSummary();
     const isMultiMode = summary.isMultiFlowNode;
@@ -30797,18 +31017,22 @@
     });
     const userActionLockRef = (0, import_react10.useRef)(0);
     const prevSelectedNodeIdRef = (0, import_react10.useRef)(null);
-    const isSectionOpen = isOpen;
+    const isBadgeOnDrafted = multiDraft.badgeOn !== void 0;
+    const effectiveIsOpen = isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : isOpen;
+    const isSectionOpen = effectiveIsOpen;
     const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react10.useState)(false);
     const [stepNumText, setStepNumText] = (0, import_react10.useState)("1");
     const [isMixed, setIsMixed] = (0, import_react10.useState)(false);
     const dropdownRef = (0, import_react10.useRef)(null);
-    const isCornerMixed = isMultiMode && summary.badgeCorner.isMixed;
-    const isShapeMixed = isMultiMode && summary.badgeShape.isMixed;
-    const isColorModeMixed = isMultiMode && summary.badgeColorMode.isMixed;
-    const isStartNumberDefined = !isMixed && stepNumText.trim() !== "" && !isNaN(parseInt(stepNumText, 10));
-    const selectedBadgeCorner = isCornerMixed ? void 0 : summary.isMultiFlowNode && summary.badgeCorner.value ? summary.badgeCorner.value : uiState.selectedBadgeCorner || "TOP_LEFT";
-    const selectedBadgeShape = isShapeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeShape.value ? summary.badgeShape.value : uiState.selectedBadgeShape || "Square";
-    const selectedBadgeColorMode = isColorModeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeColorMode.value ? summary.badgeColorMode.value : uiState.selectedBadgeColorMode || "Style";
+    const isCornerMixed = multiDraft.badgeCorner !== void 0 ? false : isMultiMode && summary.badgeCorner.isMixed;
+    const isShapeMixed = multiDraft.badgeShape !== void 0 ? false : isMultiMode && summary.badgeShape.isMixed;
+    const isColorModeMixed = multiDraft.badgeColorMode !== void 0 ? false : isMultiMode && summary.badgeColorMode.isMixed;
+    const displayStepNum = multiDraft.badgeNumber !== void 0 ? String(multiDraft.badgeNumber) : stepNumText;
+    const effectiveIsMixed = multiDraft.badgeNumber !== void 0 ? false : isMixed;
+    const isStartNumberDefined = !effectiveIsMixed && displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10));
+    const selectedBadgeCorner = multiDraft.badgeCorner || (isCornerMixed ? void 0 : summary.isMultiFlowNode && summary.badgeCorner.value ? summary.badgeCorner.value : uiState.selectedBadgeCorner || "TOP_LEFT");
+    const selectedBadgeShape = multiDraft.badgeShape || (isShapeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeShape.value ? summary.badgeShape.value : uiState.selectedBadgeShape || "Square");
+    const selectedBadgeColorMode = multiDraft.badgeColorMode || (isColorModeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeColorMode.value ? summary.badgeColorMode.value : uiState.selectedBadgeColorMode || "Style");
     const firstNode = selectedNodes[0];
     const nodeBgColorHex = firstNode?.fillColorHex || uiState.selectedColor || "#FFFFFF";
     const hasNodeStroke = (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
@@ -30908,12 +31132,25 @@
       };
     }, [colorDropdownOpen]);
     function getNumberValue() {
-      const parsed = parseInt(stepNumText, 10);
+      const parsed = parseInt(displayStepNum, 10);
       return isNaN(parsed) || parsed < 1 ? 1 : parsed;
     }
     function handleToggle(checked) {
       userActionLockRef.current = Date.now();
       setIsOpen(checked);
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({
+          badgeOn: checked,
+          badgeNumber: checked ? getNumberValue() : void 0,
+          badgeCorner: checked ? selectedBadgeCorner : void 0,
+          badgeShape: checked ? selectedBadgeShape : void 0,
+          badgeColorMode: checked ? selectedBadgeColorMode : void 0
+        });
+        requestAnimationFrame(() => {
+          autoResizeWindow();
+        });
+        return;
+      }
       setLastNodeConfig({ stepBadgesOn: checked });
       if (checked) {
         applyStepBadges(
@@ -30931,6 +31168,10 @@
     }
     function handleCornerSelect(pos) {
       setUIState({ selectedBadgeCorner: pos });
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ badgeCorner: pos });
+        return;
+      }
       setLastNodeConfig({ badgeCorner: pos });
       if (isSectionOpen && !isMultiMode) {
         applyStepBadges(
@@ -30943,6 +31184,10 @@
     }
     function handleShapeSelect(shape) {
       setUIState({ selectedBadgeShape: shape });
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ badgeShape: shape });
+        return;
+      }
       setLastNodeConfig({ badgeShape: shape });
       if (isSectionOpen && !isMultiMode) {
         applyStepBadges(
@@ -30955,8 +31200,12 @@
     }
     function handleColorSelect(mode) {
       setUIState({ selectedBadgeColorMode: mode });
-      setLastNodeConfig({ badgeColorMode: mode });
       setColorDropdownOpen(false);
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ badgeColorMode: mode });
+        return;
+      }
+      setLastNodeConfig({ badgeColorMode: mode });
       if (isSectionOpen && !isMultiMode) {
         applyStepBadges(
           getNumberValue(),
@@ -30970,6 +31219,10 @@
       setIsMixed(false);
       const val = getNumberValue();
       setStepNumText(String(val));
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ badgeNumber: val });
+        return;
+      }
       setLastNodeConfig({ stepNumber: val });
       if (isSectionOpen && !isMultiMode) {
         applyStepBadges(
@@ -30983,6 +31236,17 @@
     function handleResetNumber() {
       setIsMixed(false);
       setStepNumText("1");
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ badgeNumber: 1 });
+        const input2 = document.getElementById(
+          "input-step-number"
+        );
+        if (input2) {
+          input2.focus();
+          input2.select();
+        }
+        return;
+      }
       setLastNodeConfig({ stepNumber: 1 });
       if (isSectionOpen && !isMultiMode) {
         applyStepBadges(
@@ -31001,6 +31265,17 @@
       }
     }
     function handleAddStepBadgesMulti() {
+      if (selectedNodes.length >= 2) {
+        const start2 = getNumberValue();
+        updateMultiDraft({
+          badgeOn: true,
+          badgeNumber: start2,
+          badgeCorner: selectedBadgeCorner || "TOP_LEFT",
+          badgeShape: selectedBadgeShape || "Square",
+          badgeColorMode: selectedBadgeColorMode || "Style"
+        });
+        return;
+      }
       const start = getNumberValue();
       applyStepBadges(
         start,
@@ -31078,13 +31353,13 @@
               Switch,
               {
                 id: "toggle-step-badges",
-                checked: isSectionOpen,
-                isMixed: summary.isMultiFlowNode && summary.hasStepBadge.isMixed,
+                checked: effectiveIsOpen,
+                isMixed: !isBadgeOnDrafted && summary.isMultiFlowNode && summary.hasStepBadge.isMixed,
                 onChange: handleToggle
               }
             )
           ] }),
-          isSectionOpen && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+          effectiveIsOpen && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
             "div",
             {
               style: {
@@ -31145,8 +31420,8 @@
                               {
                                 type: "text",
                                 id: "input-step-number",
-                                value: isMixed ? "" : stepNumText,
-                                placeholder: isMixed ? "Mixed" : "1",
+                                value: effectiveIsMixed ? "" : displayStepNum,
+                                placeholder: effectiveIsMixed ? "Mixed" : "1",
                                 onChange: (e) => {
                                   setIsMixed(false);
                                   setStepNumText(e.target.value.replace(/[^0-9]/g, ""));
@@ -31164,7 +31439,7 @@
                                   outline: "none",
                                   fontSize: "11px",
                                   fontWeight: 400,
-                                  color: isMixed ? "var(--color-text-primary, #000000)" : "#111827",
+                                  color: effectiveIsMixed ? "var(--color-text-primary, #000000)" : "#111827",
                                   padding: 0
                                 }
                               }
@@ -31468,10 +31743,15 @@
       closeAllPopovers,
       applyCurrentNodeState,
       autoResizeWindow,
-      showToast
+      showToast,
+      multiDraft,
+      updateMultiDraft
     } = useApp();
     const summary = useSelectionSummary();
     const isSizeAllowed = (() => {
+      if (multiDraft.nodeType !== void 0) {
+        return normalizeNodeType(multiDraft.nodeType) === "Screen";
+      }
       if (selectedNodes.length === 1) {
         const node = selectedNodes[0];
         const rawType = node?.flowNodeType || (node?.nodeType === "FRAME" ? "Screen" : node?.nodeType);
@@ -31527,6 +31807,7 @@
       }
     }, [isSizeAllowed, dropdownOpen, setSizeModeDropdownOpen]);
     const currentSizeMode = (() => {
+      if (multiDraft.sizeMode) return multiDraft.sizeMode;
       if (summary.isMultiFlowNode) {
         if (summary.sizeMode.isMixed) return "mixed";
         return summary.sizeMode.value || lastNodeConfig.sizeMode || "fixed";
@@ -31536,9 +31817,9 @@
       }
       return lastNodeConfig.sizeMode || "fixed";
     })();
-    const isWMixed = summary.isMultiFlowNode && summary.width.isMixed;
-    const isHMixed = summary.isMultiFlowNode && summary.height.isMixed;
-    const isRMixed = summary.isMultiFlowNode && summary.cornerRadius.isMixed;
+    const isWMixed = multiDraft.width !== void 0 ? false : summary.isMultiFlowNode && summary.width.isMixed;
+    const isHMixed = multiDraft.height !== void 0 ? false : summary.isMultiFlowNode && summary.height.isMixed;
+    const isRMixed = multiDraft.cornerRadius !== void 0 ? false : summary.isMultiFlowNode && summary.cornerRadius.isMixed;
     import_react11.default.useEffect(() => {
       const validNodes = (selectedNodes || []).filter((n) => Boolean(n));
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : "NONE";
@@ -31553,13 +31834,13 @@
       if (validNodes.length > 0) {
         if (summary.isMultiFlowNode) {
           if (!isFocusedRef.current.w) {
-            setWidthInput(isWMixed ? "" : summary.width.value !== void 0 ? String(summary.width.value) : "");
+            setWidthInput(multiDraft.width !== void 0 ? String(multiDraft.width) : isWMixed ? "" : summary.width.value !== void 0 ? String(summary.width.value) : "");
           }
           if (!isFocusedRef.current.h) {
-            setHeightInput(isHMixed ? "" : summary.height.value !== void 0 ? String(summary.height.value) : "");
+            setHeightInput(multiDraft.height !== void 0 ? String(multiDraft.height) : isHMixed ? "" : summary.height.value !== void 0 ? String(summary.height.value) : "");
           }
           if (!isFocusedRef.current.r) {
-            setRadiusInput(isRMixed ? "" : summary.cornerRadius.value !== void 0 ? String(summary.cornerRadius.value) : "");
+            setRadiusInput(multiDraft.cornerRadius !== void 0 ? String(multiDraft.cornerRadius) : isRMixed ? "" : summary.cornerRadius.value !== void 0 ? String(summary.cornerRadius.value) : "");
           }
         } else {
           const first = validNodes[0];
@@ -31628,10 +31909,21 @@
       if (!isSizeAllowed) return;
       const raw = explicitVal !== void 0 ? explicitVal : widthInput;
       const parsed = parseInt(raw, 10);
-      const validW = isNaN(parsed) ? lastNodeConfig.width || 250 : Math.max(50, parsed);
+      let validW = isNaN(parsed) ? lastNodeConfig.width || 250 : parsed;
+      if (validW < SCREEN_NODE_CONSTRAINTS.MIN_WIDTH) {
+        validW = SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
+        showToast(`\uCD5C\uC18C \uB108\uBE44\uB294 ${SCREEN_NODE_CONSTRAINTS.MIN_WIDTH}px\uC785\uB2C8\uB2E4.`, "warning");
+      } else if (validW > SCREEN_NODE_CONSTRAINTS.MAX_WIDTH) {
+        validW = SCREEN_NODE_CONSTRAINTS.MAX_WIDTH;
+        showToast(`\uCD5C\uB300 \uB108\uBE44\uB294 ${SCREEN_NODE_CONSTRAINTS.MAX_WIDTH}px\uC785\uB2C8\uB2E4.`, "warning");
+      }
       setWidthInput(String(validW));
       userActionLockRef.current = Date.now();
       setSelectedSizePresetId(null);
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ width: validW, sizeMode: "fixed" });
+        return;
+      }
       const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
       const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
       const targetNodeId = selectedNodes[0]?.id || "NONE";
@@ -31660,13 +31952,13 @@
         e.preventDefault();
         const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
         const step = e.shiftKey ? 10 : 1;
-        const next = current + step;
+        const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_WIDTH, current + step);
         commitW(String(next));
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
         const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
         const step = e.shiftKey ? 10 : 1;
-        const next = Math.max(50, current - step);
+        const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, current - step);
         commitW(String(next));
       }
     }
@@ -31678,10 +31970,21 @@
       if (!isSizeAllowed) return;
       const raw = explicitVal !== void 0 ? explicitVal : heightInput;
       const parsed = parseInt(raw, 10);
-      const validH = isNaN(parsed) ? lastNodeConfig.height || 90 : Math.max(40, parsed);
+      let validH = isNaN(parsed) ? lastNodeConfig.height || 90 : parsed;
+      if (validH < SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT) {
+        validH = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
+        showToast(`\uCD5C\uC18C \uB192\uC774\uB294 ${SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT}px\uC785\uB2C8\uB2E4.`, "warning");
+      } else if (validH > SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT) {
+        validH = SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT;
+        showToast(`\uCD5C\uB300 \uB192\uC774\uB294 ${SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT}px\uC785\uB2C8\uB2E4.`, "warning");
+      }
       setHeightInput(String(validH));
       userActionLockRef.current = Date.now();
       setSelectedSizePresetId(null);
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ height: validH, sizeMode: "fixed" });
+        return;
+      }
       const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
       const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
       const targetNodeId = selectedNodes[0]?.id || "NONE";
@@ -31710,13 +32013,13 @@
         e.preventDefault();
         const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
         const step = e.shiftKey ? 10 : 1;
-        const next = current + step;
+        const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT, current + step);
         commitH(String(next));
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
         const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
         const step = e.shiftKey ? 10 : 1;
-        const next = Math.max(40, current - step);
+        const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, current - step);
         commitH(String(next));
       }
     }
@@ -31728,14 +32031,20 @@
       if (!isSizeAllowed) return;
       const raw = explicitVal !== void 0 ? explicitVal : radiusInput;
       const parsed = parseInt(raw, 10);
-      let validR = isNaN(parsed) ? lastNodeConfig.cornerRadius ?? 0 : Math.max(0, parsed);
-      if (validR > 999) {
-        validR = 999;
-        showToast("\uCD5C\uB300\uAC12\uC740 999\uC785\uB2C8\uB2E4.", "warning");
+      let validR = isNaN(parsed) ? lastNodeConfig.cornerRadius ?? 0 : parsed;
+      if (validR < SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS) {
+        validR = SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS;
+      } else if (validR > SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS) {
+        validR = SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS;
+        showToast(`\uCD5C\uB300\uAC12\uC740 ${SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS}\uC785\uB2C8\uB2E4.`, "warning");
       }
       setRadiusInput(String(validR));
       userActionLockRef.current = Date.now();
       setSelectedSizePresetId(null);
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ cornerRadius: validR });
+        return;
+      }
       const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
       const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
       const targetNodeId = selectedNodes[0]?.id || "NONE";
@@ -31760,13 +32069,13 @@
         e.preventDefault();
         const current = parseInt(radiusInput, 10) || 0;
         const step = e.shiftKey ? 10 : 1;
-        const next = Math.min(999, current + step);
+        const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS, current + step);
         commitR(String(next));
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
         const current = parseInt(radiusInput, 10) || 0;
         const step = e.shiftKey ? 10 : 1;
-        const next = Math.max(0, current - step);
+        const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS, current - step);
         commitR(String(next));
       }
     }
@@ -31777,6 +32086,15 @@
       setHeightInput(String(p.h));
       setRadiusInput(String(p.radius ?? 0));
       userActionLockRef.current = Date.now();
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({
+          width: p.w,
+          height: p.h,
+          cornerRadius: p.radius ?? 0,
+          sizeMode: p.sizeMode || "fixed"
+        });
+        return;
+      }
       const targetNodeId = selectedNodes[0]?.id || "NONE";
       pendingSizeRef.current = {
         nodeId: targetNodeId,
@@ -31826,6 +32144,15 @@
     }
     function selectSizeMode(mode) {
       if (!isSizeAllowed) return;
+      if (selectedNodes.length >= 2) {
+        if (mode !== "mixed") {
+          updateMultiDraft({ sizeMode: mode });
+        }
+        setSelectedSizePresetId(null);
+        setDropdownOpen(false);
+        setSizeModeDropdownOpen(false);
+        return;
+      }
       if (mode !== "mixed") {
         setLastNodeConfig({ sizeMode: mode });
       }
@@ -31880,7 +32207,8 @@
                 type: "number",
                 id: "input-size-w",
                 value: widthInput,
-                min: 50,
+                min: SCREEN_NODE_CONSTRAINTS.MIN_WIDTH,
+                max: SCREEN_NODE_CONSTRAINTS.MAX_WIDTH,
                 placeholder: isWMixed ? "Mixed" : void 0,
                 disabled: !isSizeAllowed,
                 onFocus: () => {
@@ -31903,7 +32231,8 @@
                 type: "number",
                 id: "input-size-h",
                 value: heightInput,
-                min: 40,
+                min: SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT,
+                max: SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT,
                 placeholder: isHMixed ? "Mixed" : void 0,
                 disabled: !isSizeAllowed,
                 onFocus: () => {
@@ -31926,8 +32255,8 @@
                 type: "number",
                 id: "input-size-radius",
                 value: radiusInput,
-                min: 0,
-                max: 999,
+                min: SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS,
+                max: SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS,
                 placeholder: isRMixed ? "Mixed" : void 0,
                 disabled: !isSizeAllowed,
                 onFocus: () => {
@@ -32070,17 +32399,19 @@
       setContextMenuTarget,
       setContextMenuPos,
       closeAllPopovers,
-      selectedNodes
+      selectedNodes,
+      multiDraft,
+      updateMultiDraft
     } = useApp();
     const summary = useSelectionSummary();
     const btnMoreRef = (0, import_react12.useRef)(null);
-    const isFillMixed = summary.isMultiFlowNode ? summary.color.isMixed : false;
-    const isStrokeMixed = summary.isMultiFlowNode ? summary.strokeColor.isMixed : false;
-    const isWeightMixed = summary.isMultiFlowNode ? summary.strokeWeight.isMixed : false;
-    const effectiveFillColor = (summary.isMultiFlowNode ? summary.color.value : summary.isSingleFlowNode ? summary.color.value : uiState.selectedColor) || uiState.selectedColor || "#FFFFFF";
-    const effectiveStrokeColor = (summary.isMultiFlowNode ? summary.strokeColor.value : summary.isSingleFlowNode ? summary.strokeColor.value : uiState.selectedStrokeColor) || uiState.selectedStrokeColor || "#000000";
+    const isFillMixed = multiDraft.colorHex !== void 0 ? false : summary.isMultiFlowNode ? summary.color.isMixed : false;
+    const isStrokeMixed = multiDraft.strokeColor !== void 0 ? false : summary.isMultiFlowNode ? summary.strokeColor.isMixed : false;
+    const isWeightMixed = multiDraft.strokeWeight !== void 0 ? false : summary.isMultiFlowNode ? summary.strokeWeight.isMixed : false;
+    const effectiveFillColor = multiDraft.colorHex !== void 0 ? multiDraft.colorHex : (summary.isMultiFlowNode ? summary.color.value : summary.isSingleFlowNode ? summary.color.value : uiState.selectedColor) || uiState.selectedColor || "#FFFFFF";
+    const effectiveStrokeColor = multiDraft.strokeColor !== void 0 ? multiDraft.strokeColor : (summary.isMultiFlowNode ? summary.strokeColor.value : summary.isSingleFlowNode ? summary.strokeColor.value : uiState.selectedStrokeColor) || uiState.selectedStrokeColor || "#000000";
     const rawWeight = summary.isMultiFlowNode ? summary.strokeWeight.value : summary.isSingleFlowNode ? summary.strokeWeight.value : uiState.selectedStrokeWeight;
-    const effectiveStrokeWeight = typeof rawWeight === "number" ? rawWeight : typeof uiState.selectedStrokeWeight === "number" ? uiState.selectedStrokeWeight : 1.5;
+    const effectiveStrokeWeight = multiDraft.strokeWeight !== void 0 ? multiDraft.strokeWeight : typeof rawWeight === "number" ? rawWeight : typeof uiState.selectedStrokeWeight === "number" ? uiState.selectedStrokeWeight : 1.5;
     const isStrokeNone = !isStrokeMixed && (effectiveStrokeWeight === 0 || !effectiveStrokeColor || effectiveStrokeColor.toLowerCase() === "none");
     const isFillNone = !isFillMixed && (effectiveFillColor.toLowerCase() === "none" || effectiveFillColor.toLowerCase() === "transparent");
     const lastValidFillRef = (0, import_react12.useRef)("#FFFFFF");
@@ -32133,17 +32464,25 @@
     const applyFillColor = (0, import_react12.useCallback)(
       (newColorHex) => {
         const formatted = newColorHex.startsWith("#") ? newColorHex : `#${newColorHex}`;
+        if (selectedNodes.length >= 2) {
+          updateMultiDraft({ colorHex: formatted });
+          return;
+        }
         setUIState({ selectedColor: formatted });
         setLastNodeConfig({ color: formatted });
         applyCurrentNodeState(void 0, { colorHex: formatted });
       },
-      [setUIState, setLastNodeConfig, applyCurrentNodeState]
+      [selectedNodes, updateMultiDraft, setUIState, setLastNodeConfig, applyCurrentNodeState]
     );
     const applyFillNone = (0, import_react12.useCallback)(() => {
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ colorHex: "None" });
+        return;
+      }
       setUIState({ selectedColor: "None" });
       setLastNodeConfig({ color: "None" });
       applyCurrentNodeState(void 0, { colorHex: "None" });
-    }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
+    }, [selectedNodes, updateMultiDraft, setUIState, setLastNodeConfig, applyCurrentNodeState]);
     const handleFillChipClick = () => {
       if (isFillNone) {
         const restoreColor = lastValidFillRef.current && !["none", "transparent"].includes(
@@ -32155,14 +32494,22 @@
       }
     };
     const applyStrokeNone = (0, import_react12.useCallback)(() => {
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ strokeWeight: 0 });
+        return;
+      }
       setUIState({ selectedStrokeWeight: 0 });
       setLastNodeConfig({ strokeWeight: 0 });
       applyCurrentNodeState(void 0, { strokeWeight: 0 });
-    }, [setUIState, setLastNodeConfig, applyCurrentNodeState]);
+    }, [selectedNodes, updateMultiDraft, setUIState, setLastNodeConfig, applyCurrentNodeState]);
     const applyStrokeColor = (0, import_react12.useCallback)(
       (newStrokeHex, explicitWeight) => {
         const formatted = newStrokeHex.startsWith("#") ? newStrokeHex : `#${newStrokeHex}`;
         const targetWeight = explicitWeight !== void 0 ? explicitWeight : effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5;
+        if (selectedNodes.length >= 2) {
+          updateMultiDraft({ strokeColor: formatted, strokeWeight: targetWeight });
+          return;
+        }
         setUIState({
           selectedStrokeColor: formatted,
           selectedStrokeWeight: targetWeight
@@ -32174,6 +32521,8 @@
         });
       },
       [
+        selectedNodes,
+        updateMultiDraft,
         effectiveStrokeWeight,
         setUIState,
         setLastNodeConfig,
@@ -32183,11 +32532,15 @@
     const applyStrokeWeight = (0, import_react12.useCallback)(
       (newWeight) => {
         const validWeight = Math.max(0, Math.round(newWeight * 10) / 10);
+        if (selectedNodes.length >= 2) {
+          updateMultiDraft({ strokeWeight: validWeight });
+          return;
+        }
         setUIState({ selectedStrokeWeight: validWeight });
         setLastNodeConfig({ strokeWeight: validWeight });
         applyCurrentNodeState(void 0, { strokeWeight: validWeight });
       },
-      [setUIState, setLastNodeConfig, applyCurrentNodeState]
+      [selectedNodes, updateMultiDraft, setUIState, setLastNodeConfig, applyCurrentNodeState]
     );
     const handleStrokeIconClick = () => {
       if (isStrokeNone) {
@@ -32286,13 +32639,19 @@
       }
     };
     const toggleStrokeWeight = () => {
-      const current = parseFloat(weightInput) || 0;
-      const next = current === 0 ? 1.5 : 0;
-      setWeightInput(String(next));
-      applyStrokeWeight(next);
+      setWeightInput("1.5");
+      applyStrokeWeight(1.5);
     };
     function selectStylePreset(preset) {
       setSelectedStylePresetId(preset.id);
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({
+          colorHex: preset.fillColor,
+          strokeWeight: preset.strokeWeight,
+          strokeColor: preset.strokeColor
+        });
+        return;
+      }
       const isPresetFillNone = preset.fillColor.toLowerCase() === "none" || preset.fillColor.toLowerCase() === "transparent";
       const connectorColor = isPresetFillNone ? preset.strokeWeight > 0 ? preset.strokeColor : "#000000" : preset.fillColor.toLowerCase() === "#ffffff" && preset.strokeWeight > 0 ? preset.strokeColor : preset.fillColor;
       setUIState({
@@ -32484,7 +32843,7 @@
               {
                 type: "button",
                 className: "style-weight-action-btn",
-                title: isWeightMixed ? "Stroke width (Mixed)" : `Stroke width (Toggle: 0 / 1.5)`,
+                title: isWeightMixed ? "Stroke width (Mixed)" : "Stroke width (Set default: 1.5)",
                 onClick: toggleStrokeWeight,
                 children: STROKE_WEIGHT_ICON_SVG
               }
@@ -32579,13 +32938,32 @@
       applyStatusToNode,
       activeAppearanceSection,
       setActiveAppearanceSection,
-      autoResizeWindow
+      autoResizeWindow,
+      selectedNodes,
+      multiDraft,
+      updateMultiDraft
     } = useApp();
     const summary = useSelectionSummary();
     const isSectionOpen = activeAppearanceSection === "elevation";
-    const isElevationMixed = summary.isMultiFlowNode && summary.elevation.isMixed;
-    const currentLevel = summary.isMultiFlowNode ? summary.elevation.value : typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
+    const isElevationDrafted = multiDraft.elevation !== void 0;
+    const effectiveIsSectionOpen = isElevationDrafted ? typeof multiDraft.elevation === "number" : isSectionOpen;
+    const isElevationMixed = isElevationDrafted ? false : summary.isMultiFlowNode && summary.elevation.isMixed;
+    const currentLevel = isElevationDrafted ? typeof multiDraft.elevation === "number" ? multiDraft.elevation : void 0 : summary.isMultiFlowNode ? summary.elevation.value : typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
     function handleToggle(checked) {
+      if (selectedNodes.length >= 2) {
+        if (checked) {
+          setActiveAppearanceSection("elevation");
+          const targetLevel = typeof currentLevel === "number" ? currentLevel : 0;
+          updateMultiDraft({ elevation: targetLevel });
+        } else {
+          setActiveAppearanceSection(null);
+          updateMultiDraft({ elevation: null });
+        }
+        requestAnimationFrame(() => {
+          autoResizeWindow();
+        });
+        return;
+      }
       if (checked) {
         setActiveAppearanceSection("elevation");
         setLastNodeConfig({ elevationOn: true });
@@ -32602,6 +32980,13 @@
     }
     function selectElevation(level) {
       setActiveAppearanceSection("elevation");
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ elevation: level });
+        requestAnimationFrame(() => {
+          autoResizeWindow();
+        });
+        return;
+      }
       setLastNodeConfig({ elevationOn: true, elevation: level });
       applyElevationToNodes(level);
       requestAnimationFrame(() => {
@@ -32612,19 +32997,19 @@
       /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "section-header toggle-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: "section-title", children: [
           "Elevation",
-          summary.isMultiFlowNode && (summary.elevationOn.isMixed || isElevationMixed) && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+          summary.isMultiFlowNode && !isElevationDrafted && (summary.elevationOn.isMixed || isElevationMixed) && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
           Switch,
           {
             id: "toggle-elevation",
-            checked: isSectionOpen,
-            isMixed: isElevationMixed,
+            checked: effectiveIsSectionOpen,
+            isMixed: !isElevationDrafted && isElevationMixed,
             onChange: handleToggle
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: `elevation-cards-container${isSectionOpen ? " active" : ""}`, id: "elevation-options", children: ELEVATION_LEVELS.map(({ level, label, desc }) => {
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: `elevation-cards-container${effectiveIsSectionOpen ? " active" : ""}`, id: "elevation-options", children: ELEVATION_LEVELS.map(({ level, label, desc }) => {
         const isSelected = !isElevationMixed && currentLevel === level;
         return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
           "div",
@@ -34268,14 +34653,15 @@
     function handleRadiusChange(e) {
       let val = parseInt(e.target.value, 10);
       if (isNaN(val)) val = 0;
-      if (val > 20) val = 20;
+      if (val > SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS) val = SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS;
+      if (val < SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS) val = SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS;
       setRadius(val);
     }
     function handleSave() {
       const finalName = name.trim() || "Custom";
-      const finalW = Math.max(20, w || 250);
-      const finalH = Math.max(20, h || 90);
-      const finalRadius = Math.min(20, Math.max(0, radius || 0));
+      const finalW = clampScreenWidth(w || 250);
+      const finalH = clampScreenHeight(h || 90);
+      const finalRadius = clampScreenCornerRadius(radius || 0);
       onSave({ name: finalName, w: finalW, h: finalH, radius: finalRadius, sizeMode });
       onClose();
     }
@@ -34330,7 +34716,8 @@
                           id: `input-${mode}-size-w`,
                           className: "prefix-input",
                           value: w,
-                          min: 20,
+                          min: SCREEN_NODE_CONSTRAINTS.MIN_WIDTH,
+                          max: SCREEN_NODE_CONSTRAINTS.MAX_WIDTH,
                           onChange: (e) => setW(parseInt(e.target.value, 10) || 0),
                           onKeyDown: (e) => e.key === "Enter" && handleSave()
                         }
@@ -34345,7 +34732,8 @@
                           id: `input-${mode}-size-h`,
                           className: "prefix-input",
                           value: h,
-                          min: 20,
+                          min: SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT,
+                          max: SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT,
                           onChange: (e) => setH(parseInt(e.target.value, 10) || 0),
                           onKeyDown: (e) => e.key === "Enter" && handleSave()
                         }
@@ -34361,8 +34749,8 @@
                         id: `input-${mode}-size-radius`,
                         className: "prefix-input",
                         value: radius,
-                        min: 0,
-                        max: 20,
+                        min: SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS,
+                        max: SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS,
                         onChange: handleRadiusChange,
                         onKeyDown: (e) => e.key === "Enter" && handleSave()
                       }
@@ -35500,7 +35888,7 @@
       const resolvedFill = fillHex.trim() ? fillHex : validFill;
       const finalFillColor = isFillNone ? "None" : `#${resolvedFill.length === 3 ? resolvedFill.split("").map((c) => c + c).join("") : resolvedFill}`;
       const finalStrokeColor = `#${strokeHex.length === 3 ? strokeHex.split("").map((c) => c + c).join("") : strokeHex}`;
-      const finalStrokeWeight = Math.max(0, strokeWeight);
+      const finalStrokeWeight = clampStrokeWeight(strokeWeight);
       if (mode === "edit" && editingPresetId) {
         updateStylePreset(editingPresetId, {
           name: targetPreset?.name || (isFillNone ? "Custom None" : `Custom ${finalFillColor}`),
@@ -35749,10 +36137,10 @@
                               {
                                 type: "number",
                                 className: "prefix-input",
-                                min: 0,
-                                max: 50,
+                                min: SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT,
+                                max: SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT,
                                 value: strokeWeight,
-                                onChange: (e) => setStrokeWeight(parseFloat(e.target.value) || 0),
+                                onChange: (e) => setStrokeWeight(clampStrokeWeight(parseFloat(e.target.value) || 0)),
                                 onKeyDown: (e) => e.key === "Enter" && handleSave(),
                                 style: {
                                   width: "100%",
@@ -36221,7 +36609,7 @@
       onApply(`#${hex}`, targetWeight);
     };
     const handleWeightChange = (newWeight) => {
-      const valid = Math.max(0, newWeight);
+      const valid = clampStrokeWeight(newWeight);
       setStrokeWeight(valid);
       if (valid > 0) {
         lastValidWeightRef.current = valid;
@@ -36257,7 +36645,7 @@
     const handleSave = () => {
       const resolved = strokeHex.trim() ? strokeHex : validStroke;
       const finalColor = `#${resolved.length === 3 ? resolved.split("").map((c) => c + c).join("") : resolved}`;
-      const finalWeight = Math.max(0, strokeWeight);
+      const finalWeight = clampStrokeWeight(strokeWeight);
       onApply(finalColor, finalWeight);
       onClose();
     };
@@ -36357,8 +36745,8 @@
                           {
                             type: "number",
                             className: "prefix-input",
-                            min: 0,
-                            max: 50,
+                            min: SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT,
+                            max: SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT,
                             value: strokeWeight,
                             onChange: (e) => handleWeightChange(parseFloat(e.target.value) || 0),
                             onKeyDown: (e) => e.key === "Enter" && handleSave(),
@@ -36416,7 +36804,7 @@
     if (currentTab === "connection") {
       return "Connect";
     }
-    if (nodeCount >= 2) return "Update All";
+    if (nodeCount >= 2) return "Apply to All";
     if (nodeCount === 1) return "Update";
     return "Create";
   }
@@ -36447,7 +36835,11 @@
       selectedSizePresetId,
       sizePresets,
       addSizePreset,
-      updateSizePreset
+      updateSizePreset,
+      multiDraft,
+      hasMultiDraft,
+      updateMultiDraft,
+      isApplyingMultiDraft
     } = useApp();
     const handleAddSizeSave = (0, import_react24.useCallback)((preset) => {
       addSizePreset(preset);
@@ -36492,7 +36884,10 @@
         if (target instanceof HTMLInputElement && (target.type === "text" || target.type === "number" || !target.type) && !target.readOnly && !target.disabled) {
           newlyFocusedInput = target;
           requestAnimationFrame(() => {
-            target.select();
+            const isMixedOrEmpty = target.value === "" || target.placeholder === "Mixed";
+            if (!isMixedOrEmpty) {
+              target.select();
+            }
           });
         } else {
           newlyFocusedInput = null;
@@ -36502,7 +36897,10 @@
         const target = e.target;
         if (target instanceof HTMLInputElement && (target.type === "text" || target.type === "number" || !target.type) && !target.readOnly && !target.disabled) {
           if (newlyFocusedInput === target) {
-            target.select();
+            const isMixedOrEmpty = target.value === "" || target.placeholder === "Mixed";
+            if (!isMixedOrEmpty) {
+              target.select();
+            }
             newlyFocusedInput = null;
           }
         }
@@ -36650,17 +37048,20 @@
           }
         )
       ] }) }),
-      currentTab !== "connection" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
-        "button",
-        {
-          id: "btn-main-cta",
-          className: `btn-cta-primary${isFigjamSelected ? " disabled" : ""}`,
-          type: "button",
-          disabled: isFigjamSelected,
-          onClick: isFigjamSelected ? void 0 : handleMainAction,
-          children: ctaLabel
-        }
-      ) }),
+      currentTab !== "connection" && (() => {
+        const isCtaDisabled = isFigjamSelected || nodeCount >= 2 && (!hasMultiDraft || isApplyingMultiDraft);
+        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("footer", { className: "app-footer", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+          "button",
+          {
+            id: "btn-main-cta",
+            className: `btn-cta-primary${isCtaDisabled ? " disabled" : ""}`,
+            type: "button",
+            disabled: isCtaDisabled,
+            onClick: isFigjamSelected ? void 0 : handleMainAction,
+            children: ctaLabel
+          }
+        ) });
+      })(),
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
       activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
         SizeModal,
@@ -36745,28 +37146,32 @@
         );
       })(),
       activeModal === "fill-color" && (() => {
-        const isFillMixed = summary.isMultiFlowNode ? summary.color.isMixed : false;
-        const currentFill = (summary.isMultiFlowNode ? summary.color.value : summary.isSingleFlowNode ? summary.color.value : uiState.selectedColor) || uiState.selectedColor || "#FFFFFF";
+        const isFillMixed = summary.isMultiFlowNode ? multiDraft.colorHex !== void 0 ? false : summary.color.isMixed : false;
+        const currentFill = multiDraft.colorHex !== void 0 ? multiDraft.colorHex : (summary.isMultiFlowNode ? summary.color.value : summary.isSingleFlowNode ? summary.color.value : uiState.selectedColor) || uiState.selectedColor || "#FFFFFF";
         return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
           FillColorModal,
           {
             initialColor: currentFill,
             isMixed: isFillMixed,
             onApply: (colorHex) => {
-              setUIState({ selectedColor: colorHex });
-              setLastNodeConfig({ color: colorHex });
-              applyCurrentNodeState(void 0, { colorHex });
+              if (selectedNodes.length >= 2) {
+                updateMultiDraft({ colorHex });
+              } else {
+                setUIState({ selectedColor: colorHex });
+                setLastNodeConfig({ color: colorHex });
+                applyCurrentNodeState(void 0, { colorHex });
+              }
             },
             onClose: () => setActiveModal("none")
           }
         );
       })(),
       activeModal === "stroke-color" && (() => {
-        const isStrokeMixed = summary.isMultiFlowNode ? summary.strokeColor.isMixed : false;
-        const isWeightMixed = summary.isMultiFlowNode ? summary.strokeWeight.isMixed : false;
-        const currentStrokeColor = (summary.isMultiFlowNode ? summary.strokeColor.value : summary.isSingleFlowNode ? summary.strokeColor.value : uiState.selectedStrokeColor) || uiState.selectedStrokeColor || "#000000";
+        const isStrokeMixed = summary.isMultiFlowNode ? multiDraft.strokeColor !== void 0 ? false : summary.strokeColor.isMixed : false;
+        const isWeightMixed = summary.isMultiFlowNode ? multiDraft.strokeWeight !== void 0 ? false : summary.strokeWeight.isMixed : false;
+        const currentStrokeColor = multiDraft.strokeColor !== void 0 ? multiDraft.strokeColor : (summary.isMultiFlowNode ? summary.strokeColor.value : summary.isSingleFlowNode ? summary.strokeColor.value : uiState.selectedStrokeColor) || uiState.selectedStrokeColor || "#000000";
         const rawWeight = summary.isMultiFlowNode ? summary.strokeWeight.value : summary.isSingleFlowNode ? summary.strokeWeight.value : uiState.selectedStrokeWeight;
-        const currentStrokeWeight = typeof rawWeight === "number" ? rawWeight : typeof uiState.selectedStrokeWeight === "number" ? uiState.selectedStrokeWeight : 1.5;
+        const currentStrokeWeight = multiDraft.strokeWeight !== void 0 ? multiDraft.strokeWeight : typeof rawWeight === "number" ? rawWeight : typeof uiState.selectedStrokeWeight === "number" ? uiState.selectedStrokeWeight : 1.5;
         return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
           StrokeColorModal,
           {
@@ -36775,9 +37180,13 @@
             isColorMixed: isStrokeMixed,
             isWeightMixed,
             onApply: (strokeColor, strokeWeight) => {
-              setUIState({ selectedStrokeColor: strokeColor, selectedStrokeWeight: strokeWeight });
-              setLastNodeConfig({ strokeColor, strokeWeight });
-              applyCurrentNodeState(void 0, { strokeColor, strokeWeight });
+              if (selectedNodes.length >= 2) {
+                updateMultiDraft({ strokeColor, strokeWeight });
+              } else {
+                setUIState({ selectedStrokeColor: strokeColor, selectedStrokeWeight: strokeWeight });
+                setLastNodeConfig({ strokeColor, strokeWeight });
+                applyCurrentNodeState(void 0, { strokeColor, strokeWeight });
+              }
             },
             onClose: () => setActiveModal("none")
           }

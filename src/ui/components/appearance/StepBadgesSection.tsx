@@ -4,6 +4,7 @@ import { useSelectionSummary } from "../../hooks/useSelectionSummary";
 import { DropdownMixedItem } from "../shared/DropdownMixedItem";
 import { COLOR_MIXED_ICON, MixedDashChip } from "../shared/icons";
 import { Switch } from "../shared/Switch";
+import type { BadgePosition, BadgeShape } from "../../../types";
 
 type BadgeColorMode = "White" | "Black" | "Style";
 
@@ -91,6 +92,8 @@ export function StepBadgesSection() {
     removeStepBadgesFromNodes,
     selectedNodes,
     autoResizeWindow,
+    multiDraft,
+    updateMultiDraft,
   } = useApp();
 
   const summary = useSelectionSummary();
@@ -106,34 +109,47 @@ export function StepBadgesSection() {
   const userActionLockRef = useRef<number>(0);
   const prevSelectedNodeIdRef = useRef<string | null>(null);
 
-  const isSectionOpen = isOpen;
+  const isBadgeOnDrafted = multiDraft.badgeOn !== undefined;
+  const effectiveIsOpen = isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : isOpen;
+  const isSectionOpen = effectiveIsOpen;
   const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
   const [stepNumText, setStepNumText] = useState("1");
   const [isMixed, setIsMixed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  const isCornerMixed = isMultiMode && summary.badgeCorner.isMixed;
-  const isShapeMixed = isMultiMode && summary.badgeShape.isMixed;
-  const isColorModeMixed = isMultiMode && summary.badgeColorMode.isMixed;
+  const isCornerMixed = multiDraft.badgeCorner !== undefined
+    ? false
+    : (isMultiMode && summary.badgeCorner.isMixed);
+  const isShapeMixed = multiDraft.badgeShape !== undefined
+    ? false
+    : (isMultiMode && summary.badgeShape.isMixed);
+  const isColorModeMixed = multiDraft.badgeColorMode !== undefined
+    ? false
+    : (isMultiMode && summary.badgeColorMode.isMixed);
+
+  const displayStepNum = multiDraft.badgeNumber !== undefined
+    ? String(multiDraft.badgeNumber)
+    : stepNumText;
+  const effectiveIsMixed = multiDraft.badgeNumber !== undefined ? false : isMixed;
 
   // start number가 정의되어 있는지 여부 (빈 값이 아니고, Mixed가 아니며 유효한 숫자)
   const isStartNumberDefined =
-    !isMixed && stepNumText.trim() !== "" && !isNaN(parseInt(stepNumText, 10));
-  const selectedBadgeCorner = isCornerMixed
+    !effectiveIsMixed && displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10));
+  const selectedBadgeCorner = multiDraft.badgeCorner || (isCornerMixed
     ? undefined
     : summary.isMultiFlowNode && summary.badgeCorner.value
       ? summary.badgeCorner.value
-      : uiState.selectedBadgeCorner || "TOP_LEFT";
-  const selectedBadgeShape = isShapeMixed
+      : uiState.selectedBadgeCorner || "TOP_LEFT");
+  const selectedBadgeShape = multiDraft.badgeShape || (isShapeMixed
     ? undefined
     : summary.isMultiFlowNode && summary.badgeShape.value
       ? summary.badgeShape.value
-      : uiState.selectedBadgeShape || "Square";
-  const selectedBadgeColorMode: BadgeColorMode | undefined = isColorModeMixed
+      : uiState.selectedBadgeShape || "Square");
+  const selectedBadgeColorMode: BadgeColorMode | undefined = multiDraft.badgeColorMode || (isColorModeMixed
     ? undefined
     : summary.isMultiFlowNode && summary.badgeColorMode.value
       ? (summary.badgeColorMode.value as BadgeColorMode)
-      : uiState.selectedBadgeColorMode || "Style";
+      : uiState.selectedBadgeColorMode || "Style");
 
   // 현재 노드의 배경색 및 보더색 추출 (Style / White 모드 스와치 표시용)
   const firstNode = selectedNodes[0];
@@ -261,13 +277,28 @@ export function StepBadgesSection() {
   }, [colorDropdownOpen]);
 
   function getNumberValue(): number {
-    const parsed = parseInt(stepNumText, 10);
+    const parsed = parseInt(displayStepNum, 10);
     return isNaN(parsed) || parsed < 1 ? 1 : parsed;
   }
 
   function handleToggle(checked: boolean) {
     userActionLockRef.current = Date.now();
     setIsOpen(checked);
+
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({
+        badgeOn: checked,
+        badgeNumber: checked ? getNumberValue() : undefined,
+        badgeCorner: checked ? (selectedBadgeCorner as BadgePosition) : undefined,
+        badgeShape: checked ? (selectedBadgeShape as BadgeShape) : undefined,
+        badgeColorMode: checked ? selectedBadgeColorMode : undefined,
+      });
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
+      return;
+    }
+
     setLastNodeConfig({ stepBadgesOn: checked });
     if (checked) {
       applyStepBadges(
@@ -286,6 +317,10 @@ export function StepBadgesSection() {
 
   function handleCornerSelect(pos: string) {
     setUIState({ selectedBadgeCorner: pos });
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ badgeCorner: pos as BadgePosition });
+      return;
+    }
     setLastNodeConfig({ badgeCorner: pos });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
@@ -299,6 +334,10 @@ export function StepBadgesSection() {
 
   function handleShapeSelect(shape: string) {
     setUIState({ selectedBadgeShape: shape });
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ badgeShape: shape as BadgeShape });
+      return;
+    }
     setLastNodeConfig({ badgeShape: shape });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
@@ -312,8 +351,12 @@ export function StepBadgesSection() {
 
   function handleColorSelect(mode: BadgeColorMode) {
     setUIState({ selectedBadgeColorMode: mode });
-    setLastNodeConfig({ badgeColorMode: mode });
     setColorDropdownOpen(false);
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ badgeColorMode: mode });
+      return;
+    }
+    setLastNodeConfig({ badgeColorMode: mode });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
         getNumberValue(),
@@ -328,6 +371,10 @@ export function StepBadgesSection() {
     setIsMixed(false);
     const val = getNumberValue();
     setStepNumText(String(val));
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ badgeNumber: val });
+      return;
+    }
     setLastNodeConfig({ stepNumber: val });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
@@ -343,6 +390,17 @@ export function StepBadgesSection() {
   function handleResetNumber() {
     setIsMixed(false);
     setStepNumText("1");
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ badgeNumber: 1 });
+      const input = document.getElementById(
+        "input-step-number",
+      ) as HTMLInputElement | null;
+      if (input) {
+        input.focus();
+        input.select();
+      }
+      return;
+    }
     setLastNodeConfig({ stepNumber: 1 });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
@@ -363,6 +421,17 @@ export function StepBadgesSection() {
 
   // 복수 선택 시 하단 보라색 버튼 클릭: 순차 부여
   function handleAddStepBadgesMulti() {
+    if (selectedNodes.length >= 2) {
+      const start = getNumberValue();
+      updateMultiDraft({
+        badgeOn: true,
+        badgeNumber: start,
+        badgeCorner: (selectedBadgeCorner || 'TOP_LEFT') as BadgePosition,
+        badgeShape: (selectedBadgeShape || 'Square') as BadgeShape,
+        badgeColorMode: (selectedBadgeColorMode || 'Style') as BadgeColorMode,
+      });
+      return;
+    }
     const start = getNumberValue();
     applyStepBadges(
       start,
@@ -443,13 +512,13 @@ export function StepBadgesSection() {
         <span className="section-title">Step Badges</span>
         <Switch
           id="toggle-step-badges"
-          checked={isSectionOpen}
-          isMixed={summary.isMultiFlowNode && summary.hasStepBadge.isMixed}
+          checked={effectiveIsOpen}
+          isMixed={!isBadgeOnDrafted && summary.isMultiFlowNode && summary.hasStepBadge.isMixed}
           onChange={handleToggle}
         />
       </div>
 
-      {isSectionOpen && (
+      {effectiveIsOpen && (
         <div
           style={{
             display: "flex",
@@ -502,8 +571,8 @@ export function StepBadgesSection() {
               <input
                 type="text"
                 id="input-step-number"
-                value={isMixed ? "" : stepNumText}
-                placeholder={isMixed ? "Mixed" : "1"}
+                value={effectiveIsMixed ? "" : displayStepNum}
+                placeholder={effectiveIsMixed ? "Mixed" : "1"}
                 onChange={(e) => {
                   setIsMixed(false);
                   setStepNumText(e.target.value.replace(/[^0-9]/g, ""));
@@ -521,7 +590,7 @@ export function StepBadgesSection() {
                   outline: "none",
                   fontSize: "11px",
                   fontWeight: 400,
-                  color: isMixed
+                  color: effectiveIsMixed
                     ? "var(--color-text-primary, #000000)"
                     : "#111827",
                   padding: 0,

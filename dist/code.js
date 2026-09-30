@@ -108,6 +108,38 @@
     Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false }
   };
+  var SCREEN_NODE_CONSTRAINTS = {
+    MIN_WIDTH: 49,
+    MAX_WIDTH: 800,
+    MIN_HEIGHT: 49,
+    MAX_HEIGHT: 600,
+    MIN_CORNER_RADIUS: 0,
+    MAX_CORNER_RADIUS: 20,
+    MIN_STROKE_WEIGHT: 0,
+    MAX_STROKE_WEIGHT: 10
+  };
+  var {
+    MIN_WIDTH: SCREEN_MIN_WIDTH,
+    MAX_WIDTH: SCREEN_MAX_WIDTH,
+    MIN_HEIGHT: SCREEN_MIN_HEIGHT,
+    MAX_HEIGHT: SCREEN_MAX_HEIGHT,
+    MIN_CORNER_RADIUS: SCREEN_MIN_CORNER_RADIUS,
+    MAX_CORNER_RADIUS: SCREEN_MAX_CORNER_RADIUS,
+    MIN_STROKE_WEIGHT: SCREEN_MIN_STROKE_WEIGHT,
+    MAX_STROKE_WEIGHT: SCREEN_MAX_STROKE_WEIGHT
+  } = SCREEN_NODE_CONSTRAINTS;
+  function clampScreenWidth(w) {
+    return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_WIDTH, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, w));
+  }
+  function clampScreenHeight(h) {
+    return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, h));
+  }
+  function clampScreenCornerRadius(r) {
+    return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS, r));
+  }
+  function clampStrokeWeight(sw) {
+    return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT, sw));
+  }
 
   // src/customConnector.ts
   function safeGetPluginData(node, key) {
@@ -1562,7 +1594,6 @@
     svgNode.x = 0;
     svgNode.y = 0;
     svgNode.locked = true;
-    await loadRequiredFonts();
     const linkText = figma.createText();
     linkText.name = "LinkOverlay";
     linkText.characters = "\u2588";
@@ -1806,15 +1837,19 @@
       if (descText.layoutAlign !== "STRETCH") {
         descText.layoutAlign = "STRETCH";
       }
-      const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
-      const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
-      const effectiveCardW = typeof targetWidth === "number" && targetWidth > 0 ? targetWidth : card.width;
-      const availW = Math.max(50, effectiveCardW - pl - pr);
-      if (Math.abs(descText.width - availW) > 1) {
-        descText.resize(availW, descText.height);
-      }
       if (descText.textAutoResize !== "HEIGHT") {
         descText.textAutoResize = "HEIGHT";
+      }
+      const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
+      const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
+      const strokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
+      const effectiveCardW = typeof targetWidth === "number" && targetWidth > 0 ? targetWidth : card.width;
+      const availW = Math.max(10, effectiveCardW - pl - pr - strokeOffset);
+      if (Math.abs(descText.width - availW) > 1) {
+        try {
+          descText.resize(availW, descText.height);
+        } catch (_) {
+        }
       }
       const isHug = card.primaryAxisSizingMode === "AUTO";
       if (isHug) {
@@ -2298,6 +2333,79 @@
           cornerRadius = nSpec.cornerRadius;
         }
       }
+      if (isFlowNode && flowNodeType === "Screen" && node.type === "FRAME") {
+        const frameNode = node;
+        if (frameNode.strokeAlign !== "INSIDE") {
+          try {
+            frameNode.strokeAlign = "INSIDE";
+          } catch (_) {
+          }
+        }
+        if ("strokesIncludedInLayout" in frameNode && !frameNode.strokesIncludedInLayout) {
+          try {
+            frameNode.strokesIncludedInLayout = true;
+          } catch (_) {
+          }
+        }
+        const header = frameNode.children.find(isHeaderFrame);
+        if (header) {
+          const pl = typeof frameNode.paddingLeft === "number" ? frameNode.paddingLeft : 16;
+          const pr = typeof frameNode.paddingRight === "number" ? frameNode.paddingRight : 16;
+          const strokeOffset = (typeof frameNode.strokeWeight === "number" ? frameNode.strokeWeight : 0) * 2;
+          const availW = Math.max(10, frameNode.width - pl - pr - strokeOffset);
+          if (header.layoutAlign !== "STRETCH") {
+            try {
+              header.layoutAlign = "STRETCH";
+            } catch (_) {
+            }
+          }
+          if (header.primaryAxisSizingMode !== "FIXED") {
+            try {
+              header.primaryAxisSizingMode = "FIXED";
+            } catch (_) {
+            }
+          }
+          if (header.counterAxisSizingMode !== "AUTO") {
+            try {
+              header.counterAxisSizingMode = "AUTO";
+            } catch (_) {
+            }
+          }
+          if (Math.abs(header.width - availW) > 1) {
+            try {
+              header.resize(availW, header.height || 18);
+            } catch (_) {
+            }
+          }
+          const tText = header.children.find((c) => c.type === "TEXT");
+          if (tText) {
+            if (tText.layoutGrow !== 1) {
+              try {
+                tText.layoutGrow = 1;
+              } catch (_) {
+              }
+            }
+            if (tText.layoutAlign !== "STRETCH") {
+              try {
+                tText.layoutAlign = "STRETCH";
+              } catch (_) {
+              }
+            }
+            if (Math.abs(tText.width - availW) > 1) {
+              try {
+                tText.resize(availW, tText.height || 18);
+              } catch (_) {
+              }
+            }
+            if (tText.textAutoResize !== "HEIGHT") {
+              try {
+                tText.textAutoResize = "HEIGHT";
+              } catch (_) {
+              }
+            }
+          }
+        }
+      }
       const pos = getNodeTopLeft(node);
       return {
         id: node.id,
@@ -2448,20 +2556,16 @@
       }
       if (textNode.parent && "layoutMode" in textNode.parent) {
         const parentFrame = textNode.parent;
-        if (parentFrame.layoutMode !== "VERTICAL") {
-          parentFrame.layoutMode = "VERTICAL";
-        }
-        if (parentFrame.counterAxisAlignItems !== "MIN") {
-          parentFrame.counterAxisAlignItems = "MIN";
-        }
-        if (parentFrame.primaryAxisAlignItems !== "MIN") {
-          parentFrame.primaryAxisAlignItems = "MIN";
-        }
-        const pl = typeof parentFrame.paddingLeft === "number" ? parentFrame.paddingLeft : 16;
-        const pr = typeof parentFrame.paddingRight === "number" ? parentFrame.paddingRight : 16;
-        const availW = Math.max(50, parentFrame.width - pl - pr);
+        const card = parentFrame.parent && "layoutMode" in parentFrame.parent ? parentFrame.parent : parentFrame;
+        const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
+        const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
+        const strokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
+        const availW = Math.max(10, card.width - pl - pr - strokeOffset);
         if (Math.abs(textNode.width - availW) > 1) {
-          textNode.resize(availW, textNode.height);
+          try {
+            textNode.resize(availW, textNode.height);
+          } catch (_) {
+          }
         }
       }
       if (textNode.layoutAlign !== "STRETCH") {
@@ -2736,6 +2840,10 @@
     card.strokeWeight = 1.5;
     card.strokes = [{ type: "SOLID", color: borderColor }];
     card.fills = [{ type: "SOLID", color: bgColor }];
+    card.strokeAlign = "INSIDE";
+    if ("strokesIncludedInLayout" in card) {
+      card.strokesIncludedInLayout = true;
+    }
     card.clipsContent = false;
     card.layoutMode = "VERTICAL";
     card.primaryAxisSizingMode = "FIXED";
@@ -2752,7 +2860,8 @@
     card.maxWidth = width;
     card.minHeight = height;
     card.maxHeight = height;
-    const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+    const strokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
+    const availW = Math.max(10, width - card.paddingLeft - card.paddingRight - strokeOffset);
     const headerRow = figma.createFrame();
     headerRow.name = "Header";
     headerRow.layoutMode = "HORIZONTAL";
@@ -2827,7 +2936,6 @@
     descText.setPluginData("node_role", "desc");
     card.appendChild(descText);
     descText.layoutAlign = "STRETCH";
-    descText.resize(availW, descText.height);
     descText.textAutoResize = "HEIGHT";
     await updateDescTextTruncation(card, descText, height, desc);
     if (stepNumber) {
@@ -2998,10 +3106,10 @@
       const isShapeNode = !spec.allowDescription;
       const rawTitle = payload.title && payload.title.trim() || (nodeType === "Screen" ? "Screen" : nodeType);
       const title = rawTitle.slice(0, 32);
-      const width = isShapeNode ? spec.width : payload.width ? Math.max(50, payload.width) : spec.width;
-      const height = isShapeNode ? spec.height : payload.height ? Math.max(50, payload.height) : spec.height;
+      const width = isShapeNode ? spec.width : payload.width ? clampScreenWidth(payload.width) : spec.width;
+      const height = isShapeNode ? spec.height : payload.height ? clampScreenHeight(payload.height) : spec.height;
       const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
-      const cornerRadius = isShapeNode ? defaultRadius : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius;
+      const cornerRadius = isShapeNode ? defaultRadius : typeof payload.cornerRadius === "number" ? clampScreenCornerRadius(payload.cornerRadius) : defaultRadius;
       const description = isShapeNode ? "" : (payload.description || "").trim();
       const theme = payload.theme || "light";
       const isDark = theme === "dark";
@@ -3020,7 +3128,7 @@
       card.name = title;
       card.cornerRadius = cornerRadius;
       const cardStrokes = typeof payload.strokeWeight === "number" && payload.strokeWeight === 0 ? [] : [{ type: "SOLID", color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
-      const cardStrokeWeight = typeof payload.strokeWeight === "number" ? payload.strokeWeight : 1.5;
+      const cardStrokeWeight = typeof payload.strokeWeight === "number" ? clampStrokeWeight(payload.strokeWeight) : 1.5;
       const vectorPathData = getShapeVectorData(nodeType, width, height);
       if (vectorPathData) {
         card.fills = [];
@@ -3031,6 +3139,10 @@
         card.fills = isFillNone ? [] : [{ type: "SOLID", color: bgColor }];
         card.strokes = cardStrokes;
         card.strokeWeight = cardStrokeWeight;
+        card.strokeAlign = "INSIDE";
+        if ("strokesIncludedInLayout" in card) {
+          card.strokesIncludedInLayout = true;
+        }
       }
       card.clipsContent = false;
       card.layoutMode = "VERTICAL";
@@ -3065,7 +3177,7 @@
         titleText.textAlignVertical = "CENTER";
         titleText.layoutAlign = "STRETCH";
         if (nodeType === "Decision") {
-          const availW = Math.max(50, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
+          const availW = Math.max(10, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
           titleText.resize(availW, 54);
           titleText.maxHeight = 54;
           titleText.textAutoResize = "TRUNCATE";
@@ -3095,7 +3207,8 @@
         card.paddingRight = 16;
         card.itemSpacing = 8;
         card.counterAxisAlignItems = "MIN";
-        const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+        const strokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
+        const availW = Math.max(10, width - card.paddingLeft - card.paddingRight - strokeOffset);
         const headerRow = figma.createFrame();
         headerRow.name = "Header";
         headerRow.layoutMode = "HORIZONTAL";
@@ -3128,8 +3241,8 @@
           measureText.characters = title.trim() || " ";
           const measuredTitleW = Math.ceil(measureText.width);
           measureText.remove();
-          effectiveCreateW = Math.max(49, measuredTitleW + card.paddingLeft + card.paddingRight);
-          const contentW = Math.max(17, effectiveCreateW - card.paddingLeft - card.paddingRight);
+          effectiveCreateW = Math.max(49, measuredTitleW + card.paddingLeft + card.paddingRight + strokeOffset);
+          const contentW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - strokeOffset);
           headerRow.resize(contentW, 18);
           titleText.resize(contentW, 18);
           titleText.textAutoResize = "HEIGHT";
@@ -3162,14 +3275,14 @@
           descText.setPluginData("node_role", "desc");
           card.appendChild(descText);
           descText.layoutAlign = "STRETCH";
-          const descAvailW = Math.max(50, effectiveCreateW - card.paddingLeft - card.paddingRight);
+          const descAvailW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - strokeOffset);
           descText.resize(descAvailW, descText.height);
           descText.textAutoResize = "HEIGHT";
           if (!isShapeNode && payload.sizeMode === "fit") {
             descText.maxLines = null;
             descText.textTruncation = "DISABLED";
           } else {
-            await updateDescTextTruncation(card, descText, height, description);
+            await updateDescTextTruncation(card, descText, height, description, effectiveCreateW);
           }
         }
       }
@@ -3333,7 +3446,7 @@
       card.name = effectiveTitle;
       card.clipsContent = false;
       const cardStrokes = typeof payload.strokeWeight === "number" && payload.strokeWeight === 0 ? [] : [{ type: "SOLID", color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
-      const cardStrokeWeight = typeof payload.strokeWeight === "number" ? payload.strokeWeight : 1.5;
+      const cardStrokeWeight = typeof payload.strokeWeight === "number" ? clampStrokeWeight(payload.strokeWeight) : 1.5;
       if (card.layoutMode !== "VERTICAL") {
         card.layoutMode = "VERTICAL";
       }
@@ -3348,8 +3461,20 @@
       const restoredScreenR = savedScreenR !== "" && savedScreenR !== void 0 ? parseInt(savedScreenR, 10) : spec.cornerRadius ?? 0;
       const prevSizeMode = safeGetPluginData2(card, "size_mode") || "fixed";
       const isChangingFromFitToFixed = prevSizeMode === "fit" && payload.sizeMode === "fixed";
-      const targetW = isShapeNode ? payload.width ? Math.max(50, payload.width) : spec.width : isChangingToScreen ? payload.width ? Math.max(50, payload.width) : restoredScreenW || spec.width : isChangingFromFitToFixed ? payload.width ? Math.max(50, payload.width) : restoredScreenW || card.width : payload.width ? Math.max(50, payload.width) : card.width;
-      const targetH = isShapeNode ? payload.height ? Math.max(50, payload.height) : spec.height : isChangingToScreen ? payload.height ? Math.max(50, payload.height) : restoredScreenH || spec.height : payload.height ? Math.max(50, payload.height) : card.height;
+      const targetW = isShapeNode ? spec.width : isChangingToScreen ? payload.width ? clampScreenWidth(payload.width) : restoredScreenW ? clampScreenWidth(restoredScreenW) : spec.width : isChangingFromFitToFixed ? payload.width ? clampScreenWidth(payload.width) : restoredScreenW ? clampScreenWidth(restoredScreenW) : clampScreenWidth(card.width) : payload.width ? clampScreenWidth(payload.width) : clampScreenWidth(card.width);
+      const targetH = isShapeNode ? spec.height : isChangingToScreen ? payload.height ? clampScreenHeight(payload.height) : restoredScreenH ? clampScreenHeight(restoredScreenH) : spec.height : payload.height ? clampScreenHeight(payload.height) : clampScreenHeight(card.height);
+      const prevDescription = safeGetPluginData2(card, "node_desc") || "";
+      const prevStatus = safeGetPluginData2(card, "workflow_status") || "";
+      const prevFigmaLink = safeGetPluginData2(card, "figma_link") || safeGetPluginData2(card, "cached_figma_link") || "";
+      const effectiveDesc = isShapeNode ? "" : (payload.description !== void 0 && payload.description !== "" ? payload.description : isChangingToScreen ? prevDescription : payload.description ?? prevDescription).trim();
+      const effectiveStatus = !isShapeNode ? payload.status ? payload.status : isChangingToScreen ? prevStatus : payload.status ?? prevStatus : "";
+      const effectiveLink = !isShapeNode ? payload.figmaLink !== void 0 && payload.figmaLink !== "" ? payload.figmaLink : (isChangingToScreen ? prevFigmaLink : payload.figmaLink ?? prevFigmaLink) || "" : "";
+      const existingStatusBadgeOnCard = !isShapeNode ? card.children.find(
+        (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
+      ) : void 0;
+      const hasStatus = Boolean(existingStatusBadgeOnCard || !isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]);
+      const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
+      const hasBottomBar = hasStatus || hasLink;
       const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
       if (vectorPathData) {
         card.fills = [];
@@ -3366,17 +3491,33 @@
           existingShapeVector.remove();
         }
         const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
-        const targetRadius = typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : isChangingToScreen && savedScreenR !== "" && savedScreenR !== void 0 ? restoredScreenR : defaultRadius;
+        const targetRadius = typeof payload.cornerRadius === "number" ? nodeType === "Screen" ? clampScreenCornerRadius(payload.cornerRadius) : Math.max(0, payload.cornerRadius) : isChangingToScreen && savedScreenR !== "" && savedScreenR !== void 0 ? clampScreenCornerRadius(restoredScreenR) : defaultRadius;
         card.cornerRadius = targetRadius;
         card.fills = isFillNone ? [] : [{ type: "SOLID", color: bgColor }];
         card.strokes = cardStrokes;
         card.strokeWeight = cardStrokeWeight;
+        card.strokeAlign = "INSIDE";
+        if ("strokesIncludedInLayout" in card) {
+          card.strokesIncludedInLayout = true;
+        }
       }
       if (card.layoutMode !== "VERTICAL") {
         card.layoutMode = "VERTICAL";
       }
       card.counterAxisAlignItems = isShapeNode ? "CENTER" : "MIN";
       card.primaryAxisAlignItems = isShapeNode ? "CENTER" : "MIN";
+      if (!isShapeNode) {
+        card.primaryAxisSizingMode = "FIXED";
+        card.counterAxisSizingMode = "FIXED";
+        card.resize(targetW, targetH);
+        card.itemSpacing = 8;
+        card.paddingLeft = 16;
+        card.paddingRight = 16;
+        card.paddingTop = 14;
+        card.paddingBottom = hasBottomBar ? 36 : 16;
+        card.primaryAxisAlignItems = !effectiveDesc && !hasBottomBar ? "CENTER" : "MIN";
+        card.counterAxisAlignItems = "MIN";
+      }
       if (isShapeNode) {
         const existingStatusBadge = card.children.find(
           (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
@@ -3415,7 +3556,7 @@
         titleText.textAlignVertical = "CENTER";
         titleText.lineHeight = { value: 18, unit: "PIXELS" };
         if (nodeType === "Decision") {
-          const availW = Math.max(50, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
+          const availW = Math.max(10, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
           try {
             titleText.resize(availW, 54);
           } catch (_) {
@@ -3462,8 +3603,9 @@
       } else {
         const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
         const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
+        const strokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
         const effectiveW = fitW !== void 0 ? fitW : targetW;
-        const availW = Math.max(50, effectiveW - pl - pr);
+        const availW = Math.max(10, effectiveW - pl - pr - strokeOffset);
         let headerRow = card.children.find(isHeaderFrame);
         if (!headerRow) {
           headerRow = figma.createFrame();
@@ -3506,8 +3648,8 @@
           measureText.characters = effectiveTitle.trim() || " ";
           const measuredTitleW = Math.ceil(measureText.width);
           measureText.remove();
-          fitW = Math.max(49, measuredTitleW + pl + pr);
-          const contentW = Math.max(17, fitW - pl - pr);
+          fitW = Math.max(49, measuredTitleW + pl + pr + strokeOffset);
+          const contentW = Math.max(10, fitW - pl - pr - strokeOffset);
           headerRow.resize(contentW, headerRow.height || 18);
           titleText.resize(contentW, titleText.height || 18);
           titleText.textAutoResize = "HEIGHT";
@@ -3519,7 +3661,8 @@
         } else {
           titleText.resize(availW, titleText.height || 18);
           titleText.textAutoResize = "HEIGHT";
-          await safeSetCharacters(titleText, effectiveTitle);
+          titleText.fontName = { family: "Inter", style: "Bold" };
+          titleText.characters = effectiveTitle;
           try {
             titleText.resize(availW, titleText.height);
           } catch (_) {
@@ -3536,10 +3679,6 @@
           titleText.fills = [titleFill];
         }
       }
-      const prevDescription = safeGetPluginData2(card, "node_desc") || "";
-      const prevStatus = safeGetPluginData2(card, "workflow_status") || "";
-      const prevFigmaLink = safeGetPluginData2(card, "figma_link") || safeGetPluginData2(card, "cached_figma_link") || "";
-      const effectiveDesc = isShapeNode ? "" : (payload.description !== void 0 && payload.description !== "" ? payload.description : isChangingToScreen ? prevDescription : payload.description ?? prevDescription).trim();
       let descText = card.children.find(
         (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
       );
@@ -3549,22 +3688,21 @@
           descText = void 0;
         }
       } else {
+        const isNewDesc = !descText;
         if (!descText) {
           descText = figma.createText();
           descText.name = "DescText";
-          descText.fontName = { family: "Inter", style: "Regular" };
-          descText.fontSize = 11;
-          descText.textAlignHorizontal = "LEFT";
           descText.setPluginData("node_role", "desc");
-          card.appendChild(descText);
         }
         descText.textAlignHorizontal = "LEFT";
         descText.layoutAlign = "STRETCH";
-        const descAvailW = Math.max(50, (fitW !== void 0 ? fitW : targetW) - card.paddingLeft - card.paddingRight);
-        if (Math.abs(descText.width - descAvailW) > 1) {
-          descText.resize(descAvailW, descText.height);
-        }
+        const descStrokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
+        const descAvailW = Math.max(10, (fitW !== void 0 ? fitW : targetW) - card.paddingLeft - card.paddingRight - descStrokeOffset);
+        descText.fontName = { family: "Inter", style: "Regular" };
+        descText.fontSize = 11;
+        descText.characters = effectiveDesc;
         descText.textAutoResize = "HEIGHT";
+        descText.resize(descAvailW, descText.height || 16);
         if (!isShapeNode && payload.sizeMode === "fit") {
           descText.maxLines = null;
           try {
@@ -3572,37 +3710,28 @@
           } catch (_) {
           }
           descText.textTruncation = "DISABLED";
+        } else if (isChangingToScreen || payload.sizeMode === "fixed" || !payload.sizeMode) {
+          descText.textTruncation = "ENDING";
+          const pb = hasBottomBar ? 36 : 16;
+          const headerRow = card.children.find(isHeaderFrame);
+          const headerH = headerRow ? headerRow.height : 18;
+          const availableH = Math.max(14, targetH - 14 - pb - 8 - Math.round(headerH));
+          descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
         } else {
           const currentH = payload.height || card.height;
           await updateDescTextTruncation(card, descText, currentH, effectiveDesc, targetW);
         }
-        await safeSetCharacters(descText, effectiveDesc);
         const hasExistingDescFill = descText.fills === figma.mixed || Array.isArray(descText.fills) && descText.fills.length > 0;
         if (!hasExistingDescFill || payload.colorHex) {
           descText.fills = [descFill];
         }
-        try {
-          const descFont = { family: "Inter", style: "Regular" };
-          await figma.loadFontAsync(descFont);
-          const dLen = descText.characters.length;
-          if (dLen > 0) {
-            descText.setRangeFontName(0, dLen, descFont);
-            descText.setRangeFontSize(0, dLen, 11);
-          } else {
-            descText.fontName = descFont;
-            descText.fontSize = 11;
-          }
-        } catch (_) {
+        if (isNewDesc || descText.parent !== card) {
+          card.appendChild(descText);
         }
       }
       let statusBadge = !isShapeNode ? card.children.find(
         (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
       ) : void 0;
-      const effectiveStatus = !isShapeNode ? payload.status ? payload.status : isChangingToScreen ? prevStatus : payload.status ?? prevStatus : "";
-      const hasStatus = Boolean(statusBadge || !isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]);
-      const effectiveLink = !isShapeNode ? payload.figmaLink !== void 0 && payload.figmaLink !== "" ? payload.figmaLink : (isChangingToScreen ? prevFigmaLink : payload.figmaLink ?? prevFigmaLink) || "" : "";
-      const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
-      const hasBottomBar = hasStatus || hasLink;
       if (isShapeNode) {
         const hPad = nodeType === "Decision" ? 24 : 12;
         card.paddingLeft = hPad;
@@ -3651,15 +3780,24 @@
           badgeText.name = "StatusText";
           badgeText.fontName = { family: "Inter", style: "Bold" };
           badgeText.fontSize = 9;
+          const cfg = STATUS_CONFIG[effectiveStatus];
+          if (cfg) {
+            badgeText.characters = cfg.label.toUpperCase();
+          }
           badgeText.textAutoResize = "WIDTH_AND_HEIGHT";
           badgeText.locked = true;
           statusBadge.appendChild(badgeText);
+          const badgeW = Math.round(badgeText.width + 18);
+          const badgeH = Math.round(badgeText.height + 6);
+          statusBadge.resize(badgeW, badgeH);
           card.appendChild(statusBadge);
           if (card.layoutMode !== "NONE") {
             statusBadge.layoutPositioning = "ABSOLUTE";
           }
           statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
           statusBadge.locked = true;
+          statusBadge.x = targetW - badgeW - 10;
+          statusBadge.y = targetH - badgeH - 10;
         }
         statusBadge.paddingLeft = 9;
         statusBadge.paddingRight = 9;
@@ -3694,8 +3832,8 @@
       }
       const isHug = !isShapeNode && payload.sizeMode === "hug";
       const isFit = !isShapeNode && payload.sizeMode === "fit";
-      const finalW = isFit && fitW !== void 0 ? fitW : Math.max(50, targetW);
-      const finalH = Math.max(40, targetH);
+      const finalW = isFit && fitW !== void 0 ? fitW : nodeType === "Screen" ? clampScreenWidth(targetW) : Math.max(50, targetW);
+      const finalH = nodeType === "Screen" ? clampScreenHeight(targetH) : Math.max(40, targetH);
       card.minWidth = null;
       card.maxWidth = null;
       card.minHeight = null;
@@ -3825,6 +3963,464 @@
       notify(`\uB178\uB4DC \uC218\uC815 \uC2E4\uD328: ${String(err)}`, "error");
     }
   }
+  async function batchUpdateFlowNodes(nodeIds, patch) {
+    if (!nodeIds || nodeIds.length === 0 || !patch) return;
+    try {
+      await loadRequiredFonts();
+      let updatedCount = 0;
+      const targetCards = [];
+      for (const id of nodeIds) {
+        const rawNode = figma.getNodeById(id);
+        if (!rawNode) continue;
+        let flowNode = findFlowNode(rawNode) || rawNode;
+        if (!flowNode) continue;
+        if (flowNode.type === "SHAPE_WITH_TEXT") {
+          flowNode = await convertShapeToFrameNode(flowNode);
+        }
+        if (flowNode.type === "FRAME") {
+          targetCards.push(flowNode);
+        }
+      }
+      targetCards.sort((a, b) => a.x - b.x);
+      let currentBadgeNum = patch.badgeNumber !== void 0 ? patch.badgeNumber : void 0;
+      for (const card of targetCards) {
+        card.minWidth = null;
+        card.maxWidth = null;
+        card.minHeight = null;
+        card.maxHeight = null;
+        const prevRawType = safeGetPluginData2(card, "node_type") || "Screen";
+        const prevNodeType = normalizeNodeType(prevRawType);
+        const rawType = patch.nodeType || prevRawType;
+        const nodeType = normalizeNodeType(rawType);
+        const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
+        const isShapeNode = !spec.allowDescription;
+        const isChangingToScreen = prevNodeType !== "Screen" && nodeType === "Screen";
+        const prevTheme = safeGetPluginData2(card, "node_theme") || "light";
+        const isDark = prevTheme === "dark";
+        let isFillNone = false;
+        let bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
+        if (patch.colorHex !== void 0) {
+          isFillNone = patch.colorHex.toLowerCase() === "none" || patch.colorHex.toLowerCase() === "transparent";
+          if (!isFillNone) {
+            bgColor = hexToRgbColor(patch.colorHex);
+          }
+        } else {
+          const currentFill = card.fills;
+          if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === "SOLID") {
+            bgColor = currentFill[0].color;
+          } else if (!Array.isArray(currentFill) || currentFill.length === 0) {
+            isFillNone = true;
+          }
+        }
+        const { titleFill, descFill, isBgDark } = isFillNone ? {
+          titleFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } },
+          descFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 },
+          isBgDark: isDark
+        } : getTextFillsByBackground(bgColor, isDark);
+        const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
+        if (patch.colorHex !== void 0) {
+          if (isFillNone) {
+            card.fills = [];
+          } else {
+            card.fills = [{ type: "SOLID", color: bgColor }];
+          }
+        }
+        let cardStrokeWeight = typeof card.strokeWeight === "number" ? card.strokeWeight : 1.5;
+        if (patch.strokeWeight !== void 0 || patch.strokeColor !== void 0) {
+          cardStrokeWeight = patch.strokeWeight !== void 0 ? clampStrokeWeight(patch.strokeWeight) : cardStrokeWeight;
+          if (cardStrokeWeight === 0) {
+            card.strokes = [];
+          } else {
+            const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : Array.isArray(card.strokes) && card.strokes[0]?.type === "SOLID" ? card.strokes[0].color : borderColor;
+            card.strokes = [{ type: "SOLID", color: strokeCol }];
+            card.strokeWeight = cardStrokeWeight;
+            card.strokeAlign = "INSIDE";
+            if ("strokesIncludedInLayout" in card) {
+              card.strokesIncludedInLayout = true;
+            }
+          }
+        }
+        const DEFAULT_SHAPE_NAMES = /* @__PURE__ */ new Set([
+          "Decision",
+          "Process",
+          "Connector",
+          "Terminator",
+          "Branch",
+          "Action",
+          "System",
+          "Database",
+          "Square",
+          "Circle",
+          "Diamond",
+          "Pill",
+          "Capsule"
+        ]);
+        const currentTitle = card.name || "Untitled";
+        let effectiveTitle = currentTitle;
+        if (isChangingToScreen && (DEFAULT_SHAPE_NAMES.has(currentTitle) || !currentTitle)) {
+          effectiveTitle = "Screen";
+          card.name = effectiveTitle;
+        } else if (patch.nodeType !== void 0 && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
+          effectiveTitle = nodeType;
+          card.name = effectiveTitle;
+        }
+        if (card.layoutMode !== "VERTICAL") {
+          card.layoutMode = "VERTICAL";
+        }
+        card.clipsContent = false;
+        const savedScreenW = safeGetPluginData2(card, "screen_width");
+        const savedScreenH = safeGetPluginData2(card, "screen_height");
+        const savedScreenR = safeGetPluginData2(card, "screen_corner_radius");
+        const restoredScreenW = savedScreenW ? parseInt(savedScreenW, 10) : spec.width;
+        const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
+        const restoredScreenR = savedScreenR !== "" && savedScreenR !== void 0 ? parseInt(savedScreenR, 10) : spec.cornerRadius ?? 0;
+        const prevSizeMode = safeGetPluginData2(card, "size_mode") || "fixed";
+        const effectiveSizeMode = patch.sizeMode !== void 0 ? patch.sizeMode : prevSizeMode;
+        let targetW;
+        let targetH;
+        let targetR;
+        if (isShapeNode) {
+          targetW = spec.width;
+          targetH = spec.height;
+          targetR = spec.cornerRadius ?? 0;
+        } else if (isChangingToScreen) {
+          targetW = patch.width !== void 0 ? clampScreenWidth(patch.width) : clampScreenWidth(restoredScreenW);
+          targetH = patch.height !== void 0 ? clampScreenHeight(patch.height) : clampScreenHeight(restoredScreenH);
+          targetR = patch.cornerRadius !== void 0 ? clampScreenCornerRadius(patch.cornerRadius) : clampScreenCornerRadius(restoredScreenR);
+        } else {
+          targetW = patch.width !== void 0 ? clampScreenWidth(patch.width) : card.width;
+          targetH = patch.height !== void 0 ? clampScreenHeight(patch.height) : card.height;
+          targetR = patch.cornerRadius !== void 0 ? clampScreenCornerRadius(patch.cornerRadius) : typeof card.cornerRadius === "number" ? card.cornerRadius : 0;
+        }
+        if (nodeType === "Screen" || nodeType === "Process" || nodeType === "Branch") {
+          card.cornerRadius = targetR;
+        } else {
+          card.cornerRadius = spec.cornerRadius ?? 0;
+        }
+        const pl = isShapeNode ? 12 : 16;
+        const pr = isShapeNode ? 12 : 16;
+        const pt = isShapeNode ? 12 : 14;
+        card.paddingLeft = pl;
+        card.paddingRight = pr;
+        card.paddingTop = pt;
+        const hasBottomBar = Boolean(safeGetPluginData2(card, "workflow_status") || patch.status || safeGetPluginData2(card, "figma_link") || patch.figmaLink);
+        card.paddingBottom = hasBottomBar ? 36 : isShapeNode ? 12 : 16;
+        let headerRow = card.children.find(isHeaderFrame);
+        let titleText;
+        if (headerRow) {
+          titleText = headerRow.children.find((c) => c.type === "TEXT");
+        }
+        if (!headerRow) {
+          headerRow = figma.createFrame();
+          headerRow.name = "HeaderRow";
+          headerRow.layoutMode = "HORIZONTAL";
+          headerRow.primaryAxisSizingMode = "FIXED";
+          headerRow.counterAxisSizingMode = "AUTO";
+          card.appendChild(headerRow);
+        }
+        if (!titleText) {
+          titleText = figma.createText();
+          titleText.name = "TitleText";
+          titleText.fontName = { family: "Inter", style: "Bold" };
+          titleText.fontSize = 13;
+          titleText.setPluginData("node_role", "title");
+          headerRow.appendChild(titleText);
+        }
+        titleText.lineHeight = { value: 18, unit: "PIXELS" };
+        titleText.textAlignHorizontal = isShapeNode ? "CENTER" : "LEFT";
+        titleText.textAlignVertical = "TOP";
+        titleText.layoutGrow = 1;
+        titleText.layoutAlign = "STRETCH";
+        titleText.textTruncation = "DISABLED";
+        let fitW;
+        const strokeOffset = cardStrokeWeight * 2;
+        if (!isShapeNode && effectiveSizeMode === "fit") {
+          const measureText = figma.createText();
+          const titleFont = { family: "Inter", style: "Bold" };
+          await figma.loadFontAsync(titleFont);
+          measureText.fontName = titleFont;
+          measureText.fontSize = 13;
+          measureText.lineHeight = { value: 18, unit: "PIXELS" };
+          measureText.textAutoResize = "WIDTH_AND_HEIGHT";
+          measureText.characters = effectiveTitle.trim() || " ";
+          const measuredTitleW = Math.ceil(measureText.width);
+          measureText.remove();
+          fitW = Math.max(49, measuredTitleW + pl + pr + strokeOffset);
+          const contentW = Math.max(10, fitW - pl - pr - strokeOffset);
+          headerRow.resize(contentW, headerRow.height || 18);
+          titleText.resize(contentW, titleText.height || 18);
+          titleText.textAutoResize = "HEIGHT";
+          await safeSetCharacters(titleText, effectiveTitle);
+          try {
+            titleText.resize(contentW, titleText.height);
+          } catch (_) {
+          }
+        } else {
+          const availW = Math.max(10, targetW - pl - pr - strokeOffset);
+          headerRow.resize(availW, headerRow.height || 18);
+          titleText.resize(availW, titleText.height || 18);
+        }
+        if (patch.colorHex !== void 0) {
+          titleText.fills = [titleFill];
+        }
+        const prevDesc = safeGetPluginData2(card, "node_desc") || "";
+        const effectiveDesc = patch.description !== void 0 ? patch.description : prevDesc;
+        let descText = card.children.find(
+          (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
+        );
+        if (isShapeNode || !effectiveDesc) {
+          if (descText) {
+            descText.remove();
+            descText = void 0;
+          }
+        } else {
+          if (!descText) {
+            descText = figma.createText();
+            descText.name = "DescText";
+            descText.setPluginData("node_role", "desc");
+            card.appendChild(descText);
+          }
+          descText.textAlignHorizontal = "LEFT";
+          descText.layoutAlign = "STRETCH";
+          descText.fontName = { family: "Inter", style: "Regular" };
+          descText.fontSize = 11;
+          descText.characters = effectiveDesc;
+          descText.textAutoResize = "HEIGHT";
+          if (patch.colorHex !== void 0) {
+            descText.fills = [descFill];
+          }
+          if (!isShapeNode && effectiveSizeMode === "fit") {
+            descText.maxLines = null;
+            try {
+              descText.maxHeight = null;
+            } catch (_) {
+            }
+            descText.textTruncation = "DISABLED";
+          } else {
+            await updateDescTextTruncation(card, descText, targetH, effectiveDesc, targetW);
+          }
+        }
+        let statusBadge = card.children.find(
+          (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
+        );
+        if (patch.status !== void 0) {
+          if (!patch.status) {
+            card.setPluginData("workflow_status", "");
+            card.paddingBottom = 16;
+            if (statusBadge) {
+              statusBadge.remove();
+              statusBadge = void 0;
+            }
+          } else {
+            card.setPluginData("workflow_status", patch.status);
+            card.paddingBottom = 36;
+            if (!statusBadge) {
+              statusBadge = figma.createFrame();
+              statusBadge.name = "StatusBadge";
+              statusBadge.layoutMode = "HORIZONTAL";
+              statusBadge.primaryAxisSizingMode = "AUTO";
+              statusBadge.counterAxisSizingMode = "AUTO";
+              statusBadge.primaryAxisAlignItems = "CENTER";
+              statusBadge.counterAxisAlignItems = "CENTER";
+              statusBadge.paddingLeft = 9;
+              statusBadge.paddingRight = 9;
+              statusBadge.paddingTop = 3;
+              statusBadge.paddingBottom = 3;
+              statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+                typeof card.cornerRadius === "number" ? card.cornerRadius : 0
+              );
+              statusBadge.setPluginData("is_status_badge", "true");
+              card.appendChild(statusBadge);
+              const bText2 = figma.createText();
+              bText2.name = "StatusText";
+              bText2.fontName = { family: "Inter", style: "Bold" };
+              bText2.fontSize = 9;
+              bText2.textAutoResize = "WIDTH_AND_HEIGHT";
+              statusBadge.appendChild(bText2);
+            }
+            if (statusBadge.layoutPositioning !== "ABSOLUTE") {
+              statusBadge.layoutPositioning = "ABSOLUTE";
+            }
+            const { badgeBg, badgeTextColor } = getStatusBadgeColors(patch.status, bgColor, isDark);
+            statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
+            statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+              typeof card.cornerRadius === "number" ? card.cornerRadius : 0
+            );
+            statusBadge.locked = true;
+            const bText = statusBadge.children.find((c) => c.type === "TEXT");
+            if (bText) {
+              bText.locked = false;
+              const statusLabel = STATUS_CONFIG[patch.status]?.label || patch.status;
+              await safeSetCharacters(bText, statusLabel.toUpperCase());
+              bText.fills = [{ type: "SOLID", color: badgeTextColor }];
+              bText.locked = true;
+            }
+          }
+        } else if (statusBadge && patch.colorHex !== void 0) {
+          const curStatus = safeGetPluginData2(card, "workflow_status");
+          if (curStatus && STATUS_CONFIG[curStatus]) {
+            const { badgeBg, badgeTextColor } = getStatusBadgeColors(curStatus, bgColor, isDark);
+            statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
+            const bText = statusBadge.children.find((c) => c.type === "TEXT");
+            if (bText) bText.fills = [{ type: "SOLID", color: badgeTextColor }];
+          }
+        }
+        if (!isShapeNode) {
+          const effectiveLink = patch.figmaLink !== void 0 ? patch.figmaLink : safeGetPluginData2(card, "figma_link") || "";
+          if (patch.figmaLink !== void 0 || patch.clearLinkCache || patch.colorHex !== void 0) {
+            await updateFigmaLinkBadge(card, effectiveLink, isBgDark, patch.clearLinkCache);
+          }
+        }
+        if (patch.elevation !== void 0) {
+          if (patch.elevation === null) {
+            card.setPluginData("node_elevation", "");
+            card.effects = [];
+          } else {
+            card.setPluginData("node_elevation", `${patch.elevation}`);
+            card.effects = getElevationEffects(patch.elevation, isBgDark);
+            card.clipsContent = false;
+          }
+        } else if (patch.colorHex !== void 0) {
+          const curElev = safeGetPluginData2(card, "node_elevation");
+          if (curElev) {
+            const lvl = parseInt(curElev, 10);
+            if (!isNaN(lvl)) card.effects = getElevationEffects(lvl, isBgDark);
+          }
+        }
+        const existingStepBadge = card.children.find(
+          (c) => c.name.startsWith("[Step]") || safeGetPluginData2(c, "is_step_badge") === "true"
+        );
+        if (patch.badgeOn === false) {
+          card.setPluginData("step_number", "");
+          card.setPluginData("badge_corner", "");
+          card.setPluginData("badge_shape", "");
+          card.setPluginData("badge_color_mode", "");
+          if (existingStepBadge) existingStepBadge.remove();
+        } else if (patch.badgeOn === true || patch.badgeNumber !== void 0 || patch.badgeCorner !== void 0 || patch.badgeShape !== void 0 || patch.badgeColorMode !== void 0) {
+          const curNum = safeGetPluginData2(card, "step_number") ? parseInt(safeGetPluginData2(card, "step_number"), 10) : 1;
+          const curCorner = safeGetPluginData2(card, "badge_corner") || "TOP_LEFT";
+          const curShape = safeGetPluginData2(card, "badge_shape") || "Square";
+          const curMode = safeGetPluginData2(card, "badge_color_mode") || "Style";
+          const finalNum = currentBadgeNum !== void 0 ? currentBadgeNum++ : curNum;
+          const finalCorner = patch.badgeCorner !== void 0 ? patch.badgeCorner : curCorner;
+          const finalShape = patch.badgeShape !== void 0 ? patch.badgeShape : curShape;
+          const finalMode = patch.badgeColorMode !== void 0 ? patch.badgeColorMode : curMode;
+          await applyStepBadgeToSingleCard(card, finalNum, finalCorner, finalShape, finalMode);
+        } else if (existingStepBadge && patch.colorHex !== void 0) {
+          const stepText = existingStepBadge.children.find((c) => c.type === "TEXT");
+          if (stepText) {
+            const currentMode = safeGetPluginData2(card, "badge_color_mode") || "Style";
+            applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
+          }
+        }
+        const isHug = nodeType === "Screen" && effectiveSizeMode === "hug";
+        const isFit = nodeType === "Screen" && effectiveSizeMode === "fit";
+        const finalW = isFit && fitW !== void 0 ? fitW : nodeType === "Screen" ? clampScreenWidth(targetW) : Math.max(50, targetW);
+        const finalH = nodeType === "Screen" ? clampScreenHeight(targetH) : Math.max(40, targetH);
+        if (isHug) {
+          if (descText) {
+            descText.maxLines = null;
+          }
+          if (card.width !== finalW) {
+            card.counterAxisSizingMode = "FIXED";
+            card.resize(finalW, card.height);
+          }
+          card.counterAxisSizingMode = "FIXED";
+          card.primaryAxisSizingMode = "AUTO";
+          card.minWidth = finalW;
+          card.maxWidth = finalW;
+          card.minHeight = null;
+          card.maxHeight = null;
+          card.setPluginData("size_mode", "hug");
+        } else if (isFit) {
+          if (descText) {
+            descText.maxLines = null;
+            try {
+              descText.maxHeight = null;
+            } catch (_) {
+            }
+          }
+          card.counterAxisSizingMode = "FIXED";
+          card.primaryAxisSizingMode = "AUTO";
+          card.minHeight = 49;
+          card.maxHeight = null;
+          card.minWidth = finalW;
+          card.maxWidth = finalW;
+          card.resize(finalW, Math.max(49, card.height));
+          card.setPluginData("size_mode", "fit");
+        } else {
+          card.primaryAxisSizingMode = "FIXED";
+          card.counterAxisSizingMode = "FIXED";
+          card.resize(finalW, finalH);
+          card.minWidth = finalW;
+          card.maxWidth = finalW;
+          card.minHeight = finalH;
+          card.maxHeight = finalH;
+          card.setPluginData("size_mode", effectiveSizeMode);
+        }
+        if (statusBadge) {
+          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+          statusBadge.x = finalW - statusBadge.width - 10;
+          statusBadge.y = card.height - statusBadge.height - 10;
+        }
+        const linkBadge = card.children.find(
+          (c) => safeGetPluginData2(c, "is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
+        );
+        if (linkBadge) {
+          linkBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
+          linkBadge.x = 16;
+          linkBadge.y = card.height - linkBadge.height - 10;
+        }
+        const shapeVec = card.children.find(
+          (c) => c.name === "ShapeVector" || c.name === "DiamondShape"
+        );
+        if (shapeVec) {
+          shapeVec.remove();
+        }
+        if (isShapeNode) {
+          const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : borderColor;
+          attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
+        }
+        const curStepBadge = card.children.find(
+          (c) => c.name.startsWith("[Step]") || safeGetPluginData2(c, "is_step_badge") === "true"
+        );
+        if (curStepBadge) {
+          const stepCorner = safeGetPluginData2(card, "badge_corner") || "TOP_LEFT";
+          const bw = Math.max(24, Math.round(curStepBadge.width));
+          const bh = 24;
+          const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, card.height, bw, bh, stepCorner);
+          curStepBadge.x = badgeCoords.x;
+          curStepBadge.y = badgeCoords.y;
+          curStepBadge.constraints = badgeCoords.constraints;
+        }
+        card.setPluginData("is_flow_node", "true");
+        card.setPluginData("schema_version", "2");
+        if (nodeType === "Screen") {
+          if (!isFit) {
+            card.setPluginData("screen_width", String(finalW));
+            card.setPluginData("screen_height", String(finalH));
+          }
+          card.setPluginData("screen_corner_radius", String(targetR));
+          card.setPluginData("screen_size_mode", effectiveSizeMode);
+          if (patch.description !== void 0) card.setPluginData("node_desc", patch.description);
+          if (patch.figmaLink !== void 0) card.setPluginData("figma_link", patch.figmaLink);
+        } else {
+          if (patch.description !== void 0) card.setPluginData("node_desc", patch.description);
+          if (patch.figmaLink !== void 0) card.setPluginData("figma_link", patch.figmaLink);
+        }
+        if (patch.nodeType !== void 0) {
+          card.setPluginData("node_type", nodeType);
+        }
+        updatedCount++;
+      }
+      handleSelectionChange();
+      if (updatedCount > 0) {
+        notify(`${updatedCount}\uAC1C \uB178\uB4DC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, "success");
+      }
+    } catch (err) {
+      notify(`\uB2E4\uC911 \uB178\uB4DC \uC5C5\uB370\uC774\uD2B8 \uC2E4\uD328: ${String(err)}`, "error");
+    }
+  }
   async function resizeNode(nodeId, width, height) {
     try {
       let rawNode = figma.getNodeById(nodeId);
@@ -3837,8 +4433,6 @@
       if (flowNode.type === "SHAPE_WITH_TEXT") {
         flowNode = await convertShapeToFrameNode(flowNode);
       }
-      const w = Math.max(120, width);
-      const h = Math.max(50, height);
       const frame = flowNode;
       frame.minWidth = null;
       frame.maxWidth = null;
@@ -3848,6 +4442,8 @@
       const nType = normalizeNodeType(rawNodeType);
       const nSpec = NODE_TYPE_SHAPE_SPECS[nType] || NODE_TYPE_SHAPE_SPECS.Screen;
       const isShape = !nSpec.allowDescription;
+      const w = nType === "Screen" ? clampScreenWidth(width) : Math.max(120, width);
+      const h = nType === "Screen" ? clampScreenHeight(height) : Math.max(50, height);
       if (frame.layoutMode !== "VERTICAL") {
         frame.layoutMode = "VERTICAL";
       }
@@ -3907,7 +4503,8 @@
           }
           const pl = typeof frame.paddingLeft === "number" ? frame.paddingLeft : 16;
           const pr = typeof frame.paddingRight === "number" ? frame.paddingRight : 16;
-          const curW = Math.max(50, w - pl - pr);
+          const strokeOffset = (typeof frame.strokeWeight === "number" ? frame.strokeWeight : 0) * 2;
+          const curW = Math.max(10, w - pl - pr - strokeOffset);
           if (isShape) {
             if (title.textAutoResize !== "HEIGHT") {
               title.textAutoResize = "HEIGHT";
@@ -3954,6 +4551,12 @@
         shapeVec.remove();
         attachShapeVectorNode(frame, nType, w, h, curBgColor, curStrokeColor, curStrokeWeight, true);
       }
+      if (nType === "Screen") {
+        frame.strokeAlign = "INSIDE";
+        if ("strokesIncludedInLayout" in frame) {
+          frame.strokesIncludedInLayout = true;
+        }
+      }
       const statusBadge = frame.children.find(
         (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
       );
@@ -3967,12 +4570,16 @@
         desc.layoutAlign = "STRETCH";
         const pl = typeof frame.paddingLeft === "number" ? frame.paddingLeft : 16;
         const pr = typeof frame.paddingRight === "number" ? frame.paddingRight : 16;
-        const availW = Math.max(50, w - pl - pr);
+        const strokeOffset = (typeof frame.strokeWeight === "number" ? frame.strokeWeight : 0) * 2;
+        const availW = Math.max(10, w - pl - pr - strokeOffset);
         if (Math.abs(desc.width - availW) > 1) {
-          desc.resize(availW, desc.height);
+          try {
+            desc.resize(availW, desc.height);
+          } catch (_) {
+          }
         }
         desc.textAutoResize = "HEIGHT";
-        await updateDescTextTruncation(frame, desc, h);
+        await updateDescTextTruncation(frame, desc, h, void 0, w);
       }
       if (statusBadge) {
         statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
@@ -5152,6 +5759,9 @@
         break;
       case "UPDATE_FLOW_NODE":
         await updateFlowNode(msg.payload);
+        break;
+      case "BATCH_UPDATE_FLOW_NODES":
+        await batchUpdateFlowNodes(msg.payload.nodeIds, msg.payload.patch);
         break;
       case "CONNECT_POINTS":
         await connectPoints(msg.payload);

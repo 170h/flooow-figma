@@ -3,7 +3,13 @@ import { useApp, SizePreset, NodeInfo } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 import { MixedDashChip } from '../shared/icons';
-import { normalizeNodeType } from '../../../types';
+import {
+  normalizeNodeType,
+  SCREEN_NODE_CONSTRAINTS,
+  clampScreenWidth,
+  clampScreenHeight,
+  clampScreenCornerRadius,
+} from '../../../types';
 
 const FIXED_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -70,6 +76,8 @@ export function SizeSection() {
     applyCurrentNodeState,
     autoResizeWindow,
     showToast,
+    multiDraft,
+    updateMultiDraft,
   } = useApp();
 
   const summary = useSelectionSummary();
@@ -80,6 +88,9 @@ export function SizeSection() {
   // 2. 복수 노드 선택: 모든 선택 노드가 Screen 타입인지 판별 (Mixed일 경우 disabled)
   // 3. 미선택 (신규 생성 대기 모드): 현재 UI에서 선택된 생성 대상 타입(selectedNodeType)이 Screen인지 판별
   const isSizeAllowed = (() => {
+    if (multiDraft.nodeType !== undefined) {
+      return normalizeNodeType(multiDraft.nodeType) === 'Screen';
+    }
     if (selectedNodes.length === 1) {
       const node = selectedNodes[0];
       const rawType = node?.flowNodeType || (node?.nodeType === 'FRAME' ? 'Screen' : node?.nodeType);
@@ -154,6 +165,7 @@ export function SizeSection() {
   }, [isSizeAllowed, dropdownOpen, setSizeModeDropdownOpen]);
 
   const currentSizeMode = (() => {
+    if (multiDraft.sizeMode) return multiDraft.sizeMode;
     if (summary.isMultiFlowNode) {
       if (summary.sizeMode.isMixed) return 'mixed';
       return summary.sizeMode.value || lastNodeConfig.sizeMode || 'fixed';
@@ -164,9 +176,9 @@ export function SizeSection() {
     return lastNodeConfig.sizeMode || 'fixed';
   })();
 
-  const isWMixed = summary.isMultiFlowNode && summary.width.isMixed;
-  const isHMixed = summary.isMultiFlowNode && summary.height.isMixed;
-  const isRMixed = summary.isMultiFlowNode && summary.cornerRadius.isMixed;
+  const isWMixed = multiDraft.width !== undefined ? false : (summary.isMultiFlowNode && summary.width.isMixed);
+  const isHMixed = multiDraft.height !== undefined ? false : (summary.isMultiFlowNode && summary.height.isMixed);
+  const isRMixed = multiDraft.cornerRadius !== undefined ? false : (summary.isMultiFlowNode && summary.cornerRadius.isMixed);
 
   // 2. 선택된 노드 변경 시 W, H, Radius 인풋 필드 값 동기화
   React.useEffect(() => {
@@ -188,13 +200,13 @@ export function SizeSection() {
     if (validNodes.length > 0) {
       if (summary.isMultiFlowNode) {
         if (!isFocusedRef.current.w) {
-          setWidthInput(isWMixed ? '' : (summary.width.value !== undefined ? String(summary.width.value) : ''));
+          setWidthInput(multiDraft.width !== undefined ? String(multiDraft.width) : (isWMixed ? '' : (summary.width.value !== undefined ? String(summary.width.value) : '')));
         }
         if (!isFocusedRef.current.h) {
-          setHeightInput(isHMixed ? '' : (summary.height.value !== undefined ? String(summary.height.value) : ''));
+          setHeightInput(multiDraft.height !== undefined ? String(multiDraft.height) : (isHMixed ? '' : (summary.height.value !== undefined ? String(summary.height.value) : '')));
         }
         if (!isFocusedRef.current.r) {
-          setRadiusInput(isRMixed ? '' : (summary.cornerRadius.value !== undefined ? String(summary.cornerRadius.value) : ''));
+          setRadiusInput(multiDraft.cornerRadius !== undefined ? String(multiDraft.cornerRadius) : (isRMixed ? '' : (summary.cornerRadius.value !== undefined ? String(summary.cornerRadius.value) : '')));
         }
       } else {
         const first = validNodes[0];
@@ -277,10 +289,22 @@ export function SizeSection() {
     if (!isSizeAllowed) return;
     const raw = explicitVal !== undefined ? explicitVal : widthInput;
     const parsed = parseInt(raw, 10);
-    const validW = isNaN(parsed) ? (lastNodeConfig.width || 250) : Math.max(50, parsed);
+    let validW = isNaN(parsed) ? (lastNodeConfig.width || 250) : parsed;
+    if (validW < SCREEN_NODE_CONSTRAINTS.MIN_WIDTH) {
+      validW = SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
+      showToast(`최소 너비는 ${SCREEN_NODE_CONSTRAINTS.MIN_WIDTH}px입니다.`, 'warning');
+    } else if (validW > SCREEN_NODE_CONSTRAINTS.MAX_WIDTH) {
+      validW = SCREEN_NODE_CONSTRAINTS.MAX_WIDTH;
+      showToast(`최대 너비는 ${SCREEN_NODE_CONSTRAINTS.MAX_WIDTH}px입니다.`, 'warning');
+    }
     setWidthInput(String(validW));
     userActionLockRef.current = Date.now();
     setSelectedSizePresetId(null);
+
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ width: validW, sizeMode: 'fixed' });
+      return;
+    }
 
     const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
     const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
@@ -313,13 +337,13 @@ export function SizeSection() {
       e.preventDefault();
       const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
       const step = e.shiftKey ? 10 : 1;
-      const next = current + step;
+      const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_WIDTH, current + step);
       commitW(String(next));
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
       const step = e.shiftKey ? 10 : 1;
-      const next = Math.max(50, current - step);
+      const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, current - step);
       commitW(String(next));
     }
   }
@@ -333,10 +357,22 @@ export function SizeSection() {
     if (!isSizeAllowed) return;
     const raw = explicitVal !== undefined ? explicitVal : heightInput;
     const parsed = parseInt(raw, 10);
-    const validH = isNaN(parsed) ? (lastNodeConfig.height || 90) : Math.max(40, parsed);
+    let validH = isNaN(parsed) ? (lastNodeConfig.height || 90) : parsed;
+    if (validH < SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT) {
+      validH = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
+      showToast(`최소 높이는 ${SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT}px입니다.`, 'warning');
+    } else if (validH > SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT) {
+      validH = SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT;
+      showToast(`최대 높이는 ${SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT}px입니다.`, 'warning');
+    }
     setHeightInput(String(validH));
     userActionLockRef.current = Date.now();
     setSelectedSizePresetId(null);
+
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ height: validH, sizeMode: 'fixed' });
+      return;
+    }
 
     const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
     const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
@@ -369,13 +405,13 @@ export function SizeSection() {
       e.preventDefault();
       const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
       const step = e.shiftKey ? 10 : 1;
-      const next = current + step;
+      const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT, current + step);
       commitH(String(next));
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
       const step = e.shiftKey ? 10 : 1;
-      const next = Math.max(40, current - step);
+      const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, current - step);
       commitH(String(next));
     }
   }
@@ -389,14 +425,21 @@ export function SizeSection() {
     if (!isSizeAllowed) return;
     const raw = explicitVal !== undefined ? explicitVal : radiusInput;
     const parsed = parseInt(raw, 10);
-    let validR = isNaN(parsed) ? (lastNodeConfig.cornerRadius ?? 0) : Math.max(0, parsed);
-    if (validR > 999) {
-      validR = 999;
-      showToast('최대값은 999입니다.', 'warning');
+    let validR = isNaN(parsed) ? (lastNodeConfig.cornerRadius ?? 0) : parsed;
+    if (validR < SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS) {
+      validR = SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS;
+    } else if (validR > SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS) {
+      validR = SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS;
+      showToast(`최대값은 ${SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS}입니다.`, 'warning');
     }
     setRadiusInput(String(validR));
     userActionLockRef.current = Date.now();
     setSelectedSizePresetId(null);
+
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ cornerRadius: validR });
+      return;
+    }
 
     const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
     const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
@@ -425,13 +468,13 @@ export function SizeSection() {
       e.preventDefault();
       const current = parseInt(radiusInput, 10) || 0;
       const step = e.shiftKey ? 10 : 1;
-      const next = Math.min(999, current + step);
+      const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS, current + step);
       commitR(String(next));
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       const current = parseInt(radiusInput, 10) || 0;
       const step = e.shiftKey ? 10 : 1;
-      const next = Math.max(0, current - step);
+      const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS, current - step);
       commitR(String(next));
     }
   }
@@ -443,6 +486,16 @@ export function SizeSection() {
     setHeightInput(String(p.h));
     setRadiusInput(String(p.radius ?? 0));
     userActionLockRef.current = Date.now();
+
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({
+        width: p.w,
+        height: p.h,
+        cornerRadius: p.radius ?? 0,
+        sizeMode: (p.sizeMode || 'fixed') as 'fixed' | 'hug' | 'fit',
+      });
+      return;
+    }
 
     const targetNodeId = selectedNodes[0]?.id || 'NONE';
     pendingSizeRef.current = {
@@ -498,6 +551,15 @@ export function SizeSection() {
 
   function selectSizeMode(mode: string) {
     if (!isSizeAllowed) return;
+    if (selectedNodes.length >= 2) {
+      if (mode !== 'mixed') {
+        updateMultiDraft({ sizeMode: mode as 'fixed' | 'hug' | 'fit' });
+      }
+      setSelectedSizePresetId(null);
+      setDropdownOpen(false);
+      setSizeModeDropdownOpen(false);
+      return;
+    }
     if (mode !== 'mixed') {
       setLastNodeConfig({ sizeMode: mode });
     }
@@ -545,7 +607,8 @@ export function SizeSection() {
               type="number"
               id="input-size-w"
               value={widthInput}
-              min={50}
+              min={SCREEN_NODE_CONSTRAINTS.MIN_WIDTH}
+              max={SCREEN_NODE_CONSTRAINTS.MAX_WIDTH}
               placeholder={isWMixed ? 'Mixed' : undefined}
               disabled={!isSizeAllowed}
               onFocus={() => { isFocusedRef.current.w = true; }}
@@ -560,7 +623,8 @@ export function SizeSection() {
               type="number"
               id="input-size-h"
               value={heightInput}
-              min={40}
+              min={SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT}
+              max={SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT}
               placeholder={isHMixed ? 'Mixed' : undefined}
               disabled={!isSizeAllowed}
               onFocus={() => { isFocusedRef.current.h = true; }}
@@ -575,8 +639,8 @@ export function SizeSection() {
               type="number"
               id="input-size-radius"
               value={radiusInput}
-              min={0}
-              max={999}
+              min={SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS}
+              max={SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS}
               placeholder={isRMixed ? 'Mixed' : undefined}
               disabled={!isSizeAllowed}
               onFocus={() => { isFocusedRef.current.r = true; }}

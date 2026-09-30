@@ -7,12 +7,14 @@ import React, {
   useEffect,
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
-import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus } from '../../types';
+import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload } from '../../types';
 import { NODE_TYPE_SHAPE_SPECS, normalizeNodeType } from '../../types';
 
 // ============================================================
 // 타입 정의
 // ============================================================
+
+export type MultiNodeDraft = NodePatchPayload;
 
 export interface SizePreset {
   id: string;
@@ -247,6 +249,11 @@ export interface AppContextValue {
   closeAllPopovers: () => void;
   showToast: (msg: string, level?: string) => void;
   autoResizeWindow: () => void;
+  multiDraft: MultiNodeDraft;
+  hasMultiDraft: boolean;
+  updateMultiDraft: (partial: Partial<MultiNodeDraft>) => void;
+  clearMultiDraft: () => void;
+  isApplyingMultiDraft: boolean;
 }
 
 // ============================================================
@@ -336,6 +343,83 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedSizePresetId, setSelectedSizePresetId] = useState<string | null>('default');
   const [selectedStylePresetId, setSelectedStylePresetId] = useState<string | null>('style-white');
   const [designFrames, setDesignFrames] = useState<DesignFrameItem[]>([]);
+
+  // 다중 선택 편집용 임시 저장소 (Multi Node Draft)
+  const [multiDraft, setMultiDraftRaw] = useState<MultiNodeDraft>({});
+  const multiDraftRef = useRef<MultiNodeDraft>({});
+  const multiDraftSelectionRef = useRef<string[]>([]);
+
+  const updateMultiDraft = useCallback((partial: Partial<MultiNodeDraft>) => {
+    setMultiDraftRaw(prev => {
+      const next = { ...prev, ...partial };
+      multiDraftRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const clearMultiDraft = useCallback(() => {
+    multiDraftRef.current = {};
+    setMultiDraftRaw({});
+  }, []);
+
+  const hasMultiDraft = Object.keys(multiDraft).length > 0;
+
+  // 다중 노드 일괄 부분 적용(Apply to All) 진행 상태
+  const [isApplyingMultiDraft, setIsApplyingMultiDraft] = useState(false);
+  const isApplyingMultiDraftRef = useRef(false);
+  const applyTimeoutRef = useRef<number | null>(null);
+
+  const applyMultiDraft = useCallback(() => {
+    const nodes = selectedNodesRef.current;
+    if (isApplyingMultiDraftRef.current) return;
+    if (!nodes || nodes.length < 2) return;
+    if (!hasMultiDraft) return;
+
+    // 현재 선택 노드 집합과 Draft 대상 노드 집합 일치 검증
+    const currentSortedIds = nodes.map(n => n?.id).filter(Boolean).sort();
+    const draftSortedIds = multiDraftSelectionRef.current;
+    const isIdSetMatch =
+      currentSortedIds.length === draftSortedIds.length &&
+      currentSortedIds.every((id, idx) => id === draftSortedIds[idx]);
+    if (!isIdSetMatch) return;
+
+    // Partial Patch 생성: undefined 필드를 제외하고 실제 사용자가 변경한 필드만 전송
+    const rawDraft = multiDraftRef.current;
+    const patch: NodePatchPayload = {};
+    let hasField = false;
+    (Object.keys(rawDraft) as Array<keyof NodePatchPayload>).forEach((key) => {
+      if (rawDraft[key] !== undefined) {
+        (patch as any)[key] = rawDraft[key];
+        hasField = true;
+      }
+    });
+
+    if (!hasField) return;
+
+    isApplyingMultiDraftRef.current = true;
+    setIsApplyingMultiDraft(true);
+
+    parent.postMessage({
+      pluginMessage: {
+        type: 'BATCH_UPDATE_FLOW_NODES',
+        payload: {
+          nodeIds: [...draftSortedIds],
+          patch,
+        }
+      }
+    }, '*');
+
+    // 안전 타임아웃 (Core 응답 지연 시 5초 후 잠금 자동 해제)
+    if (applyTimeoutRef.current !== null) {
+      window.clearTimeout(applyTimeoutRef.current);
+    }
+    applyTimeoutRef.current = window.setTimeout(() => {
+      if (isApplyingMultiDraftRef.current) {
+        isApplyingMultiDraftRef.current = false;
+        setIsApplyingMultiDraft(false);
+      }
+    }, 5000);
+  }, [hasMultiDraft]);
 
   const loadDesignFrames = useCallback(() => {
     parent.postMessage({ pluginMessage: { type: 'GET_DESIGN_FRAMES' } }, '*');
@@ -906,6 +990,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // 다중 플로우 노드 선택 시: Apply to All 실행 (DOM 전체를 읽거나 Creation Cache를 수정하지 않고 오직 multiDraft만 사용하여 Batch 전송)
+    if (nodes.length >= 2) {
+      applyMultiDraft();
+      return;
+    }
+
     const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
     const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
     const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
@@ -995,18 +1085,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     } else if (nodes.length >= 2) {
-      nodes.forEach(node => {
-        parent.postMessage({
-          pluginMessage: {
-            type: 'UPDATE_FLOW_NODE',
-            payload: { nodeId: node.id, title: node.title || title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: node.theme || getCurrentUITheme(), figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
-          }
-        }, '*');
-      });
-      if (statusToggleEl?.checked && selectedStatus) {
-        parent.postMessage({ pluginMessage: { type: 'SET_STATUS', status: selectedStatus } }, '*');
-      }
-      showToast(`${nodes.length}개 노드가 업데이트되었습니다.`);
+      // Step 2: 다중 선택 시 기존의 전체 덮어쓰기 loop를 차단 (Apply 실행은 Step 3에서 구현)
+      return;
     } else {
       parent.postMessage({
         pluginMessage: {
@@ -1034,13 +1114,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     }
-  }, [applyCurrentConnectorState, setLastNodeConfig, showToast]);
+  }, [applyCurrentConnectorState, applyMultiDraft, setLastNodeConfig, showToast]);
 
   const handleSelectionChange = useCallback((
     count: number,
     nodes: NodeInfo[],
     meta: { flowNodeCount?: number; otherObjectCount?: number; connectorCount?: number; }
   ) => {
+    // 다중 선택 Apply to All 완료 처리:
+    // Core에서 batchUpdateFlowNodes 완료 후 handleSelectionChange가 호출되어 UI로 전달됨
+    if (isApplyingMultiDraftRef.current) {
+      if (applyTimeoutRef.current !== null) {
+        window.clearTimeout(applyTimeoutRef.current);
+        applyTimeoutRef.current = null;
+      }
+      clearMultiDraft();
+      isApplyingMultiDraftRef.current = false;
+      setIsApplyingMultiDraft(false);
+    }
+
     // 실제 선택 노드 대상이 변경되었을 때만 열려있는 모든 드롭다운 및 팝오버를 닫음
     const prevIds = (selectedNodesRef.current || []).map(n => n?.id).filter(Boolean);
     const newIds = (nodes || []).map(n => n?.id).filter(Boolean);
@@ -1050,6 +1142,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (isSelectionChanged) {
       closeAllPopovers();
+    }
+
+    // 다중 선택 Draft 폐기 로직: 선택 노드 집합(Set)이 변경되었을 때만 폐기
+    // 동일한 노드 집합에 대한 단순 SELECTION_CHANGED 재발생 시에는 Draft 유지
+    const sortedNewIds = [...newIds].sort();
+    const sortedPrevDraftIds = multiDraftSelectionRef.current;
+    const isDraftSelectionChanged =
+      sortedNewIds.length !== sortedPrevDraftIds.length ||
+      sortedNewIds.some((id, idx) => id !== sortedPrevDraftIds[idx]);
+
+    if (isDraftSelectionChanged) {
+      clearMultiDraft();
+      multiDraftSelectionRef.current = sortedNewIds;
     }
 
     setSelectedNodes(nodes);
@@ -1207,7 +1312,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState]);
+  }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState, clearMultiDraft]);
 
   const value: AppContextValue = {
     selectedNodes,
@@ -1259,6 +1364,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     closeAllPopovers,
     showToast,
     autoResizeWindow,
+    multiDraft,
+    hasMultiDraft,
+    updateMultiDraft,
+    clearMultiDraft,
+    isApplyingMultiDraft,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

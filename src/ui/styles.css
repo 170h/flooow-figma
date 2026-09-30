@@ -1068,7 +1068,7 @@
     /* ============================================================ */
     .numeric-inputs-row {
       display: grid;
-      grid-template-columns: 65px 65px 65px minmax(0, 1fr);
+      grid-template-columns: 61px 61px 61px minmax(0, 1fr);
       gap: 6px;
       align-items: center;
       width: 100%;
@@ -1082,8 +1082,8 @@
       border: 1px solid transparent;
       border-radius: var(--radius-sm);
       height: 28px;
-      padding: 0 4px 0 6px;
-      gap: 3px;
+      padding: 0 4px 0 0;
+      gap: 0;
       box-sizing: border-box;
       width: 100%;
       min-width: 0;
@@ -1104,8 +1104,14 @@
 
     .input-scrubber-box span,
     .input-scrubber-box .scrubber-label {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
       color: var(--color-text-secondary);
-      font-weight: 500;
+      font-weight: var(--font-weight-strong, 550);
       font-size: 11px;
       line-height: 1;
       cursor: default;
@@ -1119,11 +1125,7 @@
       color: var(--color-text-secondary);
       flex-shrink: 0;
       cursor: default;
-    }
-
-    .input-scrubber-box:has(svg) {
-      padding: 0 4px 0 0;
-      gap: 0;
+      display: block;
     }
 
     .input-scrubber-box input {
@@ -1399,10 +1401,11 @@
       width: 180px;
     }
 
-    /* Size 등 래퍼 기준 드롭다운: 버튼과 동일한 100% 폭 */
+    /* Size 드롭다운 메뉴: 버튼 너비에 종속되지 않고 메뉴 항목들이 시원하게 잘 보이도록 우측 기준 확장 */
     .size-mode-menu-popover {
-      width: 100%;
-      left: 0;
+      width: max-content;
+      min-width: 152px;
+      left: auto;
       right: 0;
     }
 
@@ -2636,7 +2639,7 @@
       border: none;
       border-radius: var(--radius-sm, 5px);
       font-size: 11px;
-      font-weight: var(--font-weight-strong);
+      font-weight: var(--font-weight-default, 450);
       cursor: pointer;
       display: inline-flex;
       align-items: center;

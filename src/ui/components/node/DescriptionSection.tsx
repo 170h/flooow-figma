@@ -17,6 +17,8 @@ export function DescriptionSection() {
     setLastNodeConfig,
     autoResizeWindow,
     uiState,
+    multiDraft,
+    updateMultiDraft,
   } = useApp();
   const summary = useSelectionSummary();
 
@@ -76,8 +78,36 @@ export function DescriptionSection() {
     }
   }, [selectedNodes, lastNodeConfig.descriptionOn, summary.hasDescription.hasValue, setLastNodeConfig]);
 
+  const isDescDrafted = multiDraft.description !== undefined;
+  const effectiveIsDescMixed = isDescDrafted ? false : isDescMixed;
+  const isDescSectionOpen = isDescriptionAllowed && (isDescDrafted ? Boolean(multiDraft.description) : (effectiveIsDescMixed ? false : isOn));
+  const effectiveIsOn = isDescriptionAllowed && (isDescDrafted ? Boolean(multiDraft.description) : isOn);
+
+  const effectiveHasText = isDescDrafted
+    ? Boolean(multiDraft.description?.trim())
+    : (selectedNodes.length >= 2
+        ? (effectiveIsDescMixed ? false : Boolean(summary.description.value?.trim()))
+        : hasText);
+
   function handleToggle(checked: boolean) {
     setIsOn(checked);
+
+    if (selectedNodes.length >= 2) {
+      if (!checked) {
+        setHasText(false);
+        const ta = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
+        if (ta) ta.value = '';
+        updateMultiDraft({ description: '' });
+      } else {
+        const ta = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
+        const val = ta?.value.trim() || '';
+        setHasText(Boolean(val));
+        updateMultiDraft({ description: val });
+      }
+      autoResizeWindow();
+      return;
+    }
+
     setLastNodeConfig({ descriptionOn: checked });
 
     if (!checked) {
@@ -101,6 +131,13 @@ export function DescriptionSection() {
   function handleInput(e: React.FormEvent<HTMLTextAreaElement>) {
     const val = (e.target as HTMLTextAreaElement).value;
     setHasText(Boolean(val.trim()));
+    if (selectedNodes.length >= 2) {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        updateMultiDraft({ description: val });
+      }, 300);
+      return;
+    }
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => applyCurrentNodeState(), 400);
   }
@@ -145,36 +182,36 @@ export function DescriptionSection() {
     document.body.removeChild(ta);
   }
 
-  const defaultDescValue = summary.isMultiFlowNode
-    ? (isDescMixed ? '' : (summary.description.value || ''))
-    : (selectedNodes.length === 1 ? (selectedNodes[0]?.description || '') : '');
+  const defaultDescValue = isDescDrafted
+    ? (multiDraft.description || '')
+    : (summary.isMultiFlowNode
+        ? (effectiveIsDescMixed ? '' : (summary.description.value || ''))
+        : (selectedNodes.length === 1 ? (selectedNodes[0]?.description || '') : ''));
 
-  const effectiveIsOn = isDescriptionAllowed && isOn;
-
-  const descPlaceholder = isDescMixed
+  const descPlaceholder = effectiveIsDescMixed
     ? 'Mixed'
     : 'Add a description';
 
   return (
-    <div className="section-block" style={{ paddingBottom: effectiveIsOn ? '12px' : '0px' }}>
+    <div className="section-block" style={{ paddingBottom: isDescSectionOpen ? '12px' : '0px' }}>
       <div className="section-header toggle-row">
         <span className={`section-title${!isDescriptionAllowed ? ' disabled' : ''}`}>
           Description
-          {isDescriptionAllowed && isDescMixed && (
+          {isDescriptionAllowed && effectiveIsDescMixed && (
             <span className="section-mixed-label">
               (Mixed)
             </span>
           )}
         </span>
         <div className="section-actions">
-          {/* 스위치가 켜진 상태에서만 복사 버튼 노출, 텍스트가 없으면 비활성 상태 */}
-          {effectiveIsOn && (
+          {/* 스위치가 켜진 상태(isDescSectionOpen)에서만 복사 버튼 노출, 텍스트가 없으면 비활성 상태 */}
+          {isDescSectionOpen && (
             <button
               id="btn-copy-desc"
               type="button"
-              className={`btn-action-icon${copied ? ' copied' : ''}${!hasText ? ' disabled' : ''}`}
-              title={copied ? '복사 완료' : (hasText ? 'Copy' : '입력된 설명이 없습니다')}
-              disabled={!hasText}
+              className={`btn-action-icon${copied ? ' copied' : ''}${!effectiveHasText ? ' disabled' : ''}`}
+              title={copied ? '복사 완료' : (effectiveHasText ? 'Copy' : '입력된 설명이 없습니다')}
+              disabled={!effectiveHasText}
               onClick={copyDescription}
             >
               {copied ? <IcCheckLarge /> : <IcCopy />}
@@ -182,15 +219,15 @@ export function DescriptionSection() {
           )}
           <Switch
             id="toggle-description"
-            checked={effectiveIsOn}
-            isMixed={isDescriptionAllowed && isDescMixed}
-            disabled={!isDescriptionAllowed}
+            checked={isDescSectionOpen}
+            isMixed={isDescriptionAllowed && effectiveIsDescMixed}
+            disabled={!isDescriptionAllowed || (selectedNodes.length >= 2 && effectiveIsDescMixed)}
             data-tooltip={!isDescriptionAllowed ? 'Description is disabled for this shape' : undefined}
             onChange={handleToggle}
           />
         </div>
       </div>
-      {effectiveIsOn && (
+      {isDescSectionOpen && (
         <div className="section-body collapsible-body">
           <textarea
             key={summary.isMultiFlowNode ? 'multi-desc' : (selectedNodes[0]?.id || 'none')}

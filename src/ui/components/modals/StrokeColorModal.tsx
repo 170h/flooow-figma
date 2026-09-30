@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { ColorWheelField } from "../shared/ColorWheelField";
 import { StrokeColorIcon } from "../shared/icons";
+import { SCREEN_NODE_CONSTRAINTS, clampStrokeWeight } from "../../../types";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -86,7 +87,7 @@ export function StrokeColorModal({
 
   // 두께 변경 핸들러 (실시간 프리뷰 적용)
   const handleWeightChange = (newWeight: number) => {
-    const valid = Math.max(0, newWeight);
+    const valid = clampStrokeWeight(newWeight);
     setStrokeWeight(valid);
     if (valid > 0) {
       lastValidWeightRef.current = valid;
@@ -159,7 +160,7 @@ export function StrokeColorModal({
             .join("")
         : resolved
     }`;
-    const finalWeight = Math.max(0, strokeWeight);
+    const finalWeight = clampStrokeWeight(strokeWeight);
     onApply(finalColor, finalWeight);
     onClose();
   };
@@ -253,8 +254,8 @@ export function StrokeColorModal({
                   <input
                     type="number"
                     className="prefix-input"
-                    min={0}
-                    max={50}
+                    min={SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT}
+                    max={SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT}
                     value={strokeWeight}
                     onChange={(e) =>
                       handleWeightChange(parseFloat(e.target.value) || 0)

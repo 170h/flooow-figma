@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  SCREEN_NODE_CONSTRAINTS,
+  clampScreenWidth,
+  clampScreenHeight,
+  clampScreenCornerRadius,
+} from '../../../types';
 
 // ============================================================
 // Props 정의 — useApp() 의존성 없이 완전 독립 컴포넌트
@@ -98,15 +104,16 @@ export function SizeModal({
   function handleRadiusChange(e: React.ChangeEvent<HTMLInputElement>) {
     let val = parseInt(e.target.value, 10);
     if (isNaN(val)) val = 0;
-    if (val > 20) val = 20;
+    if (val > SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS) val = SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS;
+    if (val < SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS) val = SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS;
     setRadius(val);
   }
 
   function handleSave() {
     const finalName = name.trim() || 'Custom';
-    const finalW = Math.max(20, w || 250);
-    const finalH = Math.max(20, h || 90);
-    const finalRadius = Math.min(20, Math.max(0, radius || 0));
+    const finalW = clampScreenWidth(w || 250);
+    const finalH = clampScreenHeight(h || 90);
+    const finalRadius = clampScreenCornerRadius(radius || 0);
     onSave({ name: finalName, w: finalW, h: finalH, radius: finalRadius, sizeMode });
     onClose();
   }
@@ -174,7 +181,8 @@ export function SizeModal({
                   id={`input-${mode}-size-w`}
                   className="prefix-input"
                   value={w}
-                  min={20}
+                  min={SCREEN_NODE_CONSTRAINTS.MIN_WIDTH}
+                  max={SCREEN_NODE_CONSTRAINTS.MAX_WIDTH}
                   onChange={(e) => setW(parseInt(e.target.value, 10) || 0)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                 />
@@ -186,7 +194,8 @@ export function SizeModal({
                   id={`input-${mode}-size-h`}
                   className="prefix-input"
                   value={h}
-                  min={20}
+                  min={SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT}
+                  max={SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT}
                   onChange={(e) => setH(parseInt(e.target.value, 10) || 0)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                 />
@@ -204,8 +213,8 @@ export function SizeModal({
                   id={`input-${mode}-size-radius`}
                   className="prefix-input"
                   value={radius}
-                  min={0}
-                  max={20}
+                  min={SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS}
+                  max={SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS}
                   onChange={handleRadiusChange}
                   onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                 />

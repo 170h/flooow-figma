@@ -24,19 +24,44 @@ export function ElevationSection() {
     applyStatusToNode,
     activeAppearanceSection,
     setActiveAppearanceSection,
-    autoResizeWindow
+    autoResizeWindow,
+    selectedNodes,
+    multiDraft,
+    updateMultiDraft,
   } = useApp();
   const summary = useSelectionSummary();
 
   const isSectionOpen = activeAppearanceSection === 'elevation';
 
+  const isElevationDrafted = multiDraft.elevation !== undefined;
+  const effectiveIsSectionOpen = isElevationDrafted
+    ? (typeof multiDraft.elevation === 'number')
+    : isSectionOpen;
+
   // 선택된 레벨 (Mixed 상태인 경우 선택 하이라이트 해제)
-  const isElevationMixed = summary.isMultiFlowNode && summary.elevation.isMixed;
-  const currentLevel = summary.isMultiFlowNode
-    ? summary.elevation.value
-    : (typeof uiState.selectedElevation === 'number' ? uiState.selectedElevation : 0);
+  const isElevationMixed = isElevationDrafted ? false : (summary.isMultiFlowNode && summary.elevation.isMixed);
+  const currentLevel = isElevationDrafted
+    ? (typeof multiDraft.elevation === 'number' ? multiDraft.elevation : undefined)
+    : (summary.isMultiFlowNode
+        ? summary.elevation.value
+        : (typeof uiState.selectedElevation === 'number' ? uiState.selectedElevation : 0));
 
   function handleToggle(checked: boolean) {
+    if (selectedNodes.length >= 2) {
+      if (checked) {
+        setActiveAppearanceSection('elevation');
+        const targetLevel = typeof currentLevel === 'number' ? currentLevel : 0;
+        updateMultiDraft({ elevation: targetLevel });
+      } else {
+        setActiveAppearanceSection(null);
+        updateMultiDraft({ elevation: null });
+      }
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
+      return;
+    }
+
     if (checked) {
       setActiveAppearanceSection('elevation');
       setLastNodeConfig({ elevationOn: true });
@@ -54,6 +79,15 @@ export function ElevationSection() {
 
   function selectElevation(level: number) {
     setActiveAppearanceSection('elevation');
+
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ elevation: level });
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
+      return;
+    }
+
     setLastNodeConfig({ elevationOn: true, elevation: level });
     applyElevationToNodes(level);
     requestAnimationFrame(() => {
@@ -66,7 +100,7 @@ export function ElevationSection() {
       <div className="section-header toggle-row">
         <span className="section-title">
           Elevation
-          {summary.isMultiFlowNode && (summary.elevationOn.isMixed || isElevationMixed) && (
+          {summary.isMultiFlowNode && !isElevationDrafted && (summary.elevationOn.isMixed || isElevationMixed) && (
             <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
               (Mixed)
             </span>
@@ -74,13 +108,13 @@ export function ElevationSection() {
         </span>
         <Switch
           id="toggle-elevation"
-          checked={isSectionOpen}
-          isMixed={isElevationMixed}
+          checked={effectiveIsSectionOpen}
+          isMixed={!isElevationDrafted && isElevationMixed}
           onChange={handleToggle}
         />
       </div>
       <div className="section-body">
-        <div className={`elevation-cards-container${isSectionOpen ? ' active' : ''}`} id="elevation-options">
+        <div className={`elevation-cards-container${effectiveIsSectionOpen ? ' active' : ''}`} id="elevation-options">
           {ELEVATION_LEVELS.map(({ level, label, desc }) => {
             const isSelected = !isElevationMixed && currentLevel === level;
             return (

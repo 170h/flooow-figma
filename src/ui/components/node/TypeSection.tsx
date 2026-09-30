@@ -90,17 +90,30 @@ const NODE_TYPE_OPTIONS: NodeTypeOption[] = [
  * (Figma 1027415-4690 기반)
  */
 export function TypeSection() {
-  const { uiState, setUIState, applyCurrentNodeState, setLastNodeConfig, lastNodeConfig } = useApp();
+  const {
+    uiState,
+    setUIState,
+    applyCurrentNodeState,
+    setLastNodeConfig,
+    lastNodeConfig,
+    selectedNodes,
+    multiDraft,
+    updateMultiDraft,
+  } = useApp();
   const summary = useSelectionSummary();
   const { selectedNodeType } = uiState;
 
-  // 복수 노드 선택 시 혼합(Mixed) 여부 판별
-  const isTypeMixed = summary.isMultiFlowNode && summary.nodeType.isMixed;
-  const currentRawType = isTypeMixed
-    ? undefined
-    : (summary.isSingleFlowNode || summary.isMultiFlowNode
-        ? summary.nodeType.value
-        : selectedNodeType);
+  // 복수 노드 선택 시 혼합(Mixed) 여부 판별 (Draft가 있으면 Draft 우선이므로 Mixed 해제)
+  const isTypeMixed = multiDraft.nodeType !== undefined
+    ? false
+    : (summary.isMultiFlowNode && summary.nodeType.isMixed);
+  const currentRawType = multiDraft.nodeType !== undefined
+    ? multiDraft.nodeType
+    : (isTypeMixed
+        ? undefined
+        : (summary.isSingleFlowNode || summary.isMultiFlowNode
+            ? summary.nodeType.value
+            : selectedNodeType));
   const activeType = currentRawType ? normalizeNodeType(currentRawType) : undefined;
 
   const DEFAULT_TYPE_TITLES = new Set([
@@ -109,6 +122,13 @@ export function TypeSection() {
   ]);
 
   function selectNodeType(type: DiagramNodeType) {
+    // 다중 선택 시 실제 Figma 노드를 변경하지 않고 Draft에만 기록
+    // Type 변경 시 dimensions(W/H/R)를 자동으로 Draft에 넣지 않고 nodeType만 기록
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ nodeType: type });
+      return;
+    }
+
     const spec = NODE_TYPE_SHAPE_SPECS[type];
     const titleInputEl = document.getElementById('node-title-input') as HTMLInputElement | null;
     const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;

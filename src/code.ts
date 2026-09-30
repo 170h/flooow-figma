@@ -6,6 +6,7 @@ import {
   CoreToUIMessage,
   FlowNodePayload,
   UpdateNodePayload,
+  NodePatchPayload,
   ConnectPointsPayload,
   SelectedNodeInfo,
   MagnetPosition,
@@ -16,6 +17,11 @@ import {
   normalizeNodeType,
   NODE_TYPE_SHAPE_SPECS,
   DesignFrameItem,
+  SCREEN_NODE_CONSTRAINTS,
+  clampScreenWidth,
+  clampScreenHeight,
+  clampScreenCornerRadius,
+  clampStrokeWeight,
 } from './types';
 import {
   createOrthogonalVectorConnector,
@@ -624,7 +630,6 @@ async function updateFigmaLinkBadge(
   svgNode.locked = true;
 
   // 2. 아이콘 크기(16×16)와 완벽히 1:1로 겹치는 투명 텍스트 링크 오버레이
-  await loadRequiredFonts();
   const linkText = figma.createText();
   linkText.name = 'LinkOverlay';
   linkText.characters = '█'; // 16x16 블록 문자로 정사각형 영역 확보
@@ -912,17 +917,17 @@ async function updateDescTextTruncation(card: FrameNode, descText: TextNode, cur
     if (descText.layoutAlign !== 'STRETCH') {
       descText.layoutAlign = 'STRETCH';
     }
-
-    // 가용 너비(신규 대상 너비 또는 카드 너비 - 좌우 패딩) 복원 및 textAutoResize 고정 (세로 변형 방지)
-    const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
-    const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
-    const effectiveCardW = typeof targetWidth === 'number' && targetWidth > 0 ? targetWidth : card.width;
-    const availW = Math.max(50, effectiveCardW - pl - pr);
-    if (Math.abs(descText.width - availW) > 1) {
-      descText.resize(availW, descText.height);
-    }
     if (descText.textAutoResize !== 'HEIGHT') {
       descText.textAutoResize = 'HEIGHT';
+    }
+
+    const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
+    const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
+    const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+    const effectiveCardW = typeof targetWidth === 'number' && targetWidth > 0 ? targetWidth : card.width;
+    const availW = Math.max(10, effectiveCardW - pl - pr - strokeOffset);
+    if (Math.abs(descText.width - availW) > 1) {
+      try { descText.resize(availW, descText.height); } catch (_) {}
     }
 
     const isHug = card.primaryAxisSizingMode === 'AUTO';
@@ -1509,6 +1514,50 @@ async function handleSelectionChange() {
       }
     }
 
+    if (isFlowNode && flowNodeType === 'Screen' && node.type === 'FRAME') {
+      const frameNode = node as FrameNode;
+      if (frameNode.strokeAlign !== 'INSIDE') {
+        try { frameNode.strokeAlign = 'INSIDE'; } catch (_) {}
+      }
+      if ('strokesIncludedInLayout' in frameNode && !frameNode.strokesIncludedInLayout) {
+        try { frameNode.strokesIncludedInLayout = true; } catch (_) {}
+      }
+      const header = frameNode.children.find(isHeaderFrame) as FrameNode | undefined;
+      if (header) {
+        const pl = typeof frameNode.paddingLeft === 'number' ? frameNode.paddingLeft : 16;
+        const pr = typeof frameNode.paddingRight === 'number' ? frameNode.paddingRight : 16;
+        const strokeOffset = (typeof frameNode.strokeWeight === 'number' ? frameNode.strokeWeight : 0) * 2;
+        const availW = Math.max(10, frameNode.width - pl - pr - strokeOffset);
+        if (header.layoutAlign !== 'STRETCH') {
+          try { header.layoutAlign = 'STRETCH'; } catch (_) {}
+        }
+        if (header.primaryAxisSizingMode !== 'FIXED') {
+          try { header.primaryAxisSizingMode = 'FIXED'; } catch (_) {}
+        }
+        if (header.counterAxisSizingMode !== 'AUTO') {
+          try { header.counterAxisSizingMode = 'AUTO'; } catch (_) {}
+        }
+        if (Math.abs(header.width - availW) > 1) {
+          try { header.resize(availW, header.height || 18); } catch (_) {}
+        }
+        const tText = header.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+        if (tText) {
+          if (tText.layoutGrow !== 1) {
+            try { tText.layoutGrow = 1; } catch (_) {}
+          }
+          if (tText.layoutAlign !== 'STRETCH') {
+            try { tText.layoutAlign = 'STRETCH'; } catch (_) {}
+          }
+          if (Math.abs(tText.width - availW) > 1) {
+            try { tText.resize(availW, tText.height || 18); } catch (_) {}
+          }
+          if (tText.textAutoResize !== 'HEIGHT') {
+            try { tText.textAutoResize = 'HEIGHT'; } catch (_) {}
+          }
+        }
+      }
+    }
+
     const pos = getNodeTopLeft(node);
 
     return {
@@ -1666,21 +1715,13 @@ async function lockTextFontSizeAndAutoResize(textNode: TextNode, targetSize: num
 
     if (textNode.parent && 'layoutMode' in textNode.parent) {
       const parentFrame = textNode.parent as FrameNode;
-      if (parentFrame.layoutMode !== 'VERTICAL') {
-        parentFrame.layoutMode = 'VERTICAL';
-      }
-      if (parentFrame.counterAxisAlignItems !== 'MIN') {
-        parentFrame.counterAxisAlignItems = 'MIN';
-      }
-      if (parentFrame.primaryAxisAlignItems !== 'MIN') {
-        parentFrame.primaryAxisAlignItems = 'MIN';
-      }
-
-      const pl = typeof parentFrame.paddingLeft === 'number' ? parentFrame.paddingLeft : 16;
-      const pr = typeof parentFrame.paddingRight === 'number' ? parentFrame.paddingRight : 16;
-      const availW = Math.max(50, parentFrame.width - pl - pr);
+      const card = (parentFrame.parent && 'layoutMode' in parentFrame.parent) ? (parentFrame.parent as FrameNode) : parentFrame;
+      const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
+      const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
+      const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+      const availW = Math.max(10, card.width - pl - pr - strokeOffset);
       if (Math.abs(textNode.width - availW) > 1) {
-        textNode.resize(availW, textNode.height);
+        try { textNode.resize(availW, textNode.height); } catch (_) {}
       }
     }
 
@@ -1918,6 +1959,10 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.strokeWeight = 1.5;
   card.strokes = [{ type: 'SOLID', color: borderColor }];
   card.fills = [{ type: 'SOLID', color: bgColor }];
+  card.strokeAlign = 'INSIDE';
+  if ('strokesIncludedInLayout' in card) {
+    card.strokesIncludedInLayout = true;
+  }
   card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
 
   card.layoutMode = 'VERTICAL';
@@ -1939,7 +1984,8 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.maxHeight = height;
 
   // 헤더 행 (타이틀 수용 공간)
-  const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+  const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+  const availW = Math.max(10, width - card.paddingLeft - card.paddingRight - strokeOffset);
   const headerRow = figma.createFrame();
   headerRow.name = 'Header';
   headerRow.layoutMode = 'HORIZONTAL';
@@ -2023,7 +2069,6 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.appendChild(descText);
 
   descText.layoutAlign = 'STRETCH';
-  descText.resize(availW, descText.height);
   descText.textAutoResize = 'HEIGHT';
   await updateDescTextTruncation(card, descText, height, desc);
 
@@ -2252,10 +2297,10 @@ async function createFlowNode(payload: FlowNodePayload) {
     const rawTitle = (payload.title && payload.title.trim()) || (nodeType === 'Screen' ? 'Screen' : nodeType);
     const title = rawTitle.slice(0, 32); // 타이틀 글자 수 제한 (입력필드 너비 최적화)
     // 도형 노드인 경우 스펙 규격(Process: 120x120, Connector: 120x120, Decision: 140x140, Terminator: 180x90) 최우선 보장
-    const width = isShapeNode ? spec.width : (payload.width ? Math.max(50, payload.width) : spec.width);
-    const height = isShapeNode ? spec.height : (payload.height ? Math.max(50, payload.height) : spec.height);
+    const width = isShapeNode ? spec.width : (payload.width ? clampScreenWidth(payload.width) : spec.width);
+    const height = isShapeNode ? spec.height : (payload.height ? clampScreenHeight(payload.height) : spec.height);
     const defaultRadius = spec.cornerRadius !== undefined ? spec.cornerRadius : 0;
-    const cornerRadius = isShapeNode ? defaultRadius : (typeof payload.cornerRadius === 'number' ? Math.max(0, payload.cornerRadius) : defaultRadius);
+    const cornerRadius = isShapeNode ? defaultRadius : (typeof payload.cornerRadius === 'number' ? clampScreenCornerRadius(payload.cornerRadius) : defaultRadius);
     const description = isShapeNode ? '' : (payload.description || '').trim();
     const theme = payload.theme || 'light';
 
@@ -2282,7 +2327,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     const cardStrokes: Paint[] = typeof payload.strokeWeight === 'number' && payload.strokeWeight === 0
       ? []
       : [{ type: 'SOLID', color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
-    const cardStrokeWeight = typeof payload.strokeWeight === 'number' ? payload.strokeWeight : 1.5;
+    const cardStrokeWeight = typeof payload.strokeWeight === 'number' ? clampStrokeWeight(payload.strokeWeight) : 1.5;
 
     const vectorPathData = getShapeVectorData(nodeType, width, height);
 
@@ -2296,6 +2341,10 @@ async function createFlowNode(payload: FlowNodePayload) {
       card.fills = isFillNone ? [] : [{ type: 'SOLID', color: bgColor }];
       card.strokes = cardStrokes;
       card.strokeWeight = cardStrokeWeight;
+      card.strokeAlign = 'INSIDE';
+      if ('strokesIncludedInLayout' in card) {
+        card.strokesIncludedInLayout = true;
+      }
     }
     card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
 
@@ -2340,7 +2389,7 @@ async function createFlowNode(payload: FlowNodePayload) {
 
       if (nodeType === 'Decision') {
         // 마름모는 3줄 높이(54px)로 고정하여 3번째 줄 끝에서 ..(말줄임) 보장
-        const availW = Math.max(50, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
+        const availW = Math.max(10, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
         titleText.resize(availW, 54);
         titleText.maxHeight = 54;
         titleText.textAutoResize = 'TRUNCATE';
@@ -2375,7 +2424,8 @@ async function createFlowNode(payload: FlowNodePayload) {
       card.counterAxisAlignItems = 'MIN';
 
       // 2. 헤더 행 (타이틀 수용 공간)
-      const availW = Math.max(50, width - card.paddingLeft - card.paddingRight);
+      const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+      const availW = Math.max(10, width - card.paddingLeft - card.paddingRight - strokeOffset);
       const headerRow = figma.createFrame();
       headerRow.name = 'Header';
       headerRow.layoutMode = 'HORIZONTAL';
@@ -2412,8 +2462,8 @@ async function createFlowNode(payload: FlowNodePayload) {
         const measuredTitleW = Math.ceil(measureText.width);
         measureText.remove();
 
-        effectiveCreateW = Math.max(49, measuredTitleW + card.paddingLeft + card.paddingRight);
-        const contentW = Math.max(17, effectiveCreateW - card.paddingLeft - card.paddingRight);
+        effectiveCreateW = Math.max(49, measuredTitleW + card.paddingLeft + card.paddingRight + strokeOffset);
+        const contentW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - strokeOffset);
         headerRow.resize(contentW, 18);
         titleText.resize(contentW, 18);
         titleText.textAutoResize = 'HEIGHT';
@@ -2451,14 +2501,14 @@ async function createFlowNode(payload: FlowNodePayload) {
         card.appendChild(descText);
 
         descText.layoutAlign = 'STRETCH';
-        const descAvailW = Math.max(50, effectiveCreateW - card.paddingLeft - card.paddingRight);
+        const descAvailW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - strokeOffset);
         descText.resize(descAvailW, descText.height);
         descText.textAutoResize = 'HEIGHT';
         if (!isShapeNode && payload.sizeMode === 'fit') {
           descText.maxLines = null;
           descText.textTruncation = 'DISABLED';
         } else {
-          await updateDescTextTruncation(card, descText, height, description);
+          await updateDescTextTruncation(card, descText, height, description, effectiveCreateW);
         }
       }
     }
@@ -2646,7 +2696,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const cardStrokes: Paint[] = typeof payload.strokeWeight === 'number' && payload.strokeWeight === 0
       ? []
       : [{ type: 'SOLID', color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
-    const cardStrokeWeight = typeof payload.strokeWeight === 'number' ? payload.strokeWeight : 1.5;
+    const cardStrokeWeight = typeof payload.strokeWeight === 'number' ? clampStrokeWeight(payload.strokeWeight) : 1.5;
 
     // 카드 레이아웃 모드 및 정렬 방향 사전 보장 (ABSOLUTE 자식 배치를 위해 반드시 layoutMode !== NONE 필요)
     if (card.layoutMode !== 'VERTICAL') {
@@ -2672,17 +2722,45 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     // Screen 복귀 시 또는 Fit에서 Fixed 복귀 시: 이전에 저장된 screen_width/height를 payload 기본값보다 우선 복원
     // payload.width=250 같은 타입 기본값이 truthy여서 사용자 설정값(300 등)을 덮어쓰던 버그 수정
     const targetW = isShapeNode
-      ? (payload.width ? Math.max(50, payload.width) : spec.width)
+      ? spec.width
       : (isChangingToScreen
-          ? (payload.width ? Math.max(50, payload.width) : (restoredScreenW || spec.width))
+          ? (payload.width ? clampScreenWidth(payload.width) : (restoredScreenW ? clampScreenWidth(restoredScreenW) : spec.width))
           : (isChangingFromFitToFixed
-              ? (payload.width ? Math.max(50, payload.width) : (restoredScreenW || card.width))
-              : (payload.width ? Math.max(50, payload.width) : card.width)));
+              ? (payload.width ? clampScreenWidth(payload.width) : (restoredScreenW ? clampScreenWidth(restoredScreenW) : clampScreenWidth(card.width)))
+              : (payload.width ? clampScreenWidth(payload.width) : clampScreenWidth(card.width))));
     const targetH = isShapeNode
-      ? (payload.height ? Math.max(50, payload.height) : spec.height)
+      ? spec.height
       : (isChangingToScreen
-          ? (payload.height ? Math.max(50, payload.height) : (restoredScreenH || spec.height))
-          : (payload.height ? Math.max(50, payload.height) : card.height));
+          ? (payload.height ? clampScreenHeight(payload.height) : (restoredScreenH ? clampScreenHeight(restoredScreenH) : spec.height))
+          : (payload.height ? clampScreenHeight(payload.height) : clampScreenHeight(card.height)));
+
+    const prevDescription = safeGetPluginData(card, 'node_desc') || '';
+    const prevStatus = (safeGetPluginData(card, 'workflow_status') || '') as WorkflowStatus;
+    const prevFigmaLink = safeGetPluginData(card, 'figma_link') || safeGetPluginData(card, 'cached_figma_link') || '';
+
+    // 복원할 유효 설명: Screen 복귀 시 이전 설명 복원, 단 사용자가 직접 빈칸으로 수정한 경우는 제외
+    const effectiveDesc = isShapeNode
+      ? ''
+      : (payload.description !== undefined && payload.description !== ''
+          ? payload.description
+          : (isChangingToScreen ? prevDescription : (payload.description ?? prevDescription))).trim();
+    const effectiveStatus = (!isShapeNode
+      ? (payload.status
+          ? payload.status
+          : (isChangingToScreen ? prevStatus : (payload.status ?? prevStatus)))
+      : '') as WorkflowStatus;
+    const effectiveLink = !isShapeNode
+      ? (payload.figmaLink !== undefined && payload.figmaLink !== ''
+          ? payload.figmaLink
+          : (isChangingToScreen ? prevFigmaLink : (payload.figmaLink ?? prevFigmaLink)) || '')
+      : '';
+    const existingStatusBadgeOnCard = !isShapeNode ? card.children.find(
+      (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
+    ) : undefined;
+    const hasStatus = Boolean(existingStatusBadgeOnCard || (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]));
+    const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
+    const hasBottomBar = hasStatus || hasLink;
+
     const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
 
     if (vectorPathData) {
@@ -2702,12 +2780,16 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
       const defaultRadius = spec.cornerRadius !== undefined ? spec.cornerRadius : 0;
       const targetRadius = typeof payload.cornerRadius === 'number'
-        ? Math.max(0, payload.cornerRadius)
-        : (isChangingToScreen && savedScreenR !== '' && savedScreenR !== undefined ? restoredScreenR : defaultRadius);
+        ? (nodeType === 'Screen' ? clampScreenCornerRadius(payload.cornerRadius) : Math.max(0, payload.cornerRadius))
+        : (isChangingToScreen && savedScreenR !== '' && savedScreenR !== undefined ? clampScreenCornerRadius(restoredScreenR) : defaultRadius);
       card.cornerRadius = targetRadius;
       card.fills = isFillNone ? [] : [{ type: 'SOLID', color: bgColor }];
       card.strokes = cardStrokes;
       card.strokeWeight = cardStrokeWeight;
+      card.strokeAlign = 'INSIDE';
+      if ('strokesIncludedInLayout' in card) {
+        card.strokesIncludedInLayout = true;
+      }
     }
 
     // 카드 레이아웃 모드 및 정렬 방향 보장
@@ -2716,6 +2798,21 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     }
     card.counterAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
     card.primaryAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
+
+    if (!isShapeNode) {
+      // Screen 노드의 최종 크기 및 Auto Layout 속성(패딩, 간격, 정렬)을 자식 구성 전에 최우선 확정
+      // 다른 타입 → Screen 복귀 시 자식 요소들이 이전 도형 크기나 엉뚱한 좌표로 렌더링되는 중간 상태 원천 차단
+      card.primaryAxisSizingMode = 'FIXED';
+      card.counterAxisSizingMode = 'FIXED';
+      card.resize(targetW, targetH);
+      card.itemSpacing = 8;
+      card.paddingLeft = 16;
+      card.paddingRight = 16;
+      card.paddingTop = 14;
+      card.paddingBottom = hasBottomBar ? 36 : 16;
+      card.primaryAxisAlignItems = (!effectiveDesc && !hasBottomBar) ? 'CENTER' : 'MIN';
+      card.counterAxisAlignItems = 'MIN';
+    }
 
     // shape 노드로 전환된 경우 카드 캔버스 상의 배지만 분리 (pluginData 데이터는 보존)
     if (isShapeNode) {
@@ -2764,7 +2861,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       titleText.lineHeight = { value: 18, unit: 'PIXELS' };
 
       if (nodeType === 'Decision') {
-        const availW = Math.max(50, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
+        const availW = Math.max(10, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
         try { titleText.resize(availW, 54); } catch (_) {}
         try { titleText.maxHeight = 54; } catch (_) {}
         try { titleText.textAutoResize = 'TRUNCATE'; } catch (_) {}
@@ -2785,8 +2882,9 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       // Screen 노드 등: Header 프레임 내에 titleText 배치
       const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
       const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
+      const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
       const effectiveW = fitW !== undefined ? fitW : targetW;
-      const availW = Math.max(50, effectiveW - pl - pr);
+      const availW = Math.max(10, effectiveW - pl - pr - strokeOffset);
 
       let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
       if (!headerRow) {
@@ -2834,8 +2932,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         const measuredTitleW = Math.ceil(measureText.width);
         measureText.remove();
 
-        fitW = Math.max(49, measuredTitleW + pl + pr);
-        const contentW = Math.max(17, fitW - pl - pr);
+        fitW = Math.max(49, measuredTitleW + pl + pr + strokeOffset);
+        const contentW = Math.max(10, fitW - pl - pr - strokeOffset);
 
         headerRow.resize(contentW, headerRow.height || 18);
         titleText.resize(contentW, titleText.height || 18);
@@ -2845,7 +2943,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       } else {
         titleText.resize(availW, titleText.height || 18);
         titleText.textAutoResize = 'HEIGHT';
-        await safeSetCharacters(titleText, effectiveTitle);
+        titleText.fontName = { family: 'Inter', style: 'Bold' };
+        titleText.characters = effectiveTitle;
         try { titleText.resize(availW, titleText.height); } catch (_) {}
       }
 
@@ -2858,17 +2957,6 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
     }
 
-    const prevDescription = safeGetPluginData(card, 'node_desc') || '';
-    const prevStatus = (safeGetPluginData(card, 'workflow_status') || '') as WorkflowStatus;
-    const prevFigmaLink = safeGetPluginData(card, 'figma_link') || safeGetPluginData(card, 'cached_figma_link') || '';
-
-    // 복원할 유효 설명: Screen 복귀 시 이전 설명 복원, 단 사용자가 직접 빈칸으로 수정한 경우는 제외
-    const effectiveDesc = isShapeNode
-      ? ''
-      : (payload.description !== undefined && payload.description !== ''
-          ? payload.description
-          : (isChangingToScreen ? prevDescription : (payload.description ?? prevDescription))).trim();
-
     // 설명 텍스트 갱신 (isShapeNode이거나 설명이 없는 경우 카드에서 제거하되 pluginData는 보존)
     let descText = card.children.find(
       (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
@@ -2880,69 +2968,55 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         descText = undefined;
       }
     } else {
+      const isNewDesc = !descText;
       if (!descText) {
         descText = figma.createText();
         descText.name = 'DescText';
-        descText.fontName = { family: 'Inter', style: 'Regular' };
-        descText.fontSize = 11;
-        descText.textAlignHorizontal = 'LEFT';
         descText.setPluginData('node_role', 'desc');
-        card.appendChild(descText);
       }
 
       descText.textAlignHorizontal = 'LEFT';
       descText.layoutAlign = 'STRETCH';
-      const descAvailW = Math.max(50, (fitW !== undefined ? fitW : targetW) - card.paddingLeft - card.paddingRight);
-      if (Math.abs(descText.width - descAvailW) > 1) {
-        descText.resize(descAvailW, descText.height);
-      }
+      const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+      const descAvailW = Math.max(10, (fitW !== undefined ? fitW : targetW) - card.paddingLeft - card.paddingRight - descStrokeOffset);
+      descText.fontName = { family: 'Inter', style: 'Regular' };
+      descText.fontSize = 11;
+      descText.characters = effectiveDesc;
       descText.textAutoResize = 'HEIGHT';
+      descText.resize(descAvailW, descText.height || 16);
 
       if (!isShapeNode && payload.sizeMode === 'fit') {
         descText.maxLines = null;
         try { descText.maxHeight = null; } catch (_) {}
         descText.textTruncation = 'DISABLED';
+      } else if (isChangingToScreen || payload.sizeMode === 'fixed' || !payload.sizeMode) {
+        // Screen 복귀 시: card를 AUTO로 바꾸는 calculateCardHugHeight 없이 가용 높이로 직접 Truncation 계산
+        descText.textTruncation = 'ENDING';
+        const pb = hasBottomBar ? 36 : 16;
+        const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+        const headerH = headerRow ? headerRow.height : 18;
+        const availableH = Math.max(14, targetH - 14 - pb - 8 - Math.round(headerH));
+        descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
       } else {
         const currentH = payload.height || card.height;
         await updateDescTextTruncation(card, descText, currentH, effectiveDesc, targetW);
       }
 
-      await safeSetCharacters(descText, effectiveDesc);
       const hasExistingDescFill = descText.fills === figma.mixed || (Array.isArray(descText.fills) && descText.fills.length > 0);
       if (!hasExistingDescFill || payload.colorHex) {
         descText.fills = [descFill];
       }
-      try {
-        const descFont: FontName = { family: 'Inter', style: 'Regular' };
-        await figma.loadFontAsync(descFont);
-        const dLen = descText.characters.length;
-        if (dLen > 0) {
-          descText.setRangeFontName(0, dLen, descFont);
-          descText.setRangeFontSize(0, dLen, 11);
-        } else {
-          descText.fontName = descFont;
-          descText.fontSize = 11;
-        }
-      } catch (_) {}
+
+      // 텍스트, 폰트, 크기, 말줄임이 완전히 확정된 후 card에 append (빈 텍스트 노출 원천 차단)
+      if (isNewDesc || descText.parent !== card) {
+        card.appendChild(descText);
+      }
     }
 
     // 패딩 및 정렬 동기화
     let statusBadge = !isShapeNode ? (card.children.find(
       (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
     ) as FrameNode | undefined) : undefined;
-    const effectiveStatus = (!isShapeNode
-      ? (payload.status
-          ? payload.status
-          : (isChangingToScreen ? prevStatus : (payload.status ?? prevStatus)))
-      : '') as WorkflowStatus;
-    const hasStatus = Boolean(statusBadge || (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]));
-    const effectiveLink = !isShapeNode
-      ? (payload.figmaLink !== undefined && payload.figmaLink !== ''
-          ? payload.figmaLink
-          : (isChangingToScreen ? prevFigmaLink : (payload.figmaLink ?? prevFigmaLink)) || '')
-      : '';
-    const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
-    const hasBottomBar = hasStatus || hasLink;
 
     if (isShapeNode) {
       const hPad = nodeType === 'Decision' ? 24 : 12;
@@ -2994,9 +3068,18 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         badgeText.name = 'StatusText';
         badgeText.fontName = { family: 'Inter', style: 'Bold' };
         badgeText.fontSize = 9;
+        const cfg = STATUS_CONFIG[effectiveStatus];
+        if (cfg) {
+          badgeText.characters = cfg.label.toUpperCase();
+        }
         badgeText.textAutoResize = 'WIDTH_AND_HEIGHT';
         badgeText.locked = true;
         statusBadge.appendChild(badgeText);
+
+        // 자식 텍스트의 실제 실측 너비/높이에 패딩(좌우 18, 상하 6)을 더해 프레임 크기 선행 확정 (기본 100x100 왜곡 방지)
+        const badgeW = Math.round(badgeText.width + 18);
+        const badgeH = Math.round(badgeText.height + 6);
+        statusBadge.resize(badgeW, badgeH);
 
         card.appendChild(statusBadge);
         if ((card.layoutMode as any) !== 'NONE') {
@@ -3004,6 +3087,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         }
         statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
         statusBadge.locked = true;
+        statusBadge.x = targetW - badgeW - 10;
+        statusBadge.y = targetH - badgeH - 10;
       }
 
       statusBadge.paddingLeft = 9;
@@ -3047,8 +3132,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     // 내부 자식(DescText, Header, Badges 등) 정리 완료 후 최종 크기 조정 및 min/max 재잠금
     const isHug = !isShapeNode && payload.sizeMode === 'hug';
     const isFit = !isShapeNode && payload.sizeMode === 'fit';
-    const finalW = isFit && fitW !== undefined ? fitW : Math.max(50, targetW);
-    const finalH = Math.max(40, targetH);
+    const finalW = isFit && fitW !== undefined ? fitW : (nodeType === 'Screen' ? clampScreenWidth(targetW) : Math.max(50, targetW));
+    const finalH = nodeType === 'Screen' ? clampScreenHeight(targetH) : Math.max(40, targetH);
 
     card.minWidth = null;
     card.maxWidth = null;
@@ -3190,6 +3275,523 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 }
 
 // ----------------------------------------------------
+// 4-1. 다중 선택(Multi Selection) 전용 배치 부분 업데이트 기능 (Batch Partial Update)
+// - nodeIds 목록에 해당하는 각 노드에 patch 속성만 부분 적용 (Partial Patch)
+// - 기존 updateFlowNode를 수정하지 않고 독립된 배치 경로로 실행
+// - figma.currentPage.selection을 절대 변경하지 않음 (다중 선택 100% 보존)
+// - 중간 SELECTION_CHANGED 발생을 차단하고, 전체 완료 후 최종 1회만 handleSelectionChange() 호출
+// ----------------------------------------------------
+async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) {
+  if (!nodeIds || nodeIds.length === 0 || !patch) return;
+
+  try {
+    await loadRequiredFonts();
+    let updatedCount = 0;
+
+    const targetCards: FrameNode[] = [];
+    for (const id of nodeIds) {
+      const rawNode = figma.getNodeById(id);
+      if (!rawNode) continue;
+
+      let flowNode = findFlowNode(rawNode) || (rawNode as FrameNode | ShapeWithTextNode | null);
+      if (!flowNode) continue;
+
+      if (flowNode.type === 'SHAPE_WITH_TEXT') {
+        flowNode = await convertShapeToFrameNode(flowNode as ShapeWithTextNode);
+      }
+      if (flowNode.type === 'FRAME') {
+        targetCards.push(flowNode as FrameNode);
+      }
+    }
+
+    targetCards.sort((a, b) => a.x - b.x);
+
+    let currentBadgeNum = patch.badgeNumber !== undefined ? patch.badgeNumber : undefined;
+
+    for (const card of targetCards) {
+      card.minWidth = null;
+      card.maxWidth = null;
+      card.minHeight = null;
+      card.maxHeight = null;
+
+      // 1. 기존 노드 데이터 읽기
+      const prevRawType = safeGetPluginData(card, 'node_type') || 'Screen';
+      const prevNodeType = normalizeNodeType(prevRawType);
+      const rawType = patch.nodeType || prevRawType;
+      const nodeType = normalizeNodeType(rawType);
+      const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
+      const isShapeNode = !spec.allowDescription;
+      const isChangingToScreen = prevNodeType !== 'Screen' && nodeType === 'Screen';
+
+      // 2. 테마 및 색상
+      const prevTheme = (safeGetPluginData(card, 'node_theme') as 'light' | 'dark') || 'light';
+      const isDark = prevTheme === 'dark';
+
+      let isFillNone = false;
+      let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
+
+      if (patch.colorHex !== undefined) {
+        isFillNone = patch.colorHex.toLowerCase() === 'none' || patch.colorHex.toLowerCase() === 'transparent';
+        if (!isFillNone) {
+          bgColor = hexToRgbColor(patch.colorHex);
+        }
+      } else {
+        const currentFill = card.fills;
+        if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === 'SOLID') {
+          bgColor = currentFill[0].color;
+        } else if (!Array.isArray(currentFill) || currentFill.length === 0) {
+          isFillNone = true;
+        }
+      }
+
+      const { titleFill, descFill, isBgDark } = isFillNone
+        ? {
+            titleFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } } as SolidPaint,
+            descFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 } as SolidPaint,
+            isBgDark: isDark,
+          }
+        : getTextFillsByBackground(bgColor, isDark);
+
+      const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
+
+      // 3. Fills 적용 (patch.colorHex가 제공된 경우에만)
+      if (patch.colorHex !== undefined) {
+        if (isFillNone) {
+          card.fills = [];
+        } else {
+          card.fills = [{ type: 'SOLID', color: bgColor }];
+        }
+      }
+
+      // 4. Strokes 적용 (patch.strokeWeight 또는 patch.strokeColor가 제공된 경우)
+      let cardStrokeWeight = typeof card.strokeWeight === 'number' ? card.strokeWeight : 1.5;
+      if (patch.strokeWeight !== undefined || patch.strokeColor !== undefined) {
+        cardStrokeWeight = patch.strokeWeight !== undefined ? clampStrokeWeight(patch.strokeWeight) : cardStrokeWeight;
+        if (cardStrokeWeight === 0) {
+          card.strokes = [];
+        } else {
+          const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : (Array.isArray(card.strokes) && card.strokes[0]?.type === 'SOLID' ? card.strokes[0].color : borderColor);
+          card.strokes = [{ type: 'SOLID', color: strokeCol }];
+          card.strokeWeight = cardStrokeWeight;
+          card.strokeAlign = 'INSIDE';
+          if ('strokesIncludedInLayout' in card) {
+            card.strokesIncludedInLayout = true;
+          }
+        }
+      }
+
+      // 5. 타이틀 (도형 기본명 갱신 또는 기존 타이틀 유지)
+      const DEFAULT_SHAPE_NAMES = new Set([
+        'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
+        'Action', 'System', 'Database', 'Square', 'Circle', 'Diamond', 'Pill', 'Capsule',
+      ]);
+      const currentTitle = card.name || 'Untitled';
+      let effectiveTitle = currentTitle;
+      if (isChangingToScreen && (DEFAULT_SHAPE_NAMES.has(currentTitle) || !currentTitle)) {
+        effectiveTitle = 'Screen';
+        card.name = effectiveTitle;
+      } else if (patch.nodeType !== undefined && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
+        effectiveTitle = nodeType;
+        card.name = effectiveTitle;
+      }
+
+      if (card.layoutMode !== 'VERTICAL') {
+        card.layoutMode = 'VERTICAL';
+      }
+      card.clipsContent = false;
+
+      // 6. 치수(Size) 계산: patch에 있으면 적용, 없으면 기존 치수 보존
+      const savedScreenW = safeGetPluginData(card, 'screen_width');
+      const savedScreenH = safeGetPluginData(card, 'screen_height');
+      const savedScreenR = safeGetPluginData(card, 'screen_corner_radius');
+      const restoredScreenW = savedScreenW ? parseInt(savedScreenW, 10) : spec.width;
+      const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
+      const restoredScreenR = savedScreenR !== '' && savedScreenR !== undefined ? parseInt(savedScreenR, 10) : (spec.cornerRadius ?? 0);
+
+      const prevSizeMode = (safeGetPluginData(card, 'size_mode') as 'fixed' | 'hug' | 'fit') || 'fixed';
+      const effectiveSizeMode = patch.sizeMode !== undefined ? patch.sizeMode : prevSizeMode;
+
+      let targetW: number;
+      let targetH: number;
+      let targetR: number;
+
+      if (isShapeNode) {
+        targetW = spec.width;
+        targetH = spec.height;
+        targetR = spec.cornerRadius ?? 0;
+      } else if (isChangingToScreen) {
+        targetW = patch.width !== undefined ? clampScreenWidth(patch.width) : clampScreenWidth(restoredScreenW);
+        targetH = patch.height !== undefined ? clampScreenHeight(patch.height) : clampScreenHeight(restoredScreenH);
+        targetR = patch.cornerRadius !== undefined ? clampScreenCornerRadius(patch.cornerRadius) : clampScreenCornerRadius(restoredScreenR);
+      } else {
+        targetW = patch.width !== undefined ? clampScreenWidth(patch.width) : card.width;
+        targetH = patch.height !== undefined ? clampScreenHeight(patch.height) : card.height;
+        targetR = patch.cornerRadius !== undefined ? clampScreenCornerRadius(patch.cornerRadius) : (typeof card.cornerRadius === 'number' ? card.cornerRadius : 0);
+      }
+
+      if (nodeType === 'Screen' || nodeType === 'Process' || nodeType === 'Branch') {
+        card.cornerRadius = targetR;
+      } else {
+        card.cornerRadius = spec.cornerRadius ?? 0;
+      }
+
+      // 7. 자식 레이아웃 및 텍스트 갱신
+      const pl = isShapeNode ? 12 : 16;
+      const pr = isShapeNode ? 12 : 16;
+      const pt = isShapeNode ? 12 : 14;
+      card.paddingLeft = pl;
+      card.paddingRight = pr;
+      card.paddingTop = pt;
+
+      const hasBottomBar = Boolean(safeGetPluginData(card, 'workflow_status') || patch.status || safeGetPluginData(card, 'figma_link') || patch.figmaLink);
+      card.paddingBottom = hasBottomBar ? 36 : (isShapeNode ? 12 : 16);
+
+      let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+      let titleText: TextNode | undefined;
+      if (headerRow) {
+        titleText = headerRow.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+      }
+      if (!headerRow) {
+        headerRow = figma.createFrame();
+        headerRow.name = 'HeaderRow';
+        headerRow.layoutMode = 'HORIZONTAL';
+        headerRow.primaryAxisSizingMode = 'FIXED';
+        headerRow.counterAxisSizingMode = 'AUTO';
+        card.appendChild(headerRow);
+      }
+      if (!titleText) {
+        titleText = figma.createText();
+        titleText.name = 'TitleText';
+        titleText.fontName = { family: 'Inter', style: 'Bold' };
+        titleText.fontSize = 13;
+        titleText.setPluginData('node_role', 'title');
+        headerRow.appendChild(titleText);
+      }
+      titleText.lineHeight = { value: 18, unit: 'PIXELS' };
+      titleText.textAlignHorizontal = isShapeNode ? 'CENTER' : 'LEFT';
+      titleText.textAlignVertical = 'TOP';
+      titleText.layoutGrow = 1;
+      titleText.layoutAlign = 'STRETCH';
+      titleText.textTruncation = 'DISABLED';
+      let fitW: number | undefined;
+      const strokeOffset = cardStrokeWeight * 2;
+
+      if (!isShapeNode && effectiveSizeMode === 'fit') {
+        const measureText = figma.createText();
+        const titleFont: FontName = { family: 'Inter', style: 'Bold' };
+        await figma.loadFontAsync(titleFont);
+        measureText.fontName = titleFont;
+        measureText.fontSize = 13;
+        measureText.lineHeight = { value: 18, unit: 'PIXELS' };
+        measureText.textAutoResize = 'WIDTH_AND_HEIGHT';
+        measureText.characters = effectiveTitle.trim() || ' ';
+        const measuredTitleW = Math.ceil(measureText.width);
+        measureText.remove();
+
+        fitW = Math.max(49, measuredTitleW + pl + pr + strokeOffset);
+        const contentW = Math.max(10, fitW - pl - pr - strokeOffset);
+
+        headerRow.resize(contentW, headerRow.height || 18);
+        titleText.resize(contentW, titleText.height || 18);
+        titleText.textAutoResize = 'HEIGHT';
+        await safeSetCharacters(titleText, effectiveTitle);
+        try { titleText.resize(contentW, titleText.height); } catch (_) {}
+      } else {
+        const availW = Math.max(10, targetW - pl - pr - strokeOffset);
+        headerRow.resize(availW, headerRow.height || 18);
+        titleText.resize(availW, titleText.height || 18);
+      }
+      if (patch.colorHex !== undefined) {
+        titleText.fills = [titleFill];
+      }
+
+      // 8. 설명 (Description) 갱신
+      const prevDesc = safeGetPluginData(card, 'node_desc') || '';
+      const effectiveDesc = patch.description !== undefined ? patch.description : prevDesc;
+      let descText = card.children.find(
+        (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
+      ) as TextNode | undefined;
+
+      if (isShapeNode || !effectiveDesc) {
+        if (descText) {
+          descText.remove();
+          descText = undefined;
+        }
+      } else {
+        if (!descText) {
+          descText = figma.createText();
+          descText.name = 'DescText';
+          descText.setPluginData('node_role', 'desc');
+          card.appendChild(descText);
+        }
+        descText.textAlignHorizontal = 'LEFT';
+        descText.layoutAlign = 'STRETCH';
+        descText.fontName = { family: 'Inter', style: 'Regular' };
+        descText.fontSize = 11;
+        descText.characters = effectiveDesc;
+        descText.textAutoResize = 'HEIGHT';
+        if (patch.colorHex !== undefined) {
+          descText.fills = [descFill];
+        }
+        if (!isShapeNode && effectiveSizeMode === 'fit') {
+          descText.maxLines = null;
+          try { descText.maxHeight = null; } catch (_) {}
+          descText.textTruncation = 'DISABLED';
+        } else {
+          await updateDescTextTruncation(card, descText, targetH, effectiveDesc, targetW);
+        }
+      }
+
+      // 9. 상태 (Status) 갱신
+      let statusBadge = card.children.find(
+        (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
+      ) as FrameNode | undefined;
+
+      if (patch.status !== undefined) {
+        if (!patch.status) {
+          card.setPluginData('workflow_status', '');
+          card.paddingBottom = 16;
+          if (statusBadge) {
+            statusBadge.remove();
+            statusBadge = undefined;
+          }
+        } else {
+          card.setPluginData('workflow_status', patch.status);
+          card.paddingBottom = 36;
+          if (!statusBadge) {
+            statusBadge = figma.createFrame();
+            statusBadge.name = 'StatusBadge';
+            statusBadge.layoutMode = 'HORIZONTAL';
+            statusBadge.primaryAxisSizingMode = 'AUTO';
+            statusBadge.counterAxisSizingMode = 'AUTO';
+            statusBadge.primaryAxisAlignItems = 'CENTER';
+            statusBadge.counterAxisAlignItems = 'CENTER';
+            statusBadge.paddingLeft = 9;
+            statusBadge.paddingRight = 9;
+            statusBadge.paddingTop = 3;
+            statusBadge.paddingBottom = 3;
+            statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+              typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
+            );
+            statusBadge.setPluginData('is_status_badge', 'true');
+            card.appendChild(statusBadge);
+
+            const bText = figma.createText();
+            bText.name = 'StatusText';
+            bText.fontName = { family: 'Inter', style: 'Bold' };
+            bText.fontSize = 9;
+            bText.textAutoResize = 'WIDTH_AND_HEIGHT';
+            statusBadge.appendChild(bText);
+          }
+          if (statusBadge.layoutPositioning !== 'ABSOLUTE') {
+            statusBadge.layoutPositioning = 'ABSOLUTE';
+          }
+          const { badgeBg, badgeTextColor } = getStatusBadgeColors(patch.status, bgColor, isDark);
+          statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
+          statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+            typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
+          );
+          statusBadge.locked = true;
+          const bText = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+          if (bText) {
+            bText.locked = false;
+            const statusLabel = STATUS_CONFIG[patch.status]?.label || patch.status;
+            await safeSetCharacters(bText, statusLabel.toUpperCase());
+            bText.fills = [{ type: 'SOLID', color: badgeTextColor }];
+            bText.locked = true;
+          }
+        }
+      } else if (statusBadge && patch.colorHex !== undefined) {
+        const curStatus = safeGetPluginData(card, 'workflow_status') as WorkflowStatus;
+        if (curStatus && STATUS_CONFIG[curStatus]) {
+          const { badgeBg, badgeTextColor } = getStatusBadgeColors(curStatus, bgColor, isDark);
+          statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
+          const bText = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+          if (bText) bText.fills = [{ type: 'SOLID', color: badgeTextColor }];
+        }
+      }
+
+      // 10. 링크 (Figma Link) 갱신
+      if (!isShapeNode) {
+        const effectiveLink = patch.figmaLink !== undefined ? patch.figmaLink : (safeGetPluginData(card, 'figma_link') || '');
+        if (patch.figmaLink !== undefined || patch.clearLinkCache || patch.colorHex !== undefined) {
+          await updateFigmaLinkBadge(card, effectiveLink, isBgDark, patch.clearLinkCache);
+        }
+      }
+
+      // 11. 엘리베이션 (Elevation) 갱신
+      if (patch.elevation !== undefined) {
+        if (patch.elevation === null) {
+          card.setPluginData('node_elevation', '');
+          card.effects = [];
+        } else {
+          card.setPluginData('node_elevation', `${patch.elevation}`);
+          card.effects = getElevationEffects(patch.elevation, isBgDark);
+          card.clipsContent = false;
+        }
+      } else if (patch.colorHex !== undefined) {
+        const curElev = safeGetPluginData(card, 'node_elevation');
+        if (curElev) {
+          const lvl = parseInt(curElev, 10);
+          if (!isNaN(lvl)) card.effects = getElevationEffects(lvl, isBgDark);
+        }
+      }
+
+      // 12. 스텝 배지 (Badge) 갱신
+      const existingStepBadge = card.children.find(
+        (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
+      ) as FrameNode | undefined;
+
+      if (patch.badgeOn === false) {
+        card.setPluginData('step_number', '');
+        card.setPluginData('badge_corner', '');
+        card.setPluginData('badge_shape', '');
+        card.setPluginData('badge_color_mode', '');
+        if (existingStepBadge) existingStepBadge.remove();
+      } else if (
+        patch.badgeOn === true ||
+        patch.badgeNumber !== undefined ||
+        patch.badgeCorner !== undefined ||
+        patch.badgeShape !== undefined ||
+        patch.badgeColorMode !== undefined
+      ) {
+        const curNum = safeGetPluginData(card, 'step_number') ? parseInt(safeGetPluginData(card, 'step_number'), 10) : 1;
+        const curCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
+        const curShape = safeGetPluginData(card, 'badge_shape') || 'Square';
+        const curMode = (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
+
+        const finalNum = currentBadgeNum !== undefined ? currentBadgeNum++ : curNum;
+        const finalCorner = patch.badgeCorner !== undefined ? patch.badgeCorner : curCorner;
+        const finalShape = patch.badgeShape !== undefined ? patch.badgeShape : curShape;
+        const finalMode = patch.badgeColorMode !== undefined ? patch.badgeColorMode : curMode;
+
+        await applyStepBadgeToSingleCard(card, finalNum, finalCorner, finalShape, finalMode);
+      } else if (existingStepBadge && patch.colorHex !== undefined) {
+        const stepText = existingStepBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+        if (stepText) {
+          const currentMode = (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
+          applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
+        }
+      }
+
+      const isHug = nodeType === 'Screen' && effectiveSizeMode === 'hug';
+      const isFit = nodeType === 'Screen' && effectiveSizeMode === 'fit';
+      const finalW = isFit && fitW !== undefined ? fitW : (nodeType === 'Screen' ? clampScreenWidth(targetW) : Math.max(50, targetW));
+      const finalH = nodeType === 'Screen' ? clampScreenHeight(targetH) : Math.max(40, targetH);
+
+      if (isHug) {
+        if (descText) {
+          descText.maxLines = null;
+        }
+        if (card.width !== finalW) {
+          card.counterAxisSizingMode = 'FIXED';
+          card.resize(finalW, card.height);
+        }
+        card.counterAxisSizingMode = 'FIXED';
+        card.primaryAxisSizingMode = 'AUTO';
+        card.minWidth = finalW;
+        card.maxWidth = finalW;
+        card.minHeight = null;
+        card.maxHeight = null;
+        card.setPluginData('size_mode', 'hug');
+      } else if (isFit) {
+        if (descText) {
+          descText.maxLines = null;
+          try { descText.maxHeight = null; } catch (_) {}
+        }
+        card.counterAxisSizingMode = 'FIXED';
+        card.primaryAxisSizingMode = 'AUTO';
+        card.minHeight = 49;
+        card.maxHeight = null;
+        card.minWidth = finalW;
+        card.maxWidth = finalW;
+        card.resize(finalW, Math.max(49, card.height));
+        card.setPluginData('size_mode', 'fit');
+      } else {
+        card.primaryAxisSizingMode = 'FIXED';
+        card.counterAxisSizingMode = 'FIXED';
+        card.resize(finalW, finalH);
+        card.minWidth = finalW;
+        card.maxWidth = finalW;
+        card.minHeight = finalH;
+        card.maxHeight = finalH;
+        card.setPluginData('size_mode', effectiveSizeMode);
+      }
+
+      if (statusBadge) {
+        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+        statusBadge.x = finalW - statusBadge.width - 10;
+        statusBadge.y = card.height - statusBadge.height - 10;
+      }
+      const linkBadge = card.children.find(
+        (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+      ) as FrameNode | undefined;
+      if (linkBadge) {
+        linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
+        linkBadge.x = 16;
+        linkBadge.y = card.height - linkBadge.height - 10;
+      }
+
+      // 14. Shape 커스텀 벡터 교체/생성
+      const shapeVec = card.children.find(
+        (c) => c.name === 'ShapeVector' || c.name === 'DiamondShape'
+      ) as (VectorNode | FrameNode) | undefined;
+      if (shapeVec) {
+        shapeVec.remove();
+      }
+      if (isShapeNode) {
+        const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : borderColor;
+        attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
+      }
+
+      // 15. 스텝 배지 위치 재동기화
+      const curStepBadge = card.children.find(
+        (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
+      ) as FrameNode | undefined;
+      if (curStepBadge) {
+        const stepCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
+        const bw = Math.max(24, Math.round(curStepBadge.width));
+        const bh = 24;
+        const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, card.height, bw, bh, stepCorner);
+        curStepBadge.x = badgeCoords.x;
+        curStepBadge.y = badgeCoords.y;
+        curStepBadge.constraints = badgeCoords.constraints;
+      }
+
+      // 16. PluginData 동기화 및 Screen 치수 보존
+      card.setPluginData('is_flow_node', 'true');
+      card.setPluginData('schema_version', '2');
+      if (nodeType === 'Screen') {
+        if (!isFit) {
+          card.setPluginData('screen_width', String(finalW));
+          card.setPluginData('screen_height', String(finalH));
+        }
+        card.setPluginData('screen_corner_radius', String(targetR));
+        card.setPluginData('screen_size_mode', effectiveSizeMode);
+        if (patch.description !== undefined) card.setPluginData('node_desc', patch.description);
+        if (patch.figmaLink !== undefined) card.setPluginData('figma_link', patch.figmaLink);
+      } else {
+        if (patch.description !== undefined) card.setPluginData('node_desc', patch.description);
+        if (patch.figmaLink !== undefined) card.setPluginData('figma_link', patch.figmaLink);
+      }
+      if (patch.nodeType !== undefined) {
+        card.setPluginData('node_type', nodeType);
+      }
+
+      updatedCount++;
+    }
+
+    // 17. 전체 노드 처리 완료 후 단 1회 UI 동기화 및 알림 (선택 보존!)
+    handleSelectionChange();
+    if (updatedCount > 0) {
+      notify(`${updatedCount}개 노드가 업데이트되었습니다!`, 'success');
+    }
+  } catch (err) {
+    notify(`다중 노드 업데이트 실패: ${String(err)}`, 'error');
+  }
+}
+
+// ----------------------------------------------------
 // 5. 노드 박스 면적(Width / Height) 실시간 독립 조절 기능
 // 폰트 크기나 내부 뱃지는 절대 스케일되지 않고 오직 박스 크기만 리사이즈됨
 // ----------------------------------------------------
@@ -3208,9 +3810,6 @@ async function resizeNode(nodeId: string, width: number, height: number) {
       flowNode = await convertShapeToFrameNode(flowNode as ShapeWithTextNode);
     }
 
-    const w = Math.max(120, width);
-    const h = Math.max(50, height);
-
     const frame = flowNode as FrameNode;
     frame.minWidth = null;
     frame.maxWidth = null;
@@ -3221,6 +3820,9 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     const nType = normalizeNodeType(rawNodeType);
     const nSpec = NODE_TYPE_SHAPE_SPECS[nType] || NODE_TYPE_SHAPE_SPECS.Screen;
     const isShape = !nSpec.allowDescription;
+
+    const w = nType === 'Screen' ? clampScreenWidth(width) : Math.max(120, width);
+    const h = nType === 'Screen' ? clampScreenHeight(height) : Math.max(50, height);
 
     if (frame.layoutMode !== 'VERTICAL') {
       frame.layoutMode = 'VERTICAL';
@@ -3265,7 +3867,8 @@ async function resizeNode(nodeId: string, width: number, height: number) {
         try { title.maxHeight = null; } catch (_) {}
         const pl = typeof frame.paddingLeft === 'number' ? frame.paddingLeft : 16;
         const pr = typeof frame.paddingRight === 'number' ? frame.paddingRight : 16;
-        const curW = Math.max(50, w - pl - pr);
+        const strokeOffset = (typeof frame.strokeWeight === 'number' ? frame.strokeWeight : 0) * 2;
+        const curW = Math.max(10, w - pl - pr - strokeOffset);
 
         if (isShape) {
           if (title.textAutoResize !== 'HEIGHT') {
@@ -3314,6 +3917,12 @@ async function resizeNode(nodeId: string, width: number, height: number) {
     }
 
     // 상태 뱃지 탐색 및 패딩 동기화
+    if (nType === 'Screen') {
+      frame.strokeAlign = 'INSIDE';
+      if ('strokesIncludedInLayout' in frame) {
+        frame.strokesIncludedInLayout = true;
+      }
+    }
     const statusBadge = frame.children.find(
       (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
     ) as FrameNode | undefined;
@@ -3329,12 +3938,13 @@ async function resizeNode(nodeId: string, width: number, height: number) {
       desc.layoutAlign = 'STRETCH';
       const pl = typeof frame.paddingLeft === 'number' ? frame.paddingLeft : 16;
       const pr = typeof frame.paddingRight === 'number' ? frame.paddingRight : 16;
-      const availW = Math.max(50, w - pl - pr);
+      const strokeOffset = (typeof frame.strokeWeight === 'number' ? frame.strokeWeight : 0) * 2;
+      const availW = Math.max(10, w - pl - pr - strokeOffset);
       if (Math.abs(desc.width - availW) > 1) {
-        desc.resize(availW, desc.height);
+        try { desc.resize(availW, desc.height); } catch (_) {}
       }
       desc.textAutoResize = 'HEIGHT';
-      await updateDescTextTruncation(frame, desc, h);
+      await updateDescTextTruncation(frame, desc, h, undefined, w);
     }
 
     // 리사이즈 시 하단 오른쪽 박스 안쪽 상태 뱃지 위치 동기화
@@ -4861,6 +5471,9 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       break;
     case 'UPDATE_FLOW_NODE':
       await updateFlowNode(msg.payload);
+      break;
+    case 'BATCH_UPDATE_FLOW_NODES':
+      await batchUpdateFlowNodes(msg.payload.nodeIds, msg.payload.patch);
       break;
     case 'CONNECT_POINTS':
       await connectPoints(msg.payload);

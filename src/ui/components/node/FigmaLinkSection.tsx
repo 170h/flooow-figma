@@ -28,6 +28,8 @@ export function FigmaLinkSection() {
     selectedNodes,
     applyCurrentNodeState,
     uiState,
+    multiDraft,
+    updateMultiDraft,
   } = useApp();
   const summary = useSelectionSummary();
 
@@ -99,11 +101,20 @@ export function FigmaLinkSection() {
     setLastNodeConfig,
   ]);
 
+  const isLinkDrafted = multiDraft.figmaLink !== undefined;
+  const displayUrl = isLinkDrafted ? (multiDraft.figmaLink || '') : url;
+  const effectiveIsOn = isLinkAllowed && (isLinkDrafted ? Boolean(multiDraft.figmaLink) : isOn);
+  const effectiveIsLinkMixed = isLinkDrafted ? false : isLinkMixed;
+
   function commitUrl(currentRawUrl: string) {
     const trimmed = currentRawUrl.trim();
     if (!trimmed) {
       setUrl("");
       cachedUrlRef.current = "";
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ figmaLink: "", clearLinkCache: true });
+        return;
+      }
       setLastNodeConfig({ singleLinkUrl: "" });
       setTimeout(() => {
         applyCurrentNodeState(undefined, undefined, {
@@ -116,6 +127,10 @@ export function FigmaLinkSection() {
     const normalized = normalizeUrl(trimmed);
     setUrl(normalized);
     cachedUrlRef.current = normalized;
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ figmaLink: normalized, clearLinkCache: false });
+      return;
+    }
     setLastNodeConfig({ singleLinkUrl: normalized });
     setTimeout(() => {
       applyCurrentNodeState(undefined, undefined, {
@@ -129,6 +144,23 @@ export function FigmaLinkSection() {
     if (!isLinkAllowed) return;
     setIsOn(checked);
     autoResizeWindow();
+
+    if (selectedNodes.length >= 2) {
+      if (!checked) {
+        cachedUrlRef.current = displayUrl;
+        updateMultiDraft({ figmaLink: "", clearLinkCache: false });
+      } else {
+        const restoreUrl = displayUrl || cachedUrlRef.current;
+        if (restoreUrl.trim()) {
+          commitUrl(restoreUrl);
+        } else {
+          setTimeout(() => {
+            inputRef.current?.focus();
+          }, 60);
+        }
+      }
+      return;
+    }
 
     if (!checked) {
       // 1. 토글을 껐을 때: URL은 캐시에 남겨두고 노드 캔버스의 링크 배지만 숨김
@@ -160,12 +192,12 @@ export function FigmaLinkSection() {
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
-      commitUrl(url);
+      commitUrl(displayUrl);
     }
   }
 
   function handleBlur() {
-    commitUrl(url);
+    commitUrl(displayUrl);
   }
 
   // X 버튼 클릭: URL 완전 삭제 및 노드 캐시 삭제
@@ -173,6 +205,14 @@ export function FigmaLinkSection() {
     e.stopPropagation();
     setUrl("");
     cachedUrlRef.current = "";
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({
+        figmaLink: "",
+        clearLinkCache: true,
+      });
+      inputRef.current?.focus();
+      return;
+    }
     setLastNodeConfig({ singleLinkUrl: "" });
     applyCurrentNodeState(undefined, undefined, {
       figmaLink: "",
@@ -180,8 +220,6 @@ export function FigmaLinkSection() {
     });
     inputRef.current?.focus();
   }
-
-  const effectiveIsOn = isLinkAllowed && isOn;
 
   return (
     <div
@@ -191,14 +229,14 @@ export function FigmaLinkSection() {
       <div className="section-header toggle-row">
         <span className={`section-title${!isLinkAllowed ? " disabled" : ""}`}>
           Figma Screen Link
-          {isLinkAllowed && isLinkMixed && (
+          {isLinkAllowed && effectiveIsLinkMixed && (
             <span className="section-mixed-label">(Mixed)</span>
           )}
         </span>
         <Switch
           id="toggle-single-figma-link"
           checked={effectiveIsOn}
-          isMixed={isLinkAllowed && isLinkMixed}
+          isMixed={isLinkAllowed && effectiveIsLinkMixed}
           disabled={!isLinkAllowed}
           data-tooltip={
             !isLinkAllowed
@@ -226,14 +264,14 @@ export function FigmaLinkSection() {
               type="text"
               id="single-screen-url"
               className="form-input"
-              style={{ width: "100%", paddingRight: url ? "28px" : "10px" }}
-              placeholder={isLinkMixed ? "Mixed" : "Add a Figma Screen URL"}
-              value={url}
+              style={{ width: "100%", paddingRight: displayUrl ? "28px" : "10px" }}
+              placeholder={effectiveIsLinkMixed ? "Mixed" : "Add a Figma Screen URL"}
+              value={displayUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
             />
-            {url && (
+            {displayUrl && (
               <button
                 type="button"
                 aria-label="Clear link URL"
