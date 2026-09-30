@@ -13,7 +13,6 @@ export function useFigmaMessage() {
     setUIState,
     setLastNodeConfig,
     setDesignFrames,
-    showToast,
   } = useApp();
 
   const handlerRef = useRef<((event: MessageEvent) => void) | null>(null);
@@ -190,5 +189,5 @@ export function useFigmaMessage() {
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, [handleSelectionChange, setCurrentTab, setUIState, setLastNodeConfig, showToast]);
+  }, [handleSelectionChange, setCurrentTab, setUIState, setLastNodeConfig]);
 }

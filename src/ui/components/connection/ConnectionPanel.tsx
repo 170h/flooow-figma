@@ -15,6 +15,13 @@ export function ConnectionPanel(_props?: any) {
   const isSingleConn = count === 1 && allConnectors;
   const isMultiConn = count >= 2 && allConnectors;
 
+  // preview 텍스트 동기화에 필요한 안정적인 원시값 키 (배열 참조 변경으로 인한 불필요한 effect 재실행 방지, C-19)
+  const previewKey = isSingleConn
+    ? `${selectedNodes[0]?.connectorSourceNodeName || ''}->${selectedNodes[0]?.connectorTargetNodeName || ''}`
+    : isMultiConn
+    ? selectedNodes.map((n) => `${n?.id || ''}:${(n?.connectedNodeNames || []).join(',')}:${n?.connectorSourceNodeName || ''}->${n?.connectorTargetNodeName || ''}`).join('|')
+    : `${selectedNodes[0]?.title || selectedNodes[0]?.name || ''}:${selectedNodes[1]?.title || selectedNodes[1]?.name || ''}`;
+
   // 커넥터 단일 선택 시 anchorPreviewBox 표시 제어
   useEffect(() => {
     const anchorBox = document.getElementById('conn-anchor-preview-box');
@@ -88,7 +95,7 @@ export function ConnectionPanel(_props?: any) {
         }
       }
     }
-  }, [isSingleConn, isMultiConn, count, selectedNodes]);
+  }, [isSingleConn, isMultiConn, count, previewKey]);
 
   return (
     <div id="conn-multi-mode" style={{ display: 'flex', flexDirection: 'column' }}>

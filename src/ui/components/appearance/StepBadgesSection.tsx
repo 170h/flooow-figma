@@ -135,49 +135,6 @@ export function StepBadgesSection() {
       ? (summary.badgeColorMode.value as BadgeColorMode)
       : uiState.selectedBadgeColorMode || "Style";
 
-  function isHexHighSaturation(hex: string): boolean {
-    const clean = hex.replace("#", "");
-    if (clean.length !== 6 && clean.length !== 3) return false;
-    const num = parseInt(
-      clean.length === 3
-        ? clean
-            .split("")
-            .map((c) => c + c)
-            .join("")
-        : clean,
-      16,
-    );
-    const r = ((num >> 16) & 255) / 255;
-    const g = ((num >> 8) & 255) / 255;
-    const b = (num & 255) / 255;
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
-    if (delta < 0.15) return false;
-    const l = (max + min) / 2;
-    const s = l > 0 && l < 1 ? delta / (1 - Math.abs(2 * l - 1)) : 0;
-    return s >= 0.25;
-  }
-
-  function isHexDark(hex: string): boolean {
-    const clean = hex.replace("#", "");
-    if (clean.length !== 6 && clean.length !== 3) return false;
-    const num = parseInt(
-      clean.length === 3
-        ? clean
-            .split("")
-            .map((c) => c + c)
-            .join("")
-        : clean,
-      16,
-    );
-    const r = ((num >> 16) & 255) / 255;
-    const g = ((num >> 8) & 255) / 255;
-    const b = (num & 255) / 255;
-    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-    return lum < 0.6;
-  }
-
   // 현재 노드의 배경색 및 보더색 추출 (Style / White 모드 스와치 표시용)
   const firstNode = selectedNodes[0];
   const nodeBgColorHex = firstNode?.fillColorHex || uiState.selectedColor || "#FFFFFF";

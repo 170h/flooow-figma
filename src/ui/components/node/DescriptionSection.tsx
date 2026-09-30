@@ -132,6 +132,7 @@ export function DescriptionSection() {
     }
   }
 
+  // Clipboard API 미지원 또는 iframe 권한 제한 환경을 위한 레거시 복사 폴백 유지 (C-34)
   function fallbackCopy(text: string) {
     const ta = document.createElement('textarea');
     ta.value = text;

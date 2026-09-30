@@ -563,16 +563,6 @@ export function ConnectSection() {
     setHexInput(formatted.replace('#', ''));
     setUIState({ selectedConnectorColor: formatted });
 
-    // 일치하는 스타일 프리셋이 있다면 커넥터 라인 컬러 반영
-    const matchedPreset = stylePresets.find(
-      (p) => getPresetLineColor(p) === formatted
-    );
-    if (matchedPreset) {
-      setUIState({
-        selectedConnectorColor: formatted,
-      });
-    }
-
     const selectEl = document.getElementById('conn-line-color') as HTMLInputElement | null;
     if (selectEl) selectEl.value = formatted;
     setTimeout(() => applyCurrentConnectorState(), 0);
@@ -1317,76 +1307,83 @@ export function ConnectSection() {
         </div>
 
         {/* 하단 연결 버튼 행 (설정 행들과 동일한 간격으로 배치) */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: '100%',
-            gap: '8px',
-          }}
-        >
-          <span
-            style={{
-              fontSize: '10px',
-              lineHeight: '1.3',
-              color: 'var(--color-text-secondary, #6B7280)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            title={
-              selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector)
-                ? selectedNodes.length === 1
-                  ? 'Update selected connector'
-                  : `Update ${selectedNodes.length} selected connectors`
-                : selectedNodes.length >= 2
-                ? `${selectedNodes.length} nodes selected to connect`
-                : 'Select 2 or more nodes to connect'
-            }
-          >
-            {selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector)
-              ? selectedNodes.length === 1
-                ? 'Connector selected'
-                : `${selectedNodes.length} connectors selected`
-              : selectedNodes.length >= 2
-              ? `${selectedNodes.length} nodes selected`
-              : 'Select 2+ nodes to connect'}
-          </span>
-          <button
-            type="button"
-            id="btn-section-connect"
-            className="btn-add-step-badges"
-            disabled={selectedNodes.length < 2 && !(selectedNodes.length >= 1 && selectedNodes.every(n => n && n.isConnector))}
-            onClick={handleMainAction}
-            title={
-              selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector)
-                ? selectedNodes.length === 1
-                  ? 'Update Connector'
-                  : 'Update Connectors'
-                : selectedNodes.length >= 2
-                ? 'Connect selected nodes'
-                : 'Select 2 or more nodes to connect'
-            }
-          >
-            {/* 커넥터 연결 아이콘 */}
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M10.6464 2.64645C10.8417 2.45118 11.1583 2.45118 11.3536 2.64645L12.8536 4.14645C13.0488 4.34171 13.0488 4.65829 12.8536 4.85355L11.3536 6.35355C11.1583 6.54882 10.8417 6.54882 10.6464 6.35355C10.4512 6.15829 10.4512 5.84171 10.6464 5.64645L11.2929 5H10.5C9.67157 5 9 5.67157 9 6.5V9.5C9 10.8807 7.88071 12 6.5 12H6C5.97174 12 5.94403 11.9977 5.91705 11.9932C5.71308 12.5793 5.15567 13 4.5 13C3.67157 13 3 12.3284 3 11.5C3 10.6716 3.67157 10 4.5 10C5.15567 10 5.71308 10.4207 5.91705 11.0068C5.94403 11.0023 5.97174 11 6 11H6.5C7.32843 11 8 10.3284 8 9.5V6.5C8 5.11929 9.11929 4 10.5 4H11.2929L10.6464 3.35355C10.4512 3.15829 10.4512 2.84171 10.6464 2.64645ZM4.5 12C4.77614 12 5 11.7761 5 11.5C5 11.2239 4.77614 11 4.5 11C4.22386 11 4 11.2239 4 11.5C4 11.7761 4.22386 12 4.5 12Z"
-                fill="currentColor"
-              />
-            </svg>
-            <span>
-              {selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector)
-                ? selectedNodes.length === 1
-                  ? 'Update Connector'
-                  : 'Update Connectors'
-                : 'Connect'}
-            </span>
-          </button>
-        </div>
+        {(() => {
+          const isAllConnectors = selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector);
+          const isConnectDisabled = selectedNodes.length < 2 && !isAllConnectors;
+
+          return (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                gap: '8px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '10px',
+                  lineHeight: '1.3',
+                  color: 'var(--color-text-secondary, #6B7280)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={
+                  isAllConnectors
+                    ? selectedNodes.length === 1
+                      ? 'Update selected connector'
+                      : `Update ${selectedNodes.length} selected connectors`
+                    : selectedNodes.length >= 2
+                    ? `${selectedNodes.length} nodes selected to connect`
+                    : 'Select 2 or more nodes to connect'
+                }
+              >
+                {isAllConnectors
+                  ? selectedNodes.length === 1
+                    ? 'Connector selected'
+                    : `${selectedNodes.length} connectors selected`
+                  : selectedNodes.length >= 2
+                  ? `${selectedNodes.length} nodes selected`
+                  : 'Select 2+ nodes to connect'}
+              </span>
+              <button
+                type="button"
+                id="btn-section-connect"
+                className="btn-add-step-badges"
+                disabled={isConnectDisabled}
+                onClick={handleMainAction}
+                title={
+                  isAllConnectors
+                    ? selectedNodes.length === 1
+                      ? 'Update Connector'
+                      : 'Update Connectors'
+                    : selectedNodes.length >= 2
+                    ? 'Connect selected nodes'
+                    : 'Select 2 or more nodes to connect'
+                }
+              >
+                {/* 커넥터 연결 아이콘 */}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M10.6464 2.64645C10.8417 2.45118 11.1583 2.45118 11.3536 2.64645L12.8536 4.14645C13.0488 4.34171 13.0488 4.65829 12.8536 4.85355L11.3536 6.35355C11.1583 6.54882 10.8417 6.54882 10.6464 6.35355C10.4512 6.15829 10.4512 5.84171 10.6464 5.64645L11.2929 5H10.5C9.67157 5 9 5.67157 9 6.5V9.5C9 10.8807 7.88071 12 6.5 12H6C5.97174 12 5.94403 11.9977 5.91705 11.9932C5.71308 12.5793 5.15567 13 4.5 13C3.67157 13 3 12.3284 3 11.5C3 10.6716 3.67157 10 4.5 10C5.15567 10 5.71308 10.4207 5.91705 11.0068C5.94403 11.0023 5.97174 11 6 11H6.5C7.32843 11 8 10.3284 8 9.5V6.5C8 5.11929 9.11929 4 10.5 4H11.2929L10.6464 3.35355C10.4512 3.15829 10.4512 2.84171 10.6464 2.64645ZM4.5 12C4.77614 12 5 11.7761 5 11.5C5 11.2239 4.77614 11 4.5 11C4.22386 11 4 11.2239 4 11.5C4 11.7761 4.22386 12 4.5 12Z"
+                    fill="currentColor"
+                  />
+                </svg>
+                <span>
+                  {isAllConnectors
+                    ? selectedNodes.length === 1
+                      ? 'Update Connector'
+                      : 'Update Connectors'
+                    : 'Connect'}
+                </span>
+              </button>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
