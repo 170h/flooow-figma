@@ -1990,7 +1990,9 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
 
     statusBadge.locked = true; // 상태 배지 잠금
     card.appendChild(statusBadge);
-    statusBadge.layoutPositioning = 'ABSOLUTE';
+    if ((card.layoutMode as any) !== 'NONE') {
+      statusBadge.layoutPositioning = 'ABSOLUTE';
+    }
     statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
     statusBadge.x = card.width - statusBadge.width - 10;
     statusBadge.y = card.height - statusBadge.height - 10;
@@ -2017,7 +2019,9 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
     const stepBadge = figma.createFrame();
     stepBadge.name = `[Step] ${stepNumber}`;
     card.appendChild(stepBadge);
-    stepBadge.layoutPositioning = 'ABSOLUTE';
+    if ((card.layoutMode as any) !== 'NONE') {
+      stepBadge.layoutPositioning = 'ABSOLUTE';
+    }
     stepBadge.layoutMode = 'HORIZONTAL';
     stepBadge.primaryAxisAlignItems = 'CENTER';
     stepBadge.counterAxisAlignItems = 'CENTER';
@@ -2458,7 +2462,9 @@ async function createFlowNode(payload: FlowNodePayload) {
 
         statusBadge.locked = true; // 상태 배지 잠금
         card.appendChild(statusBadge);
-        statusBadge.layoutPositioning = 'ABSOLUTE';
+        if ((card.layoutMode as any) !== 'NONE') {
+          statusBadge.layoutPositioning = 'ABSOLUTE';
+        }
         statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
         statusBadge.x = card.width - statusBadge.width - 10;
         statusBadge.y = card.height - statusBadge.height - 10;
@@ -2897,7 +2903,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         statusBadge.appendChild(badgeText);
 
         card.appendChild(statusBadge);
-        if (card.layoutMode !== 'NONE') {
+        if ((card.layoutMode as any) !== 'NONE') {
           statusBadge.layoutPositioning = 'ABSOLUTE';
         }
         statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };

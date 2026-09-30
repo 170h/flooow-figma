@@ -2798,7 +2798,9 @@
       statusBadge.appendChild(badgeText);
       statusBadge.locked = true;
       card.appendChild(statusBadge);
-      statusBadge.layoutPositioning = "ABSOLUTE";
+      if (card.layoutMode !== "NONE") {
+        statusBadge.layoutPositioning = "ABSOLUTE";
+      }
       statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
       statusBadge.x = card.width - statusBadge.width - 10;
       statusBadge.y = card.height - statusBadge.height - 10;
@@ -2820,7 +2822,9 @@
       const stepBadge = figma.createFrame();
       stepBadge.name = `[Step] ${stepNumber}`;
       card.appendChild(stepBadge);
-      stepBadge.layoutPositioning = "ABSOLUTE";
+      if (card.layoutMode !== "NONE") {
+        stepBadge.layoutPositioning = "ABSOLUTE";
+      }
       stepBadge.layoutMode = "HORIZONTAL";
       stepBadge.primaryAxisAlignItems = "CENTER";
       stepBadge.counterAxisAlignItems = "CENTER";
@@ -2965,7 +2969,9 @@
     if (originalParent && originalParent !== card) {
       originalParent.remove();
     }
-    shape.layoutPositioning = "ABSOLUTE";
+    if (card.layoutMode !== "NONE") {
+      shape.layoutPositioning = "ABSOLUTE";
+    }
     shape.x = 0;
     shape.y = 0;
     shape.locked = true;
@@ -3167,7 +3173,9 @@
           statusBadge.appendChild(badgeText);
           statusBadge.locked = true;
           card.appendChild(statusBadge);
-          statusBadge.layoutPositioning = "ABSOLUTE";
+          if (card.layoutMode !== "NONE") {
+            statusBadge.layoutPositioning = "ABSOLUTE";
+          }
           statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
           statusBadge.x = card.width - statusBadge.width - 10;
           statusBadge.y = card.height - statusBadge.height - 10;
@@ -3562,10 +3570,12 @@
           badgeText.textAutoResize = "WIDTH_AND_HEIGHT";
           badgeText.locked = true;
           statusBadge.appendChild(badgeText);
-          statusBadge.layoutPositioning = "ABSOLUTE";
+          card.appendChild(statusBadge);
+          if (card.layoutMode !== "NONE") {
+            statusBadge.layoutPositioning = "ABSOLUTE";
+          }
           statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
           statusBadge.locked = true;
-          card.appendChild(statusBadge);
         }
         statusBadge.paddingLeft = 9;
         statusBadge.paddingRight = 9;
