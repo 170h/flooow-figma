@@ -38,7 +38,6 @@ function getCtaLabel(
     return 'Connect';
   }
   if (currentTab === 'connection') {
-    if (nodeCount >= 2) return 'Connect';
     return 'Connect';
   }
   if (nodeCount >= 2) return 'Update All';
@@ -204,16 +203,9 @@ export function App() {
   // 전역 클릭으로 팝오버 닫기
   function handleRootClick(e: React.MouseEvent) {
     const target = e.target as HTMLElement;
-    const isPopoverTrigger =
-      target.closest('#btn-size-more') ||
-      target.closest('#btn-style-more') ||
-      target.closest('#btn-size-mode-dropdown') ||
-      target.closest('#popover-context') ||
-      target.closest('#popover-size-mode') ||
-      target.closest('.figma-dropdown-wrapper') ||
-      target.closest('.figma-dropdown-menu') ||
-      target.closest('.terminal-ui3-menu') ||
-      target.closest('.terminal-dropdown-wrap');
+    const isPopoverTrigger = target.closest(
+      '#btn-size-more, #btn-style-more, #btn-size-mode-dropdown, #popover-context, #popover-size-mode, .figma-dropdown-wrapper, .figma-dropdown-menu, .terminal-ui3-menu',
+    );
 
     if (!isPopoverTrigger) {
       closeAllPopovers();

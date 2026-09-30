@@ -285,7 +285,7 @@
     }
 
     .node-title-input:focus {
-      background: #ffffff;
+      background: var(--color-bg);
       border-color: var(--color-brand);
     }
 
@@ -615,7 +615,7 @@
 
     .form-input:focus {
       border-color: var(--color-brand);
-      background: #ffffff;
+      background: var(--color-bg);
     }
 
     .form-input::placeholder {
@@ -836,15 +836,21 @@
       color: var(--figma-color-text, #1e1e1e);
     }
 
-    .theme-dark .type-icon-btn {
+    body.figma-dark .type-icon-btn,
+    .figma-dark .type-icon-btn,
+    [data-theme="dark"] .type-icon-btn {
       color: var(--figma-color-text, #ffffff);
     }
 
-    .theme-dark .type-icon-btn:hover:not(.active) {
+    body.figma-dark .type-icon-btn:hover:not(.active),
+    .figma-dark .type-icon-btn:hover:not(.active),
+    [data-theme="dark"] .type-icon-btn:hover:not(.active) {
       background-color: var(--color-bg-dark-hover);
     }
 
-    .theme-dark .type-icon-btn.active {
+    body.figma-dark .type-icon-btn.active,
+    .figma-dark .type-icon-btn.active,
+    [data-theme="dark"] .type-icon-btn.active {
       outline: 2px solid var(--color-brand, #8638e5);
       color: var(--figma-color-text, #ffffff);
     }
@@ -1030,7 +1036,7 @@
     }
 
     .desc-textarea:focus {
-      background: #ffffff;
+      background: var(--color-bg);
       border-color: var(--color-brand);
     }
 
@@ -1231,7 +1237,7 @@
     }
 
     .select-dropdown-box:focus {
-      background-color: #ffffff;
+      background-color: var(--color-bg);
       border-color: var(--color-brand);
       box-shadow: none;
     }
@@ -1890,7 +1896,7 @@
     }
 
     .corner-btn.active {
-      background: #ffffff;
+      background: var(--color-bg);
       color: var(--color-text-primary);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
@@ -1930,7 +1936,7 @@
     }
 
     .shape-btn.active {
-      background: #ffffff;
+      background: var(--color-bg);
       color: var(--color-text-primary);
       font-weight: 400;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -2545,8 +2551,8 @@
     }
 
     .btn-cta-secondary:hover {
-      background: #f5f5f5;
-      border-color: rgba(0, 0, 0, 0.2);
+      background: var(--color-bg-hover);
+      border-color: var(--color-border);
     }
 
     .btn-cta-secondary:disabled {
@@ -3556,7 +3562,7 @@
 
     .conn-modal-hex-box:focus-within {
       background-color: #222222;
-      border-color: var(--color-border-selected, #0d99ff);
+      border-color: var(--color-border-selected, #8C4CF6);
     }
 
     .conn-modal-hex-chip {
@@ -3803,7 +3809,7 @@
       padding: 0 14px;
       border-radius: 6px;
       border: none;
-      background: var(--color-primary, #0d99ff);
+      background: var(--color-primary, #8C4CF6);
       color: #ffffff;
       font-size: 11px;
       font-weight: 500;
@@ -3813,7 +3819,7 @@
     }
 
     .conn-btn-save:hover {
-      background: var(--color-primary-hover, #008ae6);
+      background: var(--color-primary-hover, #7B3CE3);
     }
   </style>
 </head>
@@ -36123,7 +36129,6 @@
       return "Connect";
     }
     if (currentTab === "connection") {
-      if (nodeCount >= 2) return "Connect";
       return "Connect";
     }
     if (nodeCount >= 2) return "Update All";
@@ -36236,7 +36241,9 @@
     }
     function handleRootClick(e) {
       const target = e.target;
-      const isPopoverTrigger = target.closest("#btn-size-more") || target.closest("#btn-style-more") || target.closest("#btn-size-mode-dropdown") || target.closest("#popover-context") || target.closest("#popover-size-mode") || target.closest(".figma-dropdown-wrapper") || target.closest(".figma-dropdown-menu") || target.closest(".terminal-ui3-menu") || target.closest(".terminal-dropdown-wrap");
+      const isPopoverTrigger = target.closest(
+        "#btn-size-more, #btn-style-more, #btn-size-mode-dropdown, #popover-context, #popover-size-mode, .figma-dropdown-wrapper, .figma-dropdown-menu, .terminal-ui3-menu"
+      );
       if (!isPopoverTrigger) {
         closeAllPopovers();
       }
