@@ -2,7 +2,14 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { Switch } from '../shared/Switch';
-import { normalizeNodeType, type WorkflowStatus } from '../../../types';
+import {
+  normalizeNodeType,
+  type WorkflowStatus,
+  supportsOption,
+  getMutationTargets,
+  computeOptionSwitchState,
+  type OptionSwitchState,
+} from '../../../types';
 
 const STATUSES = [
   { id: 'draft', label: 'Draft', color: '#9CA3AF' },
@@ -17,7 +24,7 @@ const STATUSES = [
 
 /**
  * Status 섹션 - 토글 스위치 + 8종 상태 칩 (토글형)
- * Screen 타입일 때만 활성화, 그 외 타입은 비활성(dimmed) 처리
+ * Screen 타입일 때만 지원, 그 외 타입(Shape, Bridge, FigmaObject)은 unsupported (비활성/접힘) 처리
  */
 export function StatusSection() {
   const {
@@ -34,7 +41,7 @@ export function StatusSection() {
   const summary = useSelectionSummary();
 
   const [isOpen, setIsOpen] = useState(() => {
-    if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+    if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], 'status')) {
       return Boolean(selectedNodes[0]?.status);
     }
     return Boolean(lastNodeConfig.statusOn);
@@ -45,21 +52,39 @@ export function StatusSection() {
 
   const { selectedStatus } = uiState;
 
-  // Screen 타입일 때만 Status 허용 (DescriptionSection의 isDescriptionAllowed 패턴과 동일)
-  const isStatusAllowed = (() => {
-    if (multiDraft.nodeType !== undefined) {
-      return normalizeNodeType(multiDraft.nodeType) === 'Screen';
+  // Option Capability Matrix 기반 스위치 상태 산출
+  const rawOptionState = React.useMemo(() => {
+    if (selectedNodes.length === 0) {
+      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
+      const isAllowed = normalizeNodeType(creationType) === 'Screen';
+      if (!isAllowed) {
+        return {
+          state: 'MIXED_DISABLED' as const,
+          supportedCount: 0,
+          unsupportedCount: 1,
+          supportedNodes: [],
+          unsupportedNodes: [],
+          checked: false,
+          isMixed: true,
+          disabled: true,
+          isOpen: false,
+        };
+      }
+      const on = Boolean(lastNodeConfig.statusOn);
+      return {
+        state: (on ? 'ON' : 'OFF') as OptionSwitchState,
+        supportedCount: 1,
+        unsupportedCount: 0,
+        supportedNodes: [],
+        unsupportedNodes: [],
+        checked: on,
+        isMixed: false,
+        disabled: false,
+        isOpen: on,
+      };
     }
-    if (summary.isMultiFlowNode) {
-      return !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === 'Screen';
-    }
-    if (selectedNodes.length === 1) {
-      const rawType = selectedNodes[0]?.flowNodeType || (selectedNodes[0]?.nodeType === 'FRAME' ? 'Screen' : selectedNodes[0]?.nodeType);
-      return normalizeNodeType(rawType) === 'Screen';
-    }
-    const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
-    return normalizeNodeType(creationType) === 'Screen';
-  })();
+    return computeOptionSwitchState(selectedNodes, 'status', (n) => Boolean(n.status));
+  }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.statusOn]);
 
   // 선택된 노드의 상태와 UI 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   React.useEffect(() => {
@@ -69,33 +94,96 @@ export function StatusSection() {
     prevSelectedNodeIdRef.current = currentNodeId;
 
     if (!isUserLocked || isDifferentNode) {
-      if (summary.isSingleFlowNode) {
-        const node = selectedNodes[0];
-        const hasStatus = Boolean(node && node.status);
-        setIsOpen(hasStatus);
-        if (node && node.status) {
-          setUIState({ selectedStatus: node.status });
-        }
-      } else if (summary.isMultiFlowNode) {
-        const hasStatus = summary.statusOn.hasValue;
-        setIsOpen(hasStatus);
-        if (!summary.status.isMixed && summary.status.value) {
-          setUIState({ selectedStatus: summary.status.value });
+      if (rawOptionState.supportedCount > 0) {
+        const supported = rawOptionState.supportedNodes;
+        if (supported.length === 1) {
+          const node = supported[0];
+          const hasStatus = Boolean(node && node.status);
+          setIsOpen(hasStatus);
+          if (node && node.status) {
+            setUIState({ selectedStatus: node.status });
+          }
+        } else {
+          const onCount = supported.filter((n) => Boolean(n.status)).length;
+          setIsOpen(onCount > 0);
+          const firstStatus = supported.find((n) => n.status)?.status;
+          const allSame = supported.every((n) => n.status === firstStatus);
+          if (allSame && firstStatus) {
+            setUIState({ selectedStatus: firstStatus });
+          }
         }
       } else {
-        setIsOpen(Boolean(lastNodeConfig.statusOn));
+        setIsOpen(false);
       }
     }
-  }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, summary.statusOn.hasValue, selectedNodes, lastNodeConfig.statusOn, setUIState]);
+  }, [rawOptionState, selectedNodes, setUIState]);
+
+  // Multi Draft 상태 반영
+  const isTypeDrafted = multiDraft.nodeType !== undefined;
+  const isDraftAllowed = isTypeDrafted ? normalizeNodeType(multiDraft.nodeType) === 'Screen' : true;
 
   const isStatusDrafted = multiDraft.status !== undefined;
-  const effectiveIsOpen = isStatusDrafted ? Boolean(multiDraft.status) : isOpen;
-  const isStatusMixed = isStatusDrafted ? false : (summary.isMultiFlowNode && summary.status.isMixed);
+  const effectiveIsOpen = !isDraftAllowed
+    ? false
+    : (isStatusDrafted ? Boolean(multiDraft.status) : (rawOptionState.disabled ? false : isOpen));
+
+  const effectiveState = React.useMemo(() => {
+    if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {
+      return {
+        state: 'MIXED_DISABLED' as const,
+        checked: false,
+        isMixed: true,
+        disabled: true,
+        isOpen: false,
+      };
+    }
+    if (isStatusDrafted) {
+      const on = Boolean(multiDraft.status);
+      return {
+        state: (on ? 'ON' : 'OFF') as OptionSwitchState,
+        checked: on,
+        isMixed: false,
+        disabled: false,
+        isOpen: on,
+      };
+    }
+    return {
+      state: rawOptionState.state,
+      checked: rawOptionState.checked,
+      isMixed: rawOptionState.isMixed,
+      disabled: rawOptionState.disabled,
+      isOpen: effectiveIsOpen,
+    };
+  }, [isDraftAllowed, rawOptionState, isStatusDrafted, multiDraft.status, effectiveIsOpen]);
+
+  // Mixed 상태 판별: 지원 노드들 중에서 상태값이 서로 다른 경우
+  const isStatusMixed = React.useMemo(() => {
+    if (isStatusDrafted) return false;
+    if (effectiveState.disabled) return false;
+    const supported = rawOptionState.supportedNodes;
+    if (supported.length <= 1) return false;
+    const firstStatus = supported[0]?.status;
+    return supported.some((n) => n.status !== firstStatus);
+  }, [isStatusDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
+
   const activeStatus = isStatusDrafted
     ? (multiDraft.status || undefined)
-    : (isStatusMixed ? undefined : (summary.isMultiFlowNode ? summary.status.value : selectedStatus));
+    : (isStatusMixed ? undefined : (rawOptionState.supportedNodes.find((n) => n.status)?.status || selectedStatus));
+
+  // 다중 선택 시 Mixed 상태에서 각 상태별 지원 노드 수 산출
+  const statusCounts = React.useMemo(() => {
+    if (!isStatusMixed) return {};
+    const counts: Record<string, number> = {};
+    for (const n of rawOptionState.supportedNodes) {
+      if (n.status) {
+        counts[n.status] = (counts[n.status] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [isStatusMixed, rawOptionState.supportedNodes]);
 
   function handleToggle(checked: boolean) {
+    if (effectiveState.disabled) return;
     userActionLockRef.current = Date.now();
     setIsOpen(checked);
 
@@ -112,6 +200,10 @@ export function StatusSection() {
       return;
     }
 
+    if (selectedNodes.length === 1 && !supportsOption(selectedNodes[0], 'status')) {
+      return;
+    }
+
     setLastNodeConfig({ statusOn: checked });
     if (checked) {
       const targetStatus = activeStatus || selectedStatus || 'draft';
@@ -125,6 +217,7 @@ export function StatusSection() {
   }
 
   function selectStatus(status: string) {
+    if (effectiveState.disabled) return;
     userActionLockRef.current = Date.now();
     setIsOpen(true);
 
@@ -133,6 +226,10 @@ export function StatusSection() {
       requestAnimationFrame(() => {
         autoResizeWindow();
       });
+      return;
+    }
+
+    if (selectedNodes.length === 1 && !supportsOption(selectedNodes[0], 'status')) {
       return;
     }
 
@@ -147,25 +244,26 @@ export function StatusSection() {
   return (
     <div
       className="section-block"
-      style={{ paddingBottom: effectiveIsOpen && isStatusAllowed ? '12px' : '0px' }}
+      style={{ paddingBottom: effectiveState.isOpen ? '12px' : '0px' }}
     >
       <div className="section-header toggle-row">
-        <span className={`section-title${!isStatusAllowed ? ' disabled' : ''}`}>
+        <span className={`section-title${effectiveState.disabled ? ' disabled' : ''}`}>
           Status
         </span>
         <Switch
           id="toggle-status"
-          checked={effectiveIsOpen && isStatusAllowed}
-          isMixed={isStatusAllowed && !isStatusDrafted && (summary.statusOn.isMixed || isStatusMixed)}
+          checked={effectiveState.checked}
+          isMixed={effectiveState.isMixed}
           onChange={handleToggle}
-          disabled={!isStatusAllowed}
+          disabled={effectiveState.disabled}
         />
       </div>
-      {effectiveIsOpen && isStatusAllowed && (
-        <div className="section-body" style={{ marginTop: '6px' }}>
+      {effectiveState.isOpen && (
+        <div className="section-body" style={{ display: 'flex', marginTop: '6px' }}>
           <div className="chip-group active" id="status-options" style={{ display: 'flex' }}>
             {STATUSES.map(s => {
               const isChipActive = !isStatusMixed && activeStatus === s.id;
+              const count = statusCounts[s.id] || 0;
               return (
                 <button
                   key={s.id}
@@ -177,6 +275,7 @@ export function StatusSection() {
                 >
                   <span className="tab-bullet" style={{ backgroundColor: s.color }} />
                   <span className="tab-label">{s.label}</span>
+                  {count > 0 && <span className="tab-badge">{count}</span>}
                 </button>
               );
             })}

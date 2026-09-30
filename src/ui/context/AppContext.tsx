@@ -253,6 +253,7 @@ export interface AppContextValue {
   hasMultiDraft: boolean;
   updateMultiDraft: (partial: Partial<MultiNodeDraft>) => void;
   clearMultiDraft: () => void;
+  clearMultiDraftKeys: (keys: (keyof MultiNodeDraft)[]) => void;
   isApplyingMultiDraft: boolean;
 }
 
@@ -360,6 +361,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const clearMultiDraft = useCallback(() => {
     multiDraftRef.current = {};
     setMultiDraftRaw({});
+  }, []);
+
+  const clearMultiDraftKeys = useCallback((keys: (keyof MultiNodeDraft)[]) => {
+    setMultiDraftRaw(prev => {
+      const next = { ...prev };
+      keys.forEach(k => {
+        delete next[k];
+      });
+      multiDraftRef.current = next;
+      return next;
+    });
   }, []);
 
   const hasMultiDraft = Object.keys(multiDraft).length > 0;
@@ -1295,7 +1307,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const first = flowNodes[0] || nodes[0];
         if (first) {
           const hasElevation = first.elevation !== undefined && first.elevation !== null
-            ? first.elevation > 0
+            ? first.elevation >= 0
             : Boolean(first.elevationOn);
           if (hasElevation) {
             setActiveAppearanceSection('elevation');
@@ -1304,7 +1316,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } else {
-        const hasElevation = Boolean(lastNodeConfigRef.current.elevationOn) && (lastNodeConfigRef.current.elevation ?? 0) > 0;
+        const hasElevation = Boolean(lastNodeConfigRef.current.elevationOn);
         if (hasElevation) {
           setActiveAppearanceSection('elevation');
         } else {
@@ -1368,6 +1380,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     hasMultiDraft,
     updateMultiDraft,
     clearMultiDraft,
+    clearMultiDraftKeys,
     isApplyingMultiDraft,
   };
 

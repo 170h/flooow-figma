@@ -84,7 +84,7 @@ export type DiagramNodeType =
   | 'Decision'
   | 'Terminator'
   | 'Branch'
-  // 레거시 호환 타입
+  // 레거시 호환 및 특수 타입
   | 'Square'
   | 'Circle'
   | 'Diamond'
@@ -95,7 +95,8 @@ export type DiagramNodeType =
   | 'True'
   | 'False'
   | 'Error'
-  | 'Capsule';
+  | 'Capsule'
+  | 'Bridge';
 
 /**
  * 다양한 노드 타입 및 레거시 타입을 6종 표준 타입으로 정규화합니다.
@@ -128,6 +129,8 @@ export function normalizeNodeType(type?: string): DiagramNodeType {
     case 'branch':
     case 'subflow':
       return 'Branch';
+    case 'bridge':
+      return 'Bridge';
     default:
       return (type as DiagramNodeType) || 'Screen';
   }
@@ -151,6 +154,7 @@ export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
   Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
   Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
   Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+  Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
   // 레거시 별칭
   Square: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
   Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
@@ -161,6 +165,238 @@ export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
   Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
   Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
 };
+
+/**
+ * 노드 분류 4대 범주 (Option Capability Matrix 기준)
+ * - Screen: 화면 카드
+ * - Shape: 도형 노드 (Process, Decision, Terminator)
+ * - Bridge: 연결/분기 노드 (Connector, Branch, Bridge)
+ * - FigmaObject: 플로우 노드가 아닌 일반 Figma 객체
+ */
+export type NodeCategory = 'Screen' | 'Shape' | 'Bridge' | 'FigmaObject';
+
+/**
+ * 플러그인에서 제공하는 제어 옵션 종류
+ */
+export type PluginOption =
+  | 'title'
+  | 'description'
+  | 'status'
+  | 'stepBadge'
+  | 'elevation'
+  | 'size'
+  | 'figmaLink'
+  | 'style';
+
+/**
+ * Option Capability Matrix
+ * 각 노드 범주별 옵션 지원 여부 단일 소스 오브 트루스
+ */
+export const OPTION_CAPABILITY_MATRIX: Record<NodeCategory, Record<PluginOption, boolean>> = {
+  Screen: {
+    title: true,
+    description: true,
+    status: true,
+    stepBadge: true,
+    elevation: true,
+    size: true,
+    figmaLink: true,
+    style: true,
+  },
+  Shape: {
+    title: true,
+    description: false,
+    status: false,
+    stepBadge: true,
+    elevation: true,
+    size: false,
+    figmaLink: false,
+    style: true,
+  },
+  Bridge: {
+    title: true,
+    description: false,
+    status: false,
+    stepBadge: false,
+    elevation: false,
+    size: false,
+    figmaLink: false,
+    style: true,
+  },
+  FigmaObject: {
+    title: false,
+    description: false,
+    status: false,
+    stepBadge: false,
+    elevation: false,
+    size: false,
+    figmaLink: false,
+    style: false,
+  },
+};
+
+/**
+ * 노드 객체(UI NodeInfo 또는 Core SceneNode)의 최종 타입을 기반으로
+ * 4대 범주('Screen' | 'Shape' | 'Bridge' | 'FigmaObject') 중 하나를 판별합니다.
+ */
+export function getNodeCategory(node: any): NodeCategory {
+  if (!node) return 'FigmaObject';
+
+  // 피그마 커넥터(연결선)인 경우
+  if (node.isConnector || node.type === 'CONNECTOR') {
+    return 'FigmaObject';
+  }
+
+  // 플로우 노드 여부 검사
+  const hasPluginDataFn = typeof node.getPluginData === 'function';
+  const isFlowNode = Boolean(
+    node.isFlowNode ||
+    (hasPluginDataFn && node.getPluginData('is_flow_node') === 'true') ||
+    (node.type === 'FRAME' && hasPluginDataFn && Boolean(
+      node.getPluginData('node_type') ||
+      node.children?.some?.((c: any) => c.name === 'Header' || c.name === 'TitleText' || (typeof c.getPluginData === 'function' && c.getPluginData('node_role') === 'title'))
+    ))
+  );
+
+  // 플로우 노드가 아니고 구형 쉐이프(SHAPE_WITH_TEXT)도 아닌 경우 일반 Figma 객체
+  if (!isFlowNode && node.type !== 'SHAPE_WITH_TEXT') {
+    if (!node.flowNodeType) {
+      return 'FigmaObject';
+    }
+  }
+
+  // 현재 최종 노드 타입 추출 및 정규화
+  let rawType: string | undefined = node.flowNodeType;
+  if (!rawType && hasPluginDataFn) {
+    rawType = node.getPluginData('node_type');
+  }
+  if (!rawType && node.nodeType && node.nodeType !== 'FRAME') {
+    rawType = node.nodeType;
+  }
+  const normType = normalizeNodeType(rawType);
+
+  switch (normType) {
+    case 'Screen':
+      return 'Screen';
+    case 'Process':
+    case 'Decision':
+    case 'Terminator':
+      return 'Shape';
+    case 'Connector':
+    case 'Branch':
+    case 'Bridge':
+      return 'Bridge';
+    default:
+      return 'Shape';
+  }
+}
+
+/**
+ * 노드가 특정 옵션(Capability)을 현재 지원하는지 판별합니다.
+ */
+export function supportsOption(node: any, option: PluginOption): boolean {
+  const category = getNodeCategory(node);
+  return OPTION_CAPABILITY_MATRIX[category]?.[option] ?? false;
+}
+
+/**
+ * 주어진 노드 목록에서 특정 옵션을 지원하는 노드만 필터링합니다. (실제 데이터 변경 대상 추출)
+ */
+export function getMutationTargets<T = any>(nodes: T[], option: PluginOption): T[] {
+  if (!Array.isArray(nodes)) return [];
+  return nodes.filter((n) => supportsOption(n, option));
+}
+
+/**
+ * 토글 스위치 최종 상태 4종
+ * - ON: 켜짐 (보라색 배경, ON 아이콘, 섹션 펼침)
+ * - OFF: 꺼짐 (회색 배경, OFF 아이콘, 섹션 접힘)
+ * - MIXED_ACTIVE: 혼합 활성 (보라색 배경, '-' 아이콘, 섹션 펼침)
+ * - MIXED_DISABLED: 혼합 비활성 (밝은 회색 배경, '-' 아이콘, 섹션 접힘)
+ */
+export type OptionSwitchState = 'ON' | 'OFF' | 'MIXED_ACTIVE' | 'MIXED_DISABLED';
+
+export interface OptionStateResult {
+  state: OptionSwitchState;
+  supportedCount: number;
+  unsupportedCount: number;
+  supportedNodes: any[];
+  unsupportedNodes: any[];
+  checked: boolean;
+  isMixed: boolean;
+  disabled: boolean;
+  isOpen: boolean;
+}
+
+/**
+ * 선택된 노드 목록 전체를 분석하여 해당 옵션의 스위치 상태를 결정합니다.
+ */
+export function computeOptionSwitchState(
+  nodes: any[],
+  option: PluginOption,
+  isNodeOnFn: (node: any) => boolean
+): OptionStateResult {
+  const validNodes = (nodes || []).filter(Boolean);
+  const supportedNodes = validNodes.filter((n) => supportsOption(n, option));
+  const unsupportedNodes = validNodes.filter((n) => !supportsOption(n, option));
+
+  if (supportedNodes.length === 0) {
+    return {
+      state: 'MIXED_DISABLED',
+      supportedCount: 0,
+      unsupportedCount: unsupportedNodes.length,
+      supportedNodes: [],
+      unsupportedNodes,
+      checked: false,
+      isMixed: true,
+      disabled: true,
+      isOpen: false,
+    };
+  }
+
+  const onCount = supportedNodes.filter((n) => isNodeOnFn(n)).length;
+  const offCount = supportedNodes.length - onCount;
+
+  if (onCount === supportedNodes.length) {
+    return {
+      state: 'ON',
+      supportedCount: supportedNodes.length,
+      unsupportedCount: unsupportedNodes.length,
+      supportedNodes,
+      unsupportedNodes,
+      checked: true,
+      isMixed: false,
+      disabled: false,
+      isOpen: true,
+    };
+  }
+
+  if (offCount === supportedNodes.length) {
+    return {
+      state: 'OFF',
+      supportedCount: supportedNodes.length,
+      unsupportedCount: unsupportedNodes.length,
+      supportedNodes,
+      unsupportedNodes,
+      checked: false,
+      isMixed: false,
+      disabled: false,
+      isOpen: false,
+    };
+  }
+
+  return {
+    state: 'MIXED_ACTIVE',
+    supportedCount: supportedNodes.length,
+    unsupportedCount: unsupportedNodes.length,
+    supportedNodes,
+    unsupportedNodes,
+    checked: true,
+    isMixed: true,
+    disabled: false,
+    isOpen: true,
+  };
+}
 
 /**
  * 스크린(Screen) 노드 치수 및 코너 라운드 제약 상수

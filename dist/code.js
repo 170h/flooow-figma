@@ -87,6 +87,8 @@
       case "branch":
       case "subflow":
         return "Branch";
+      case "bridge":
+        return "Bridge";
       default:
         return type || "Screen";
     }
@@ -98,6 +100,7 @@
     Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+    Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     // 레거시 별칭
     Square: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
@@ -108,6 +111,91 @@
     Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false }
   };
+  var OPTION_CAPABILITY_MATRIX = {
+    Screen: {
+      title: true,
+      description: true,
+      status: true,
+      stepBadge: true,
+      elevation: true,
+      size: true,
+      figmaLink: true,
+      style: true
+    },
+    Shape: {
+      title: true,
+      description: false,
+      status: false,
+      stepBadge: true,
+      elevation: true,
+      size: false,
+      figmaLink: false,
+      style: true
+    },
+    Bridge: {
+      title: true,
+      description: false,
+      status: false,
+      stepBadge: false,
+      elevation: false,
+      size: false,
+      figmaLink: false,
+      style: true
+    },
+    FigmaObject: {
+      title: false,
+      description: false,
+      status: false,
+      stepBadge: false,
+      elevation: false,
+      size: false,
+      figmaLink: false,
+      style: false
+    }
+  };
+  function getNodeCategory(node) {
+    if (!node) return "FigmaObject";
+    if (node.isConnector || node.type === "CONNECTOR") {
+      return "FigmaObject";
+    }
+    const hasPluginDataFn = typeof node.getPluginData === "function";
+    const isFlowNode = Boolean(
+      node.isFlowNode || hasPluginDataFn && node.getPluginData("is_flow_node") === "true" || node.type === "FRAME" && hasPluginDataFn && Boolean(
+        node.getPluginData("node_type") || node.children?.some?.((c) => c.name === "Header" || c.name === "TitleText" || typeof c.getPluginData === "function" && c.getPluginData("node_role") === "title")
+      )
+    );
+    if (!isFlowNode && node.type !== "SHAPE_WITH_TEXT") {
+      if (!node.flowNodeType) {
+        return "FigmaObject";
+      }
+    }
+    let rawType = node.flowNodeType;
+    if (!rawType && hasPluginDataFn) {
+      rawType = node.getPluginData("node_type");
+    }
+    if (!rawType && node.nodeType && node.nodeType !== "FRAME") {
+      rawType = node.nodeType;
+    }
+    const normType = normalizeNodeType(rawType);
+    switch (normType) {
+      case "Screen":
+        return "Screen";
+      case "Process":
+      case "Decision":
+      case "Terminator":
+        return "Shape";
+      case "Connector":
+      case "Branch":
+      case "Bridge":
+        return "Bridge";
+      default:
+        return "Shape";
+    }
+  }
+  function supportsOption(node, option) {
+    const category = getNodeCategory(node);
+    return OPTION_CAPABILITY_MATRIX[category]?.[option] ?? false;
+  }
   var SCREEN_NODE_CONSTRAINTS = {
     MIN_WIDTH: 140,
     MAX_WIDTH: 800,
@@ -3306,7 +3394,7 @@
       if (!isShapeNode) {
         await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark);
       }
-      if (typeof payload.elevation === "number") {
+      if (supportsOption(card, "elevation") && typeof payload.elevation === "number") {
         card.setPluginData("node_elevation", `${payload.elevation}`);
         card.effects = getElevationEffects(payload.elevation, isBgDark);
         card.clipsContent = false;
@@ -3314,7 +3402,7 @@
         card.setPluginData("node_elevation", "");
         card.effects = [];
       }
-      if (typeof payload.badgeNumber === "number" && payload.badgeNumber > 0) {
+      if (supportsOption(card, "stepBadge") && typeof payload.badgeNumber === "number" && payload.badgeNumber > 0) {
         await applyStepBadgeToSingleCard(
           card,
           payload.badgeNumber,
@@ -3852,7 +3940,13 @@
           attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
         }
       }
-      if (existingStepBadge) {
+      if (!supportsOption(card, "stepBadge")) {
+        if (existingStepBadge) existingStepBadge.remove();
+        card.setPluginData("step_number", "");
+        card.setPluginData("badge_corner", "");
+        card.setPluginData("badge_shape", "");
+        card.setPluginData("badge_color_mode", "");
+      } else if (existingStepBadge) {
         const stepCorner = safeGetPluginData2(card, "badge_corner") || "TOP_LEFT";
         const bw = Math.max(24, Math.round(existingStepBadge.width));
         const bh = 24;
@@ -3868,36 +3962,37 @@
       card.setPluginData("node_tag", "");
       card.setPluginData("node_width", "");
       card.setPluginData("node_height", "");
-      if (!isShapeNode) {
+      if (supportsOption(card, "description")) {
         card.setPluginData("node_desc", effectiveDesc);
+      } else {
+        card.setPluginData("node_desc", "");
+      }
+      if (supportsOption(card, "status")) {
         if (effectiveStatus) card.setPluginData("workflow_status", effectiveStatus);
+        else card.setPluginData("workflow_status", "");
+      } else {
+        card.setPluginData("workflow_status", "");
+      }
+      if (supportsOption(card, "figmaLink")) {
         if (effectiveLink) card.setPluginData("figma_link", effectiveLink);
+        else if (payload.clearLinkCache) card.setPluginData("figma_link", "");
+      } else {
+        card.setPluginData("figma_link", "");
+      }
+      if (!isShapeNode) {
         if (!isFit) {
           card.setPluginData("screen_width", String(finalW));
           card.setPluginData("screen_height", String(finalH));
         }
         card.setPluginData("screen_corner_radius", String(card.cornerRadius || 0));
         card.setPluginData("screen_size_mode", payload.sizeMode || card.getPluginData("size_mode") || "fixed");
-      } else {
-        if (payload.description) {
-          card.setPluginData("node_desc", payload.description);
-        } else if (prevDescription) {
-          card.setPluginData("node_desc", prevDescription);
-        }
-        if (payload.status) {
-          card.setPluginData("workflow_status", payload.status);
-        } else if (prevStatus) {
-          card.setPluginData("workflow_status", prevStatus);
-        }
-        if (payload.figmaLink) {
-          card.setPluginData("figma_link", payload.figmaLink);
-        } else if (prevFigmaLink) {
-          card.setPluginData("figma_link", prevFigmaLink);
-        }
       }
       if (payload.theme) card.setPluginData("node_theme", payload.theme);
       card.setPluginData("node_type", nodeType);
-      if (typeof payload.elevation === "number") {
+      if (!supportsOption(card, "elevation")) {
+        card.setPluginData("node_elevation", "");
+        card.effects = [];
+      } else if (typeof payload.elevation === "number") {
         card.setPluginData("node_elevation", `${payload.elevation}`);
         card.effects = getElevationEffects(payload.elevation, isBgDark);
         card.clipsContent = false;
@@ -4119,7 +4214,7 @@
         let descText = card.children.find(
           (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
         );
-        if (isShapeNode || !effectiveDesc) {
+        if (!supportsOption(card, "description") || !effectiveDesc) {
           if (descText) {
             descText.remove();
             descText = void 0;
@@ -4154,7 +4249,12 @@
         let statusBadge = card.children.find(
           (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
         );
-        if (patch.status !== void 0) {
+        if (!supportsOption(card, "status")) {
+          if (statusBadge) {
+            statusBadge.remove();
+            statusBadge = void 0;
+          }
+        } else if (patch.status !== void 0) {
           if (!patch.status) {
             card.setPluginData("workflow_status", "");
             card.paddingBottom = 16;
@@ -4216,32 +4316,40 @@
             if (bText) bText.fills = [{ type: "SOLID", color: badgeTextColor }];
           }
         }
-        if (!isShapeNode) {
+        if (supportsOption(card, "figmaLink")) {
           const effectiveLink = patch.figmaLink !== void 0 ? patch.figmaLink : safeGetPluginData2(card, "figma_link") || "";
           if (patch.figmaLink !== void 0 || patch.clearLinkCache || patch.colorHex !== void 0) {
             await updateFigmaLinkBadge(card, effectiveLink, isBgDark, patch.clearLinkCache);
           }
         }
-        if (patch.elevation !== void 0) {
-          if (patch.elevation === null) {
-            card.setPluginData("node_elevation", "");
-            card.effects = [];
-          } else {
-            card.setPluginData("node_elevation", `${patch.elevation}`);
-            card.effects = getElevationEffects(patch.elevation, isBgDark);
-            card.clipsContent = false;
-          }
-        } else if (patch.colorHex !== void 0) {
-          const curElev = safeGetPluginData2(card, "node_elevation");
-          if (curElev) {
-            const lvl = parseInt(curElev, 10);
-            if (!isNaN(lvl)) card.effects = getElevationEffects(lvl, isBgDark);
+        if (supportsOption(card, "elevation")) {
+          if (patch.elevation !== void 0) {
+            if (patch.elevation === null) {
+              card.setPluginData("node_elevation", "");
+              card.effects = [];
+            } else {
+              card.setPluginData("node_elevation", `${patch.elevation}`);
+              card.effects = getElevationEffects(patch.elevation, isBgDark);
+              card.clipsContent = false;
+            }
+          } else if (patch.colorHex !== void 0) {
+            const curElev = safeGetPluginData2(card, "node_elevation");
+            if (curElev) {
+              const lvl = parseInt(curElev, 10);
+              if (!isNaN(lvl)) card.effects = getElevationEffects(lvl, isBgDark);
+            }
           }
         }
         const existingStepBadge = card.children.find(
           (c) => c.name.startsWith("[Step]") || safeGetPluginData2(c, "is_step_badge") === "true"
         );
-        if (patch.badgeOn === false) {
+        if (!supportsOption(card, "stepBadge")) {
+          if (existingStepBadge) existingStepBadge.remove();
+          card.setPluginData("step_number", "");
+          card.setPluginData("badge_corner", "");
+          card.setPluginData("badge_shape", "");
+          card.setPluginData("badge_color_mode", "");
+        } else if (patch.badgeOn === false) {
           card.setPluginData("step_number", "");
           card.setPluginData("badge_corner", "");
           card.setPluginData("badge_shape", "");
@@ -5110,6 +5218,9 @@
     const cfg = !isRemove ? STATUS_CONFIG[status] : null;
     for (const rawNode of selection) {
       let flowNode = findFlowNode(rawNode) || rawNode;
+      if (!supportsOption(flowNode, "status")) {
+        continue;
+      }
       if (flowNode.type === "SHAPE_WITH_TEXT") {
         flowNode = await convertShapeToFrameNode(flowNode);
       }
@@ -5223,6 +5334,9 @@
     }
     for (const rawNode of selection) {
       let flowNode = findFlowNode(rawNode) || rawNode;
+      if (!supportsOption(flowNode, "elevation")) {
+        continue;
+      }
       if (flowNode.type === "SHAPE_WITH_TEXT") {
         flowNode = await convertShapeToFrameNode(flowNode);
       }
@@ -5494,6 +5608,9 @@
     const nodesMap = /* @__PURE__ */ new Map();
     for (const n of rawSelection) {
       let flow = findFlowNode(n) || n;
+      if (!supportsOption(flow, "stepBadge")) {
+        continue;
+      }
       if (flow.type === "SHAPE_WITH_TEXT") {
         flow = await convertShapeToFrameNode(flow);
       }
@@ -5520,6 +5637,9 @@
     let removedCount = 0;
     for (const n of rawSelection) {
       let flow = findFlowNode(n) || n;
+      if (!supportsOption(flow, "stepBadge")) {
+        continue;
+      }
       if (flow.type === "SHAPE_WITH_TEXT") {
         flow = await convertShapeToFrameNode(flow);
       }

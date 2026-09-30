@@ -1,12 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { IcCopy, IcCheckLarge } from '../shared/icons';
 import { Switch } from '../shared/Switch';
-import { normalizeNodeType, NODE_TYPE_SHAPE_SPECS } from '../../../types';
+import {
+  normalizeNodeType,
+  supportsOption,
+  getMutationTargets,
+  computeOptionSwitchState,
+  type OptionSwitchState,
+} from '../../../types';
 
 /**
  * Description 섹션 - 스위치 토글 + 복사 버튼 + collapsible textarea
+ * Screen 노드만 지원하며, Shape/Bridge/FigmaObject 노드는 unsupported (비활성/접힘) 처리
  */
 export function DescriptionSection() {
   const {
@@ -20,24 +26,13 @@ export function DescriptionSection() {
     multiDraft,
     updateMultiDraft,
   } = useApp();
-  const summary = useSelectionSummary();
-
-  // 스크린(Screen) 노드 타입일 때만 디스크립션 허용
-  const isDescriptionAllowed = summary.isMultiFlowNode
-    ? (!summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === 'Screen')
-    : (selectedNodes.length === 1
-        ? normalizeNodeType(selectedNodes[0]?.flowNodeType) === 'Screen'
-        : normalizeNodeType(uiState.selectedNodeType) === 'Screen');
 
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const lastSelectedNodeIdRef = useRef<string | null | undefined>(undefined);
-
-  // 토글 초기값: 단일 플로우 노드 선택 시 description 존재 여부, 그 외 lastNodeConfig 참조
   const [isOn, setIsOn] = useState(() => {
-    if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+    if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], 'description')) {
       return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
     }
     return Boolean(lastNodeConfig.descriptionOn);
@@ -45,51 +40,144 @@ export function DescriptionSection() {
 
   // 복사 버튼 활성화 여부 (입력된 텍스트 존재 여부 실시간 추적)
   const [hasText, setHasText] = useState(() => {
-    if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+    if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], 'description')) {
       return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
     }
     return false;
   });
 
-  const isDescMixed = summary.isMultiFlowNode && (summary.hasDescription.isMixed || summary.description.isMixed);
+  const userActionLockRef = useRef<number>(0);
+  const prevSelectedNodeIdRef = useRef<string | null>(null);
 
-  // 노드 선택 대상이 실제로 변경되었을 때만 토글 상태 동기화
-  useEffect(() => {
-    const currentNodeId = selectedNodes.length === 1
-      ? selectedNodes[0].id
-      : (selectedNodes.length > 1 ? 'MULTI' : null);
-
-    if (currentNodeId !== lastSelectedNodeIdRef.current) {
-      lastSelectedNodeIdRef.current = currentNodeId;
-
-      if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
-        const hasDesc = Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
-        setIsOn(hasDesc);
-        setHasText(hasDesc);
-        setLastNodeConfig({ descriptionOn: hasDesc });
-      } else if (selectedNodes.length === 0) {
-        setIsOn(Boolean(lastNodeConfig.descriptionOn));
-        setHasText(false);
-      } else {
-        const anyHasDesc = summary.hasDescription.hasValue;
-        setIsOn(anyHasDesc);
-        setHasText(anyHasDesc);
+  // Option Capability Matrix 기반 스위치 상태 산출
+  const rawOptionState = useMemo(() => {
+    if (selectedNodes.length === 0) {
+      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
+      const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, 'description');
+      if (!isAllowed) {
+        return {
+          state: 'MIXED_DISABLED' as const,
+          supportedCount: 0,
+          unsupportedCount: 1,
+          supportedNodes: [],
+          unsupportedNodes: [],
+          checked: false,
+          isMixed: true,
+          disabled: true,
+          isOpen: false,
+        };
       }
+      const on = Boolean(lastNodeConfig.descriptionOn);
+      return {
+        state: (on ? 'ON' : 'OFF') as OptionSwitchState,
+        supportedCount: 1,
+        unsupportedCount: 0,
+        supportedNodes: [],
+        unsupportedNodes: [],
+        checked: on,
+        isMixed: false,
+        disabled: false,
+        isOpen: on,
+      };
     }
-  }, [selectedNodes, lastNodeConfig.descriptionOn, summary.hasDescription.hasValue, setLastNodeConfig]);
+    return computeOptionSwitchState(
+      selectedNodes,
+      'description',
+      (n) => Boolean(n.description && n.description.trim())
+    );
+  }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.descriptionOn]);
+
+  // Multi Draft 상태 반영
+  const isTypeDrafted = multiDraft.nodeType !== undefined;
+  const isDraftAllowed = isTypeDrafted
+    ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, 'description')
+    : true;
 
   const isDescDrafted = multiDraft.description !== undefined;
-  const effectiveIsDescMixed = isDescDrafted ? false : isDescMixed;
-  const isDescSectionOpen = isDescriptionAllowed && (isDescDrafted ? Boolean(multiDraft.description) : (effectiveIsDescMixed ? false : isOn));
-  const effectiveIsOn = isDescriptionAllowed && (isDescDrafted ? Boolean(multiDraft.description) : isOn);
+  const effectiveIsOpen = !isDraftAllowed
+    ? false
+    : (isDescDrafted ? Boolean(multiDraft.description) : (rawOptionState.disabled ? false : (rawOptionState.state === 'MIXED_ACTIVE' ? true : isOn)));
+
+  const effectiveState = useMemo(() => {
+    if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {
+      return {
+        state: 'MIXED_DISABLED' as const,
+        checked: false,
+        isMixed: true,
+        disabled: true,
+        isOpen: false,
+      };
+    }
+    if (isDescDrafted) {
+      const on = Boolean(multiDraft.description);
+      return {
+        state: (on ? 'ON' : 'OFF') as OptionSwitchState,
+        checked: on,
+        isMixed: false,
+        disabled: false,
+        isOpen: on,
+      };
+    }
+    return {
+      state: rawOptionState.state,
+      checked: rawOptionState.checked,
+      isMixed: rawOptionState.isMixed,
+      disabled: rawOptionState.disabled,
+      isOpen: effectiveIsOpen,
+    };
+  }, [isDraftAllowed, rawOptionState, isDescDrafted, multiDraft.description, effectiveIsOpen]);
+
+  // 노드 선택 대상이 실제로 변경되었을 때만 토글 상태 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
+  useEffect(() => {
+    const isUserLocked = Date.now() - userActionLockRef.current < 600;
+    const currentNodeId = selectedNodes.length === 1
+      ? selectedNodes[0]?.id
+      : (selectedNodes.length > 1 ? 'MULTI' : null);
+    const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+    prevSelectedNodeIdRef.current = currentNodeId;
+
+    if (!isUserLocked || isDifferentNode) {
+      if (rawOptionState.supportedCount > 0) {
+        const supported = rawOptionState.supportedNodes;
+        if (supported.length === 1) {
+          const node = supported[0];
+          const hasDesc = Boolean(node && node.description && node.description.trim());
+          setIsOn(hasDesc);
+          setHasText(hasDesc);
+          setLastNodeConfig({ descriptionOn: hasDesc });
+        } else {
+          const onCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
+          setIsOn(onCount > 0);
+          setHasText(onCount > 0);
+        }
+      } else {
+        setIsOn(false);
+        setHasText(false);
+      }
+    }
+  }, [rawOptionState, selectedNodes, setLastNodeConfig]);
+
+  // Mixed 텍스트 여부: 지원 노드가 2개 이상이고 입력된 설명 텍스트가 서로 다른 경우
+  const isDescValueMixed = useMemo(() => {
+    if (isDescDrafted) return false;
+    if (effectiveState.disabled) return false;
+    const supported = rawOptionState.supportedNodes;
+    if (supported.length <= 1) return false;
+    const firstDesc = supported[0]?.description || '';
+    return supported.some((n) => (n.description || '') !== firstDesc);
+  }, [isDescDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
+
+  const isDescSectionOpen = effectiveState.isOpen;
 
   const effectiveHasText = isDescDrafted
     ? Boolean(multiDraft.description?.trim())
-    : (selectedNodes.length >= 2
-        ? (effectiveIsDescMixed ? false : Boolean(summary.description.value?.trim()))
+    : (rawOptionState.supportedNodes.length >= 2
+        ? (!isDescValueMixed && Boolean(rawOptionState.supportedNodes[0]?.description?.trim()))
         : hasText);
 
   function handleToggle(checked: boolean) {
+    if (effectiveState.disabled) return;
+    userActionLockRef.current = Date.now();
     setIsOn(checked);
 
     if (selectedNodes.length >= 2) {
@@ -104,7 +192,9 @@ export function DescriptionSection() {
         setHasText(Boolean(val));
         updateMultiDraft({ description: val });
       }
-      autoResizeWindow();
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
       return;
     }
 
@@ -144,7 +234,7 @@ export function DescriptionSection() {
 
   function copyDescription() {
     const val = (document.getElementById('node-description-input') as HTMLTextAreaElement)?.value ||
-      (selectedNodes.length === 1 ? selectedNodes[0]?.description || '' : '');
+      (rawOptionState.supportedNodes.length === 1 ? rawOptionState.supportedNodes[0]?.description || '' : '');
 
     if (!val.trim()) {
       showToast('복사할 설명이 없습니다.', 'warning');
@@ -184,20 +274,20 @@ export function DescriptionSection() {
 
   const defaultDescValue = isDescDrafted
     ? (multiDraft.description || '')
-    : (summary.isMultiFlowNode
-        ? (effectiveIsDescMixed ? '' : (summary.description.value || ''))
-        : (selectedNodes.length === 1 ? (selectedNodes[0]?.description || '') : ''));
+    : (rawOptionState.supportedNodes.length >= 2
+        ? (isDescValueMixed ? '' : (rawOptionState.supportedNodes[0]?.description || ''))
+        : (rawOptionState.supportedNodes.length === 1 ? (rawOptionState.supportedNodes[0]?.description || '') : ''));
 
-  const descPlaceholder = effectiveIsDescMixed
+  const descPlaceholder = isDescValueMixed
     ? 'Mixed'
     : 'Add a description';
 
   return (
     <div className="section-block" style={{ paddingBottom: isDescSectionOpen ? '12px' : '0px' }}>
       <div className="section-header toggle-row">
-        <span className={`section-title${!isDescriptionAllowed ? ' disabled' : ''}`}>
+        <span className={`section-title${effectiveState.disabled ? ' disabled' : ''}`}>
           Description
-          {isDescriptionAllowed && effectiveIsDescMixed && (
+          {!effectiveState.disabled && isDescValueMixed && (
             <span className="section-mixed-label">
               (Mixed)
             </span>
@@ -219,10 +309,10 @@ export function DescriptionSection() {
           )}
           <Switch
             id="toggle-description"
-            checked={isDescSectionOpen}
-            isMixed={isDescriptionAllowed && effectiveIsDescMixed}
-            disabled={!isDescriptionAllowed || (selectedNodes.length >= 2 && effectiveIsDescMixed)}
-            data-tooltip={!isDescriptionAllowed ? 'Description is disabled for this shape' : undefined}
+            checked={effectiveState.checked}
+            isMixed={effectiveState.isMixed}
+            disabled={effectiveState.disabled}
+            data-tooltip={effectiveState.disabled ? 'Description is disabled for this shape' : undefined}
             onChange={handleToggle}
           />
         </div>
@@ -230,7 +320,7 @@ export function DescriptionSection() {
       {isDescSectionOpen && (
         <div className="section-body collapsible-body">
           <textarea
-            key={summary.isMultiFlowNode ? 'multi-desc' : (selectedNodes[0]?.id || 'none')}
+            key={selectedNodes.length >= 2 ? 'multi-desc' : (rawOptionState.supportedNodes[0]?.id || 'none')}
             id="node-description-input"
             className="desc-textarea"
             placeholder={descPlaceholder}

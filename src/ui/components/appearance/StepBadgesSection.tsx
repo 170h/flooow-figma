@@ -4,7 +4,14 @@ import { useSelectionSummary } from "../../hooks/useSelectionSummary";
 import { DropdownMixedItem } from "../shared/DropdownMixedItem";
 import { COLOR_MIXED_ICON, MixedDashChip } from "../shared/icons";
 import { Switch } from "../shared/Switch";
-import type { BadgePosition, BadgeShape } from "../../../types";
+import {
+  type BadgePosition,
+  type BadgeShape,
+  supportsOption,
+  getMutationTargets,
+  computeOptionSwitchState,
+  type OptionSwitchState,
+} from "../../../types";
 
 type BadgeColorMode = "White" | "Black" | "Style";
 
@@ -94,6 +101,7 @@ export function StepBadgesSection() {
     autoResizeWindow,
     multiDraft,
     updateMultiDraft,
+    clearMultiDraftKeys,
   } = useApp();
 
   const summary = useSelectionSummary();
@@ -109,9 +117,6 @@ export function StepBadgesSection() {
   const userActionLockRef = useRef<number>(0);
   const prevSelectedNodeIdRef = useRef<string | null>(null);
 
-  const isBadgeOnDrafted = multiDraft.badgeOn !== undefined;
-  const effectiveIsOpen = isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : isOpen;
-  const isSectionOpen = effectiveIsOpen;
   const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
   const [stepNumText, setStepNumText] = useState("1");
   const [isMixed, setIsMixed] = useState(false);
@@ -132,9 +137,9 @@ export function StepBadgesSection() {
     : stepNumText;
   const effectiveIsMixed = multiDraft.badgeNumber !== undefined ? false : isMixed;
 
-  // start number가 정의되어 있는지 여부 (빈 값이 아니고, Mixed가 아니며 유효한 숫자)
+  // start number가 정의되어 있는지 여부 (빈 값이 아니고 유효한 숫자)
   const isStartNumberDefined =
-    !effectiveIsMixed && displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10));
+    displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10));
   const selectedBadgeCorner = multiDraft.badgeCorner || (isCornerMixed
     ? undefined
     : summary.isMultiFlowNode && summary.badgeCorner.value
@@ -157,6 +162,86 @@ export function StepBadgesSection() {
   const hasNodeStroke =
     (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
 
+  // Option Capability Matrix 기반 스위치 상태 산출
+  const rawOptionState = React.useMemo(() => {
+    if (selectedNodes.length === 0) {
+      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
+      const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, 'stepBadge');
+      if (!isAllowed) {
+        return {
+          state: 'MIXED_DISABLED' as const,
+          supportedCount: 0,
+          unsupportedCount: 1,
+          supportedNodes: [],
+          unsupportedNodes: [],
+          checked: false,
+          isMixed: true,
+          disabled: true,
+          isOpen: false,
+        };
+      }
+      const on = Boolean(lastNodeConfig.stepBadgesOn);
+      return {
+        state: (on ? 'ON' : 'OFF') as OptionSwitchState,
+        supportedCount: 1,
+        unsupportedCount: 0,
+        supportedNodes: [],
+        unsupportedNodes: [],
+        checked: on,
+        isMixed: false,
+        disabled: false,
+        isOpen: on,
+      };
+    }
+    return computeOptionSwitchState(
+      selectedNodes,
+      'stepBadge',
+      (n) => n.stepNumber !== undefined && n.stepNumber !== null
+    );
+  }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.stepBadgesOn]);
+
+  // Multi Draft 상태 반영
+  const isTypeDrafted = multiDraft.nodeType !== undefined;
+  const isDraftAllowed = isTypeDrafted
+    ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, 'stepBadge')
+    : true;
+
+  const isBadgeOnDrafted = multiDraft.badgeOn !== undefined;
+  const effectiveIsOpen = !isDraftAllowed
+    ? false
+    : (isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : (rawOptionState.disabled ? false : isOpen));
+
+  const effectiveState = React.useMemo(() => {
+    if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {
+      return {
+        state: 'MIXED_DISABLED' as const,
+        checked: false,
+        isMixed: true,
+        disabled: true,
+        isOpen: false,
+      };
+    }
+    if (isBadgeOnDrafted) {
+      const on = Boolean(multiDraft.badgeOn);
+      return {
+        state: (on ? 'ON' : 'OFF') as OptionSwitchState,
+        checked: on,
+        isMixed: false,
+        disabled: false,
+        isOpen: on,
+      };
+    }
+    return {
+      state: rawOptionState.state,
+      checked: rawOptionState.checked,
+      isMixed: rawOptionState.isMixed,
+      disabled: rawOptionState.disabled,
+      isOpen: effectiveIsOpen,
+    };
+  }, [isDraftAllowed, rawOptionState, isBadgeOnDrafted, multiDraft.badgeOn, effectiveIsOpen]);
+
+  const isSectionOpen = effectiveState.isOpen;
+
   // 선택된 노드의 상태 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   useEffect(() => {
     const isUserLocked = Date.now() - userActionLockRef.current < 600;
@@ -170,10 +255,11 @@ export function StepBadgesSection() {
     prevSelectedNodeIdRef.current = currentNodeId;
 
     if (!isUserLocked || isDifferentNode) {
-      if (selectedNodes && selectedNodes.length > 0) {
-        if (selectedNodes.length === 1) {
+      if (rawOptionState.supportedCount > 0) {
+        const supported = rawOptionState.supportedNodes;
+        if (supported.length === 1) {
           setIsMixed(false);
-          const node = selectedNodes[0];
+          const node = supported[0];
           if (node.stepNumber !== undefined) {
             setIsOpen(true);
             setStepNumText(String(node.stepNumber));
@@ -191,20 +277,21 @@ export function StepBadgesSection() {
             setUIState({ selectedBadgeColorMode: node.badgeColorMode });
           }
         } else {
-          // 복수 선택
-          const hasBadges = summary.hasStepBadge.hasValue;
-          setIsOpen(hasBadges);
-          const stepNums = selectedNodes
+          // 복수 선택 (지원 노드들만 기준)
+          const onCount = supported.filter((n) => n.stepNumber !== undefined && n.stepNumber !== null).length;
+          setIsOpen(onCount > 0);
+          const validNums = supported
             .map((n) => n.stepNumber)
-            .filter((n) => n !== undefined);
-          const allSame =
-            stepNums.length > 0 && stepNums.every((v) => v === stepNums[0]);
-          if (allSame) {
-            setIsMixed(false);
-            setStepNumText(String(stepNums[0]));
+            .filter((n): n is number => typeof n === "number" && !isNaN(n) && n > 0);
+
+          if (validNums.length > 0) {
+            const minNum = Math.min(...validNums);
+            const allSame = validNums.every((v) => v === validNums[0]);
+            setIsMixed(!allSame);
+            setStepNumText(String(minNum));
           } else {
-            setIsMixed(true);
-            setStepNumText("");
+            setIsMixed(false);
+            setStepNumText("1");
           }
 
           if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
@@ -221,27 +308,25 @@ export function StepBadgesSection() {
           }
         }
       } else {
-        // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원 및 번호 +1 증가 적용
-        setIsOpen(Boolean(lastNodeConfig.stepBadgesOn));
-        setIsMixed(false);
-        const nextStepNum =
-          typeof lastNodeConfig.stepNumber === "number" &&
-          lastNodeConfig.stepNumber > 0
-            ? lastNodeConfig.stepNumber + 1
-            : 1;
-        setStepNumText(String(nextStepNum));
-        if (lastNodeConfig.badgeCorner) {
-          setUIState({ selectedBadgeCorner: lastNodeConfig.badgeCorner });
-        }
-        if (lastNodeConfig.badgeShape) {
-          setUIState({ selectedBadgeShape: lastNodeConfig.badgeShape });
-        }
-        if (lastNodeConfig.badgeColorMode) {
-          setUIState({ selectedBadgeColorMode: lastNodeConfig.badgeColorMode });
+        if (selectedNodes.length === 0) {
+          // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원
+          setIsOpen(Boolean(lastNodeConfig.stepBadgesOn));
+          setIsMixed(false);
+          const nextStepNum =
+            typeof lastNodeConfig.stepNumber === "number" &&
+            lastNodeConfig.stepNumber > 0
+              ? lastNodeConfig.stepNumber + 1
+              : 1;
+          setStepNumText(String(nextStepNum));
+        } else {
+          // 미지원 노드만 선택된 경우: 접힘
+          setIsOpen(false);
+          setIsMixed(false);
         }
       }
     }
   }, [
+    rawOptionState,
     selectedNodes,
     summary.badgeCorner.isMixed,
     summary.badgeCorner.value,
@@ -249,7 +334,6 @@ export function StepBadgesSection() {
     summary.badgeShape.value,
     summary.badgeColorMode.isMixed,
     summary.badgeColorMode.value,
-    summary.hasStepBadge.hasValue,
     lastNodeConfig.stepBadgesOn,
     lastNodeConfig.stepNumber,
     lastNodeConfig.badgeCorner,
@@ -282,6 +366,7 @@ export function StepBadgesSection() {
   }
 
   function handleToggle(checked: boolean) {
+    if (effectiveState.disabled) return;
     userActionLockRef.current = Date.now();
     setIsOpen(checked);
 
@@ -296,6 +381,10 @@ export function StepBadgesSection() {
       requestAnimationFrame(() => {
         autoResizeWindow();
       });
+      return;
+    }
+
+    if (selectedNodes.length === 1 && !supportsOption(selectedNodes[0], 'stepBadge')) {
       return;
     }
 
@@ -419,26 +508,29 @@ export function StepBadgesSection() {
     }
   }
 
-  // 복수 선택 시 하단 보라색 버튼 클릭: 순차 부여
+  // 복수 선택 시 하단 보라색 버튼 클릭: 순차 부여 (Step Badge 전용 즉시 실행 shortcut)
   function handleAddStepBadgesMulti() {
-    if (selectedNodes.length >= 2) {
-      const start = getNumberValue();
-      updateMultiDraft({
-        badgeOn: true,
-        badgeNumber: start,
-        badgeCorner: (selectedBadgeCorner || 'TOP_LEFT') as BadgePosition,
-        badgeShape: (selectedBadgeShape || 'Square') as BadgeShape,
-        badgeColorMode: (selectedBadgeColorMode || 'Style') as BadgeColorMode,
-      });
-      return;
-    }
     const start = getNumberValue();
-    applyStepBadges(
-      start,
-      selectedBadgeCorner,
-      selectedBadgeShape,
-      selectedBadgeColorMode,
-    );
+    const corner = (selectedBadgeCorner || 'TOP_LEFT') as BadgePosition;
+    const shape = (selectedBadgeShape || 'Square') as BadgeShape;
+    const colorMode = (selectedBadgeColorMode || 'Style') as BadgeColorMode;
+
+    // 1. Core의 ADD_STEP_BADGES 즉시 실행
+    // (선택된 노드 중 Step Badge 지원 노드에만 start부터 순차 번호 부여, 다른 설정은 일체 건드리지 않음)
+    applyStepBadges(start, corner, shape, colorMode);
+
+    // 2. Step Badge 섹션 로컬 상태 동기화
+    setIsOpen(true);
+    setLastNodeConfig({
+      stepBadgesOn: true,
+      stepNumber: start,
+      badgeCorner: corner,
+      badgeShape: shape,
+      badgeColorMode: colorMode,
+    });
+
+    // 3. multiDraft에서 step badge 관련 키만 정리하여 향후 'Apply to All' 실행 시 타 속성과 엉키지 않도록 함
+    clearMultiDraftKeys(['badgeOn', 'badgeNumber', 'badgeCorner', 'badgeShape', 'badgeColorMode']);
   }
 
   // 컬러 스와치 렌더러 (피그마 UI3 공식 표준 컬러칩 규격: 14x14, R:2px)
@@ -505,20 +597,23 @@ export function StepBadgesSection() {
   return (
     <div
       className="section-block step-badges-section"
-      style={{ paddingBottom: isSectionOpen ? "12px" : "0px" }}
+      style={{ paddingBottom: effectiveState.isOpen ? "12px" : "0px" }}
     >
       {/* 상단 헤더: Step Badges + 보라색 토글 스위치 */}
       <div className="section-header toggle-row">
-        <span className="section-title">Step Badges</span>
+        <span className={`section-title${effectiveState.disabled ? " disabled" : ""}`}>
+          Step Badges
+        </span>
         <Switch
           id="toggle-step-badges"
-          checked={effectiveIsOpen}
-          isMixed={!isBadgeOnDrafted && summary.isMultiFlowNode && summary.hasStepBadge.isMixed}
+          checked={effectiveState.checked}
+          isMixed={effectiveState.isMixed}
+          disabled={effectiveState.disabled}
           onChange={handleToggle}
         />
       </div>
 
-      {effectiveIsOpen && (
+      {effectiveState.isOpen && (
         <div
           style={{
             display: "flex",
@@ -571,8 +666,8 @@ export function StepBadgesSection() {
               <input
                 type="text"
                 id="input-step-number"
-                value={effectiveIsMixed ? "" : displayStepNum}
-                placeholder={effectiveIsMixed ? "Mixed" : "1"}
+                value={displayStepNum}
+                placeholder="1"
                 onChange={(e) => {
                   setIsMixed(false);
                   setStepNumText(e.target.value.replace(/[^0-9]/g, ""));
@@ -590,9 +685,7 @@ export function StepBadgesSection() {
                   outline: "none",
                   fontSize: "11px",
                   fontWeight: 400,
-                  color: effectiveIsMixed
-                    ? "var(--color-text-primary, #000000)"
-                    : "#111827",
+                  color: "#111827",
                   padding: 0,
                 }}
               />

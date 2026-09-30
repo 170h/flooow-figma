@@ -435,8 +435,9 @@
       padding-bottom: 0;
     }
 
-    /* 토글 섹션이 활성화(체크박스 ON)되어 펼쳐졌을 때는 하단 패딩 12px 복원 */
-    .section-block:has(.toggle-row input:checked) {
+    /* 토글 섹션이 활성화(체크박스 ON 또는 혼합)되어 펼쳐졌을 때는 하단 패딩 12px 복원 */
+    .section-block:has(.toggle-row input:checked),
+    .section-block:has(.toggle-row input:indeterminate) {
       padding-bottom: 12px;
     }
 
@@ -563,12 +564,13 @@
     }
 
     /* 접혀 있는 토글 섹션의 본문은 완전히 숨김 (0px) */
-    .section-block:has(.toggle-row input:not(:checked)) .section-body {
+    .section-block:has(.toggle-row input:not(:checked):not(:indeterminate)) .section-body {
       display: none;
     }
 
-    /* 펼쳐진 토글 섹션의 본문은 표시 */
-    .section-block:has(.toggle-row input:checked) .section-body {
+    /* 펼쳐진 토글 섹션의 본문은 표시 (체크됨 또는 혼합 상태) */
+    .section-block:has(.toggle-row input:checked) .section-body,
+    .section-block:has(.toggle-row input:indeterminate) .section-body {
       display: flex;
     }
 
@@ -925,23 +927,23 @@
       min-width: 16px;
       height: 16px;
       padding: 0 4px;
-      border-radius: 5px;
-      background: #f5f5f5;
-      color: rgba(0, 0, 0, 0.6);
+      border-radius: var(--radius-xs, 4px);
+      background: var(--color-bg-secondary, #f5f5f5);
+      color: var(--color-text-secondary, rgba(0, 0, 0, 0.6));
       font-size: 11px;
-      font-weight: 500;
+      font-weight: var(--font-weight-medium, 450);
       line-height: 16px;
-      margin-left: 4px;
+      margin-left: 0;
       box-sizing: border-box;
       flex-shrink: 0;
       user-select: none;
       transition: background-color 0.15s ease, color 0.15s ease;
     }
 
-    /* 탭 호버(Hover) 시 카운트 배지 배경색 흰색(#ffffff) */
+    /* 탭 호버(Hover) 시 카운트 배지 배경색 */
     .chip-btn:not(.active):hover .tab-badge {
-      background: #ffffff;
-      color: rgba(0, 0, 0, 0.9);
+      background: var(--color-bg, #ffffff);
+      color: var(--color-text-primary, rgba(0, 0, 0, 0.9));
     }
 
     /* 탭이 active 상태일 때 배지 스타일 (유색 배경 대비) */

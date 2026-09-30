@@ -441,8 +441,9 @@
       padding-bottom: 0;
     }
 
-    /* 토글 섹션이 활성화(체크박스 ON)되어 펼쳐졌을 때는 하단 패딩 12px 복원 */
-    .section-block:has(.toggle-row input:checked) {
+    /* 토글 섹션이 활성화(체크박스 ON 또는 혼합)되어 펼쳐졌을 때는 하단 패딩 12px 복원 */
+    .section-block:has(.toggle-row input:checked),
+    .section-block:has(.toggle-row input:indeterminate) {
       padding-bottom: 12px;
     }
 
@@ -569,12 +570,13 @@
     }
 
     /* 접혀 있는 토글 섹션의 본문은 완전히 숨김 (0px) */
-    .section-block:has(.toggle-row input:not(:checked)) .section-body {
+    .section-block:has(.toggle-row input:not(:checked):not(:indeterminate)) .section-body {
       display: none;
     }
 
-    /* 펼쳐진 토글 섹션의 본문은 표시 */
-    .section-block:has(.toggle-row input:checked) .section-body {
+    /* 펼쳐진 토글 섹션의 본문은 표시 (체크됨 또는 혼합 상태) */
+    .section-block:has(.toggle-row input:checked) .section-body,
+    .section-block:has(.toggle-row input:indeterminate) .section-body {
       display: flex;
     }
 
@@ -931,23 +933,23 @@
       min-width: 16px;
       height: 16px;
       padding: 0 4px;
-      border-radius: 5px;
-      background: #f5f5f5;
-      color: rgba(0, 0, 0, 0.6);
+      border-radius: var(--radius-xs, 4px);
+      background: var(--color-bg-secondary, #f5f5f5);
+      color: var(--color-text-secondary, rgba(0, 0, 0, 0.6));
       font-size: 11px;
-      font-weight: 500;
+      font-weight: var(--font-weight-medium, 450);
       line-height: 16px;
-      margin-left: 4px;
+      margin-left: 0;
       box-sizing: border-box;
       flex-shrink: 0;
       user-select: none;
       transition: background-color 0.15s ease, color 0.15s ease;
     }
 
-    /* 탭 호버(Hover) 시 카운트 배지 배경색 흰색(#ffffff) */
+    /* 탭 호버(Hover) 시 카운트 배지 배경색 */
     .chip-btn:not(.active):hover .tab-badge {
-      background: #ffffff;
-      color: rgba(0, 0, 0, 0.9);
+      background: var(--color-bg, #ffffff);
+      color: var(--color-text-primary, rgba(0, 0, 0, 0.9));
     }
 
     /* 탭이 active 상태일 때 배지 스타일 (유색 배경 대비) */
@@ -5031,7 +5033,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useCallback(callback, deps);
           }
-          function useMemo4(create, deps) {
+          function useMemo6(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useMemo(create, deps);
           }
@@ -5803,7 +5805,7 @@
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
           exports.useLayoutEffect = useLayoutEffect;
-          exports.useMemo = useMemo4;
+          exports.useMemo = useMemo6;
           exports.useReducer = useReducer;
           exports.useRef = useRef19;
           exports.useState = useState18;
@@ -6302,9 +6304,9 @@
           if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function") {
             __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
           }
-          var React22 = require_react();
+          var React23 = require_react();
           var Scheduler = require_scheduler();
-          var ReactSharedInternals = React22.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React23.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           var suppressWarning = false;
           function setSuppressWarning(newSuppressWarning) {
             {
@@ -7911,7 +7913,7 @@
             {
               if (props.value == null) {
                 if (typeof props.children === "object" && props.children !== null) {
-                  React22.Children.forEach(props.children, function(child) {
+                  React23.Children.forEach(props.children, function(child) {
                     if (child == null) {
                       return;
                     }
@@ -27507,7 +27509,7 @@
       if (true) {
         (function() {
           "use strict";
-          var React22 = require_react();
+          var React23 = require_react();
           var REACT_ELEMENT_TYPE = Symbol.for("react.element");
           var REACT_PORTAL_TYPE = Symbol.for("react.portal");
           var REACT_FRAGMENT_TYPE = Symbol.for("react.fragment");
@@ -27533,7 +27535,7 @@
             }
             return null;
           }
-          var ReactSharedInternals = React22.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React23.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           function error(format) {
             {
               {
@@ -28530,6 +28532,8 @@
       case "branch":
       case "subflow":
         return "Branch";
+      case "bridge":
+        return "Bridge";
       default:
         return type || "Screen";
     }
@@ -28541,6 +28545,7 @@
     Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
+    Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     // 레거시 별칭
     Square: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
@@ -28551,6 +28556,148 @@
     Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false }
   };
+  var OPTION_CAPABILITY_MATRIX = {
+    Screen: {
+      title: true,
+      description: true,
+      status: true,
+      stepBadge: true,
+      elevation: true,
+      size: true,
+      figmaLink: true,
+      style: true
+    },
+    Shape: {
+      title: true,
+      description: false,
+      status: false,
+      stepBadge: true,
+      elevation: true,
+      size: false,
+      figmaLink: false,
+      style: true
+    },
+    Bridge: {
+      title: true,
+      description: false,
+      status: false,
+      stepBadge: false,
+      elevation: false,
+      size: false,
+      figmaLink: false,
+      style: true
+    },
+    FigmaObject: {
+      title: false,
+      description: false,
+      status: false,
+      stepBadge: false,
+      elevation: false,
+      size: false,
+      figmaLink: false,
+      style: false
+    }
+  };
+  function getNodeCategory(node) {
+    if (!node) return "FigmaObject";
+    if (node.isConnector || node.type === "CONNECTOR") {
+      return "FigmaObject";
+    }
+    const hasPluginDataFn = typeof node.getPluginData === "function";
+    const isFlowNode = Boolean(
+      node.isFlowNode || hasPluginDataFn && node.getPluginData("is_flow_node") === "true" || node.type === "FRAME" && hasPluginDataFn && Boolean(
+        node.getPluginData("node_type") || node.children?.some?.((c) => c.name === "Header" || c.name === "TitleText" || typeof c.getPluginData === "function" && c.getPluginData("node_role") === "title")
+      )
+    );
+    if (!isFlowNode && node.type !== "SHAPE_WITH_TEXT") {
+      if (!node.flowNodeType) {
+        return "FigmaObject";
+      }
+    }
+    let rawType = node.flowNodeType;
+    if (!rawType && hasPluginDataFn) {
+      rawType = node.getPluginData("node_type");
+    }
+    if (!rawType && node.nodeType && node.nodeType !== "FRAME") {
+      rawType = node.nodeType;
+    }
+    const normType = normalizeNodeType(rawType);
+    switch (normType) {
+      case "Screen":
+        return "Screen";
+      case "Process":
+      case "Decision":
+      case "Terminator":
+        return "Shape";
+      case "Connector":
+      case "Branch":
+      case "Bridge":
+        return "Bridge";
+      default:
+        return "Shape";
+    }
+  }
+  function supportsOption(node, option) {
+    const category = getNodeCategory(node);
+    return OPTION_CAPABILITY_MATRIX[category]?.[option] ?? false;
+  }
+  function computeOptionSwitchState(nodes, option, isNodeOnFn) {
+    const validNodes = (nodes || []).filter(Boolean);
+    const supportedNodes = validNodes.filter((n) => supportsOption(n, option));
+    const unsupportedNodes = validNodes.filter((n) => !supportsOption(n, option));
+    if (supportedNodes.length === 0) {
+      return {
+        state: "MIXED_DISABLED",
+        supportedCount: 0,
+        unsupportedCount: unsupportedNodes.length,
+        supportedNodes: [],
+        unsupportedNodes,
+        checked: false,
+        isMixed: true,
+        disabled: true,
+        isOpen: false
+      };
+    }
+    const onCount = supportedNodes.filter((n) => isNodeOnFn(n)).length;
+    const offCount = supportedNodes.length - onCount;
+    if (onCount === supportedNodes.length) {
+      return {
+        state: "ON",
+        supportedCount: supportedNodes.length,
+        unsupportedCount: unsupportedNodes.length,
+        supportedNodes,
+        unsupportedNodes,
+        checked: true,
+        isMixed: false,
+        disabled: false,
+        isOpen: true
+      };
+    }
+    if (offCount === supportedNodes.length) {
+      return {
+        state: "OFF",
+        supportedCount: supportedNodes.length,
+        unsupportedCount: unsupportedNodes.length,
+        supportedNodes,
+        unsupportedNodes,
+        checked: false,
+        isMixed: false,
+        disabled: false,
+        isOpen: false
+      };
+    }
+    return {
+      state: "MIXED_ACTIVE",
+      supportedCount: supportedNodes.length,
+      unsupportedCount: unsupportedNodes.length,
+      supportedNodes,
+      unsupportedNodes,
+      checked: true,
+      isMixed: true,
+      disabled: false,
+      isOpen: true
+    };
+  }
   var SCREEN_NODE_CONSTRAINTS = {
     MIN_WIDTH: 140,
     MAX_WIDTH: 800,
@@ -28684,6 +28831,16 @@
     const clearMultiDraft = (0, import_react2.useCallback)(() => {
       multiDraftRef.current = {};
       setMultiDraftRaw({});
+    }, []);
+    const clearMultiDraftKeys = (0, import_react2.useCallback)((keys) => {
+      setMultiDraftRaw((prev) => {
+        const next = { ...prev };
+        keys.forEach((k) => {
+          delete next[k];
+        });
+        multiDraftRef.current = next;
+        return next;
+      });
     }, []);
     const hasMultiDraft = Object.keys(multiDraft).length > 0;
     const [isApplyingMultiDraft, setIsApplyingMultiDraft] = (0, import_react2.useState)(false);
@@ -29476,7 +29633,7 @@
           const flowNodes = nodes.filter((n) => n && n.isFlowNode);
           const first = flowNodes[0] || nodes[0];
           if (first) {
-            const hasElevation = first.elevation !== void 0 && first.elevation !== null ? first.elevation > 0 : Boolean(first.elevationOn);
+            const hasElevation = first.elevation !== void 0 && first.elevation !== null ? first.elevation >= 0 : Boolean(first.elevationOn);
             if (hasElevation) {
               setActiveAppearanceSection("elevation");
             } else {
@@ -29484,7 +29641,7 @@
             }
           }
         } else {
-          const hasElevation = Boolean(lastNodeConfigRef.current.elevationOn) && (lastNodeConfigRef.current.elevation ?? 0) > 0;
+          const hasElevation = Boolean(lastNodeConfigRef.current.elevationOn);
           if (hasElevation) {
             setActiveAppearanceSection("elevation");
           } else {
@@ -29547,13 +29704,14 @@
       hasMultiDraft,
       updateMultiDraft,
       clearMultiDraft,
+      clearMultiDraftKeys,
       isApplyingMultiDraft
     };
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppContext.Provider, { value, children });
   }
 
   // src/ui/App.tsx
-  var import_react24 = __toESM(require_react());
+  var import_react25 = __toESM(require_react());
 
   // src/ui/hooks/useFigmaMessage.ts
   var import_react3 = __toESM(require_react());
@@ -30192,50 +30350,129 @@
       multiDraft,
       updateMultiDraft
     } = useApp();
-    const summary = useSelectionSummary();
-    const isDescriptionAllowed = summary.isMultiFlowNode ? !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === "Screen" : selectedNodes.length === 1 ? normalizeNodeType(selectedNodes[0]?.flowNodeType) === "Screen" : normalizeNodeType(uiState.selectedNodeType) === "Screen";
     const [copied, setCopied] = (0, import_react7.useState)(false);
     const timerRef = (0, import_react7.useRef)(null);
     const debounceTimerRef = (0, import_react7.useRef)(null);
-    const lastSelectedNodeIdRef = (0, import_react7.useRef)(void 0);
     const [isOn, setIsOn] = (0, import_react7.useState)(() => {
-      if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+      if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], "description")) {
         return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
       }
       return Boolean(lastNodeConfig.descriptionOn);
     });
     const [hasText, setHasText] = (0, import_react7.useState)(() => {
-      if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+      if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], "description")) {
         return Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
       }
       return false;
     });
-    const isDescMixed = summary.isMultiFlowNode && (summary.hasDescription.isMixed || summary.description.isMixed);
+    const userActionLockRef = (0, import_react7.useRef)(0);
+    const prevSelectedNodeIdRef = (0, import_react7.useRef)(null);
+    const rawOptionState = (0, import_react7.useMemo)(() => {
+      if (selectedNodes.length === 0) {
+        const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
+        const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, "description");
+        if (!isAllowed) {
+          return {
+            state: "MIXED_DISABLED",
+            supportedCount: 0,
+            unsupportedCount: 1,
+            supportedNodes: [],
+            unsupportedNodes: [],
+            checked: false,
+            isMixed: true,
+            disabled: true,
+            isOpen: false
+          };
+        }
+        const on = Boolean(lastNodeConfig.descriptionOn);
+        return {
+          state: on ? "ON" : "OFF",
+          supportedCount: 1,
+          unsupportedCount: 0,
+          supportedNodes: [],
+          unsupportedNodes: [],
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
+      }
+      return computeOptionSwitchState(
+        selectedNodes,
+        "description",
+        (n) => Boolean(n.description && n.description.trim())
+      );
+    }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.descriptionOn]);
+    const isTypeDrafted = multiDraft.nodeType !== void 0;
+    const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "description") : true;
+    const isDescDrafted = multiDraft.description !== void 0;
+    const effectiveIsOpen = !isDraftAllowed ? false : isDescDrafted ? Boolean(multiDraft.description) : rawOptionState.disabled ? false : rawOptionState.state === "MIXED_ACTIVE" ? true : isOn;
+    const effectiveState = (0, import_react7.useMemo)(() => {
+      if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
+        return {
+          state: "MIXED_DISABLED",
+          checked: false,
+          isMixed: true,
+          disabled: true,
+          isOpen: false
+        };
+      }
+      if (isDescDrafted) {
+        const on = Boolean(multiDraft.description);
+        return {
+          state: on ? "ON" : "OFF",
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
+      }
+      return {
+        state: rawOptionState.state,
+        checked: rawOptionState.checked,
+        isMixed: rawOptionState.isMixed,
+        disabled: rawOptionState.disabled,
+        isOpen: effectiveIsOpen
+      };
+    }, [isDraftAllowed, rawOptionState, isDescDrafted, multiDraft.description, effectiveIsOpen]);
     (0, import_react7.useEffect)(() => {
-      const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0].id : selectedNodes.length > 1 ? "MULTI" : null;
-      if (currentNodeId !== lastSelectedNodeIdRef.current) {
-        lastSelectedNodeIdRef.current = currentNodeId;
-        if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
-          const hasDesc = Boolean(selectedNodes[0]?.description && selectedNodes[0].description.trim());
-          setIsOn(hasDesc);
-          setHasText(hasDesc);
-          setLastNodeConfig({ descriptionOn: hasDesc });
-        } else if (selectedNodes.length === 0) {
-          setIsOn(Boolean(lastNodeConfig.descriptionOn));
-          setHasText(false);
+      const isUserLocked = Date.now() - userActionLockRef.current < 600;
+      const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
+      const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+      prevSelectedNodeIdRef.current = currentNodeId;
+      if (!isUserLocked || isDifferentNode) {
+        if (rawOptionState.supportedCount > 0) {
+          const supported = rawOptionState.supportedNodes;
+          if (supported.length === 1) {
+            const node = supported[0];
+            const hasDesc = Boolean(node && node.description && node.description.trim());
+            setIsOn(hasDesc);
+            setHasText(hasDesc);
+            setLastNodeConfig({ descriptionOn: hasDesc });
+          } else {
+            const onCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
+            setIsOn(onCount > 0);
+            setHasText(onCount > 0);
+          }
         } else {
-          const anyHasDesc = summary.hasDescription.hasValue;
-          setIsOn(anyHasDesc);
-          setHasText(anyHasDesc);
+          setIsOn(false);
+          setHasText(false);
         }
       }
-    }, [selectedNodes, lastNodeConfig.descriptionOn, summary.hasDescription.hasValue, setLastNodeConfig]);
-    const isDescDrafted = multiDraft.description !== void 0;
-    const effectiveIsDescMixed = isDescDrafted ? false : isDescMixed;
-    const isDescSectionOpen = isDescriptionAllowed && (isDescDrafted ? Boolean(multiDraft.description) : effectiveIsDescMixed ? false : isOn);
-    const effectiveIsOn = isDescriptionAllowed && (isDescDrafted ? Boolean(multiDraft.description) : isOn);
-    const effectiveHasText = isDescDrafted ? Boolean(multiDraft.description?.trim()) : selectedNodes.length >= 2 ? effectiveIsDescMixed ? false : Boolean(summary.description.value?.trim()) : hasText;
+    }, [rawOptionState, selectedNodes, setLastNodeConfig]);
+    const isDescValueMixed = (0, import_react7.useMemo)(() => {
+      if (isDescDrafted) return false;
+      if (effectiveState.disabled) return false;
+      const supported = rawOptionState.supportedNodes;
+      if (supported.length <= 1) return false;
+      const firstDesc = supported[0]?.description || "";
+      return supported.some((n) => (n.description || "") !== firstDesc);
+    }, [isDescDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
+    const isDescSectionOpen = effectiveState.isOpen;
+    const effectiveHasText = isDescDrafted ? Boolean(multiDraft.description?.trim()) : rawOptionState.supportedNodes.length >= 2 ? !isDescValueMixed && Boolean(rawOptionState.supportedNodes[0]?.description?.trim()) : hasText;
     function handleToggle(checked) {
+      if (effectiveState.disabled) return;
+      userActionLockRef.current = Date.now();
       setIsOn(checked);
       if (selectedNodes.length >= 2) {
         if (!checked) {
@@ -30249,7 +30486,9 @@
           setHasText(Boolean(val));
           updateMultiDraft({ description: val });
         }
-        autoResizeWindow();
+        requestAnimationFrame(() => {
+          autoResizeWindow();
+        });
         return;
       }
       setLastNodeConfig({ descriptionOn: checked });
@@ -30282,7 +30521,7 @@
       debounceTimerRef.current = setTimeout(() => applyCurrentNodeState(), 400);
     }
     function copyDescription() {
-      const val = document.getElementById("node-description-input")?.value || (selectedNodes.length === 1 ? selectedNodes[0]?.description || "" : "");
+      const val = document.getElementById("node-description-input")?.value || (rawOptionState.supportedNodes.length === 1 ? rawOptionState.supportedNodes[0]?.description || "" : "");
       if (!val.trim()) {
         showToast("\uBCF5\uC0AC\uD560 \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
         return;
@@ -30317,13 +30556,13 @@
       }
       document.body.removeChild(ta);
     }
-    const defaultDescValue = isDescDrafted ? multiDraft.description || "" : summary.isMultiFlowNode ? effectiveIsDescMixed ? "" : summary.description.value || "" : selectedNodes.length === 1 ? selectedNodes[0]?.description || "" : "";
-    const descPlaceholder = effectiveIsDescMixed ? "Mixed" : "Add a description";
+    const defaultDescValue = isDescDrafted ? multiDraft.description || "" : rawOptionState.supportedNodes.length >= 2 ? isDescValueMixed ? "" : rawOptionState.supportedNodes[0]?.description || "" : rawOptionState.supportedNodes.length === 1 ? rawOptionState.supportedNodes[0]?.description || "" : "";
+    const descPlaceholder = isDescValueMixed ? "Mixed" : "Add a description";
     return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-block", style: { paddingBottom: isDescSectionOpen ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: `section-title${!isDescriptionAllowed ? " disabled" : ""}`, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: `section-title${effectiveState.disabled ? " disabled" : ""}`, children: [
           "Description",
-          isDescriptionAllowed && effectiveIsDescMixed && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
+          !effectiveState.disabled && isDescValueMixed && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-actions", children: [
           isDescSectionOpen && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
@@ -30342,10 +30581,10 @@
             Switch,
             {
               id: "toggle-description",
-              checked: isDescSectionOpen,
-              isMixed: isDescriptionAllowed && effectiveIsDescMixed,
-              disabled: !isDescriptionAllowed || selectedNodes.length >= 2 && effectiveIsDescMixed,
-              "data-tooltip": !isDescriptionAllowed ? "Description is disabled for this shape" : void 0,
+              checked: effectiveState.checked,
+              isMixed: effectiveState.isMixed,
+              disabled: effectiveState.disabled,
+              "data-tooltip": effectiveState.disabled ? "Description is disabled for this shape" : void 0,
               onChange: handleToggle
             }
           )
@@ -30360,7 +30599,7 @@
           defaultValue: defaultDescValue,
           onInput: handleInput
         },
-        summary.isMultiFlowNode ? "multi-desc" : selectedNodes[0]?.id || "none"
+        selectedNodes.length >= 2 ? "multi-desc" : rawOptionState.supportedNodes[0]?.id || "none"
       ) })
     ] });
   }
@@ -30388,61 +30627,128 @@
       multiDraft,
       updateMultiDraft
     } = useApp();
-    const summary = useSelectionSummary();
-    const isLinkAllowed = summary.isMultiFlowNode ? !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === "Screen" : selectedNodes.length === 1 ? normalizeNodeType(selectedNodes[0]?.flowNodeType) === "Screen" : normalizeNodeType(uiState.selectedNodeType) === "Screen";
     const [isOn, setIsOn] = (0, import_react8.useState)(false);
     const [url, setUrl] = (0, import_react8.useState)("");
     const cachedUrlRef = (0, import_react8.useRef)("");
-    const lastSelectedNodeIdRef = (0, import_react8.useRef)(null);
+    const userActionLockRef = (0, import_react8.useRef)(0);
+    const prevSelectedNodeIdRef = (0, import_react8.useRef)(null);
     const inputRef = (0, import_react8.useRef)(null);
-    const isLinkMixed = summary.isMultiFlowNode && summary.figmaLink.isMixed;
+    const rawOptionState = (0, import_react8.useMemo)(() => {
+      if (selectedNodes.length === 0) {
+        const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
+        const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, "figmaLink");
+        if (!isAllowed) {
+          return {
+            state: "MIXED_DISABLED",
+            supportedCount: 0,
+            unsupportedCount: 1,
+            supportedNodes: [],
+            unsupportedNodes: [],
+            checked: false,
+            isMixed: true,
+            disabled: true,
+            isOpen: false
+          };
+        }
+        const on = Boolean(lastNodeConfig.singleLinkOn);
+        return {
+          state: on ? "ON" : "OFF",
+          supportedCount: 1,
+          unsupportedCount: 0,
+          supportedNodes: [],
+          unsupportedNodes: [],
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
+      }
+      return computeOptionSwitchState(
+        selectedNodes,
+        "figmaLink",
+        (n) => Boolean(n.figmaLink && n.figmaLink.trim())
+      );
+    }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.singleLinkOn]);
+    const isTypeDrafted = multiDraft.nodeType !== void 0;
+    const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "figmaLink") : true;
+    const isLinkDrafted = multiDraft.figmaLink !== void 0;
+    const effectiveIsOpen = !isDraftAllowed ? false : isLinkDrafted ? Boolean(multiDraft.figmaLink) : rawOptionState.disabled ? false : rawOptionState.state === "MIXED_ACTIVE" ? true : isOn;
+    const effectiveState = (0, import_react8.useMemo)(() => {
+      if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
+        return {
+          state: "MIXED_DISABLED",
+          checked: false,
+          isMixed: true,
+          disabled: true,
+          isOpen: false
+        };
+      }
+      if (isLinkDrafted) {
+        const on = Boolean(multiDraft.figmaLink);
+        return {
+          state: on ? "ON" : "OFF",
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
+      }
+      return {
+        state: rawOptionState.state,
+        checked: rawOptionState.checked,
+        isMixed: rawOptionState.isMixed,
+        disabled: rawOptionState.disabled,
+        isOpen: effectiveIsOpen
+      };
+    }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, effectiveIsOpen]);
     (0, import_react8.useEffect)(() => {
-      const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0].id : selectedNodes.length > 1 ? "MULTI" : null;
-      if (currentNodeId !== lastSelectedNodeIdRef.current) {
-        lastSelectedNodeIdRef.current = currentNodeId;
-        if (selectedNodes.length === 1) {
-          const node = selectedNodes[0];
-          const activeLink = node.figmaLink || "";
-          const cachedLink = node.cachedFigmaLink || activeLink || "";
-          const enabled = Boolean(activeLink);
-          setIsOn(enabled);
-          const displayLink = activeLink || cachedLink;
-          setUrl(displayLink);
-          cachedUrlRef.current = displayLink;
-          setLastNodeConfig({
-            singleLinkOn: enabled,
-            singleLinkUrl: displayLink
-          });
-        } else if (selectedNodes.length === 0) {
-          setIsOn(lastNodeConfig.singleLinkOn || false);
-          const link = lastNodeConfig.singleLinkUrl || "";
-          setUrl(link);
-          cachedUrlRef.current = link;
-        } else {
-          const anyHasLink = summary.hasFigmaLink.hasValue;
-          setIsOn(anyHasLink);
-          if (summary.figmaLink.isMixed) {
-            setUrl("");
+      const isUserLocked = Date.now() - userActionLockRef.current < 600;
+      const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
+      const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+      prevSelectedNodeIdRef.current = currentNodeId;
+      if (!isUserLocked || isDifferentNode) {
+        if (rawOptionState.supportedCount > 0) {
+          const supported = rawOptionState.supportedNodes;
+          if (supported.length === 1) {
+            const node = supported[0];
+            const activeLink = node.figmaLink || "";
+            const cachedLink = node.cachedFigmaLink || activeLink || "";
+            const enabled = Boolean(activeLink);
+            setIsOn(enabled);
+            const displayLink = activeLink || cachedLink;
+            setUrl(displayLink);
+            cachedUrlRef.current = displayLink;
+            setLastNodeConfig({
+              singleLinkOn: enabled,
+              singleLinkUrl: displayLink
+            });
           } else {
-            const commonLink = summary.figmaLink.value || "";
-            setUrl(commonLink);
-            cachedUrlRef.current = commonLink;
+            const onCount = supported.filter((n) => Boolean(n.figmaLink && n.figmaLink.trim())).length;
+            setIsOn(onCount > 0);
+            const firstLink = supported[0]?.figmaLink || "";
+            const allSame = supported.every((n) => (n.figmaLink || "") === firstLink);
+            if (allSame && firstLink) {
+              setUrl(firstLink);
+              cachedUrlRef.current = firstLink;
+            } else {
+              setUrl("");
+            }
           }
+        } else {
+          setIsOn(false);
+          setUrl("");
         }
       }
-    }, [
-      selectedNodes,
-      lastNodeConfig.singleLinkOn,
-      lastNodeConfig.singleLinkUrl,
-      summary.hasFigmaLink.hasValue,
-      summary.figmaLink.isMixed,
-      summary.figmaLink.value,
-      setLastNodeConfig
-    ]);
-    const isLinkDrafted = multiDraft.figmaLink !== void 0;
-    const displayUrl = isLinkDrafted ? multiDraft.figmaLink || "" : url;
-    const effectiveIsOn = isLinkAllowed && (isLinkDrafted ? Boolean(multiDraft.figmaLink) : isOn);
-    const effectiveIsLinkMixed = isLinkDrafted ? false : isLinkMixed;
+    }, [rawOptionState, selectedNodes, setLastNodeConfig]);
+    const isLinkValueMixed = (0, import_react8.useMemo)(() => {
+      if (isLinkDrafted) return false;
+      if (effectiveState.disabled) return false;
+      const supported = rawOptionState.supportedNodes;
+      if (supported.length <= 1) return false;
+      const firstLink = supported[0]?.figmaLink || "";
+      return supported.some((n) => (n.figmaLink || "") !== firstLink);
+    }, [isLinkDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
+    const displayUrl = isLinkDrafted ? multiDraft.figmaLink || "" : isLinkValueMixed ? "" : url;
     function commitUrl(currentRawUrl) {
       const trimmed = currentRawUrl.trim();
       if (!trimmed) {
@@ -30477,9 +30783,9 @@
       }, 0);
     }
     function handleToggle(checked) {
-      if (!isLinkAllowed) return;
+      if (effectiveState.disabled) return;
+      userActionLockRef.current = Date.now();
       setIsOn(checked);
-      autoResizeWindow();
       if (selectedNodes.length >= 2) {
         if (!checked) {
           cachedUrlRef.current = displayUrl;
@@ -30494,6 +30800,9 @@
             }, 60);
           }
         }
+        requestAnimationFrame(() => {
+          autoResizeWindow();
+        });
         return;
       }
       if (!checked) {
@@ -30516,6 +30825,7 @@
           }, 60);
         }
       }
+      autoResizeWindow();
     }
     function handleUrlChange(value) {
       setUrl(value);
@@ -30551,26 +30861,26 @@
       "div",
       {
         className: "section-block figma-link-section",
-        style: { paddingBottom: effectiveIsOn ? "12px" : "0px" },
+        style: { paddingBottom: effectiveState.isOpen ? "12px" : "0px" },
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "section-header toggle-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: `section-title${!isLinkAllowed ? " disabled" : ""}`, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: `section-title${effectiveState.disabled ? " disabled" : ""}`, children: [
               "Figma Screen Link",
-              isLinkAllowed && effectiveIsLinkMixed && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
+              !effectiveState.disabled && isLinkValueMixed && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
               Switch,
               {
                 id: "toggle-single-figma-link",
-                checked: effectiveIsOn,
-                isMixed: isLinkAllowed && effectiveIsLinkMixed,
-                disabled: !isLinkAllowed,
-                "data-tooltip": !isLinkAllowed ? "Figma Screen Link is disabled for this shape" : void 0,
+                checked: effectiveState.checked,
+                isMixed: effectiveState.isMixed,
+                disabled: effectiveState.disabled,
+                "data-tooltip": effectiveState.disabled ? "Figma Screen Link is disabled for this shape" : void 0,
                 onChange: handleToggle
               }
             )
           ] }),
-          effectiveIsOn && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+          effectiveState.isOpen && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "div",
             {
               className: "section-body collapsible-body",
@@ -30593,7 +30903,7 @@
                         id: "single-screen-url",
                         className: "form-input",
                         style: { width: "100%", paddingRight: displayUrl ? "28px" : "10px" },
-                        placeholder: effectiveIsLinkMixed ? "Mixed" : "Add a Figma Screen URL",
+                        placeholder: isLinkValueMixed ? "Mixed" : "Add a Figma Screen URL",
                         value: displayUrl,
                         onChange: (e) => handleUrlChange(e.target.value),
                         onKeyDown: handleKeyDown,
@@ -30689,7 +30999,7 @@
     } = useApp();
     const summary = useSelectionSummary();
     const [isOpen, setIsOpen] = (0, import_react9.useState)(() => {
-      if (selectedNodes.length === 1 && selectedNodes[0]?.isFlowNode) {
+      if (selectedNodes.length === 1 && supportsOption(selectedNodes[0], "status")) {
         return Boolean(selectedNodes[0]?.status);
       }
       return Boolean(lastNodeConfig.statusOn);
@@ -30697,49 +31007,120 @@
     const userActionLockRef = import_react9.default.useRef(0);
     const prevSelectedNodeIdRef = import_react9.default.useRef(null);
     const { selectedStatus } = uiState;
-    const isStatusAllowed = (() => {
-      if (multiDraft.nodeType !== void 0) {
-        return normalizeNodeType(multiDraft.nodeType) === "Screen";
+    const rawOptionState = import_react9.default.useMemo(() => {
+      if (selectedNodes.length === 0) {
+        const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
+        const isAllowed = normalizeNodeType(creationType) === "Screen";
+        if (!isAllowed) {
+          return {
+            state: "MIXED_DISABLED",
+            supportedCount: 0,
+            unsupportedCount: 1,
+            supportedNodes: [],
+            unsupportedNodes: [],
+            checked: false,
+            isMixed: true,
+            disabled: true,
+            isOpen: false
+          };
+        }
+        const on = Boolean(lastNodeConfig.statusOn);
+        return {
+          state: on ? "ON" : "OFF",
+          supportedCount: 1,
+          unsupportedCount: 0,
+          supportedNodes: [],
+          unsupportedNodes: [],
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
       }
-      if (summary.isMultiFlowNode) {
-        return !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === "Screen";
-      }
-      if (selectedNodes.length === 1) {
-        const rawType = selectedNodes[0]?.flowNodeType || (selectedNodes[0]?.nodeType === "FRAME" ? "Screen" : selectedNodes[0]?.nodeType);
-        return normalizeNodeType(rawType) === "Screen";
-      }
-      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
-      return normalizeNodeType(creationType) === "Screen";
-    })();
+      return computeOptionSwitchState(selectedNodes, "status", (n) => Boolean(n.status));
+    }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.statusOn]);
     import_react9.default.useEffect(() => {
       const isUserLocked = Date.now() - userActionLockRef.current < 600;
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
       const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
       prevSelectedNodeIdRef.current = currentNodeId;
       if (!isUserLocked || isDifferentNode) {
-        if (summary.isSingleFlowNode) {
-          const node = selectedNodes[0];
-          const hasStatus = Boolean(node && node.status);
-          setIsOpen(hasStatus);
-          if (node && node.status) {
-            setUIState({ selectedStatus: node.status });
-          }
-        } else if (summary.isMultiFlowNode) {
-          const hasStatus = summary.statusOn.hasValue;
-          setIsOpen(hasStatus);
-          if (!summary.status.isMixed && summary.status.value) {
-            setUIState({ selectedStatus: summary.status.value });
+        if (rawOptionState.supportedCount > 0) {
+          const supported = rawOptionState.supportedNodes;
+          if (supported.length === 1) {
+            const node = supported[0];
+            const hasStatus = Boolean(node && node.status);
+            setIsOpen(hasStatus);
+            if (node && node.status) {
+              setUIState({ selectedStatus: node.status });
+            }
+          } else {
+            const onCount = supported.filter((n) => Boolean(n.status)).length;
+            setIsOpen(onCount > 0);
+            const firstStatus = supported.find((n) => n.status)?.status;
+            const allSame = supported.every((n) => n.status === firstStatus);
+            if (allSame && firstStatus) {
+              setUIState({ selectedStatus: firstStatus });
+            }
           }
         } else {
-          setIsOpen(Boolean(lastNodeConfig.statusOn));
+          setIsOpen(false);
         }
       }
-    }, [summary.isSingleFlowNode, summary.isMultiFlowNode, summary.status.isMixed, summary.status.value, summary.statusOn.hasValue, selectedNodes, lastNodeConfig.statusOn, setUIState]);
+    }, [rawOptionState, selectedNodes, setUIState]);
+    const isTypeDrafted = multiDraft.nodeType !== void 0;
+    const isDraftAllowed = isTypeDrafted ? normalizeNodeType(multiDraft.nodeType) === "Screen" : true;
     const isStatusDrafted = multiDraft.status !== void 0;
-    const effectiveIsOpen = isStatusDrafted ? Boolean(multiDraft.status) : isOpen;
-    const isStatusMixed = isStatusDrafted ? false : summary.isMultiFlowNode && summary.status.isMixed;
-    const activeStatus = isStatusDrafted ? multiDraft.status || void 0 : isStatusMixed ? void 0 : summary.isMultiFlowNode ? summary.status.value : selectedStatus;
+    const effectiveIsOpen = !isDraftAllowed ? false : isStatusDrafted ? Boolean(multiDraft.status) : rawOptionState.disabled ? false : isOpen;
+    const effectiveState = import_react9.default.useMemo(() => {
+      if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
+        return {
+          state: "MIXED_DISABLED",
+          checked: false,
+          isMixed: true,
+          disabled: true,
+          isOpen: false
+        };
+      }
+      if (isStatusDrafted) {
+        const on = Boolean(multiDraft.status);
+        return {
+          state: on ? "ON" : "OFF",
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
+      }
+      return {
+        state: rawOptionState.state,
+        checked: rawOptionState.checked,
+        isMixed: rawOptionState.isMixed,
+        disabled: rawOptionState.disabled,
+        isOpen: effectiveIsOpen
+      };
+    }, [isDraftAllowed, rawOptionState, isStatusDrafted, multiDraft.status, effectiveIsOpen]);
+    const isStatusMixed = import_react9.default.useMemo(() => {
+      if (isStatusDrafted) return false;
+      if (effectiveState.disabled) return false;
+      const supported = rawOptionState.supportedNodes;
+      if (supported.length <= 1) return false;
+      const firstStatus = supported[0]?.status;
+      return supported.some((n) => n.status !== firstStatus);
+    }, [isStatusDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
+    const activeStatus = isStatusDrafted ? multiDraft.status || void 0 : isStatusMixed ? void 0 : rawOptionState.supportedNodes.find((n) => n.status)?.status || selectedStatus;
+    const statusCounts = import_react9.default.useMemo(() => {
+      if (!isStatusMixed) return {};
+      const counts = {};
+      for (const n of rawOptionState.supportedNodes) {
+        if (n.status) {
+          counts[n.status] = (counts[n.status] || 0) + 1;
+        }
+      }
+      return counts;
+    }, [isStatusMixed, rawOptionState.supportedNodes]);
     function handleToggle(checked) {
+      if (effectiveState.disabled) return;
       userActionLockRef.current = Date.now();
       setIsOpen(checked);
       if (selectedNodes.length >= 2) {
@@ -30754,6 +31135,9 @@
         });
         return;
       }
+      if (selectedNodes.length === 1 && !supportsOption(selectedNodes[0], "status")) {
+        return;
+      }
       setLastNodeConfig({ statusOn: checked });
       if (checked) {
         const targetStatus = activeStatus || selectedStatus || "draft";
@@ -30766,6 +31150,7 @@
       });
     }
     function selectStatus(status) {
+      if (effectiveState.disabled) return;
       userActionLockRef.current = Date.now();
       setIsOpen(true);
       if (selectedNodes.length >= 2) {
@@ -30773,6 +31158,9 @@
         requestAnimationFrame(() => {
           autoResizeWindow();
         });
+        return;
+      }
+      if (selectedNodes.length === 1 && !supportsOption(selectedNodes[0], "status")) {
         return;
       }
       setUIState({ selectedStatus: status });
@@ -30786,23 +31174,24 @@
       "div",
       {
         className: "section-block",
-        style: { paddingBottom: effectiveIsOpen && isStatusAllowed ? "12px" : "0px" },
+        style: { paddingBottom: effectiveState.isOpen ? "12px" : "0px" },
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-header toggle-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: `section-title${!isStatusAllowed ? " disabled" : ""}`, children: "Status" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: `section-title${effectiveState.disabled ? " disabled" : ""}`, children: "Status" }),
             /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
               Switch,
               {
                 id: "toggle-status",
-                checked: effectiveIsOpen && isStatusAllowed,
-                isMixed: isStatusAllowed && !isStatusDrafted && (summary.statusOn.isMixed || isStatusMixed),
+                checked: effectiveState.checked,
+                isMixed: effectiveState.isMixed,
                 onChange: handleToggle,
-                disabled: !isStatusAllowed
+                disabled: effectiveState.disabled
               }
             )
           ] }),
-          effectiveIsOpen && isStatusAllowed && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "section-body", style: { marginTop: "6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "chip-group active", id: "status-options", style: { display: "flex" }, children: STATUSES.map((s) => {
+          effectiveState.isOpen && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "section-body", style: { display: "flex", marginTop: "6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "chip-group active", id: "status-options", style: { display: "flex" }, children: STATUSES.map((s) => {
             const isChipActive = !isStatusMixed && activeStatus === s.id;
+            const count = statusCounts[s.id] || 0;
             return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
               "button",
               {
@@ -30813,7 +31202,8 @@
                 onClick: () => selectStatus(s.id),
                 children: [
                   /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "tab-bullet", style: { backgroundColor: s.color } }),
-                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "tab-label", children: s.label })
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "tab-label", children: s.label }),
+                  count > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "tab-badge", children: count })
                 ]
               },
               s.id
@@ -31005,7 +31395,8 @@
       selectedNodes,
       autoResizeWindow,
       multiDraft,
-      updateMultiDraft
+      updateMultiDraft,
+      clearMultiDraftKeys
     } = useApp();
     const summary = useSelectionSummary();
     const isMultiMode = summary.isMultiFlowNode;
@@ -31017,9 +31408,6 @@
     });
     const userActionLockRef = (0, import_react10.useRef)(0);
     const prevSelectedNodeIdRef = (0, import_react10.useRef)(null);
-    const isBadgeOnDrafted = multiDraft.badgeOn !== void 0;
-    const effectiveIsOpen = isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : isOpen;
-    const isSectionOpen = effectiveIsOpen;
     const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react10.useState)(false);
     const [stepNumText, setStepNumText] = (0, import_react10.useState)("1");
     const [isMixed, setIsMixed] = (0, import_react10.useState)(false);
@@ -31029,23 +31417,93 @@
     const isColorModeMixed = multiDraft.badgeColorMode !== void 0 ? false : isMultiMode && summary.badgeColorMode.isMixed;
     const displayStepNum = multiDraft.badgeNumber !== void 0 ? String(multiDraft.badgeNumber) : stepNumText;
     const effectiveIsMixed = multiDraft.badgeNumber !== void 0 ? false : isMixed;
-    const isStartNumberDefined = !effectiveIsMixed && displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10));
+    const isStartNumberDefined = displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10));
     const selectedBadgeCorner = multiDraft.badgeCorner || (isCornerMixed ? void 0 : summary.isMultiFlowNode && summary.badgeCorner.value ? summary.badgeCorner.value : uiState.selectedBadgeCorner || "TOP_LEFT");
     const selectedBadgeShape = multiDraft.badgeShape || (isShapeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeShape.value ? summary.badgeShape.value : uiState.selectedBadgeShape || "Square");
     const selectedBadgeColorMode = multiDraft.badgeColorMode || (isColorModeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeColorMode.value ? summary.badgeColorMode.value : uiState.selectedBadgeColorMode || "Style");
     const firstNode = selectedNodes[0];
     const nodeBgColorHex = firstNode?.fillColorHex || uiState.selectedColor || "#FFFFFF";
     const hasNodeStroke = (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
+    const rawOptionState = import_react10.default.useMemo(() => {
+      if (selectedNodes.length === 0) {
+        const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
+        const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, "stepBadge");
+        if (!isAllowed) {
+          return {
+            state: "MIXED_DISABLED",
+            supportedCount: 0,
+            unsupportedCount: 1,
+            supportedNodes: [],
+            unsupportedNodes: [],
+            checked: false,
+            isMixed: true,
+            disabled: true,
+            isOpen: false
+          };
+        }
+        const on = Boolean(lastNodeConfig.stepBadgesOn);
+        return {
+          state: on ? "ON" : "OFF",
+          supportedCount: 1,
+          unsupportedCount: 0,
+          supportedNodes: [],
+          unsupportedNodes: [],
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
+      }
+      return computeOptionSwitchState(
+        selectedNodes,
+        "stepBadge",
+        (n) => n.stepNumber !== void 0 && n.stepNumber !== null
+      );
+    }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.stepBadgesOn]);
+    const isTypeDrafted = multiDraft.nodeType !== void 0;
+    const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "stepBadge") : true;
+    const isBadgeOnDrafted = multiDraft.badgeOn !== void 0;
+    const effectiveIsOpen = !isDraftAllowed ? false : isBadgeOnDrafted ? Boolean(multiDraft.badgeOn) : rawOptionState.disabled ? false : isOpen;
+    const effectiveState = import_react10.default.useMemo(() => {
+      if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
+        return {
+          state: "MIXED_DISABLED",
+          checked: false,
+          isMixed: true,
+          disabled: true,
+          isOpen: false
+        };
+      }
+      if (isBadgeOnDrafted) {
+        const on = Boolean(multiDraft.badgeOn);
+        return {
+          state: on ? "ON" : "OFF",
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
+      }
+      return {
+        state: rawOptionState.state,
+        checked: rawOptionState.checked,
+        isMixed: rawOptionState.isMixed,
+        disabled: rawOptionState.disabled,
+        isOpen: effectiveIsOpen
+      };
+    }, [isDraftAllowed, rawOptionState, isBadgeOnDrafted, multiDraft.badgeOn, effectiveIsOpen]);
+    const isSectionOpen = effectiveState.isOpen;
     (0, import_react10.useEffect)(() => {
       const isUserLocked = Date.now() - userActionLockRef.current < 600;
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
       const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
       prevSelectedNodeIdRef.current = currentNodeId;
       if (!isUserLocked || isDifferentNode) {
-        if (selectedNodes && selectedNodes.length > 0) {
-          if (selectedNodes.length === 1) {
+        if (rawOptionState.supportedCount > 0) {
+          const supported = rawOptionState.supportedNodes;
+          if (supported.length === 1) {
             setIsMixed(false);
-            const node = selectedNodes[0];
+            const node = supported[0];
             if (node.stepNumber !== void 0) {
               setIsOpen(true);
               setStepNumText(String(node.stepNumber));
@@ -31063,16 +31521,17 @@
               setUIState({ selectedBadgeColorMode: node.badgeColorMode });
             }
           } else {
-            const hasBadges = summary.hasStepBadge.hasValue;
-            setIsOpen(hasBadges);
-            const stepNums = selectedNodes.map((n) => n.stepNumber).filter((n) => n !== void 0);
-            const allSame = stepNums.length > 0 && stepNums.every((v) => v === stepNums[0]);
-            if (allSame) {
-              setIsMixed(false);
-              setStepNumText(String(stepNums[0]));
+            const onCount = supported.filter((n) => n.stepNumber !== void 0 && n.stepNumber !== null).length;
+            setIsOpen(onCount > 0);
+            const validNums = supported.map((n) => n.stepNumber).filter((n) => typeof n === "number" && !isNaN(n) && n > 0);
+            if (validNums.length > 0) {
+              const minNum = Math.min(...validNums);
+              const allSame = validNums.every((v) => v === validNums[0]);
+              setIsMixed(!allSame);
+              setStepNumText(String(minNum));
             } else {
-              setIsMixed(true);
-              setStepNumText("");
+              setIsMixed(false);
+              setStepNumText("1");
             }
             if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
               setUIState({ selectedBadgeCorner: summary.badgeCorner.value });
@@ -31087,22 +31546,19 @@
             }
           }
         } else {
-          setIsOpen(Boolean(lastNodeConfig.stepBadgesOn));
-          setIsMixed(false);
-          const nextStepNum = typeof lastNodeConfig.stepNumber === "number" && lastNodeConfig.stepNumber > 0 ? lastNodeConfig.stepNumber + 1 : 1;
-          setStepNumText(String(nextStepNum));
-          if (lastNodeConfig.badgeCorner) {
-            setUIState({ selectedBadgeCorner: lastNodeConfig.badgeCorner });
-          }
-          if (lastNodeConfig.badgeShape) {
-            setUIState({ selectedBadgeShape: lastNodeConfig.badgeShape });
-          }
-          if (lastNodeConfig.badgeColorMode) {
-            setUIState({ selectedBadgeColorMode: lastNodeConfig.badgeColorMode });
+          if (selectedNodes.length === 0) {
+            setIsOpen(Boolean(lastNodeConfig.stepBadgesOn));
+            setIsMixed(false);
+            const nextStepNum = typeof lastNodeConfig.stepNumber === "number" && lastNodeConfig.stepNumber > 0 ? lastNodeConfig.stepNumber + 1 : 1;
+            setStepNumText(String(nextStepNum));
+          } else {
+            setIsOpen(false);
+            setIsMixed(false);
           }
         }
       }
     }, [
+      rawOptionState,
       selectedNodes,
       summary.badgeCorner.isMixed,
       summary.badgeCorner.value,
@@ -31110,7 +31566,6 @@
       summary.badgeShape.value,
       summary.badgeColorMode.isMixed,
       summary.badgeColorMode.value,
-      summary.hasStepBadge.hasValue,
       lastNodeConfig.stepBadgesOn,
       lastNodeConfig.stepNumber,
       lastNodeConfig.badgeCorner,
@@ -31136,6 +31591,7 @@
       return isNaN(parsed) || parsed < 1 ? 1 : parsed;
     }
     function handleToggle(checked) {
+      if (effectiveState.disabled) return;
       userActionLockRef.current = Date.now();
       setIsOpen(checked);
       if (selectedNodes.length >= 2) {
@@ -31149,6 +31605,9 @@
         requestAnimationFrame(() => {
           autoResizeWindow();
         });
+        return;
+      }
+      if (selectedNodes.length === 1 && !supportsOption(selectedNodes[0], "stepBadge")) {
         return;
       }
       setLastNodeConfig({ stepBadgesOn: checked });
@@ -31265,24 +31724,20 @@
       }
     }
     function handleAddStepBadgesMulti() {
-      if (selectedNodes.length >= 2) {
-        const start2 = getNumberValue();
-        updateMultiDraft({
-          badgeOn: true,
-          badgeNumber: start2,
-          badgeCorner: selectedBadgeCorner || "TOP_LEFT",
-          badgeShape: selectedBadgeShape || "Square",
-          badgeColorMode: selectedBadgeColorMode || "Style"
-        });
-        return;
-      }
       const start = getNumberValue();
-      applyStepBadges(
-        start,
-        selectedBadgeCorner,
-        selectedBadgeShape,
-        selectedBadgeColorMode
-      );
+      const corner = selectedBadgeCorner || "TOP_LEFT";
+      const shape = selectedBadgeShape || "Square";
+      const colorMode = selectedBadgeColorMode || "Style";
+      applyStepBadges(start, corner, shape, colorMode);
+      setIsOpen(true);
+      setLastNodeConfig({
+        stepBadgesOn: true,
+        stepNumber: start,
+        badgeCorner: corner,
+        badgeShape: shape,
+        badgeColorMode: colorMode
+      });
+      clearMultiDraftKeys(["badgeOn", "badgeNumber", "badgeCorner", "badgeShape", "badgeColorMode"]);
     }
     function renderColorSwatch(mode, size = 14) {
       if (mode === "White") {
@@ -31345,21 +31800,22 @@
       "div",
       {
         className: "section-block step-badges-section",
-        style: { paddingBottom: isSectionOpen ? "12px" : "0px" },
+        style: { paddingBottom: effectiveState.isOpen ? "12px" : "0px" },
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "section-header toggle-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "section-title", children: "Step Badges" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: `section-title${effectiveState.disabled ? " disabled" : ""}`, children: "Step Badges" }),
             /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
               Switch,
               {
                 id: "toggle-step-badges",
-                checked: effectiveIsOpen,
-                isMixed: !isBadgeOnDrafted && summary.isMultiFlowNode && summary.hasStepBadge.isMixed,
+                checked: effectiveState.checked,
+                isMixed: effectiveState.isMixed,
+                disabled: effectiveState.disabled,
                 onChange: handleToggle
               }
             )
           ] }),
-          effectiveIsOpen && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+          effectiveState.isOpen && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
             "div",
             {
               style: {
@@ -31420,8 +31876,8 @@
                               {
                                 type: "text",
                                 id: "input-step-number",
-                                value: effectiveIsMixed ? "" : displayStepNum,
-                                placeholder: effectiveIsMixed ? "Mixed" : "1",
+                                value: displayStepNum,
+                                placeholder: "1",
                                 onChange: (e) => {
                                   setIsMixed(false);
                                   setStepNumText(e.target.value.replace(/[^0-9]/g, ""));
@@ -31439,7 +31895,7 @@
                                   outline: "none",
                                   fontSize: "11px",
                                   fontWeight: 400,
-                                  color: effectiveIsMixed ? "var(--color-text-primary, #000000)" : "#111827",
+                                  color: "#111827",
                                   padding: 0
                                 }
                               }
@@ -31820,6 +32276,20 @@
     const isWMixed = multiDraft.width !== void 0 ? false : summary.isMultiFlowNode && summary.width.isMixed;
     const isHMixed = multiDraft.height !== void 0 ? false : summary.isMultiFlowNode && summary.height.isMixed;
     const isRMixed = multiDraft.cornerRadius !== void 0 ? false : summary.isMultiFlowNode && summary.cornerRadius.isMixed;
+    const isSizeDrafted = multiDraft.width !== void 0 || multiDraft.height !== void 0;
+    const isSizeMixed = !isSizeDrafted && summary.isMultiFlowNode && (isWMixed || isHMixed);
+    const sizePresetCounts = import_react11.default.useMemo(() => {
+      if (!isSizeMixed) return {};
+      const counts = {};
+      const flowNodes = selectedNodes.filter((n) => n && n.isFlowNode && !n.isConnector);
+      for (const n of flowNodes) {
+        const matched = sizePresets.find((p) => p.w === n.width && p.h === n.height);
+        if (matched) {
+          counts[matched.id] = (counts[matched.id] || 0) + 1;
+        }
+      }
+      return counts;
+    }, [isSizeMixed, selectedNodes, sizePresets]);
     import_react11.default.useEffect(() => {
       const validNodes = (selectedNodes || []).filter((n) => Boolean(n));
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : "NONE";
@@ -31841,6 +32311,14 @@
           }
           if (!isFocusedRef.current.r) {
             setRadiusInput(multiDraft.cornerRadius !== void 0 ? String(multiDraft.cornerRadius) : isRMixed ? "" : summary.cornerRadius.value !== void 0 ? String(summary.cornerRadius.value) : "");
+          }
+          if (isDifferentNode) {
+            if (isSizeMixed) {
+              setSelectedSizePresetId(null);
+            } else {
+              const matched = sizePresets.find((p) => p.w === summary.width.value && p.h === summary.height.value);
+              setSelectedSizePresetId(matched ? matched.id : null);
+            }
           }
         } else {
           const first = validNodes[0];
@@ -32347,18 +32825,25 @@
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "chip-group", style: { marginTop: "6px", flexWrap: "wrap", gap: "4px" }, children: sizePresets.map((p) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
-          "button",
-          {
-            type: "button",
-            className: `chip-btn${selectedSizePresetId === p.id ? " active" : ""}${!isSizeAllowed ? " disabled" : ""}`,
-            onClick: () => isSizeAllowed && applySizePreset(p),
-            disabled: !isSizeAllowed,
-            title: !isSizeAllowed ? "Size presets are disabled for this shape" : `${p.name} (${p.w}\xD7${p.h})`,
-            children: p.name
-          },
-          p.id
-        )) })
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "chip-group", style: { marginTop: "6px", flexWrap: "wrap", gap: "4px" }, children: sizePresets.map((p) => {
+          const count = sizePresetCounts[p.id] || 0;
+          const isPresetActive = !isSizeMixed && selectedSizePresetId === p.id;
+          return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+            "button",
+            {
+              type: "button",
+              className: `chip-btn${isPresetActive ? " active" : ""}${!isSizeAllowed ? " disabled" : ""}`,
+              onClick: () => isSizeAllowed && applySizePreset(p),
+              disabled: !isSizeAllowed,
+              title: !isSizeAllowed ? "Size presets are disabled for this shape" : `${p.name} (${p.w}\xD7${p.h})`,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "tab-label", children: p.name }),
+                count > 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "tab-badge", children: count })
+              ]
+            },
+            p.id
+          );
+        }) })
       ] })
     ] });
   }
@@ -32921,6 +33406,7 @@
   }
 
   // src/ui/components/appearance/ElevationSection.tsx
+  var import_react13 = __toESM(require_react());
   var import_jsx_runtime13 = __toESM(require_jsx_runtime());
   var ELEVATION_LEVELS = [
     { level: 0, label: "E100", desc: "Shapes" },
@@ -32934,8 +33420,6 @@
       uiState,
       setLastNodeConfig,
       applyElevationToNodes,
-      removeStepBadgesFromNodes,
-      applyStatusToNode,
       activeAppearanceSection,
       setActiveAppearanceSection,
       autoResizeWindow,
@@ -32945,11 +33429,84 @@
     } = useApp();
     const summary = useSelectionSummary();
     const isSectionOpen = activeAppearanceSection === "elevation";
+    const rawOptionState = import_react13.default.useMemo(() => {
+      if (selectedNodes.length === 0) {
+        const creationType = uiState.selectedNodeType || "Screen";
+        const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, "elevation");
+        if (!isAllowed) {
+          return {
+            state: "MIXED_DISABLED",
+            supportedCount: 0,
+            unsupportedCount: 1,
+            supportedNodes: [],
+            unsupportedNodes: [],
+            checked: false,
+            isMixed: true,
+            disabled: true,
+            isOpen: false
+          };
+        }
+        return {
+          state: isSectionOpen ? "ON" : "OFF",
+          supportedCount: 1,
+          unsupportedCount: 0,
+          supportedNodes: [],
+          unsupportedNodes: [],
+          checked: isSectionOpen,
+          isMixed: false,
+          disabled: false,
+          isOpen: isSectionOpen
+        };
+      }
+      return computeOptionSwitchState(
+        selectedNodes,
+        "elevation",
+        (n) => Boolean(n.elevation !== void 0 && n.elevation !== null ? n.elevation >= 0 : n.elevationOn)
+      );
+    }, [selectedNodes, uiState.selectedNodeType, isSectionOpen]);
+    const isTypeDrafted = multiDraft.nodeType !== void 0;
+    const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "elevation") : true;
     const isElevationDrafted = multiDraft.elevation !== void 0;
-    const effectiveIsSectionOpen = isElevationDrafted ? typeof multiDraft.elevation === "number" : isSectionOpen;
-    const isElevationMixed = isElevationDrafted ? false : summary.isMultiFlowNode && summary.elevation.isMixed;
-    const currentLevel = isElevationDrafted ? typeof multiDraft.elevation === "number" ? multiDraft.elevation : void 0 : summary.isMultiFlowNode ? summary.elevation.value : typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
+    const effectiveIsOpen = !isDraftAllowed ? false : isElevationDrafted ? typeof multiDraft.elevation === "number" : rawOptionState.disabled ? false : isSectionOpen;
+    const effectiveState = import_react13.default.useMemo(() => {
+      if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
+        return {
+          state: "MIXED_DISABLED",
+          checked: false,
+          isMixed: true,
+          disabled: true,
+          isOpen: false
+        };
+      }
+      if (isElevationDrafted) {
+        const on = typeof multiDraft.elevation === "number";
+        return {
+          state: on ? "ON" : "OFF",
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
+      }
+      return {
+        state: rawOptionState.state,
+        checked: rawOptionState.checked,
+        isMixed: rawOptionState.isMixed,
+        disabled: rawOptionState.disabled,
+        isOpen: effectiveIsOpen
+      };
+    }, [isDraftAllowed, rawOptionState, isElevationDrafted, multiDraft.elevation, effectiveIsOpen]);
+    const isElevationMixed = import_react13.default.useMemo(() => {
+      if (isElevationDrafted) return false;
+      if (effectiveState.disabled) return false;
+      const supported = rawOptionState.supportedNodes;
+      if (supported.length <= 1) return false;
+      const firstLevel = supported[0]?.elevation;
+      return supported.some((n) => n.elevation !== firstLevel);
+    }, [isElevationDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
+    const currentLevel = isElevationDrafted ? typeof multiDraft.elevation === "number" ? multiDraft.elevation : void 0 : isElevationMixed ? void 0 : summary.isMultiFlowNode ? summary.elevation.value : typeof uiState.selectedElevation === "number" ? uiState.selectedElevation : 0;
     function handleToggle(checked) {
+      if (effectiveState.disabled) return;
       if (selectedNodes.length >= 2) {
         if (checked) {
           setActiveAppearanceSection("elevation");
@@ -32962,6 +33519,9 @@
         requestAnimationFrame(() => {
           autoResizeWindow();
         });
+        return;
+      }
+      if (selectedNodes.length === 1 && !supportsOption(selectedNodes[0], "elevation")) {
         return;
       }
       if (checked) {
@@ -32979,6 +33539,7 @@
       });
     }
     function selectElevation(level) {
+      if (effectiveState.disabled) return;
       setActiveAppearanceSection("elevation");
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ elevation: level });
@@ -32987,43 +33548,51 @@
         });
         return;
       }
+      if (selectedNodes.length === 1 && !supportsOption(selectedNodes[0], "elevation")) {
+        return;
+      }
       setLastNodeConfig({ elevationOn: true, elevation: level });
       applyElevationToNodes(level);
       requestAnimationFrame(() => {
         autoResizeWindow();
       });
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "section-block", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: "section-title", children: [
-          "Elevation",
-          summary.isMultiFlowNode && !isElevationDrafted && (summary.elevationOn.isMixed || isElevationMixed) && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
-          Switch,
-          {
-            id: "toggle-elevation",
-            checked: effectiveIsSectionOpen,
-            isMixed: !isElevationDrafted && isElevationMixed,
-            onChange: handleToggle
-          }
-        )
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: `elevation-cards-container${effectiveIsSectionOpen ? " active" : ""}`, id: "elevation-options", children: ELEVATION_LEVELS.map(({ level, label, desc }) => {
-        const isSelected = !isElevationMixed && currentLevel === level;
-        return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
-          "div",
-          {
-            className: `elevation-card elev-${level}${isSelected ? " selected" : ""}`,
-            title: `${label} (${desc})`,
-            "aria-label": `${label} (${desc})`,
-            onClick: () => selectElevation(level),
-            children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "elevation-inner-box" })
-          },
-          level
-        );
-      }) }) })
-    ] });
+    return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
+      "div",
+      {
+        className: "section-block",
+        style: { paddingBottom: effectiveState.isOpen ? "12px" : "0px" },
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "section-header toggle-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: `section-title${effectiveState.disabled ? " disabled" : ""}`, children: "Elevation" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+              Switch,
+              {
+                id: "toggle-elevation",
+                checked: effectiveState.checked,
+                isMixed: effectiveState.isMixed,
+                disabled: effectiveState.disabled,
+                onChange: handleToggle
+              }
+            )
+          ] }),
+          effectiveState.isOpen && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "section-body", style: { display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "elevation-cards-container active", id: "elevation-options", children: ELEVATION_LEVELS.map(({ level, label, desc }) => {
+            const isSelected = !isElevationMixed && currentLevel === level;
+            return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+              "div",
+              {
+                className: `elevation-card elev-${level}${isSelected ? " selected" : ""}`,
+                title: `${label} (${desc})`,
+                "aria-label": `${label} (${desc})`,
+                onClick: () => selectElevation(level),
+                children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "elevation-inner-box" })
+              },
+              level
+            );
+          }) }) })
+        ]
+      }
+    );
   }
 
   // src/ui/components/appearance/AppearancePanel.tsx
@@ -33041,10 +33610,10 @@
   }
 
   // src/ui/components/connection/ConnectionPanel.tsx
-  var import_react15 = __toESM(require_react());
+  var import_react16 = __toESM(require_react());
 
   // src/ui/components/connection/ConnectSection.tsx
-  var import_react13 = __toESM(require_react());
+  var import_react14 = __toESM(require_react());
   var import_jsx_runtime15 = __toESM(require_jsx_runtime());
   var TERMINAL_OPTIONS = [
     "NONE",
@@ -33130,19 +33699,19 @@
       }
       return true;
     });
-    const [startTermPopupOpen, setStartTermPopupOpen] = (0, import_react13.useState)(false);
-    const [endTermPopupOpen, setEndTermPopupOpen] = (0, import_react13.useState)(false);
-    const [startTermVal, setStartTermVal] = (0, import_react13.useState)("NONE");
-    const [endTermVal, setEndTermVal] = (0, import_react13.useState)("ARROW");
-    const [isColorMixed, setIsColorMixed] = (0, import_react13.useState)(false);
-    const [isWeightMixed, setIsWeightMixed] = (0, import_react13.useState)(false);
-    const [weightInput, setWeightInput] = (0, import_react13.useState)("1.5");
-    const [startOffsetInput, setStartOffsetInput] = (0, import_react13.useState)("0");
-    const [endOffsetInput, setEndOffsetInput] = (0, import_react13.useState)("0");
-    const [isStartOffsetMixed, setIsStartOffsetMixed] = (0, import_react13.useState)(false);
-    const [isEndOffsetMixed, setIsEndOffsetMixed] = (0, import_react13.useState)(false);
-    const offsetDebounceRef = (0, import_react13.useRef)(null);
-    (0, import_react13.useEffect)(() => {
+    const [startTermPopupOpen, setStartTermPopupOpen] = (0, import_react14.useState)(false);
+    const [endTermPopupOpen, setEndTermPopupOpen] = (0, import_react14.useState)(false);
+    const [startTermVal, setStartTermVal] = (0, import_react14.useState)("NONE");
+    const [endTermVal, setEndTermVal] = (0, import_react14.useState)("ARROW");
+    const [isColorMixed, setIsColorMixed] = (0, import_react14.useState)(false);
+    const [isWeightMixed, setIsWeightMixed] = (0, import_react14.useState)(false);
+    const [weightInput, setWeightInput] = (0, import_react14.useState)("1.5");
+    const [startOffsetInput, setStartOffsetInput] = (0, import_react14.useState)("0");
+    const [endOffsetInput, setEndOffsetInput] = (0, import_react14.useState)("0");
+    const [isStartOffsetMixed, setIsStartOffsetMixed] = (0, import_react14.useState)(false);
+    const [isEndOffsetMixed, setIsEndOffsetMixed] = (0, import_react14.useState)(false);
+    const offsetDebounceRef = (0, import_react14.useRef)(null);
+    (0, import_react14.useEffect)(() => {
       return () => {
         if (offsetDebounceRef.current) {
           clearTimeout(offsetDebounceRef.current);
@@ -33163,23 +33732,23 @@
       const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
       return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
     };
-    const [selectedColor, setSelectedColor] = (0, import_react13.useState)(() => {
+    const [selectedColor, setSelectedColor] = (0, import_react14.useState)(() => {
       if (selectedConnectorColor) return selectedConnectorColor.toUpperCase();
       if (activeStylePreset) {
         return getPresetLineColor2(activeStylePreset);
       }
       return "#000000";
     });
-    const [hexInput, setHexInput] = (0, import_react13.useState)(() => {
+    const [hexInput, setHexInput] = (0, import_react14.useState)(() => {
       if (selectedConnectorColor) return selectedConnectorColor.replace("#", "").toUpperCase();
       if (activeStylePreset) {
         return getPresetLineColor2(activeStylePreset).replace("#", "");
       }
       return "000000";
     });
-    const hexInputRef = (0, import_react13.useRef)(null);
-    const nativeColorInputRef = (0, import_react13.useRef)(null);
-    (0, import_react13.useEffect)(() => {
+    const hexInputRef = (0, import_react14.useRef)(null);
+    const nativeColorInputRef = (0, import_react14.useRef)(null);
+    (0, import_react14.useEffect)(() => {
       if (activeStylePreset) {
         const connectorColor = getPresetLineColor2(activeStylePreset);
         setSelectedColor(connectorColor);
@@ -33188,7 +33757,7 @@
         if (colSel) colSel.value = connectorColor;
       }
     }, [uiState.selectedColor, uiState.selectedStrokeWeight, uiState.selectedStrokeColor, selectedStylePresetId]);
-    (0, import_react13.useEffect)(() => {
+    (0, import_react14.useEffect)(() => {
       if (selectedConnectorColor) {
         const formatted = selectedConnectorColor.toUpperCase();
         setSelectedColor(formatted);
@@ -33197,7 +33766,7 @@
         if (colSel) colSel.value = formatted;
       }
     }, [selectedConnectorColor]);
-    (0, import_react13.useEffect)(() => {
+    (0, import_react14.useEffect)(() => {
       function handleDocClick(e) {
         const target = e.target;
         if (!target.closest("#wrap-start-terminal")) {
@@ -33210,7 +33779,7 @@
       document.addEventListener("click", handleDocClick);
       return () => document.removeEventListener("click", handleDocClick);
     }, []);
-    (0, import_react13.useEffect)(() => {
+    (0, import_react14.useEffect)(() => {
       if (summary.isSingleConnector) {
         const node = selectedNodes[0];
         setIsColorMixed(false);
@@ -33421,7 +33990,7 @@
       selectedNodes,
       setUIState
     ]);
-    (0, import_react13.useEffect)(() => {
+    (0, import_react14.useEffect)(() => {
       if (selectedConnectorColor) {
         const formatted = selectedConnectorColor.toUpperCase();
         setSelectedColor(formatted);
@@ -34270,22 +34839,22 @@
   }
 
   // src/ui/components/connection/LabelSection.tsx
-  var import_react14 = __toESM(require_react());
+  var import_react15 = __toESM(require_react());
   var import_jsx_runtime16 = __toESM(require_jsx_runtime());
   var LABEL_PRESETS = ["Text", "Yes", "No", "Success", "Error", "Next", "Back"];
   function LabelSection() {
     const { lastConnectorConfig, setLastConnectorConfig, applyCurrentConnectorState, autoResizeWindow } = useApp();
-    const [isOn, setIsOn] = (0, import_react14.useState)(lastConnectorConfig.labelOn || false);
-    const [labelText, setLabelText] = (0, import_react14.useState)(lastConnectorConfig.labelText || "Text");
-    const labelDebounceRef = (0, import_react14.useRef)(null);
-    (0, import_react14.useEffect)(() => {
+    const [isOn, setIsOn] = (0, import_react15.useState)(lastConnectorConfig.labelOn || false);
+    const [labelText, setLabelText] = (0, import_react15.useState)(lastConnectorConfig.labelText || "Text");
+    const labelDebounceRef = (0, import_react15.useRef)(null);
+    (0, import_react15.useEffect)(() => {
       return () => {
         if (labelDebounceRef.current) {
           clearTimeout(labelDebounceRef.current);
         }
       };
     }, []);
-    (0, import_react14.useEffect)(() => {
+    (0, import_react15.useEffect)(() => {
       setIsOn(lastConnectorConfig.labelOn || false);
       if (lastConnectorConfig.labelText !== void 0) {
         setLabelText(lastConnectorConfig.labelText);
@@ -34364,7 +34933,7 @@
     const isSingleConn = count === 1 && allConnectors;
     const isMultiConn = count >= 2 && allConnectors;
     const previewKey = isSingleConn ? `${selectedNodes[0]?.connectorSourceNodeName || ""}->${selectedNodes[0]?.connectorTargetNodeName || ""}` : isMultiConn ? selectedNodes.map((n) => `${n?.id || ""}:${(n?.connectedNodeNames || []).join(",")}:${n?.connectorSourceNodeName || ""}->${n?.connectorTargetNodeName || ""}`).join("|") : `${selectedNodes[0]?.title || selectedNodes[0]?.name || ""}:${selectedNodes[1]?.title || selectedNodes[1]?.name || ""}`;
-    (0, import_react15.useEffect)(() => {
+    (0, import_react16.useEffect)(() => {
       const anchorBox = document.getElementById("conn-anchor-preview-box");
       if (isSingleConn) {
         if (anchorBox) anchorBox.style.display = "";
@@ -34438,13 +35007,13 @@
   }
 
   // src/ui/components/shared/Tooltip.tsx
-  var import_react16 = __toESM(require_react());
+  var import_react17 = __toESM(require_react());
   var import_jsx_runtime18 = __toESM(require_jsx_runtime());
   function FigmaTooltip() {
-    const tooltipRef = (0, import_react16.useRef)(null);
-    const showTimerRef = (0, import_react16.useRef)(null);
-    const currentTargetRef = (0, import_react16.useRef)(null);
-    const hide = (0, import_react16.useCallback)(() => {
+    const tooltipRef = (0, import_react17.useRef)(null);
+    const showTimerRef = (0, import_react17.useRef)(null);
+    const currentTargetRef = (0, import_react17.useRef)(null);
+    const hide = (0, import_react17.useCallback)(() => {
       if (showTimerRef.current) {
         clearTimeout(showTimerRef.current);
         showTimerRef.current = null;
@@ -34456,7 +35025,7 @@
         tooltip.style.display = "none";
       }
     }, []);
-    const show = (0, import_react16.useCallback)((target, text) => {
+    const show = (0, import_react17.useCallback)((target, text) => {
       if (!text || !text.trim()) {
         hide();
         return;
@@ -34491,7 +35060,7 @@
         tooltip.classList.add("visible");
       }, 150);
     }, [hide]);
-    (0, import_react16.useEffect)(() => {
+    (0, import_react17.useEffect)(() => {
       const handleMouseOver = (e) => {
         const targetElement = e.target;
         if (targetElement.matches?.("input, textarea, select")) {
@@ -34613,7 +35182,7 @@
   }
 
   // src/ui/components/modals/SizeModal.tsx
-  var import_react17 = __toESM(require_react());
+  var import_react18 = __toESM(require_react());
   var import_jsx_runtime20 = __toESM(require_jsx_runtime());
   var FIXED_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) });
   var HUG_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("path", { d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z", fill: "currentColor" }) });
@@ -34630,14 +35199,14 @@
     onSave,
     onClose
   }) {
-    const [name, setName] = (0, import_react17.useState)(initialName);
-    const [w, setW] = (0, import_react17.useState)(initialW);
-    const [h, setH] = (0, import_react17.useState)(initialH);
-    const [radius, setRadius] = (0, import_react17.useState)(initialRadius);
-    const [sizeMode, setSizeMode] = (0, import_react17.useState)(initialSizeMode);
-    const [dropdownOpen, setDropdownOpen] = (0, import_react17.useState)(false);
-    const dropdownRef = (0, import_react17.useRef)(null);
-    (0, import_react17.useEffect)(() => {
+    const [name, setName] = (0, import_react18.useState)(initialName);
+    const [w, setW] = (0, import_react18.useState)(initialW);
+    const [h, setH] = (0, import_react18.useState)(initialH);
+    const [radius, setRadius] = (0, import_react18.useState)(initialRadius);
+    const [sizeMode, setSizeMode] = (0, import_react18.useState)(initialSizeMode);
+    const [dropdownOpen, setDropdownOpen] = (0, import_react18.useState)(false);
+    const dropdownRef = (0, import_react18.useRef)(null);
+    (0, import_react18.useEffect)(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
           setDropdownOpen(false);
@@ -34888,7 +35457,7 @@
   }
 
   // src/ui/components/modals/FigmaDesignPickerModal.tsx
-  var import_react18 = __toESM(require_react());
+  var import_react19 = __toESM(require_react());
   var import_jsx_runtime21 = __toESM(require_jsx_runtime());
   function FigmaDesignPickerModal({ onClose }) {
     const {
@@ -34899,24 +35468,24 @@
       sizePresets,
       applyCurrentNodeState
     } = useApp();
-    const [searchQuery, setSearchQuery] = (0, import_react18.useState)("");
-    const [selectedFrameId, setSelectedFrameId] = (0, import_react18.useState)(null);
-    const [saveAsPreset, setSaveAsPreset] = (0, import_react18.useState)(true);
-    const [linkToFrame, setLinkToFrame] = (0, import_react18.useState)(true);
-    (0, import_react18.useEffect)(() => {
+    const [searchQuery, setSearchQuery] = (0, import_react19.useState)("");
+    const [selectedFrameId, setSelectedFrameId] = (0, import_react19.useState)(null);
+    const [saveAsPreset, setSaveAsPreset] = (0, import_react19.useState)(true);
+    const [linkToFrame, setLinkToFrame] = (0, import_react19.useState)(true);
+    (0, import_react19.useEffect)(() => {
       loadDesignFrames();
     }, [loadDesignFrames]);
-    (0, import_react18.useEffect)(() => {
+    (0, import_react19.useEffect)(() => {
       if (designFrames.length > 0 && !selectedFrameId) {
         setSelectedFrameId(designFrames[0].id);
       }
     }, [designFrames, selectedFrameId]);
-    const filteredFrames = (0, import_react18.useMemo)(() => {
+    const filteredFrames = (0, import_react19.useMemo)(() => {
       const q = searchQuery.trim().toLowerCase();
       if (!q) return designFrames;
       return designFrames.filter((f) => f.name.toLowerCase().includes(q));
     }, [designFrames, searchQuery]);
-    const selectedFrame = (0, import_react18.useMemo)(() => {
+    const selectedFrame = (0, import_react19.useMemo)(() => {
       return designFrames.find((f) => f.id === selectedFrameId) || null;
     }, [designFrames, selectedFrameId]);
     function handleApply() {
@@ -35428,10 +35997,10 @@
   }
 
   // src/ui/components/modals/StyleModal.tsx
-  var import_react20 = __toESM(require_react());
+  var import_react21 = __toESM(require_react());
 
   // src/ui/components/shared/ColorWheelField.tsx
-  var import_react19 = __toESM(require_react());
+  var import_react20 = __toESM(require_react());
   var import_jsx_runtime22 = __toESM(require_jsx_runtime());
   function hexToHsv(hex, fallbackHue = 0) {
     let clean = hex.replace("#", "").trim();
@@ -35524,12 +36093,12 @@
     onNoneToggle
   }) {
     const cleanHex = value.replace("#", "").toUpperCase();
-    const [colorHex, setColorHex] = (0, import_react19.useState)(cleanHex);
-    const [colorHsv, setColorHsv] = (0, import_react19.useState)(() => hexToHsv(cleanHex));
-    const [internalOpen, setInternalOpen] = (0, import_react19.useState)(false);
-    const wheelRef = (0, import_react19.useRef)(null);
-    const innerDiscRef = (0, import_react19.useRef)(null);
-    const isInteractingRef = (0, import_react19.useRef)(false);
+    const [colorHex, setColorHex] = (0, import_react20.useState)(cleanHex);
+    const [colorHsv, setColorHsv] = (0, import_react20.useState)(() => hexToHsv(cleanHex));
+    const [internalOpen, setInternalOpen] = (0, import_react20.useState)(false);
+    const wheelRef = (0, import_react20.useRef)(null);
+    const innerDiscRef = (0, import_react20.useRef)(null);
+    const isInteractingRef = (0, import_react20.useRef)(false);
     const isWheelOpen = isOpen !== void 0 ? isOpen : internalOpen;
     const toggleWheel = () => {
       const next = !isWheelOpen;
@@ -35539,7 +36108,7 @@
         setInternalOpen(next);
       }
     };
-    (0, import_react19.useEffect)(() => {
+    (0, import_react20.useEffect)(() => {
       if (isInteractingRef.current) return;
       const nextClean = value.replace("#", "").toUpperCase();
       if (nextClean === colorHex) return;
@@ -35592,7 +36161,7 @@
         onChange(fallback);
       }
     }
-    const updateHueFromPoint = (0, import_react19.useCallback)(
+    const updateHueFromPoint = (0, import_react20.useCallback)(
       (clientX, clientY) => {
         if (!wheelRef.current) return;
         const rect = wheelRef.current.getBoundingClientRect();
@@ -35645,7 +36214,7 @@
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     };
-    const updateSatValFromPoint = (0, import_react19.useCallback)(
+    const updateSatValFromPoint = (0, import_react20.useCallback)(
       (clientX, clientY) => {
         if (!innerDiscRef.current) return;
         const rect = innerDiscRef.current.getBoundingClientRect();
@@ -35864,13 +36433,13 @@
     const initialStrokeWeight = targetPreset ? targetPreset.strokeWeight : firstSelectedNode ? firstSelectedNode.strokeWeight ?? 0 : uiState.selectedStrokeWeight ?? 0;
     const initialStrokeHex = (targetPreset ? targetPreset.strokeColor : firstSelectedNode?.strokeColorHex || uiState.selectedStrokeColor || "#000000").replace("#", "").trim().toUpperCase();
     const validStrokeHex = initialStrokeHex.length === 6 ? initialStrokeHex : "000000";
-    const [fillHex, setFillHex] = (0, import_react20.useState)(isMixed ? "" : validFill);
-    const [isFillNone, setIsFillNone] = (0, import_react20.useState)(isInitialFillNone);
-    const [isFillMixed, setIsFillMixed] = (0, import_react20.useState)(Boolean(isMixed));
-    const [strokeHex, setStrokeHex] = (0, import_react20.useState)(validStrokeHex);
-    const [strokeWeight, setStrokeWeight] = (0, import_react20.useState)(initialStrokeWeight);
-    const lastValidFillRef = (0, import_react20.useRef)(validFill);
-    const [activePicker, setActivePicker] = (0, import_react20.useState)(
+    const [fillHex, setFillHex] = (0, import_react21.useState)(isMixed ? "" : validFill);
+    const [isFillNone, setIsFillNone] = (0, import_react21.useState)(isInitialFillNone);
+    const [isFillMixed, setIsFillMixed] = (0, import_react21.useState)(Boolean(isMixed));
+    const [strokeHex, setStrokeHex] = (0, import_react21.useState)(validStrokeHex);
+    const [strokeWeight, setStrokeWeight] = (0, import_react21.useState)(initialStrokeWeight);
+    const lastValidFillRef = (0, import_react21.useRef)(validFill);
+    const [activePicker, setActivePicker] = (0, import_react21.useState)(
       "fill"
     );
     const handleFillChipClick = () => {
@@ -36184,7 +36753,7 @@
   }
 
   // src/ui/components/modals/ConnectorColorModal.tsx
-  var import_react21 = __toESM(require_react());
+  var import_react22 = __toESM(require_react());
   var import_jsx_runtime24 = __toESM(require_jsx_runtime());
   var CLOSE_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
     "path",
@@ -36204,12 +36773,12 @@
     isMixed: initialIsMixed = false
   }) {
     const { stylePresets } = useApp();
-    const [colorHex, setColorHex] = (0, import_react21.useState)(
+    const [colorHex, setColorHex] = (0, import_react22.useState)(
       () => initialIsMixed ? "" : initialColor.replace("#", "").toUpperCase()
     );
-    const [isMixed, setIsMixed] = (0, import_react21.useState)(Boolean(initialIsMixed));
-    const [showWheel, setShowWheel] = (0, import_react21.useState)(false);
-    const uniqueColorPresets = (0, import_react21.useMemo)(() => {
+    const [isMixed, setIsMixed] = (0, import_react22.useState)(Boolean(initialIsMixed));
+    const [showWheel, setShowWheel] = (0, import_react22.useState)(false);
+    const uniqueColorPresets = (0, import_react22.useMemo)(() => {
       const seen = /* @__PURE__ */ new Set();
       const result = [];
       const baseColors = [
@@ -36236,14 +36805,14 @@
     }, [stylePresets]);
     const presetsRow1 = uniqueColorPresets.slice(0, 5);
     const presetsRow2 = uniqueColorPresets.slice(5);
-    (0, import_react21.useEffect)(() => {
+    (0, import_react22.useEffect)(() => {
       if (!initialIsMixed) {
         setColorHex(initialColor.replace("#", "").toUpperCase());
       } else {
         setColorHex("");
       }
     }, [initialColor, initialIsMixed]);
-    (0, import_react21.useEffect)(() => {
+    (0, import_react22.useEffect)(() => {
       setIsMixed(Boolean(initialIsMixed));
     }, [initialIsMixed]);
     function handleSelectPreset(hex) {
@@ -36393,7 +36962,7 @@
   }
 
   // src/ui/components/modals/FillColorModal.tsx
-  var import_react22 = __toESM(require_react());
+  var import_react23 = __toESM(require_react());
   var import_jsx_runtime25 = __toESM(require_jsx_runtime());
   var CLOSE_SVG3 = /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
     "path",
@@ -36412,11 +36981,11 @@
     const isInitialNone = !isMixed && (rawInit.toLowerCase() === "none" || rawInit.toLowerCase() === "transparent");
     const resolvedColor = (isInitialNone ? "FFFFFF" : rawInit).replace("#", "").trim().toUpperCase();
     const validFill = resolvedColor.length === 6 ? resolvedColor : "FFFFFF";
-    const [fillHex, setFillHex] = (0, import_react22.useState)(isMixed ? "" : validFill);
-    const [isNone, setIsNone] = (0, import_react22.useState)(isInitialNone);
-    const [isFillMixed, setIsFillMixed] = (0, import_react22.useState)(Boolean(isMixed));
-    const [showWheel, setShowWheel] = (0, import_react22.useState)(true);
-    const lastValidFillRef = (0, import_react22.useRef)(validFill);
+    const [fillHex, setFillHex] = (0, import_react23.useState)(isMixed ? "" : validFill);
+    const [isNone, setIsNone] = (0, import_react23.useState)(isInitialNone);
+    const [isFillMixed, setIsFillMixed] = (0, import_react23.useState)(Boolean(isMixed));
+    const [showWheel, setShowWheel] = (0, import_react23.useState)(true);
+    const lastValidFillRef = (0, import_react23.useRef)(validFill);
     const handleColorChange = (hex) => {
       setIsFillMixed(false);
       setFillHex(hex);
@@ -36562,7 +37131,7 @@
   }
 
   // src/ui/components/modals/StrokeColorModal.tsx
-  var import_react23 = __toESM(require_react());
+  var import_react24 = __toESM(require_react());
   var import_jsx_runtime26 = __toESM(require_jsx_runtime());
   var CLOSE_SVG4 = /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
     "path",
@@ -36590,13 +37159,13 @@
     const isInitialNone = !isColorMixed && (initialWeight === 0 || rawInit.toLowerCase() === "none" || rawInit.toLowerCase() === "transparent");
     const resolvedColor = (isInitialNone ? "000000" : rawInit).replace("#", "").trim().toUpperCase();
     const validStroke = resolvedColor.length === 6 ? resolvedColor : "000000";
-    const [strokeHex, setStrokeHex] = (0, import_react23.useState)(isColorMixed ? "" : validStroke);
-    const [strokeWeight, setStrokeWeight] = (0, import_react23.useState)(
+    const [strokeHex, setStrokeHex] = (0, import_react24.useState)(isColorMixed ? "" : validStroke);
+    const [strokeWeight, setStrokeWeight] = (0, import_react24.useState)(
       isWeightMixed ? 0 : initialWeight
     );
-    const [showWheel, setShowWheel] = (0, import_react23.useState)(true);
-    const lastValidColorRef = (0, import_react23.useRef)(validStroke);
-    const lastValidWeightRef = (0, import_react23.useRef)(
+    const [showWheel, setShowWheel] = (0, import_react24.useState)(true);
+    const lastValidColorRef = (0, import_react24.useRef)(validStroke);
+    const lastValidWeightRef = (0, import_react24.useRef)(
       initialWeight > 0 ? initialWeight : 1.5
     );
     const handleColorChange = (hex) => {
@@ -36841,11 +37410,11 @@
       updateMultiDraft,
       isApplyingMultiDraft
     } = useApp();
-    const handleAddSizeSave = (0, import_react24.useCallback)((preset) => {
+    const handleAddSizeSave = (0, import_react25.useCallback)((preset) => {
       addSizePreset(preset);
     }, [addSizePreset]);
     const editSizePreset = sizePresets?.find((p) => p.id === selectedSizePresetId) || sizePresets?.[0];
-    const handleEditSizeSave = (0, import_react24.useCallback)((preset) => {
+    const handleEditSizeSave = (0, import_react25.useCallback)((preset) => {
       if (editSizePreset) updateSizePreset(editSizePreset.id, preset);
     }, [editSizePreset, updateSizePreset]);
     const summary = useSelectionSummary();
@@ -36858,7 +37427,7 @@
     const isMultiConn = nodeCount >= 2 && allConnectors;
     const isConnSel = isSingleConn || isMultiConn;
     const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
-    (0, import_react24.useEffect)(() => {
+    (0, import_react25.useEffect)(() => {
       if (isSingleFigjam) {
         if (currentTab !== "node") setCurrentTab("node");
       } else if (isMultiFigjam) {
@@ -36871,13 +37440,13 @@
         if (currentTab === "connection") setCurrentTab("node");
       }
     }, [isSingleFigjam, isMultiFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
-    (0, import_react24.useEffect)(() => {
+    (0, import_react25.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
-    (0, import_react24.useEffect)(() => {
+    (0, import_react25.useEffect)(() => {
       autoResizeWindow();
     }, [isSingleFigjam, isMultiFigjam, autoResizeWindow]);
-    (0, import_react24.useEffect)(() => {
+    (0, import_react25.useEffect)(() => {
       let newlyFocusedInput = null;
       const handleFocusIn = (e) => {
         const target = e.target;
@@ -36937,8 +37506,8 @@
     function handleContextDelete() {
       setContextMenuOpen(false);
     }
-    const titleDebounceRef = (0, import_react24.useRef)(null);
-    (0, import_react24.useEffect)(() => {
+    const titleDebounceRef = (0, import_react25.useRef)(null);
+    (0, import_react25.useEffect)(() => {
       return () => {
         if (titleDebounceRef.current) {
           clearTimeout(titleDebounceRef.current);

@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../context/AppContext";
-import { useSelectionSummary } from "../../hooks/useSelectionSummary";
 import { Switch } from "../shared/Switch";
-import { normalizeNodeType } from "../../../types";
+import {
+  normalizeNodeType,
+  supportsOption,
+  getMutationTargets,
+  computeOptionSwitchState,
+  type OptionSwitchState,
+} from "../../../types";
 
 /**
  * 프로토콜(http, https, figma 등)이 누락된 URL에 자동으로 https://를 붙여 유효한 링크로 정규화합니다.
@@ -19,6 +24,7 @@ function normalizeUrl(url: string): string {
 
 /**
  * Figma Screen Link 섹션 - Node 탭, 토글(캐시 지원) + URL 입력 + X 삭제 버튼
+ * Screen 노드만 지원하며, Shape/Bridge/FigmaObject 노드는 unsupported (비활성/접힘) 처리
  */
 export function FigmaLinkSection() {
   const {
@@ -31,80 +37,150 @@ export function FigmaLinkSection() {
     multiDraft,
     updateMultiDraft,
   } = useApp();
-  const summary = useSelectionSummary();
-
-  // 스크린(Screen) 노드 타입일 때만 피그마 스크린 링크 허용
-  const isLinkAllowed = summary.isMultiFlowNode
-    ? !summary.nodeType.isMixed &&
-      normalizeNodeType(summary.nodeType.value) === "Screen"
-    : selectedNodes.length === 1
-      ? normalizeNodeType(selectedNodes[0]?.flowNodeType) === "Screen"
-      : normalizeNodeType(uiState.selectedNodeType) === "Screen";
 
   const [isOn, setIsOn] = useState(false);
   const [url, setUrl] = useState("");
   const cachedUrlRef = useRef<string>("");
-  const lastSelectedNodeIdRef = useRef<string | null>(null);
+  const userActionLockRef = useRef<number>(0);
+  const prevSelectedNodeIdRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const isLinkMixed = summary.isMultiFlowNode && summary.figmaLink.isMixed;
+  // Option Capability Matrix 기반 스위치 상태 산출
+  const rawOptionState = useMemo(() => {
+    if (selectedNodes.length === 0) {
+      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
+      const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, "figmaLink");
+      if (!isAllowed) {
+        return {
+          state: "MIXED_DISABLED" as const,
+          supportedCount: 0,
+          unsupportedCount: 1,
+          supportedNodes: [],
+          unsupportedNodes: [],
+          checked: false,
+          isMixed: true,
+          disabled: true,
+          isOpen: false,
+        };
+      }
+      const on = Boolean(lastNodeConfig.singleLinkOn);
+      return {
+        state: (on ? "ON" : "OFF") as OptionSwitchState,
+        supportedCount: 1,
+        unsupportedCount: 0,
+        supportedNodes: [],
+        unsupportedNodes: [],
+        checked: on,
+        isMixed: false,
+        disabled: false,
+        isOpen: on,
+      };
+    }
+    return computeOptionSwitchState(
+      selectedNodes,
+      "figmaLink",
+      (n) => Boolean(n.figmaLink && n.figmaLink.trim())
+    );
+  }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.singleLinkOn]);
 
-  // 노드 선택 대상이 실제로 변경되었을 때만 figmaLink / cachedLink 동기화
+  // Multi Draft 상태 반영
+  const isTypeDrafted = multiDraft.nodeType !== undefined;
+  const isDraftAllowed = isTypeDrafted
+    ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "figmaLink")
+    : true;
+
+  const isLinkDrafted = multiDraft.figmaLink !== undefined;
+  const effectiveIsOpen = !isDraftAllowed
+    ? false
+    : (isLinkDrafted ? Boolean(multiDraft.figmaLink) : (rawOptionState.disabled ? false : (rawOptionState.state === "MIXED_ACTIVE" ? true : isOn)));
+
+  const effectiveState = useMemo(() => {
+    if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
+      return {
+        state: "MIXED_DISABLED" as const,
+        checked: false,
+        isMixed: true,
+        disabled: true,
+        isOpen: false,
+      };
+    }
+    if (isLinkDrafted) {
+      const on = Boolean(multiDraft.figmaLink);
+      return {
+        state: (on ? "ON" : "OFF") as OptionSwitchState,
+        checked: on,
+        isMixed: false,
+        disabled: false,
+        isOpen: on,
+      };
+    }
+    return {
+      state: rawOptionState.state,
+      checked: rawOptionState.checked,
+      isMixed: rawOptionState.isMixed,
+      disabled: rawOptionState.disabled,
+      isOpen: effectiveIsOpen,
+    };
+  }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, effectiveIsOpen]);
+
+  // 노드 선택 대상이 실제로 변경되었을 때만 figmaLink / cachedLink 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   useEffect(() => {
+    const isUserLocked = Date.now() - userActionLockRef.current < 600;
     const currentNodeId =
       selectedNodes.length === 1
-        ? selectedNodes[0].id
+        ? selectedNodes[0]?.id
         : selectedNodes.length > 1
           ? "MULTI"
           : null;
+    const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
+    prevSelectedNodeIdRef.current = currentNodeId;
 
-    if (currentNodeId !== lastSelectedNodeIdRef.current) {
-      lastSelectedNodeIdRef.current = currentNodeId;
-
-      if (selectedNodes.length === 1) {
-        const node = selectedNodes[0];
-        const activeLink = node.figmaLink || "";
-        const cachedLink = node.cachedFigmaLink || activeLink || "";
-        const enabled = Boolean(activeLink);
-        setIsOn(enabled);
-        const displayLink = activeLink || cachedLink;
-        setUrl(displayLink);
-        cachedUrlRef.current = displayLink;
-        setLastNodeConfig({
-          singleLinkOn: enabled,
-          singleLinkUrl: displayLink,
-        });
-      } else if (selectedNodes.length === 0) {
-        setIsOn(lastNodeConfig.singleLinkOn || false);
-        const link = lastNodeConfig.singleLinkUrl || "";
-        setUrl(link);
-        cachedUrlRef.current = link;
-      } else {
-        const anyHasLink = summary.hasFigmaLink.hasValue;
-        setIsOn(anyHasLink);
-        if (summary.figmaLink.isMixed) {
-          setUrl("");
+    if (!isUserLocked || isDifferentNode) {
+      if (rawOptionState.supportedCount > 0) {
+        const supported = rawOptionState.supportedNodes;
+        if (supported.length === 1) {
+          const node = supported[0];
+          const activeLink = node.figmaLink || "";
+          const cachedLink = node.cachedFigmaLink || activeLink || "";
+          const enabled = Boolean(activeLink);
+          setIsOn(enabled);
+          const displayLink = activeLink || cachedLink;
+          setUrl(displayLink);
+          cachedUrlRef.current = displayLink;
+          setLastNodeConfig({
+            singleLinkOn: enabled,
+            singleLinkUrl: displayLink,
+          });
         } else {
-          const commonLink = summary.figmaLink.value || "";
-          setUrl(commonLink);
-          cachedUrlRef.current = commonLink;
+          const onCount = supported.filter((n) => Boolean(n.figmaLink && n.figmaLink.trim())).length;
+          setIsOn(onCount > 0);
+          const firstLink = supported[0]?.figmaLink || "";
+          const allSame = supported.every((n) => (n.figmaLink || "") === firstLink);
+          if (allSame && firstLink) {
+            setUrl(firstLink);
+            cachedUrlRef.current = firstLink;
+          } else {
+            setUrl("");
+          }
         }
+      } else {
+        setIsOn(false);
+        setUrl("");
       }
     }
-  }, [
-    selectedNodes,
-    lastNodeConfig.singleLinkOn,
-    lastNodeConfig.singleLinkUrl,
-    summary.hasFigmaLink.hasValue,
-    summary.figmaLink.isMixed,
-    summary.figmaLink.value,
-    setLastNodeConfig,
-  ]);
+  }, [rawOptionState, selectedNodes, setLastNodeConfig]);
 
-  const isLinkDrafted = multiDraft.figmaLink !== undefined;
-  const displayUrl = isLinkDrafted ? (multiDraft.figmaLink || '') : url;
-  const effectiveIsOn = isLinkAllowed && (isLinkDrafted ? Boolean(multiDraft.figmaLink) : isOn);
-  const effectiveIsLinkMixed = isLinkDrafted ? false : isLinkMixed;
+  // Mixed URL 여부: 지원 노드가 2개 이상이고 입력된 링크 URL이 서로 다른 경우
+  const isLinkValueMixed = useMemo(() => {
+    if (isLinkDrafted) return false;
+    if (effectiveState.disabled) return false;
+    const supported = rawOptionState.supportedNodes;
+    if (supported.length <= 1) return false;
+    const firstLink = supported[0]?.figmaLink || "";
+    return supported.some((n) => (n.figmaLink || "") !== firstLink);
+  }, [isLinkDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
+
+  const displayUrl = isLinkDrafted ? (multiDraft.figmaLink || "") : (isLinkValueMixed ? "" : url);
 
   function commitUrl(currentRawUrl: string) {
     const trimmed = currentRawUrl.trim();
@@ -141,9 +217,9 @@ export function FigmaLinkSection() {
   }
 
   function handleToggle(checked: boolean) {
-    if (!isLinkAllowed) return;
+    if (effectiveState.disabled) return;
+    userActionLockRef.current = Date.now();
     setIsOn(checked);
-    autoResizeWindow();
 
     if (selectedNodes.length >= 2) {
       if (!checked) {
@@ -159,6 +235,9 @@ export function FigmaLinkSection() {
           }, 60);
         }
       }
+      requestAnimationFrame(() => {
+        autoResizeWindow();
+      });
       return;
     }
 
@@ -184,6 +263,7 @@ export function FigmaLinkSection() {
         }, 60);
       }
     }
+    autoResizeWindow();
   }
 
   function handleUrlChange(value: string) {
@@ -224,29 +304,29 @@ export function FigmaLinkSection() {
   return (
     <div
       className="section-block figma-link-section"
-      style={{ paddingBottom: effectiveIsOn ? "12px" : "0px" }}
+      style={{ paddingBottom: effectiveState.isOpen ? "12px" : "0px" }}
     >
       <div className="section-header toggle-row">
-        <span className={`section-title${!isLinkAllowed ? " disabled" : ""}`}>
+        <span className={`section-title${effectiveState.disabled ? " disabled" : ""}`}>
           Figma Screen Link
-          {isLinkAllowed && effectiveIsLinkMixed && (
+          {!effectiveState.disabled && isLinkValueMixed && (
             <span className="section-mixed-label">(Mixed)</span>
           )}
         </span>
         <Switch
           id="toggle-single-figma-link"
-          checked={effectiveIsOn}
-          isMixed={isLinkAllowed && effectiveIsLinkMixed}
-          disabled={!isLinkAllowed}
+          checked={effectiveState.checked}
+          isMixed={effectiveState.isMixed}
+          disabled={effectiveState.disabled}
           data-tooltip={
-            !isLinkAllowed
+            effectiveState.disabled
               ? "Figma Screen Link is disabled for this shape"
               : undefined
           }
           onChange={handleToggle}
         />
       </div>
-      {effectiveIsOn && (
+      {effectiveState.isOpen && (
         <div
           className="section-body collapsible-body"
           id="single-figma-link-group"
@@ -265,7 +345,7 @@ export function FigmaLinkSection() {
               id="single-screen-url"
               className="form-input"
               style={{ width: "100%", paddingRight: displayUrl ? "28px" : "10px" }}
-              placeholder={effectiveIsLinkMixed ? "Mixed" : "Add a Figma Screen URL"}
+              placeholder={isLinkValueMixed ? "Mixed" : "Add a Figma Screen URL"}
               value={displayUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
               onKeyDown={handleKeyDown}

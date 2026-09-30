@@ -180,6 +180,23 @@ export function SizeSection() {
   const isHMixed = multiDraft.height !== undefined ? false : (summary.isMultiFlowNode && summary.height.isMixed);
   const isRMixed = multiDraft.cornerRadius !== undefined ? false : (summary.isMultiFlowNode && summary.cornerRadius.isMixed);
 
+  const isSizeDrafted = multiDraft.width !== undefined || multiDraft.height !== undefined;
+  const isSizeMixed = !isSizeDrafted && summary.isMultiFlowNode && (isWMixed || isHMixed);
+
+  // 다중 선택 시 Mixed 상태에서 각 프리셋별 노드 수 산출
+  const sizePresetCounts = React.useMemo(() => {
+    if (!isSizeMixed) return {};
+    const counts: Record<string, number> = {};
+    const flowNodes = selectedNodes.filter((n) => n && n.isFlowNode && !n.isConnector);
+    for (const n of flowNodes) {
+      const matched = sizePresets.find((p) => p.w === n.width && p.h === n.height);
+      if (matched) {
+        counts[matched.id] = (counts[matched.id] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [isSizeMixed, selectedNodes, sizePresets]);
+
   // 2. 선택된 노드 변경 시 W, H, Radius 인풋 필드 값 동기화
   React.useEffect(() => {
     const validNodes = (selectedNodes || []).filter((n): n is NodeInfo => Boolean(n));
@@ -207,6 +224,14 @@ export function SizeSection() {
         }
         if (!isFocusedRef.current.r) {
           setRadiusInput(multiDraft.cornerRadius !== undefined ? String(multiDraft.cornerRadius) : (isRMixed ? '' : (summary.cornerRadius.value !== undefined ? String(summary.cornerRadius.value) : '')));
+        }
+        if (isDifferentNode) {
+          if (isSizeMixed) {
+            setSelectedSizePresetId(null);
+          } else {
+            const matched = sizePresets.find((p) => p.w === summary.width.value && p.h === summary.height.value);
+            setSelectedSizePresetId(matched ? matched.id : null);
+          }
         }
       } else {
         const first = validNodes[0];
@@ -734,18 +759,23 @@ export function SizeSection() {
 
         {/* 프리셋 칩 */}
         <div className="chip-group" style={{ marginTop: '6px', flexWrap: 'wrap', gap: '4px' }}>
-          {sizePresets.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`chip-btn${selectedSizePresetId === p.id ? ' active' : ''}${!isSizeAllowed ? ' disabled' : ''}`}
-              onClick={() => isSizeAllowed && applySizePreset(p)}
-              disabled={!isSizeAllowed}
-              title={!isSizeAllowed ? 'Size presets are disabled for this shape' : `${p.name} (${p.w}×${p.h})`}
-            >
-              {p.name}
-            </button>
-          ))}
+          {sizePresets.map((p) => {
+            const count = sizePresetCounts[p.id] || 0;
+            const isPresetActive = !isSizeMixed && selectedSizePresetId === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                className={`chip-btn${isPresetActive ? ' active' : ''}${!isSizeAllowed ? ' disabled' : ''}`}
+                onClick={() => isSizeAllowed && applySizePreset(p)}
+                disabled={!isSizeAllowed}
+                title={!isSizeAllowed ? 'Size presets are disabled for this shape' : `${p.name} (${p.w}×${p.h})`}
+              >
+                <span className="tab-label">{p.name}</span>
+                {count > 0 && <span className="tab-badge">{count}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

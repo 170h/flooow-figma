@@ -22,6 +22,8 @@ import {
   clampScreenHeight,
   clampScreenCornerRadius,
   clampStrokeWeight,
+  supportsOption,
+  getMutationTargets,
 } from './types';
 import {
   createOrthogonalVectorConnector,
@@ -2543,7 +2545,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     }
 
     // 엘리베이션(그림자) 효과 적용
-    if (typeof payload.elevation === 'number') {
+    if (supportsOption(card, 'elevation') && typeof payload.elevation === 'number') {
       card.setPluginData('node_elevation', `${payload.elevation}`);
       card.effects = getElevationEffects(payload.elevation, isBgDark);
       card.clipsContent = false;
@@ -2553,7 +2555,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     }
 
     // 스텝 배지(Step Badge) 생성
-    if (typeof payload.badgeNumber === 'number' && payload.badgeNumber > 0) {
+    if (supportsOption(card, 'stepBadge') && typeof payload.badgeNumber === 'number' && payload.badgeNumber > 0) {
       await applyStepBadgeToSingleCard(
         card,
         payload.badgeNumber,
@@ -3162,8 +3164,14 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
     }
 
-    // 최종 크기 변경에 맞춰 스텝 뱃지 위치 재동기화
-    if (existingStepBadge) {
+    // 최종 크기 변경에 맞춰 스텝 뱃지 위치 재동기화 (미지원 노드는 스텝 뱃지 제거 및 데이터 정리)
+    if (!supportsOption(card, 'stepBadge')) {
+      if (existingStepBadge) existingStepBadge.remove();
+      card.setPluginData('step_number', '');
+      card.setPluginData('badge_corner', '');
+      card.setPluginData('badge_shape', '');
+      card.setPluginData('badge_color_mode', '');
+    } else if (existingStepBadge) {
       const stepCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
       const bw = Math.max(24, Math.round(existingStepBadge.width));
       const bh = 24;
@@ -3184,37 +3192,41 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     card.setPluginData('node_width', '');
     card.setPluginData('node_height', '');
 
-    // 노드 속성 및 데이터 개별 기억/보존
-    if (!isShapeNode) {
+    // 노드 속성 및 데이터 개별 기억/보존 (옵션을 지원하는 노드에만 적용, 미지원 노드는 데이터 오염 차단)
+    if (supportsOption(card, 'description')) {
       card.setPluginData('node_desc', effectiveDesc);
+    } else {
+      card.setPluginData('node_desc', '');
+    }
+    if (supportsOption(card, 'status')) {
       if (effectiveStatus) card.setPluginData('workflow_status', effectiveStatus);
+      else card.setPluginData('workflow_status', '');
+    } else {
+      card.setPluginData('workflow_status', '');
+    }
+    if (supportsOption(card, 'figmaLink')) {
       if (effectiveLink) card.setPluginData('figma_link', effectiveLink);
+      else if (payload.clearLinkCache) card.setPluginData('figma_link', '');
+    } else {
+      card.setPluginData('figma_link', '');
+    }
+
+    if (!isShapeNode) {
       if (!isFit) {
         card.setPluginData('screen_width', String(finalW));
         card.setPluginData('screen_height', String(finalH));
       }
       card.setPluginData('screen_corner_radius', String(card.cornerRadius || 0));
       card.setPluginData('screen_size_mode', payload.sizeMode || card.getPluginData('size_mode') || 'fixed');
-    } else {
-      if (payload.description) {
-        card.setPluginData('node_desc', payload.description);
-      } else if (prevDescription) {
-        card.setPluginData('node_desc', prevDescription);
-      }
-      if (payload.status) {
-        card.setPluginData('workflow_status', payload.status);
-      } else if (prevStatus) {
-        card.setPluginData('workflow_status', prevStatus);
-      }
-      if (payload.figmaLink) {
-        card.setPluginData('figma_link', payload.figmaLink);
-      } else if (prevFigmaLink) {
-        card.setPluginData('figma_link', prevFigmaLink);
-      }
     }
+
     if (payload.theme) card.setPluginData('node_theme', payload.theme);
     card.setPluginData('node_type', nodeType);
-    if (typeof payload.elevation === 'number') {
+
+    if (!supportsOption(card, 'elevation')) {
+      card.setPluginData('node_elevation', '');
+      card.effects = [];
+    } else if (typeof payload.elevation === 'number') {
       card.setPluginData('node_elevation', `${payload.elevation}`);
       card.effects = getElevationEffects(payload.elevation, isBgDark);
       card.clipsContent = false;
@@ -3474,7 +3486,7 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
       ) as TextNode | undefined;
 
-      if (isShapeNode || !effectiveDesc) {
+      if (!supportsOption(card, 'description') || !effectiveDesc) {
         if (descText) {
           descText.remove();
           descText = undefined;
@@ -3504,12 +3516,18 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         }
       }
 
-      // 9. 상태 (Status) 갱신
+      // 9. 상태 (Status) 갱신 (Screen 노드만 지원)
       let statusBadge = card.children.find(
         (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
       ) as FrameNode | undefined;
 
-      if (patch.status !== undefined) {
+      if (!supportsOption(card, 'status')) {
+        // Status 미지원 노드는 기존 뱃지가 있다면 정리하고 추가 변경 안 함
+        if (statusBadge) {
+          statusBadge.remove();
+          statusBadge = undefined;
+        }
+      } else if (patch.status !== undefined) {
         if (!patch.status) {
           card.setPluginData('workflow_status', '');
           card.paddingBottom = 16;
@@ -3574,7 +3592,7 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       }
 
       // 10. 링크 (Figma Link) 갱신
-      if (!isShapeNode) {
+      if (supportsOption(card, 'figmaLink')) {
         const effectiveLink = patch.figmaLink !== undefined ? patch.figmaLink : (safeGetPluginData(card, 'figma_link') || '');
         if (patch.figmaLink !== undefined || patch.clearLinkCache || patch.colorHex !== undefined) {
           await updateFigmaLinkBadge(card, effectiveLink, isBgDark, patch.clearLinkCache);
@@ -3582,20 +3600,22 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       }
 
       // 11. 엘리베이션 (Elevation) 갱신
-      if (patch.elevation !== undefined) {
-        if (patch.elevation === null) {
-          card.setPluginData('node_elevation', '');
-          card.effects = [];
-        } else {
-          card.setPluginData('node_elevation', `${patch.elevation}`);
-          card.effects = getElevationEffects(patch.elevation, isBgDark);
-          card.clipsContent = false;
-        }
-      } else if (patch.colorHex !== undefined) {
-        const curElev = safeGetPluginData(card, 'node_elevation');
-        if (curElev) {
-          const lvl = parseInt(curElev, 10);
-          if (!isNaN(lvl)) card.effects = getElevationEffects(lvl, isBgDark);
+      if (supportsOption(card, 'elevation')) {
+        if (patch.elevation !== undefined) {
+          if (patch.elevation === null) {
+            card.setPluginData('node_elevation', '');
+            card.effects = [];
+          } else {
+            card.setPluginData('node_elevation', `${patch.elevation}`);
+            card.effects = getElevationEffects(patch.elevation, isBgDark);
+            card.clipsContent = false;
+          }
+        } else if (patch.colorHex !== undefined) {
+          const curElev = safeGetPluginData(card, 'node_elevation');
+          if (curElev) {
+            const lvl = parseInt(curElev, 10);
+            if (!isNaN(lvl)) card.effects = getElevationEffects(lvl, isBgDark);
+          }
         }
       }
 
@@ -3604,7 +3624,14 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
       ) as FrameNode | undefined;
 
-      if (patch.badgeOn === false) {
+      if (!supportsOption(card, 'stepBadge')) {
+        // Step Badge 미지원 노드(Bridge, FigmaObject 등)는 데이터 오염 방지를 위해 뱃지 제거 및 스텝 데이터 미부여
+        if (existingStepBadge) existingStepBadge.remove();
+        card.setPluginData('step_number', '');
+        card.setPluginData('badge_corner', '');
+        card.setPluginData('badge_shape', '');
+        card.setPluginData('badge_color_mode', '');
+      } else if (patch.badgeOn === false) {
         card.setPluginData('step_number', '');
         card.setPluginData('badge_corner', '');
         card.setPluginData('badge_shape', '');
@@ -4648,6 +4675,11 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
   for (const rawNode of selection) {
     let flowNode = findFlowNode(rawNode) || (rawNode as FrameNode | ShapeWithTextNode);
 
+    // Status 옵션을 지원하는 노드(Screen)에만 적용, 미지원 노드(Shape, Bridge, FigmaObject)는 데이터 오염 방지
+    if (!supportsOption(flowNode, 'status')) {
+      continue;
+    }
+
     // 구형 쉐이프 노드인 경우 직각 프레임 카드로 자동 마이그레이션
     if (flowNode.type === 'SHAPE_WITH_TEXT') {
       flowNode = await convertShapeToFrameNode(flowNode as ShapeWithTextNode);
@@ -4787,6 +4819,12 @@ async function applyElevationToSelected(level: number | null) {
 
   for (const rawNode of selection) {
     let flowNode = findFlowNode(rawNode) || (rawNode as FrameNode | ShapeWithTextNode);
+
+    // Elevation 옵션을 지원하는 노드(Screen, Shape)에만 적용, 미지원 노드(FigmaObject, Bridge)는 건너뜀
+    if (!supportsOption(flowNode, 'elevation')) {
+      continue;
+    }
+
     if (flowNode.type === 'SHAPE_WITH_TEXT') {
       flowNode = await convertShapeToFrameNode(flowNode as ShapeWithTextNode);
     }
@@ -5162,10 +5200,13 @@ async function addStepBadges(
     return;
   }
 
-  // 중복 제거 및 플로우 노드 매핑
+  // 중복 제거 및 플로우 노드 매핑 (Step Badge를 지원하는 Screen, Shape 노드만 필터링, Bridge 및 FigmaObject 배제)
   const nodesMap = new Map<string, FrameNode>();
   for (const n of rawSelection) {
     let flow = findFlowNode(n) || n;
+    if (!supportsOption(flow, 'stepBadge')) {
+      continue;
+    }
     if (flow.type === 'SHAPE_WITH_TEXT') {
       flow = await convertShapeToFrameNode(flow as ShapeWithTextNode);
     }
@@ -5198,6 +5239,9 @@ async function removeStepBadges() {
   let removedCount = 0;
   for (const n of rawSelection) {
     let flow = findFlowNode(n) || n;
+    if (!supportsOption(flow, 'stepBadge')) {
+      continue;
+    }
     if (flow.type === 'SHAPE_WITH_TEXT') {
       flow = await convertShapeToFrameNode(flow as ShapeWithTextNode);
     }
