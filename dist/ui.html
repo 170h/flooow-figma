@@ -326,6 +326,16 @@
       gap: 1px;
     }
 
+    .segmented-control.disabled {
+      pointer-events: none;
+    }
+
+    .segmented-control.disabled .tab-btn {
+      color: var(--color-text-tertiary);
+      pointer-events: none;
+      cursor: default;
+    }
+
     .tab-btn {
       flex: 1;
       height: 24px;
@@ -333,7 +343,7 @@
       background: transparent;
       border-radius: var(--radius-xs);
       font-size: 11px;
-      font-weight: 400;
+      font-weight: var(--font-weight-default);
       color: var(--color-text-secondary);
       cursor: pointer;
       display: flex;
@@ -342,21 +352,23 @@
       transition: all 0.18s ease;
     }
 
-    .tab-btn:hover {
+    .tab-btn:hover:not(:disabled) {
       color: var(--color-text-primary);
     }
 
     .tab-btn.active {
-      background: #ffffff;
+      background: var(--color-bg);
       color: var(--color-text-primary);
-      font-weight: 400;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      font-weight: var(--font-weight-default);
+      box-shadow: var(--shadow-sm);
     }
 
-    .tab-btn.disabled {
-      opacity: 0.35;
+    .tab-btn.disabled,
+    .tab-btn:disabled {
+      color: var(--color-text-tertiary);
+      opacity: 1;
       pointer-events: none;
-      cursor: not-allowed;
+      cursor: default;
     }
 
     /* ============================================================ */
@@ -1091,7 +1103,7 @@
     }
 
     .input-scrubber-box:focus-within {
-      background: #ffffff;
+      background: var(--color-bg);
       border-color: var(--color-brand);
       box-shadow: none;
     }
@@ -1951,21 +1963,29 @@
       justify-content: center;
       color: var(--color-text-secondary);
       font-size: 11px;
-      font-weight: 400;
+      font-weight: var(--font-weight-default);
       white-space: nowrap;
       transition: all 0.15s ease;
       padding: 0;
     }
 
-    .shape-btn:hover {
+    .shape-btn:hover:not(:disabled) {
       color: var(--color-text-primary);
     }
 
     .shape-btn.active {
       background: var(--color-bg);
       color: var(--color-text-primary);
-      font-weight: 400;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      font-weight: var(--font-weight-default);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .shape-btn.disabled,
+    .shape-btn:disabled {
+      color: var(--color-text-tertiary);
+      opacity: 1;
+      pointer-events: none;
+      cursor: default;
     }
 
     /* ============================================================ */
@@ -2291,11 +2311,23 @@
       display: block;
     }
 
-    .line-style-btn.active {
-      background: #ffffff;
+    .line-style-btn:hover:not(:disabled) {
       color: var(--color-text-primary);
-      font-weight: 600;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .line-style-btn.active {
+      background: var(--color-bg);
+      color: var(--color-text-primary);
+      font-weight: var(--font-weight-default);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .line-style-btn.disabled,
+    .line-style-btn:disabled {
+      color: var(--color-text-tertiary);
+      opacity: 1;
+      pointer-events: none;
+      cursor: default;
     }
 
     .routing-types-grid {
@@ -2327,10 +2359,22 @@
       display: block;
     }
 
-    .routing-btn.active {
-      background: #ffffff;
+    .routing-btn:hover:not(:disabled) {
       color: var(--color-text-primary);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .routing-btn.active {
+      background: var(--color-bg);
+      color: var(--color-text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .routing-btn.disabled,
+    .routing-btn:disabled {
+      color: var(--color-text-tertiary);
+      opacity: 1;
+      pointer-events: none;
+      cursor: default;
     }
 
     .terminal-offset-row {
@@ -2561,11 +2605,11 @@
       height: 32px;
       padding: 0 14px;
       background: transparent;
-      color: var(--color-text-primary, #000000);
-      border: 1px solid rgba(0, 0, 0, 0.12);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-sm, 5px);
       font-size: 11px;
-      font-weight: 500;
+      font-weight: var(--font-weight-strong);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -2576,28 +2620,29 @@
       user-select: none;
     }
 
-    .btn-cta-secondary:hover {
+    .btn-cta-secondary:hover:not(:disabled) {
       background: var(--color-bg-hover);
-      border-color: var(--color-border);
+      border-color: var(--color-border-strong);
     }
 
     .btn-cta-secondary:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
+      cursor: default;
       pointer-events: none;
       background: transparent;
-      border-color: rgba(0, 0, 0, 0.08);
+      border-color: var(--color-border-subtle);
+      color: var(--color-text-tertiary);
+      opacity: 1;
     }
 
     .btn-cta-primary {
       height: 32px;
       padding: 0 16px;
       background: var(--color-brand-cta);
-      color: #ffffff;
+      color: var(--color-text-onbrand);
       border: none;
       border-radius: var(--radius-sm, 5px);
       font-size: 11px;
-      font-weight: 500;
+      font-weight: var(--font-weight-strong);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -2609,14 +2654,16 @@
       user-select: none;
     }
 
-    .btn-cta-primary:hover {
+    .btn-cta-primary:hover:not(:disabled) {
       background: var(--color-brand-cta-hover);
     }
 
     .btn-cta-primary:disabled {
-      opacity: 0.35;
+      background: var(--color-bg-tertiary);
+      color: var(--color-text-tertiary);
       pointer-events: none;
-      cursor: not-allowed;
+      cursor: default;
+      opacity: 1;
     }
 
     /* 피그잼 오브젝트 선택 시 하단 안내 배너 (그레이 라운드 박스) */
@@ -2624,16 +2671,16 @@
       width: 100%;
       height: 36px;
       padding: 0 12px;
-      background-color: var(--color-bg-secondary, #f5f5f5);
-      border: 1px solid var(--color-border, #e5e5e5);
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-sm, 6px);
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
-      color: var(--color-text-secondary, #808080);
+      color: var(--color-text-secondary);
       font-size: 11px;
-      font-weight: 400;
+      font-weight: var(--font-weight-default);
       box-sizing: border-box;
       user-select: none;
     }
@@ -2643,12 +2690,12 @@
     .btn-add-step-badges {
       height: 24px;
       padding: 0 10px;
-      background-color: var(--color-brand, #8638e5);
-      color: #ffffff;
+      background-color: var(--color-brand);
+      color: var(--color-text-onbrand);
       border: none;
       border-radius: var(--radius-sm, 5px);
       font-size: 11px;
-      font-weight: 400;
+      font-weight: var(--font-weight-default);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -2664,7 +2711,7 @@
 
     .figma-btn-24:hover:not(:disabled),
     .btn-add-step-badges:hover:not(:disabled) {
-      background-color: #7320d6;
+      background-color: var(--color-brand-hover);
     }
 
     .figma-btn-24:active:not(:disabled),
@@ -2674,9 +2721,11 @@
 
     .figma-btn-24:disabled,
     .btn-add-step-badges:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
+      background-color: var(--color-bg-tertiary);
+      color: var(--color-text-tertiary);
+      cursor: default;
       pointer-events: none;
+      opacity: 1;
     }
 
     /* 커넥션 탭 2노드 선택 시 표시되는 서브 푸터 */
@@ -2689,7 +2738,7 @@
 
     .plan-status-badge {
       font-size: 11px;
-      font-weight: 600;
+      font-weight: var(--font-weight-strong);
       color: var(--color-text-secondary);
     }
 
@@ -2702,18 +2751,27 @@
     .btn-outline-action {
       height: 28px;
       padding: 0 12px;
-      background: #ffffff;
+      background: var(--color-bg);
       border: 1px solid var(--color-border-strong);
       border-radius: var(--radius-sm);
       font-size: 11px;
-      font-weight: 500;
+      font-weight: var(--font-weight-strong);
       color: var(--color-text-primary);
       cursor: pointer;
       transition: background 0.15s;
     }
 
-    .btn-outline-action:hover {
+    .btn-outline-action:hover:not(:disabled) {
       background: var(--color-bg-secondary);
+    }
+
+    .btn-outline-action:disabled {
+      background: transparent;
+      color: var(--color-text-tertiary);
+      border-color: var(--color-border-subtle);
+      pointer-events: none;
+      cursor: default;
+      opacity: 1;
     }
 
     /* ============================================================ */
@@ -3008,23 +3066,26 @@
     .btn-phase-modal-save {
       height: 24px;
       padding: 0 10px;
-      background: #8C4CF6;
+      background: var(--color-primary);
       border: none;
       border-radius: 5px;
       color: #FFFFFF;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: var(--font-weight-strong);
       cursor: pointer;
-      transition: background-color 0.15s ease, opacity 0.15s ease;
+      transition: background-color 0.15s ease;
     }
 
     .btn-phase-modal-save:hover:not(:disabled) {
-      background: #7A39E3;
+      background: var(--color-primary-hover);
     }
 
     .btn-phase-modal-save:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.35);
+      cursor: default;
+      pointer-events: none;
+      opacity: 1;
     }
 
     /* 피그마 공식 UI3 규격 모달 3종 (Add Size, Edit Size, Add Style) */

@@ -118,6 +118,27 @@
 - **인풋 입력 중 리렌더링 시 DOM 값 덮어쓰기 방지 원칙**:
   - `SizeSection`의 외부 동기화 `useEffect`에서는 현재 사용자가 포커스하여 타이핑 중인 입력 필드(`activeEl === wEl` 등)를 덮어쓰지 않도록 `(isDifferentNode || activeEl !== inputEl)` 가드를 반드시 유지하여 수치 입력이 끊기거나 이전 값으로 되돌아가지 않도록 보장합니다.
 
+## 13. 모든 UI 요소(세그먼트·버튼·인풋 등) 표준 컬러 CSS 변수 및 상태별(Active/Inactive/Disabled) 엄격 준수 규칙
+- **하드코딩 컬러 및 비표준 opacity 딤 전면 금지**:
+  - `#ffffff`, `#000000`, `rgba(...)` 등 하드코딩된 색상값이나 `opacity: 0.35`와 같은 비표준 딤 처리는 엄격히 금지합니다.
+  - 모든 UI 요소는 반드시 피그마 UI3 디자인 시스템 표준 CSS 변수(`var(--color-*)`)를 사용해야 합니다.
+  - 다크 테마(`@media (prefers-color-scheme: dark)`, `.figma-dark-auto`) 환경에서도 자동으로 완벽히 대응되어야 합니다.
+- **세그먼트 컨트롤(Segmented Control) 상태별 표준 컬러 규격**:
+  - **컨테이너 (트랙)**: `background: var(--color-bg-secondary); border-radius: var(--radius-sm); padding: 2px; gap: 1px~2px;`
+  - **비활성(Inactive / Default)**: `background: transparent; color: var(--color-text-secondary);`
+  - **호버(Hover)**: `color: var(--color-text-primary);` (또는 `background: var(--color-bg-hover);`)
+  - **활성(Active / Selected)**: `background: var(--color-bg);` (절대 하드코딩 `#ffffff` 금지 — 다크모드에서 표면색 자동 연동), `color: var(--color-text-primary); box-shadow: var(--shadow-sm);`
+  - **디세이블(Disabled)**: `color: var(--color-text-tertiary); pointer-events: none; cursor: default;` (임의의 `opacity: 0.35` 감쇄 배제).
+- **입력 필드(Input / Scrubber Box) 및 드롭다운 규격**:
+  - **기본(Default)**: `background: var(--color-bg-secondary); border-color: transparent;`
+  - **호버(Hover)**: `border-color: var(--color-border);`
+  - **포커스(Focus-within)**: `background: var(--color-bg); border-color: var(--color-brand);`
+  - **디세이블(Disabled)**: 배경색(`var(--color-bg-secondary)`) 유지, 라벨/아이콘/텍스트/플레이스홀더를 `var(--color-text-tertiary)` 및 `-webkit-text-fill-color: var(--color-text-tertiary)`로 감쇄, `pointer-events: none;`.
+- **버튼(Primary / Secondary / Outline) 규격**:
+  - **Primary**: 활성 `var(--color-brand-cta)` / 호버 `var(--color-brand-cta-hover)` / 디세이블 `background: var(--color-bg-tertiary); color: var(--color-text-tertiary); pointer-events: none; cursor: default;`
+  - **Secondary / Outline**: 활성 `background: transparent; color: var(--color-text-primary); border: 1px solid var(--color-border)` / 호버 `background: var(--color-bg-hover); border-color: var(--color-border-strong)` / 디세이블 `background: transparent; color: var(--color-text-tertiary); border-color: var(--color-border-subtle); pointer-events: none; cursor: default;`
+
+
 
 
 
