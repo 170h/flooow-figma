@@ -2876,21 +2876,22 @@
       const bCorner = card.getPluginData("badge_corner");
       const bw = Math.max(24, Math.round(stepBadge.width));
       const bh = 24;
+      const offset = 11;
       if (bCorner === "TOP_RIGHT") {
-        stepBadge.x = card.width - bw + 9;
-        stepBadge.y = -9;
+        stepBadge.x = card.width - bw + offset;
+        stepBadge.y = -offset;
         stepBadge.constraints = { horizontal: "MAX", vertical: "MIN" };
       } else if (bCorner === "BOTTOM_LEFT") {
-        stepBadge.x = -9;
-        stepBadge.y = card.height - bh + 9;
+        stepBadge.x = -offset;
+        stepBadge.y = card.height - bh + offset;
         stepBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
       } else if (bCorner === "BOTTOM_RIGHT") {
-        stepBadge.x = card.width - bw + 9;
-        stepBadge.y = card.height - bh + 9;
+        stepBadge.x = card.width - bw + offset;
+        stepBadge.y = card.height - bh + offset;
         stepBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
       } else {
-        stepBadge.x = -9;
-        stepBadge.y = -9;
+        stepBadge.x = -offset;
+        stepBadge.y = -offset;
         stepBadge.constraints = { horizontal: "MIN", vertical: "MIN" };
       }
     }
@@ -4839,14 +4840,15 @@
   }
   function getStepBadgeCoordinates(nodeType, cardW, cardH, bw, bh, corner) {
     if (nodeType !== "Connector" && nodeType !== "Decision" && nodeType !== "Terminator") {
+      const offset = 11;
       if (corner === "TOP_RIGHT") {
-        return { x: cardW - bw + 9, y: -9, constraints: { horizontal: "MAX", vertical: "MIN" } };
+        return { x: cardW - bw + offset, y: -offset, constraints: { horizontal: "MAX", vertical: "MIN" } };
       } else if (corner === "BOTTOM_LEFT") {
-        return { x: -9, y: cardH - bh + 9, constraints: { horizontal: "MIN", vertical: "MAX" } };
+        return { x: -offset, y: cardH - bh + offset, constraints: { horizontal: "MIN", vertical: "MAX" } };
       } else if (corner === "BOTTOM_RIGHT") {
-        return { x: cardW - bw + 9, y: cardH - bh + 9, constraints: { horizontal: "MAX", vertical: "MAX" } };
+        return { x: cardW - bw + offset, y: cardH - bh + offset, constraints: { horizontal: "MAX", vertical: "MAX" } };
       } else {
-        return { x: -9, y: -9, constraints: { horizontal: "MIN", vertical: "MIN" } };
+        return { x: -offset, y: -offset, constraints: { horizontal: "MIN", vertical: "MIN" } };
       }
     }
     if (nodeType === "Connector") {
@@ -4917,7 +4919,7 @@
         return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MIN", vertical: "MIN" } };
       }
     }
-    return { x: -9, y: -9, constraints: { horizontal: "MIN", vertical: "MIN" } };
+    return { x: -11, y: -11, constraints: { horizontal: "MIN", vertical: "MIN" } };
   }
   async function addStepBadges(startNumber = 1, corner = "TOP_LEFT", shape = "Square", colorMode = "Style") {
     const rawSelection = [...figma.currentPage.selection];

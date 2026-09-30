@@ -1918,7 +1918,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   card.strokeWeight = 1.5;
   card.strokes = [{ type: 'SOLID', color: borderColor }];
   card.fills = [{ type: 'SOLID', color: bgColor }];
-  card.clipsContent = false; // 스텝 배지(-9px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
+  card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
 
   card.layoutMode = 'VERTICAL';
   card.primaryAxisSizingMode = 'FIXED';
@@ -2077,21 +2077,22 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
     const bCorner = card.getPluginData('badge_corner');
     const bw = Math.max(24, Math.round(stepBadge.width));
     const bh = 24;
+    const offset = 11;
     if (bCorner === 'TOP_RIGHT') {
-      stepBadge.x = card.width - bw + 9;
-      stepBadge.y = -9;
+      stepBadge.x = card.width - bw + offset;
+      stepBadge.y = -offset;
       stepBadge.constraints = { horizontal: 'MAX', vertical: 'MIN' };
     } else if (bCorner === 'BOTTOM_LEFT') {
-      stepBadge.x = -9;
-      stepBadge.y = card.height - bh + 9;
+      stepBadge.x = -offset;
+      stepBadge.y = card.height - bh + offset;
       stepBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
     } else if (bCorner === 'BOTTOM_RIGHT') {
-      stepBadge.x = card.width - bw + 9;
-      stepBadge.y = card.height - bh + 9;
+      stepBadge.x = card.width - bw + offset;
+      stepBadge.y = card.height - bh + offset;
       stepBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
     } else {
-      stepBadge.x = -9;
-      stepBadge.y = -9;
+      stepBadge.x = -offset;
+      stepBadge.y = -offset;
       stepBadge.constraints = { horizontal: 'MIN', vertical: 'MIN' };
     }
   }
@@ -2296,7 +2297,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       card.strokes = cardStrokes;
       card.strokeWeight = cardStrokeWeight;
     }
-    card.clipsContent = false; // 스텝 배지(-9px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
+    card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
 
     card.layoutMode = 'VERTICAL';
     card.primaryAxisSizingMode = 'FIXED';
@@ -2640,7 +2641,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       : title;
 
     card.name = effectiveTitle;
-    card.clipsContent = false; // 스텝 배지(-9px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
+    card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
 
     const cardStrokes: Paint[] = typeof payload.strokeWeight === 'number' && payload.strokeWeight === 0
       ? []
@@ -4465,20 +4466,21 @@ function getStepBadgeCoordinates(
   bh: number,
   corner: string
 ): { x: number; y: number; constraints: Constraints } {
-  // 기본 직사각형(Screen, Process, Branch 등): 코너 꼭짓점 기준 중심(-9px 오프셋)
+  // 기본 직사각형(Screen, Process, Branch 등): 코너 꼭짓점 기준 중심(-11px 오프셋)
   if (
     nodeType !== 'Connector' &&
     nodeType !== 'Decision' &&
     nodeType !== 'Terminator'
   ) {
+    const offset = 11;
     if (corner === 'TOP_RIGHT') {
-      return { x: cardW - bw + 9, y: -9, constraints: { horizontal: 'MAX', vertical: 'MIN' } };
+      return { x: cardW - bw + offset, y: -offset, constraints: { horizontal: 'MAX', vertical: 'MIN' } };
     } else if (corner === 'BOTTOM_LEFT') {
-      return { x: -9, y: cardH - bh + 9, constraints: { horizontal: 'MIN', vertical: 'MAX' } };
+      return { x: -offset, y: cardH - bh + offset, constraints: { horizontal: 'MIN', vertical: 'MAX' } };
     } else if (corner === 'BOTTOM_RIGHT') {
-      return { x: cardW - bw + 9, y: cardH - bh + 9, constraints: { horizontal: 'MAX', vertical: 'MAX' } };
+      return { x: cardW - bw + offset, y: cardH - bh + offset, constraints: { horizontal: 'MAX', vertical: 'MAX' } };
     } else {
-      return { x: -9, y: -9, constraints: { horizontal: 'MIN', vertical: 'MIN' } };
+      return { x: -offset, y: -offset, constraints: { horizontal: 'MIN', vertical: 'MIN' } };
     }
   }
 
@@ -4569,7 +4571,7 @@ function getStepBadgeCoordinates(
     }
   }
 
-  return { x: -9, y: -9, constraints: { horizontal: 'MIN', vertical: 'MIN' } };
+  return { x: -11, y: -11, constraints: { horizontal: 'MIN', vertical: 'MIN' } };
 }
 
 // 스텝 번호 부여 (노드 카드 코너에 일체형 스텝 뱃지로 부착)
