@@ -2211,7 +2211,9 @@ function attachShapeVectorNode(
     originalParent.remove();
   }
 
-  shape.layoutPositioning = 'ABSOLUTE';
+  if (card.layoutMode !== 'NONE') {
+    shape.layoutPositioning = 'ABSOLUTE';
+  }
   shape.x = 0;
   shape.y = 0;
   shape.locked = true;
@@ -2894,10 +2896,12 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         badgeText.locked = true;
         statusBadge.appendChild(badgeText);
 
-        statusBadge.layoutPositioning = 'ABSOLUTE';
+        card.appendChild(statusBadge);
+        if (card.layoutMode !== 'NONE') {
+          statusBadge.layoutPositioning = 'ABSOLUTE';
+        }
         statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
         statusBadge.locked = true;
-        card.appendChild(statusBadge);
       }
 
       statusBadge.paddingLeft = 9;
