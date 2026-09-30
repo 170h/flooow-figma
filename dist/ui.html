@@ -468,6 +468,7 @@
     /* 비활성화된 섹션 타이틀 (UI3 ✦/text/default/secondary 토큰 적용) */
     .section-title.disabled,
     .section-header.disabled .section-title,
+    .section-block.disabled .section-title,
     .section-block:has(.switch.disabled) .section-title {
       color: var(--color-text-secondary);
     }
@@ -848,9 +849,18 @@
       letter-spacing: 0;
     }
 
-    .chip-btn:not(.active):hover {
+    .chip-btn:not(.active):hover:not(:disabled):not(.disabled) {
       background: #f5f5f5;
       color: rgba(0, 0, 0, 0.9);
+    }
+
+    .chip-btn:disabled,
+    .chip-btn.disabled {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      background: transparent !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
     }
 
     /* Mixed 상태 스타일: 버튼 배경 투명 및 텍스트는 디폴트(default) 컬러 상태 유지 */
@@ -1052,7 +1062,7 @@
     /* ============================================================ */
     .numeric-inputs-row {
       display: grid;
-      grid-template-columns: 58px 58px 58px minmax(0, 1fr);
+      grid-template-columns: 65px 65px 65px minmax(0, 1fr);
       gap: 6px;
       align-items: center;
       width: 100%;
@@ -1076,7 +1086,7 @@
       transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
 
-    .input-scrubber-box:hover {
+    .input-scrubber-box:not(.disabled):not(:has(input:disabled)):hover {
       border-color: var(--color-border);
     }
 
@@ -1125,6 +1135,37 @@
       -webkit-appearance: none !important;
       -moz-appearance: textfield !important;
       appearance: textfield !important;
+    }
+
+    .input-scrubber-box.disabled,
+    .input-scrubber-box:has(input:disabled) {
+      background: var(--color-bg-secondary);
+      border-color: transparent !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .input-scrubber-box.disabled span,
+    .input-scrubber-box.disabled .scrubber-label,
+    .input-scrubber-box:has(input:disabled) span,
+    .input-scrubber-box:has(input:disabled) .scrubber-label {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .input-scrubber-box.disabled svg,
+    .input-scrubber-box:has(input:disabled) svg {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 0.6;
+    }
+
+    .input-scrubber-box.disabled input,
+    .input-scrubber-box input:disabled {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
     }
 
     .input-scrubber-box input::placeholder {
@@ -1237,9 +1278,28 @@
       transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
 
-    .figma-dropdown-btn:hover,
-    .size-mode-dropdown-btn:hover {
+    .figma-dropdown-btn:not(:disabled):not(.disabled):hover,
+    .size-mode-dropdown-btn:not(:disabled):not(.disabled):hover {
       border-color: var(--color-border);
+    }
+
+    .size-mode-dropdown-btn:disabled,
+    .size-mode-dropdown-btn.disabled {
+      background-color: var(--color-bg-secondary) !important;
+      border-color: transparent !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .size-mode-dropdown-btn:disabled .size-mode-current-icon,
+    .size-mode-dropdown-btn.disabled .size-mode-current-icon,
+    .size-mode-dropdown-btn:disabled .size-mode-current-text,
+    .size-mode-dropdown-btn.disabled .size-mode-current-text,
+    .size-mode-dropdown-btn:disabled .size-mode-chevron-icon,
+    .size-mode-dropdown-btn.disabled .size-mode-chevron-icon {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 0.6;
     }
 
     .figma-dropdown-btn:focus,
@@ -28380,30 +28440,31 @@
   // src/types.ts
   function normalizeNodeType(type) {
     if (!type) return "Screen";
-    switch (type) {
-      case "Screen":
+    const clean = String(type).trim().toLowerCase();
+    switch (clean) {
+      case "screen":
         return "Screen";
-      case "Process":
-      case "Square":
-      case "Action":
-      case "Error":
-      case "True":
-      case "False":
+      case "process":
+      case "square":
+      case "action":
+      case "error":
+      case "true":
+      case "false":
         return "Process";
-      case "Connector":
-      case "Circle":
-      case "System":
-      case "Database":
+      case "connector":
+      case "circle":
+      case "system":
+      case "database":
         return "Connector";
-      case "Decision":
-      case "Diamond":
+      case "decision":
+      case "diamond":
         return "Decision";
-      case "Terminator":
-      case "Pill":
-      case "Capsule":
+      case "terminator":
+      case "pill":
+      case "capsule":
         return "Terminator";
-      case "Branch":
-      case "Subflow":
+      case "branch":
+      case "subflow":
         return "Branch";
       default:
         return type || "Screen";
@@ -28653,13 +28714,17 @@
       const singleLinkToggleEl = document.getElementById("toggle-single-figma-link");
       const sizeModeEl = document.getElementById("select-size-mode");
       const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
+      const firstNode = nodes[0];
+      const nodeActualType = firstNode?.flowNodeType || (firstNode?.nodeType === "FRAME" ? "Screen" : firstNode?.nodeType);
       const activeTypeBtn = document.querySelector("#node-type-icons .type-icon-btn.active");
       const domNodeType = activeTypeBtn?.dataset.type || void 0;
-      const effectiveNodeType = overrideNodeType || domNodeType || selectedNodeType;
+      const rawNodeType = overrideNodeType || domNodeType || nodeActualType || selectedNodeType;
+      const effectiveNodeType = normalizeNodeType(rawNodeType);
       const spec = NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
       const isDescAllowed = spec?.allowDescription ?? false;
+      const isScreen = effectiveNodeType === "Screen";
       const currentTitleVal = titleEl?.value.trim();
-      const rawTitle = overrideTitle !== void 0 ? overrideTitle : currentTitleVal || (effectiveNodeType === "Screen" ? "Screen" : effectiveNodeType);
+      const rawTitle = overrideTitle !== void 0 ? overrideTitle : currentTitleVal || (isScreen ? "Screen" : effectiveNodeType);
       if (rawTitle.length > 32) {
         showToast("\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "warning");
       }
@@ -28667,9 +28732,9 @@
       const rawDesc = descEl?.value.trim() || "";
       const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
       const desc = isDescAllowed ? isDescOn ? rawDesc : "" : rawDesc;
-      const w = overrideSize?.width !== void 0 ? overrideSize.width : !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
-      const h = overrideSize?.height !== void 0 ? overrideSize.height : !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
-      const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
+      const w = overrideSize?.width !== void 0 ? overrideSize.width : isScreen ? parseInt(wEl?.value || "", 10) || firstNode?.width || lastNodeConfigRef.current.width || 250 : !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
+      const h = overrideSize?.height !== void 0 ? overrideSize.height : isScreen ? parseInt(hEl?.value || "", 10) || firstNode?.height || lastNodeConfigRef.current.height || 90 : !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
+      const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : isScreen ? rEl?.value !== void 0 && rEl?.value !== "" && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : firstNode?.cornerRadius ?? (lastNodeConfigRef.current.cornerRadius ?? 0) : !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
       const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
       const rawFigmaUrl = linkOverrides?.figmaLink !== void 0 ? linkOverrides.figmaLink : urlEl ? urlEl.value.trim() : "";
       const figmaUrl = rawFigmaUrl ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}` : "";
@@ -29531,7 +29596,7 @@
       elevationOn: getCommonProperty(flowNodes, (n) => n.elevationOn ? true : void 0),
       status: getCommonProperty(flowNodes, (n) => n.status ? n.status : void 0),
       statusOn: getCommonProperty(flowNodes, (n) => n.status ? true : void 0),
-      nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || n.nodeType)),
+      nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || (n.nodeType === "FRAME" ? "Screen" : n.nodeType))),
       width: getCommonProperty(flowNodes, (n) => n.width),
       height: getCommonProperty(flowNodes, (n) => n.height),
       cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius),
@@ -31366,13 +31431,16 @@
       autoResizeWindow,
       showToast
     } = useApp();
+    const summary = useSelectionSummary();
+    const currentRawType = summary.isMultiFlowNode ? !summary.nodeType.isMixed ? summary.nodeType.value : void 0 : selectedNodes.length === 1 ? selectedNodes[0]?.flowNodeType || (selectedNodes[0]?.nodeType === "FRAME" ? "Screen" : selectedNodes[0]?.nodeType) || uiState.selectedNodeType : uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
+    const isSizeAllowed = normalizeNodeType(currentRawType) === "Screen" || selectedNodes.length === 1 && selectedNodes[0]?.nodeType === "FRAME" || uiState.selectedNodeType === "Screen";
     const activePreset = sizePresets.find(
       (p) => p.w === lastNodeConfig.width && p.h === lastNodeConfig.height
     );
-    const isMoreDisabled = !activePreset || Boolean(activePreset.isDefault) || DEFAULT_PRESET_IDS.has(activePreset.id);
-    const summary = useSelectionSummary();
+    const isMoreDisabled = !isSizeAllowed || !activePreset || Boolean(activePreset.isDefault) || DEFAULT_PRESET_IDS.has(activePreset.id);
     const dropdownRef = import_react11.default.useRef(null);
     const [dropdownOpen, setDropdownOpen] = import_react11.default.useState(false);
+    const lastSelectedNodeIdRef = import_react11.default.useRef(null);
     import_react11.default.useEffect(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -31387,6 +31455,12 @@
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }, [dropdownOpen, setSizeModeDropdownOpen]);
+    import_react11.default.useEffect(() => {
+      if (!isSizeAllowed && dropdownOpen) {
+        setDropdownOpen(false);
+        setSizeModeDropdownOpen(false);
+      }
+    }, [isSizeAllowed, dropdownOpen, setSizeModeDropdownOpen]);
     const currentSizeMode = (() => {
       if (summary.isMultiFlowNode) {
         if (summary.sizeMode.isMixed) return "mixed";
@@ -31402,69 +31476,78 @@
     const isRMixed = summary.isMultiFlowNode && summary.cornerRadius.isMixed;
     import_react11.default.useEffect(() => {
       const validNodes = (selectedNodes || []).filter((n) => Boolean(n));
+      const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : "NONE";
+      const isDifferentNode = currentNodeId !== lastSelectedNodeIdRef.current;
+      if (isDifferentNode) {
+        lastSelectedNodeIdRef.current = currentNodeId;
+      }
+      const wEl = document.getElementById("input-size-w");
+      const hEl = document.getElementById("input-size-h");
+      const rEl = document.getElementById("input-size-radius");
+      const activeEl = document.activeElement;
       if (validNodes.length > 0) {
-        const wEl = document.getElementById("input-size-w");
-        const hEl = document.getElementById("input-size-h");
-        const rEl = document.getElementById("input-size-radius");
         if (summary.isMultiFlowNode) {
-          if (wEl) {
+          if (wEl && (isDifferentNode || activeEl !== wEl)) {
             wEl.value = isWMixed ? "" : summary.width.value !== void 0 ? String(summary.width.value) : "";
             wEl.placeholder = isWMixed ? "Mixed" : "";
           }
-          if (hEl) {
+          if (hEl && (isDifferentNode || activeEl !== hEl)) {
             hEl.value = isHMixed ? "" : summary.height.value !== void 0 ? String(summary.height.value) : "";
             hEl.placeholder = isHMixed ? "Mixed" : "";
           }
-          if (rEl) {
+          if (rEl && (isDifferentNode || activeEl !== rEl)) {
             rEl.value = isRMixed ? "" : summary.cornerRadius.value !== void 0 ? String(summary.cornerRadius.value) : "";
             rEl.placeholder = isRMixed ? "Mixed" : "";
           }
         } else {
           const first = validNodes[0];
-          if (wEl) {
-            wEl.value = typeof first?.width === "number" ? String(first.width) : String(lastNodeConfig.width || 250);
+          if (wEl && (isDifferentNode || activeEl !== wEl)) {
+            const targetW = isDifferentNode ? typeof first?.width === "number" ? first.width : lastNodeConfig.width || 250 : lastNodeConfig.width !== void 0 ? lastNodeConfig.width : typeof first?.width === "number" ? first.width : 250;
+            wEl.value = String(targetW);
             wEl.placeholder = "";
           }
-          if (hEl) {
-            hEl.value = typeof first?.height === "number" ? String(first.height) : String(lastNodeConfig.height || 90);
+          if (hEl && (isDifferentNode || activeEl !== hEl)) {
+            const targetH = isDifferentNode ? typeof first?.height === "number" ? first.height : lastNodeConfig.height || 90 : lastNodeConfig.height !== void 0 ? lastNodeConfig.height : typeof first?.height === "number" ? first.height : 90;
+            hEl.value = String(targetH);
             hEl.placeholder = "";
           }
-          if (rEl) {
-            rEl.value = typeof first?.cornerRadius === "number" ? String(first.cornerRadius) : String(lastNodeConfig.cornerRadius || 0);
+          if (rEl && (isDifferentNode || activeEl !== rEl)) {
+            const targetR = isDifferentNode ? typeof first?.cornerRadius === "number" ? first.cornerRadius : lastNodeConfig.cornerRadius ?? 0 : lastNodeConfig.cornerRadius !== void 0 ? lastNodeConfig.cornerRadius : typeof first?.cornerRadius === "number" ? first.cornerRadius : 0;
+            rEl.value = String(targetR);
             rEl.placeholder = "";
           }
         }
       } else {
-        const wEl = document.getElementById("input-size-w");
-        const hEl = document.getElementById("input-size-h");
-        const rEl = document.getElementById("input-size-radius");
-        if (wEl) {
+        if (wEl && (isDifferentNode || activeEl !== wEl)) {
           wEl.value = String(lastNodeConfig.width || 250);
           wEl.placeholder = "";
         }
-        if (hEl) {
+        if (hEl && (isDifferentNode || activeEl !== hEl)) {
           hEl.value = String(lastNodeConfig.height || 90);
           hEl.placeholder = "";
         }
-        if (rEl) {
+        if (rEl && (isDifferentNode || activeEl !== rEl)) {
           rEl.value = String(lastNodeConfig.cornerRadius ?? 0);
           rEl.placeholder = "";
         }
       }
     }, [summary.isMultiFlowNode, isWMixed, isHMixed, isRMixed, summary.width.value, summary.height.value, summary.cornerRadius.value, selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
     function handleWChange(e) {
+      setSelectedSizePresetId(null);
       const val = parseInt(e.target.value, 10);
       if (!isNaN(val)) {
         setLastNodeConfig({ width: val });
       }
     }
     function handleHChange(e) {
+      setSelectedSizePresetId(null);
       const val = parseInt(e.target.value, 10);
       if (!isNaN(val)) {
         setLastNodeConfig({ height: val });
       }
     }
     function handleRChange(e) {
+      setSelectedSizePresetId(null);
       let val = parseInt(e.target.value, 10);
       if (!isNaN(val)) {
         if (val > 999) {
@@ -31479,6 +31562,7 @@
       }
     }
     function triggerApply() {
+      if (!isSizeAllowed) return;
       const wEl = document.getElementById("input-size-w");
       const hEl = document.getElementById("input-size-h");
       const rEl = document.getElementById("input-size-radius");
@@ -31493,12 +31577,17 @@
         r = 0;
         if (rEl) rEl.value = "0";
       }
-      if (!isNaN(w)) setLastNodeConfig({ width: w });
-      if (!isNaN(h)) setLastNodeConfig({ height: h });
+      const sizeModeEl = document.getElementById("select-size-mode");
+      if (sizeModeEl) {
+        sizeModeEl.value = "fixed";
+      }
+      if (!isNaN(w)) setLastNodeConfig({ width: w, sizeMode: "fixed" });
+      if (!isNaN(h)) setLastNodeConfig({ height: h, sizeMode: "fixed" });
       if (!isNaN(r)) setLastNodeConfig({ cornerRadius: r });
-      applyCurrentNodeState();
+      applyCurrentNodeState("fixed", void 0, void 0, "Screen", { width: w, height: h, cornerRadius: r });
     }
     function applySizePreset(p) {
+      if (!isSizeAllowed) return;
       const wEl = document.getElementById("input-size-w");
       const hEl = document.getElementById("input-size-h");
       const rEl = document.getElementById("input-size-radius");
@@ -31512,7 +31601,11 @@
         cornerRadius: p.radius ?? 0,
         sizeMode: p.sizeMode || "fixed"
       });
-      applyCurrentNodeState(p.sizeMode);
+      applyCurrentNodeState(p.sizeMode || "fixed", void 0, void 0, "Screen", {
+        width: p.w,
+        height: p.h,
+        cornerRadius: p.radius ?? 0
+      });
     }
     function toggleSizeMoreMenu(e) {
       e.stopPropagation();
@@ -31536,11 +31629,13 @@
     }
     function toggleSizeModeDropdown(e) {
       e.stopPropagation();
+      if (!isSizeAllowed) return;
       const nextState = !dropdownOpen;
       setDropdownOpen(nextState);
       setSizeModeDropdownOpen(nextState);
     }
     function selectSizeMode(mode) {
+      if (!isSizeAllowed) return;
       if (mode !== "mixed") {
         setLastNodeConfig({ sizeMode: mode });
       }
@@ -31549,20 +31644,22 @@
         hiddenInput.value = mode;
         hiddenInput.dispatchEvent(new Event("change"));
       }
+      setSelectedSizePresetId(null);
       setDropdownOpen(false);
       setSizeModeDropdownOpen(false);
       applyCurrentNodeState(mode);
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "section-block", children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `section-block${!isSizeAllowed ? " disabled" : ""}`, children: [
       /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "section-header", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "section-title", children: "Size" }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: `section-title${!isSizeAllowed ? " disabled" : ""}`, children: "Size" }),
         /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "section-actions", children: [
           /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
             "button",
             {
-              className: "btn-action-icon",
-              title: "Add size",
-              onClick: () => setActiveModal("add-size"),
+              className: `btn-action-icon${!isSizeAllowed ? " disabled" : ""}`,
+              title: !isSizeAllowed ? "Add size is disabled for this shape" : "Add size",
+              disabled: !isSizeAllowed,
+              onClick: () => isSizeAllowed && setActiveModal("add-size"),
               children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z", fill: "currentColor" }) })
             }
           ),
@@ -31571,7 +31668,7 @@
             {
               id: "btn-size-more",
               className: `btn-action-icon btn-more-icon${isMoreDisabled ? " disabled" : ""}`,
-              title: isMoreDisabled ? "\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC218\uC815 \uB610\uB294 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4" : "More options",
+              title: !isSizeAllowed ? "Size options are disabled for this shape" : isMoreDisabled ? "\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC218\uC815 \uB610\uB294 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4" : "More options",
               disabled: isMoreDisabled,
               onClick: toggleSizeMoreMenu,
               children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: [
@@ -31585,7 +31682,7 @@
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "section-body", children: [
         /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "numeric-inputs-row", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "input-scrubber-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `input-scrubber-box${!isSizeAllowed ? " disabled" : ""}`, children: [
             /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "scrubber-label", "data-tooltip": "Width", children: "W" }),
             /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
               "input",
@@ -31595,13 +31692,19 @@
                 defaultValue: 250,
                 min: 50,
                 placeholder: isWMixed ? "Mixed" : void 0,
+                disabled: !isSizeAllowed,
                 onChange: handleWChange,
                 onBlur: triggerApply,
-                onKeyDown: (e) => e.key === "Enter" && triggerApply()
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") {
+                    triggerApply();
+                    e.target.blur();
+                  }
+                }
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "input-scrubber-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `input-scrubber-box${!isSizeAllowed ? " disabled" : ""}`, children: [
             /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "scrubber-label", "data-tooltip": "Height", children: "H" }),
             /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
               "input",
@@ -31611,13 +31714,19 @@
                 defaultValue: 90,
                 min: 40,
                 placeholder: isHMixed ? "Mixed" : void 0,
+                disabled: !isSizeAllowed,
                 onChange: handleHChange,
                 onBlur: triggerApply,
-                onKeyDown: (e) => e.key === "Enter" && triggerApply()
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") {
+                    triggerApply();
+                    e.target.blur();
+                  }
+                }
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "input-scrubber-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `input-scrubber-box${!isSizeAllowed ? " disabled" : ""}`, children: [
             /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("svg", { "data-tooltip": "Corner radius", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z", fill: "currentColor" }) }),
             /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
               "input",
@@ -31628,9 +31737,15 @@
                 min: 0,
                 max: 999,
                 placeholder: isRMixed ? "Mixed" : void 0,
+                disabled: !isSizeAllowed,
                 onChange: handleRChange,
                 onBlur: triggerApply,
-                onKeyDown: (e) => e.key === "Enter" && triggerApply()
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") {
+                    triggerApply();
+                    e.target.blur();
+                  }
+                }
               }
             )
           ] }),
@@ -31646,8 +31761,9 @@
                   {
                     type: "button",
                     id: "btn-size-mode-dropdown",
-                    className: `size-mode-dropdown-btn figma-dropdown-btn${dropdownOpen ? " active" : ""}`,
-                    title: "Select height mode",
+                    className: `size-mode-dropdown-btn figma-dropdown-btn${dropdownOpen ? " active" : ""}${!isSizeAllowed ? " disabled" : ""}`,
+                    title: !isSizeAllowed ? "Size mode cannot be changed for this shape" : "Select height mode",
+                    disabled: !isSizeAllowed,
                     onClick: toggleSizeModeDropdown,
                     children: [
                       /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "size-mode-btn-content figma-dropdown-btn-content", children: [
@@ -31671,7 +31787,7 @@
                     ]
                   }
                 ),
-                dropdownOpen && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+                dropdownOpen && isSizeAllowed && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
                   "div",
                   {
                     className: "size-mode-menu-popover figma-dropdown-menu active",
@@ -31713,9 +31829,10 @@
           "button",
           {
             type: "button",
-            className: `chip-btn${selectedSizePresetId === p.id ? " active" : ""}`,
-            onClick: () => applySizePreset(p),
-            title: `${p.name} (${p.w}\xD7${p.h})`,
+            className: `chip-btn${selectedSizePresetId === p.id ? " active" : ""}${!isSizeAllowed ? " disabled" : ""}`,
+            onClick: () => isSizeAllowed && applySizePreset(p),
+            disabled: !isSizeAllowed,
+            title: !isSizeAllowed ? "Size presets are disabled for this shape" : `${p.name} (${p.w}\xD7${p.h})`,
             children: p.name
           },
           p.id

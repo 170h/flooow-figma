@@ -3,6 +3,7 @@ import { useApp, SizePreset, NodeInfo } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 import { MixedDashChip } from '../shared/icons';
+import { normalizeNodeType } from '../../../types';
 
 const FIXED_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -71,19 +72,32 @@ export function SizeSection() {
     showToast,
   } = useApp();
 
+  const summary = useSelectionSummary();
+
+  // 스크린(Screen) 노드 타입일 때만 Size 편집 허용
+  const currentRawType = summary.isMultiFlowNode
+    ? (!summary.nodeType.isMixed ? summary.nodeType.value : undefined)
+    : (selectedNodes.length === 1
+        ? (selectedNodes[0]?.flowNodeType || (selectedNodes[0]?.nodeType === 'FRAME' ? 'Screen' : selectedNodes[0]?.nodeType) || uiState.selectedNodeType)
+        : (uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen'));
+  const isSizeAllowed = normalizeNodeType(currentRawType) === 'Screen' ||
+    (selectedNodes.length === 1 && selectedNodes[0]?.nodeType === 'FRAME') ||
+    (uiState.selectedNodeType === 'Screen');
+
   // 1. 파생 상태 선언 (핸들러 및 Effect보다 먼저 선언)
   const activePreset = sizePresets.find(
     (p) => p.w === lastNodeConfig.width && p.h === lastNodeConfig.height
   );
 
   const isMoreDisabled =
+    !isSizeAllowed ||
     !activePreset ||
     Boolean(activePreset.isDefault) ||
     DEFAULT_PRESET_IDS.has(activePreset.id);
 
-  const summary = useSelectionSummary();
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const lastSelectedNodeIdRef = React.useRef<string | null>(null);
 
   // 드롭다운 외부 클릭 시에만 안전하게 닫기 (mousedown 기준)
   React.useEffect(() => {
@@ -100,6 +114,14 @@ export function SizeSection() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [dropdownOpen, setSizeModeDropdownOpen]);
+
+  // Size가 비활성화되면 열려있는 드롭다운 즉시 닫기
+  React.useEffect(() => {
+    if (!isSizeAllowed && dropdownOpen) {
+      setDropdownOpen(false);
+      setSizeModeDropdownOpen(false);
+    }
+  }, [isSizeAllowed, dropdownOpen, setSizeModeDropdownOpen]);
 
   const currentSizeMode = (() => {
     if (summary.isMultiFlowNode) {
@@ -119,53 +141,68 @@ export function SizeSection() {
   // 2. 선택된 노드 변경 시 W, H, Radius 인풋 필드 값 동기화
   React.useEffect(() => {
     const validNodes = (selectedNodes || []).filter((n): n is NodeInfo => Boolean(n));
-    if (validNodes.length > 0) {
-      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-      const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+    const currentNodeId = selectedNodes.length === 1
+      ? selectedNodes[0]?.id
+      : (selectedNodes.length > 1 ? 'MULTI' : 'NONE');
+    const isDifferentNode = currentNodeId !== lastSelectedNodeIdRef.current;
+    if (isDifferentNode) {
+      lastSelectedNodeIdRef.current = currentNodeId;
+    }
 
+    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
+    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+    const activeEl = document.activeElement;
+
+    if (validNodes.length > 0) {
       if (summary.isMultiFlowNode) {
-        if (wEl) {
+        if (wEl && (isDifferentNode || activeEl !== wEl)) {
           wEl.value = isWMixed ? '' : (summary.width.value !== undefined ? String(summary.width.value) : '');
           wEl.placeholder = isWMixed ? 'Mixed' : '';
         }
-        if (hEl) {
+        if (hEl && (isDifferentNode || activeEl !== hEl)) {
           hEl.value = isHMixed ? '' : (summary.height.value !== undefined ? String(summary.height.value) : '');
           hEl.placeholder = isHMixed ? 'Mixed' : '';
         }
-        if (rEl) {
+        if (rEl && (isDifferentNode || activeEl !== rEl)) {
           rEl.value = isRMixed ? '' : (summary.cornerRadius.value !== undefined ? String(summary.cornerRadius.value) : '');
           rEl.placeholder = isRMixed ? 'Mixed' : '';
         }
       } else {
         const first = validNodes[0];
-        if (wEl) {
-          wEl.value = typeof first?.width === 'number' ? String(first.width) : String(lastNodeConfig.width || 250);
+        if (wEl && (isDifferentNode || activeEl !== wEl)) {
+          const targetW = isDifferentNode
+            ? (typeof first?.width === 'number' ? first.width : (lastNodeConfig.width || 250))
+            : (lastNodeConfig.width !== undefined ? lastNodeConfig.width : (typeof first?.width === 'number' ? first.width : 250));
+          wEl.value = String(targetW);
           wEl.placeholder = '';
         }
-        if (hEl) {
-          hEl.value = typeof first?.height === 'number' ? String(first.height) : String(lastNodeConfig.height || 90);
+        if (hEl && (isDifferentNode || activeEl !== hEl)) {
+          const targetH = isDifferentNode
+            ? (typeof first?.height === 'number' ? first.height : (lastNodeConfig.height || 90))
+            : (lastNodeConfig.height !== undefined ? lastNodeConfig.height : (typeof first?.height === 'number' ? first.height : 90));
+          hEl.value = String(targetH);
           hEl.placeholder = '';
         }
-        if (rEl) {
-          rEl.value = typeof first?.cornerRadius === 'number' ? String(first.cornerRadius) : String(lastNodeConfig.cornerRadius || 0);
+        if (rEl && (isDifferentNode || activeEl !== rEl)) {
+          const targetR = isDifferentNode
+            ? (typeof first?.cornerRadius === 'number' ? first.cornerRadius : (lastNodeConfig.cornerRadius ?? 0))
+            : (lastNodeConfig.cornerRadius !== undefined ? lastNodeConfig.cornerRadius : (typeof first?.cornerRadius === 'number' ? first.cornerRadius : 0));
+          rEl.value = String(targetR);
           rEl.placeholder = '';
         }
       }
     } else {
       // 선택된 노드가 없을 때 (생성 대기 모드): lastNodeConfig 디폴트값(250, 90, 0) 동기화
-      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-      const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-      if (wEl) {
+      if (wEl && (isDifferentNode || activeEl !== wEl)) {
         wEl.value = String(lastNodeConfig.width || 250);
         wEl.placeholder = '';
       }
-      if (hEl) {
+      if (hEl && (isDifferentNode || activeEl !== hEl)) {
         hEl.value = String(lastNodeConfig.height || 90);
         hEl.placeholder = '';
       }
-      if (rEl) {
+      if (rEl && (isDifferentNode || activeEl !== rEl)) {
         rEl.value = String(lastNodeConfig.cornerRadius ?? 0);
         rEl.placeholder = '';
       }
@@ -174,6 +211,7 @@ export function SizeSection() {
 
   // 3. 이벤트 핸들러 함수들
   function handleWChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setSelectedSizePresetId(null);
     const val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
       setLastNodeConfig({ width: val });
@@ -181,6 +219,7 @@ export function SizeSection() {
   }
 
   function handleHChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setSelectedSizePresetId(null);
     const val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
       setLastNodeConfig({ height: val });
@@ -188,6 +227,7 @@ export function SizeSection() {
   }
 
   function handleRChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setSelectedSizePresetId(null);
     let val = parseInt(e.target.value, 10);
     if (!isNaN(val)) {
       if (val > 999) {
@@ -203,6 +243,7 @@ export function SizeSection() {
   }
 
   function triggerApply() {
+    if (!isSizeAllowed) return;
     const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
     const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
     const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
@@ -217,13 +258,19 @@ export function SizeSection() {
       r = 0;
       if (rEl) rEl.value = '0';
     }
-    if (!isNaN(w)) setLastNodeConfig({ width: w });
-    if (!isNaN(h)) setLastNodeConfig({ height: h });
+    // W, H 수동 수정 시 fixed 모드로 자동 전환하여 내용물 자동 크기 계산(hug/fit)에 의해 무시되지 않도록 보장
+    const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
+    if (sizeModeEl) {
+      sizeModeEl.value = 'fixed';
+    }
+    if (!isNaN(w)) setLastNodeConfig({ width: w, sizeMode: 'fixed' });
+    if (!isNaN(h)) setLastNodeConfig({ height: h, sizeMode: 'fixed' });
     if (!isNaN(r)) setLastNodeConfig({ cornerRadius: r });
-    applyCurrentNodeState();
+    applyCurrentNodeState('fixed', undefined, undefined, 'Screen', { width: w, height: h, cornerRadius: r });
   }
 
   function applySizePreset(p: SizePreset) {
+    if (!isSizeAllowed) return;
     const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
     const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
     const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
@@ -237,7 +284,11 @@ export function SizeSection() {
       cornerRadius: p.radius ?? 0,
       sizeMode: p.sizeMode || 'fixed',
     });
-    applyCurrentNodeState(p.sizeMode);
+    applyCurrentNodeState(p.sizeMode || 'fixed', undefined, undefined, 'Screen', {
+      width: p.w,
+      height: p.h,
+      cornerRadius: p.radius ?? 0,
+    });
   }
 
   function toggleSizeMoreMenu(e: React.MouseEvent) {
@@ -264,12 +315,14 @@ export function SizeSection() {
 
   function toggleSizeModeDropdown(e: React.MouseEvent) {
     e.stopPropagation();
+    if (!isSizeAllowed) return;
     const nextState = !dropdownOpen;
     setDropdownOpen(nextState);
     setSizeModeDropdownOpen(nextState);
   }
 
   function selectSizeMode(mode: string) {
+    if (!isSizeAllowed) return;
     if (mode !== 'mixed') {
       setLastNodeConfig({ sizeMode: mode });
     }
@@ -278,27 +331,29 @@ export function SizeSection() {
       hiddenInput.value = mode;
       hiddenInput.dispatchEvent(new Event('change'));
     }
+    setSelectedSizePresetId(null);
     setDropdownOpen(false);
     setSizeModeDropdownOpen(false);
     applyCurrentNodeState(mode);
   }
 
   return (
-    <div className="section-block">
+    <div className={`section-block${!isSizeAllowed ? ' disabled' : ''}`}>
       <div className="section-header">
-        <span className="section-title">Size</span>
+        <span className={`section-title${!isSizeAllowed ? ' disabled' : ''}`}>Size</span>
         <div className="section-actions">
           <button
-            className="btn-action-icon"
-            title="Add size"
-            onClick={() => setActiveModal('add-size')}
+            className={`btn-action-icon${!isSizeAllowed ? ' disabled' : ''}`}
+            title={!isSizeAllowed ? 'Add size is disabled for this shape' : 'Add size'}
+            disabled={!isSizeAllowed}
+            onClick={() => isSizeAllowed && setActiveModal('add-size')}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z" fill="currentColor"/></svg>
           </button>
           <button
             id="btn-size-more"
             className={`btn-action-icon btn-more-icon${isMoreDisabled ? ' disabled' : ''}`}
-            title={isMoreDisabled ? '기본 프리셋은 수정 또는 삭제할 수 없습니다' : 'More options'}
+            title={!isSizeAllowed ? 'Size options are disabled for this shape' : (isMoreDisabled ? '기본 프리셋은 수정 또는 삭제할 수 없습니다' : 'More options')}
             disabled={isMoreDisabled}
             onClick={toggleSizeMoreMenu}
           >
@@ -309,31 +364,34 @@ export function SizeSection() {
 
       <div className="section-body">
         <div className="numeric-inputs-row">
-          <div className="input-scrubber-box">
+          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`}>
             <span className="scrubber-label" data-tooltip="Width">W</span>
             <input type="number" id="input-size-w" defaultValue={250} min={50}
               placeholder={isWMixed ? 'Mixed' : undefined}
+              disabled={!isSizeAllowed}
               onChange={handleWChange}
               onBlur={triggerApply}
-              onKeyDown={e => e.key === 'Enter' && triggerApply()} />
+              onKeyDown={e => { if (e.key === 'Enter') { triggerApply(); (e.target as HTMLInputElement).blur(); } }} />
           </div>
-          <div className="input-scrubber-box">
+          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`}>
             <span className="scrubber-label" data-tooltip="Height">H</span>
             <input type="number" id="input-size-h" defaultValue={90} min={40}
               placeholder={isHMixed ? 'Mixed' : undefined}
+              disabled={!isSizeAllowed}
               onChange={handleHChange}
               onBlur={triggerApply}
-              onKeyDown={e => e.key === 'Enter' && triggerApply()} />
+              onKeyDown={e => { if (e.key === 'Enter') { triggerApply(); (e.target as HTMLInputElement).blur(); } }} />
           </div>
-          <div className="input-scrubber-box">
+          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`}>
             <svg data-tooltip="Corner radius" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z" fill="currentColor"/></svg>
             <input type="number" id="input-size-radius"
               defaultValue={typeof selectedNodes[0]?.cornerRadius === 'number' ? selectedNodes[0].cornerRadius : (lastNodeConfig.cornerRadius || 0)}
               min={0} max={999}
               placeholder={isRMixed ? 'Mixed' : undefined}
+              disabled={!isSizeAllowed}
               onChange={handleRChange}
               onBlur={triggerApply}
-              onKeyDown={e => e.key === 'Enter' && triggerApply()} />
+              onKeyDown={e => { if (e.key === 'Enter') { triggerApply(); (e.target as HTMLInputElement).blur(); } }} />
           </div>
 
           {/* 사이즈 모드 드롭다운 */}
@@ -345,8 +403,9 @@ export function SizeSection() {
             <button
               type="button"
               id="btn-size-mode-dropdown"
-              className={`size-mode-dropdown-btn figma-dropdown-btn${dropdownOpen ? ' active' : ''}`}
-              title="Select height mode"
+              className={`size-mode-dropdown-btn figma-dropdown-btn${dropdownOpen ? ' active' : ''}${!isSizeAllowed ? ' disabled' : ''}`}
+              title={!isSizeAllowed ? 'Size mode cannot be changed for this shape' : 'Select height mode'}
+              disabled={!isSizeAllowed}
               onClick={toggleSizeModeDropdown}
             >
               <div className="size-mode-btn-content figma-dropdown-btn-content">
@@ -383,7 +442,7 @@ export function SizeSection() {
               </span>
             </button>
 
-            {dropdownOpen && (
+            {dropdownOpen && isSizeAllowed && (
               <div
                 className="size-mode-menu-popover figma-dropdown-menu active"
                 id="popover-size-mode"
@@ -423,9 +482,10 @@ export function SizeSection() {
             <button
               key={p.id}
               type="button"
-              className={`chip-btn${selectedSizePresetId === p.id ? ' active' : ''}`}
-              onClick={() => applySizePreset(p)}
-              title={`${p.name} (${p.w}×${p.h})`}
+              className={`chip-btn${selectedSizePresetId === p.id ? ' active' : ''}${!isSizeAllowed ? ' disabled' : ''}`}
+              onClick={() => isSizeAllowed && applySizePreset(p)}
+              disabled={!isSizeAllowed}
+              title={!isSizeAllowed ? 'Size presets are disabled for this shape' : `${p.name} (${p.w}×${p.h})`}
             >
               {p.name}
             </button>

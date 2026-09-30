@@ -341,16 +341,18 @@
     }
 
     .tab-btn.active {
-      background: #ffffff;
+      background: var(--color-bg);
       color: var(--color-text-primary);
-      font-weight: 400;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      font-weight: var(--font-weight-default);
+      box-shadow: var(--shadow-sm);
     }
 
-    .tab-btn.disabled {
-      opacity: 0.35;
+    .tab-btn.disabled,
+    .tab-btn:disabled {
+      color: var(--color-text-tertiary);
+      opacity: 1;
       pointer-events: none;
-      cursor: not-allowed;
+      cursor: default;
     }
 
     /* ============================================================ */
@@ -462,6 +464,7 @@
     /* 비활성화된 섹션 타이틀 (UI3 ✦/text/default/secondary 토큰 적용) */
     .section-title.disabled,
     .section-header.disabled .section-title,
+    .section-block.disabled .section-title,
     .section-block:has(.switch.disabled) .section-title {
       color: var(--color-text-secondary);
     }
@@ -842,9 +845,18 @@
       letter-spacing: 0;
     }
 
-    .chip-btn:not(.active):hover {
+    .chip-btn:not(.active):hover:not(:disabled):not(.disabled) {
       background: #f5f5f5;
       color: rgba(0, 0, 0, 0.9);
+    }
+
+    .chip-btn:disabled,
+    .chip-btn.disabled {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      background: transparent !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
     }
 
     /* Mixed 상태 스타일: 버튼 배경 투명 및 텍스트는 디폴트(default) 컬러 상태 유지 */
@@ -1046,7 +1058,7 @@
     /* ============================================================ */
     .numeric-inputs-row {
       display: grid;
-      grid-template-columns: 58px 58px 58px minmax(0, 1fr);
+      grid-template-columns: 65px 65px 65px minmax(0, 1fr);
       gap: 6px;
       align-items: center;
       width: 100%;
@@ -1070,12 +1082,12 @@
       transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
 
-    .input-scrubber-box:hover {
+    .input-scrubber-box:not(.disabled):not(:has(input:disabled)):hover {
       border-color: var(--color-border);
     }
 
     .input-scrubber-box:focus-within {
-      background: #ffffff;
+      background: var(--color-bg);
       border-color: var(--color-brand);
       box-shadow: none;
     }
@@ -1119,6 +1131,37 @@
       -webkit-appearance: none !important;
       -moz-appearance: textfield !important;
       appearance: textfield !important;
+    }
+
+    .input-scrubber-box.disabled,
+    .input-scrubber-box:has(input:disabled) {
+      background: var(--color-bg-secondary);
+      border-color: transparent !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .input-scrubber-box.disabled span,
+    .input-scrubber-box.disabled .scrubber-label,
+    .input-scrubber-box:has(input:disabled) span,
+    .input-scrubber-box:has(input:disabled) .scrubber-label {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .input-scrubber-box.disabled svg,
+    .input-scrubber-box:has(input:disabled) svg {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 0.6;
+    }
+
+    .input-scrubber-box.disabled input,
+    .input-scrubber-box input:disabled {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
     }
 
     .input-scrubber-box input::placeholder {
@@ -1231,9 +1274,28 @@
       transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
 
-    .figma-dropdown-btn:hover,
-    .size-mode-dropdown-btn:hover {
+    .figma-dropdown-btn:not(:disabled):not(.disabled):hover,
+    .size-mode-dropdown-btn:not(:disabled):not(.disabled):hover {
       border-color: var(--color-border);
+    }
+
+    .size-mode-dropdown-btn:disabled,
+    .size-mode-dropdown-btn.disabled {
+      background-color: var(--color-bg-secondary) !important;
+      border-color: transparent !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .size-mode-dropdown-btn:disabled .size-mode-current-icon,
+    .size-mode-dropdown-btn.disabled .size-mode-current-icon,
+    .size-mode-dropdown-btn:disabled .size-mode-current-text,
+    .size-mode-dropdown-btn.disabled .size-mode-current-text,
+    .size-mode-dropdown-btn:disabled .size-mode-chevron-icon,
+    .size-mode-dropdown-btn.disabled .size-mode-chevron-icon {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 0.6;
     }
 
     .figma-dropdown-btn:focus,
@@ -1885,21 +1947,29 @@
       justify-content: center;
       color: var(--color-text-secondary);
       font-size: 11px;
-      font-weight: 400;
+      font-weight: var(--font-weight-default);
       white-space: nowrap;
       transition: all 0.15s ease;
       padding: 0;
     }
 
-    .shape-btn:hover {
+    .shape-btn:hover:not(:disabled) {
       color: var(--color-text-primary);
     }
 
     .shape-btn.active {
       background: var(--color-bg);
       color: var(--color-text-primary);
-      font-weight: 400;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      font-weight: var(--font-weight-default);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .shape-btn.disabled,
+    .shape-btn:disabled {
+      color: var(--color-text-tertiary);
+      opacity: 1;
+      pointer-events: none;
+      cursor: default;
     }
 
     /* ============================================================ */
@@ -2225,11 +2295,23 @@
       display: block;
     }
 
-    .line-style-btn.active {
-      background: #ffffff;
+    .line-style-btn:hover:not(:disabled) {
       color: var(--color-text-primary);
-      font-weight: 600;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .line-style-btn.active {
+      background: var(--color-bg);
+      color: var(--color-text-primary);
+      font-weight: var(--font-weight-default);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .line-style-btn.disabled,
+    .line-style-btn:disabled {
+      color: var(--color-text-tertiary);
+      opacity: 1;
+      pointer-events: none;
+      cursor: default;
     }
 
     .routing-types-grid {
@@ -2261,10 +2343,22 @@
       display: block;
     }
 
-    .routing-btn.active {
-      background: #ffffff;
+    .routing-btn:hover:not(:disabled) {
       color: var(--color-text-primary);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .routing-btn.active {
+      background: var(--color-bg);
+      color: var(--color-text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .routing-btn.disabled,
+    .routing-btn:disabled {
+      color: var(--color-text-tertiary);
+      opacity: 1;
+      pointer-events: none;
+      cursor: default;
     }
 
     .terminal-offset-row {

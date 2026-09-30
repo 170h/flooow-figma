@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
 import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus } from '../../types';
-import { NODE_TYPE_SHAPE_SPECS } from '../../types';
+import { NODE_TYPE_SHAPE_SPECS, normalizeNodeType } from '../../types';
 
 // ============================================================
 // 타입 정의
@@ -66,6 +66,7 @@ export interface NodeInfo {
   width?: number;
   height?: number;
   cornerRadius?: number;
+  nodeType?: string;
   flowNodeType?: string;
   status?: string;
   figmaLink?: string;
@@ -496,16 +497,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
 
     const { selectedColor, selectedElevation, selectedNodeType } = uiStateRef.current;
+    const firstNode = nodes[0];
+    const nodeActualType = firstNode?.flowNodeType || (firstNode?.nodeType === 'FRAME' ? 'Screen' : firstNode?.nodeType);
     const activeTypeBtn = document.querySelector('#node-type-icons .type-icon-btn.active') as HTMLElement | null;
     const domNodeType = (activeTypeBtn?.dataset.type as DiagramNodeType) || undefined;
-    const effectiveNodeType = overrideNodeType || domNodeType || selectedNodeType;
+    const rawNodeType = overrideNodeType || domNodeType || nodeActualType || selectedNodeType;
+    const effectiveNodeType = normalizeNodeType(rawNodeType);
     const spec = NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
     const isDescAllowed = spec?.allowDescription ?? false;
+    const isScreen = effectiveNodeType === 'Screen';
 
     const currentTitleVal = titleEl?.value.trim();
     const rawTitle = overrideTitle !== undefined
       ? overrideTitle
-      : (currentTitleVal || (effectiveNodeType === 'Screen' ? 'Screen' : effectiveNodeType));
+      : (currentTitleVal || (isScreen ? 'Screen' : effectiveNodeType));
     if (rawTitle.length > 32) {
       showToast('제목은 최대 32자까지 입력할 수 있습니다.', 'warning');
     }
@@ -516,13 +521,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const desc = isDescAllowed ? (isDescOn ? rawDesc : '') : rawDesc;
     const w = overrideSize?.width !== undefined
       ? overrideSize.width
-      : (!isDescAllowed && spec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250));
+      : (isScreen
+          ? (parseInt(wEl?.value || '', 10) || firstNode?.width || lastNodeConfigRef.current.width || 250)
+          : (!isDescAllowed && spec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250)));
     const h = overrideSize?.height !== undefined
       ? overrideSize.height
-      : (!isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90));
+      : (isScreen
+          ? (parseInt(hEl?.value || '', 10) || firstNode?.height || lastNodeConfigRef.current.height || 90)
+          : (!isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90)));
     const radius = overrideSize?.cornerRadius !== undefined
       ? overrideSize.cornerRadius
-      : (!isDescAllowed && spec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0));
+      : (isScreen
+          ? (rEl?.value !== undefined && rEl?.value !== '' && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : (firstNode?.cornerRadius ?? (lastNodeConfigRef.current.cornerRadius ?? 0)))
+          : (!isDescAllowed && spec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0)));
     const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
     const rawFigmaUrl = linkOverrides?.figmaLink !== undefined
       ? linkOverrides.figmaLink

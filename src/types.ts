@@ -102,30 +102,31 @@ export type DiagramNodeType =
  */
 export function normalizeNodeType(type?: string): DiagramNodeType {
   if (!type) return 'Screen';
-  switch (type) {
-    case 'Screen':
+  const clean = String(type).trim().toLowerCase();
+  switch (clean) {
+    case 'screen':
       return 'Screen';
-    case 'Process':
-    case 'Square':
-    case 'Action':
-    case 'Error':
-    case 'True':
-    case 'False':
+    case 'process':
+    case 'square':
+    case 'action':
+    case 'error':
+    case 'true':
+    case 'false':
       return 'Process';
-    case 'Connector':
-    case 'Circle':
-    case 'System':
-    case 'Database':
+    case 'connector':
+    case 'circle':
+    case 'system':
+    case 'database':
       return 'Connector';
-    case 'Decision':
-    case 'Diamond':
+    case 'decision':
+    case 'diamond':
       return 'Decision';
-    case 'Terminator':
-    case 'Pill':
-    case 'Capsule':
+    case 'terminator':
+    case 'pill':
+    case 'capsule':
       return 'Terminator';
-    case 'Branch':
-    case 'Subflow':
+    case 'branch':
+    case 'subflow':
       return 'Branch';
     default:
       return (type as DiagramNodeType) || 'Screen';

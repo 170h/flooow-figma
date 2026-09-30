@@ -883,7 +883,7 @@ async function ensureTextNodeFontsLoaded(textNode: TextNode | TextSublayerNode) 
 // 2. Fixed height 모드이더라도 카드 높이가 텍스트 전체를 담을 수 있을 만큼 충분한 경우 (currentHeight >= hugH - 4)
 //    -> maxLines = null로 유지하여 어떠한 말줄임(...)도 생기지 않습니다.
 // 3. 오직 카드가 작아서 텍스트가 카드 바깥으로 실제로 넘칠 때에만 가용 높이에 맞추어 maxLines(...)를 적용합니다.
-async function updateDescTextTruncation(card: FrameNode, descText: TextNode, currentHeight: number, textCharacters?: string) {
+async function updateDescTextTruncation(card: FrameNode, descText: TextNode, currentHeight: number, textCharacters?: string, targetWidth?: number) {
   try {
     const descFont: FontName = { family: 'Inter', style: 'Regular' };
     await figma.loadFontAsync(descFont);
@@ -913,10 +913,11 @@ async function updateDescTextTruncation(card: FrameNode, descText: TextNode, cur
       descText.layoutAlign = 'STRETCH';
     }
 
-    // 가용 너비(카드 너비 - 좌우 패딩) 복원 및 textAutoResize 고정 (세로 변형 방지)
+    // 가용 너비(신규 대상 너비 또는 카드 너비 - 좌우 패딩) 복원 및 textAutoResize 고정 (세로 변형 방지)
     const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
     const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
-    const availW = Math.max(50, card.width - pl - pr);
+    const effectiveCardW = typeof targetWidth === 'number' && targetWidth > 0 ? targetWidth : card.width;
+    const availW = Math.max(50, effectiveCardW - pl - pr);
     if (Math.abs(descText.width - availW) > 1) {
       descText.resize(availW, descText.height);
     }
@@ -1057,8 +1058,16 @@ async function handleSelectionChange() {
   // - otherObjects: 그 외 일반 객체 (피그잼 스티키 노트, 기본 도형, 일반 프레임/텍스트 등)
   const connNodes = allResolvedNodes.filter((n) => Boolean(findConnectorNode(n)));
   const nonConnNodes = allResolvedNodes.filter((n) => !findConnectorNode(n));
-  const flowNodes = nonConnNodes.filter((n) => safeGetPluginData(n, 'is_flow_node') === 'true');
-  const otherObjects = nonConnNodes.filter((n) => safeGetPluginData(n, 'is_flow_node') !== 'true');
+  const flowNodes = nonConnNodes.filter((n) => {
+    if (safeGetPluginData(n, 'is_flow_node') === 'true') return true;
+    if (n.type === 'FRAME') {
+      const frame = n as FrameNode;
+      if (safeGetPluginData(frame, 'node_type')) return true;
+      if (frame.children && frame.children.some((c) => c.name === 'Header' || c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')) return true;
+    }
+    return false;
+  });
+  const otherObjects = nonConnNodes.filter((n) => !flowNodes.includes(n));
 
   const flowNodeCount = flowNodes.length;
   const otherObjectCount = otherObjects.length;
@@ -1118,7 +1127,11 @@ async function handleSelectionChange() {
   }
 
   const nodes: SelectedNodeInfo[] = await Promise.all(uniqueNodes.map(async (node) => {
-    const isFlowNode = safeGetPluginData(node, 'is_flow_node') === 'true';
+    const isFlowNode = safeGetPluginData(node, 'is_flow_node') === 'true' ||
+      (node.type === 'FRAME' && Boolean(
+        safeGetPluginData(node, 'node_type') ||
+        (node as FrameNode).children?.some((c) => c.name === 'Header' || c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
+      ));
 
     // 캔버스 기즈모로 사이즈 조절이 되지 않도록 min/max 치수를 현재 크기로 완전 잠금
     if (isFlowNode && node.type === 'FRAME') {
@@ -1417,7 +1430,7 @@ async function handleSelectionChange() {
     }
 
     const savedType = node.getPluginData('node_type') as DiagramNodeType;
-    const flowNodeType: DiagramNodeType | undefined = isFlowNode ? (savedType || 'Screen') : undefined;
+    const flowNodeType: DiagramNodeType | undefined = isFlowNode ? (savedType || 'Screen') : (node.type === 'FRAME' ? 'Screen' : undefined);
     const savedStatus = isFlowNode ? (node.getPluginData('workflow_status') as WorkflowStatus) : undefined;
 
     let sizeMode: 'fixed' | 'hug' | 'fit' = 'fixed';
@@ -2605,6 +2618,11 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
     const card = flowNode as FrameNode;
+    // 캔버스 기즈모 잠금(min/max)을 함수 진입 즉시 해제하여 리사이즈 및 레이아웃 제약조건 오류 원천 방지
+    card.minWidth = null;
+    card.maxWidth = null;
+    card.minHeight = null;
+    card.maxHeight = null;
     const prevRawType = safeGetPluginData(card, 'node_type') || 'Screen';
     const prevNodeType = normalizeNodeType(prevRawType);
     const rawType = payload.nodeType || prevRawType;
@@ -2655,13 +2673,15 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const targetW = isShapeNode
       ? (payload.width ? Math.max(50, payload.width) : spec.width)
       : (isChangingToScreen
-          ? (restoredScreenW || (payload.width ? Math.max(50, payload.width) : spec.width))
+          ? (payload.width ? Math.max(50, payload.width) : (restoredScreenW || spec.width))
           : (isChangingFromFitToFixed
-              ? (restoredScreenW || (payload.width ? Math.max(50, payload.width) : card.width))
+              ? (payload.width ? Math.max(50, payload.width) : (restoredScreenW || card.width))
               : (payload.width ? Math.max(50, payload.width) : card.width)));
     const targetH = isShapeNode
       ? (payload.height ? Math.max(50, payload.height) : spec.height)
-      : (isChangingToScreen ? (restoredScreenH || (payload.height ? Math.max(50, payload.height) : spec.height)) : (payload.height ? Math.max(50, payload.height) : card.height));
+      : (isChangingToScreen
+          ? (payload.height ? Math.max(50, payload.height) : (restoredScreenH || spec.height))
+          : (payload.height ? Math.max(50, payload.height) : card.height));
     const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
 
     if (vectorPathData) {
@@ -2680,11 +2700,9 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         existingShapeVector.remove();
       }
       const defaultRadius = spec.cornerRadius !== undefined ? spec.cornerRadius : 0;
-      // Screen 복귀 시: savedScreenR에 실제 저장값이 있으면 restoredScreenR 우선 사용
-      // payload.cornerRadius=0(Screen 기본값)이 number이므로 기존 코드는 항상 payload를 사용 → 버그
-      const targetRadius = isChangingToScreen
-        ? (savedScreenR !== '' && savedScreenR !== undefined ? restoredScreenR : (typeof payload.cornerRadius === 'number' ? Math.max(0, payload.cornerRadius) : defaultRadius))
-        : (typeof payload.cornerRadius === 'number' ? Math.max(0, payload.cornerRadius) : defaultRadius);
+      const targetRadius = typeof payload.cornerRadius === 'number'
+        ? Math.max(0, payload.cornerRadius)
+        : (isChangingToScreen && savedScreenR !== '' && savedScreenR !== undefined ? restoredScreenR : defaultRadius);
       card.cornerRadius = targetRadius;
       card.fills = isFillNone ? [] : [{ type: 'SOLID', color: bgColor }];
       card.strokes = cardStrokes;
@@ -2766,7 +2784,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       // Screen 노드 등: Header 프레임 내에 titleText 배치
       const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
       const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
-      const availW = Math.max(50, card.width - pl - pr);
+      const effectiveW = fitW !== undefined ? fitW : targetW;
+      const availW = Math.max(50, effectiveW - pl - pr);
 
       let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
       if (!headerRow) {
@@ -2872,7 +2891,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
       descText.textAlignHorizontal = 'LEFT';
       descText.layoutAlign = 'STRETCH';
-      const descAvailW = Math.max(50, (fitW !== undefined ? fitW : card.width) - card.paddingLeft - card.paddingRight);
+      const descAvailW = Math.max(50, (fitW !== undefined ? fitW : targetW) - card.paddingLeft - card.paddingRight);
       if (Math.abs(descText.width - descAvailW) > 1) {
         descText.resize(descAvailW, descText.height);
       }
@@ -2884,7 +2903,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         descText.textTruncation = 'DISABLED';
       } else {
         const currentH = payload.height || card.height;
-        await updateDescTextTruncation(card, descText, currentH, effectiveDesc);
+        await updateDescTextTruncation(card, descText, currentH, effectiveDesc, targetW);
       }
 
       await safeSetCharacters(descText, effectiveDesc);

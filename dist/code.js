@@ -61,30 +61,31 @@
   };
   function normalizeNodeType(type) {
     if (!type) return "Screen";
-    switch (type) {
-      case "Screen":
+    const clean = String(type).trim().toLowerCase();
+    switch (clean) {
+      case "screen":
         return "Screen";
-      case "Process":
-      case "Square":
-      case "Action":
-      case "Error":
-      case "True":
-      case "False":
+      case "process":
+      case "square":
+      case "action":
+      case "error":
+      case "true":
+      case "false":
         return "Process";
-      case "Connector":
-      case "Circle":
-      case "System":
-      case "Database":
+      case "connector":
+      case "circle":
+      case "system":
+      case "database":
         return "Connector";
-      case "Decision":
-      case "Diamond":
+      case "decision":
+      case "diamond":
         return "Decision";
-      case "Terminator":
-      case "Pill":
-      case "Capsule":
+      case "terminator":
+      case "pill":
+      case "capsule":
         return "Terminator";
-      case "Branch":
-      case "Subflow":
+      case "branch":
+      case "subflow":
         return "Branch";
       default:
         return type || "Screen";
@@ -1767,7 +1768,7 @@
       }
     }
   }
-  async function updateDescTextTruncation(card, descText, currentHeight, textCharacters) {
+  async function updateDescTextTruncation(card, descText, currentHeight, textCharacters, targetWidth) {
     try {
       const descFont = { family: "Inter", style: "Regular" };
       await figma.loadFontAsync(descFont);
@@ -1807,7 +1808,8 @@
       }
       const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
       const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
-      const availW = Math.max(50, card.width - pl - pr);
+      const effectiveCardW = typeof targetWidth === "number" && targetWidth > 0 ? targetWidth : card.width;
+      const availW = Math.max(50, effectiveCardW - pl - pr);
       if (Math.abs(descText.width - availW) > 1) {
         descText.resize(availW, descText.height);
       }
@@ -1913,8 +1915,16 @@
     const allResolvedNodes = Array.from(resolvedNodesMap.values());
     const connNodes = allResolvedNodes.filter((n) => Boolean(findConnectorNode(n)));
     const nonConnNodes = allResolvedNodes.filter((n) => !findConnectorNode(n));
-    const flowNodes = nonConnNodes.filter((n) => safeGetPluginData2(n, "is_flow_node") === "true");
-    const otherObjects = nonConnNodes.filter((n) => safeGetPluginData2(n, "is_flow_node") !== "true");
+    const flowNodes = nonConnNodes.filter((n) => {
+      if (safeGetPluginData2(n, "is_flow_node") === "true") return true;
+      if (n.type === "FRAME") {
+        const frame = n;
+        if (safeGetPluginData2(frame, "node_type")) return true;
+        if (frame.children && frame.children.some((c) => c.name === "Header" || c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")) return true;
+      }
+      return false;
+    });
+    const otherObjects = nonConnNodes.filter((n) => !flowNodes.includes(n));
     const flowNodeCount = flowNodes.length;
     const otherObjectCount = otherObjects.length;
     const connectorCount = connNodes.length;
@@ -1963,7 +1973,9 @@
       }
     }
     const nodes = await Promise.all(uniqueNodes.map(async (node) => {
-      const isFlowNode = safeGetPluginData2(node, "is_flow_node") === "true";
+      const isFlowNode = safeGetPluginData2(node, "is_flow_node") === "true" || node.type === "FRAME" && Boolean(
+        safeGetPluginData2(node, "node_type") || node.children?.some((c) => c.name === "Header" || c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
+      );
       if (isFlowNode && node.type === "FRAME") {
         const frame = node;
         const w = Math.round(frame.width);
@@ -2216,7 +2228,7 @@
         description = extracted.description;
       }
       const savedType = node.getPluginData("node_type");
-      const flowNodeType = isFlowNode ? savedType || "Screen" : void 0;
+      const flowNodeType = isFlowNode ? savedType || "Screen" : node.type === "FRAME" ? "Screen" : void 0;
       const savedStatus = isFlowNode ? node.getPluginData("workflow_status") : void 0;
       let sizeMode = "fixed";
       let hugHeight = Math.round(node.height);
@@ -3290,6 +3302,10 @@
       } : getTextFillsByBackground(bgColor, isDark);
       const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
       const card = flowNode;
+      card.minWidth = null;
+      card.maxWidth = null;
+      card.minHeight = null;
+      card.maxHeight = null;
       const prevRawType = safeGetPluginData2(card, "node_type") || "Screen";
       const prevNodeType = normalizeNodeType(prevRawType);
       const rawType = payload.nodeType || prevRawType;
@@ -3331,8 +3347,8 @@
       const restoredScreenR = savedScreenR !== "" && savedScreenR !== void 0 ? parseInt(savedScreenR, 10) : spec.cornerRadius ?? 0;
       const prevSizeMode = safeGetPluginData2(card, "size_mode") || "fixed";
       const isChangingFromFitToFixed = prevSizeMode === "fit" && payload.sizeMode === "fixed";
-      const targetW = isShapeNode ? payload.width ? Math.max(50, payload.width) : spec.width : isChangingToScreen ? restoredScreenW || (payload.width ? Math.max(50, payload.width) : spec.width) : isChangingFromFitToFixed ? restoredScreenW || (payload.width ? Math.max(50, payload.width) : card.width) : payload.width ? Math.max(50, payload.width) : card.width;
-      const targetH = isShapeNode ? payload.height ? Math.max(50, payload.height) : spec.height : isChangingToScreen ? restoredScreenH || (payload.height ? Math.max(50, payload.height) : spec.height) : payload.height ? Math.max(50, payload.height) : card.height;
+      const targetW = isShapeNode ? payload.width ? Math.max(50, payload.width) : spec.width : isChangingToScreen ? payload.width ? Math.max(50, payload.width) : restoredScreenW || spec.width : isChangingFromFitToFixed ? payload.width ? Math.max(50, payload.width) : restoredScreenW || card.width : payload.width ? Math.max(50, payload.width) : card.width;
+      const targetH = isShapeNode ? payload.height ? Math.max(50, payload.height) : spec.height : isChangingToScreen ? payload.height ? Math.max(50, payload.height) : restoredScreenH || spec.height : payload.height ? Math.max(50, payload.height) : card.height;
       const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
       if (vectorPathData) {
         card.fills = [];
@@ -3349,7 +3365,7 @@
           existingShapeVector.remove();
         }
         const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
-        const targetRadius = isChangingToScreen ? savedScreenR !== "" && savedScreenR !== void 0 ? restoredScreenR : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius : typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : defaultRadius;
+        const targetRadius = typeof payload.cornerRadius === "number" ? Math.max(0, payload.cornerRadius) : isChangingToScreen && savedScreenR !== "" && savedScreenR !== void 0 ? restoredScreenR : defaultRadius;
         card.cornerRadius = targetRadius;
         card.fills = isFillNone ? [] : [{ type: "SOLID", color: bgColor }];
         card.strokes = cardStrokes;
@@ -3445,7 +3461,8 @@
       } else {
         const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
         const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
-        const availW = Math.max(50, card.width - pl - pr);
+        const effectiveW = fitW !== void 0 ? fitW : targetW;
+        const availW = Math.max(50, effectiveW - pl - pr);
         let headerRow = card.children.find(isHeaderFrame);
         if (!headerRow) {
           headerRow = figma.createFrame();
@@ -3542,7 +3559,7 @@
         }
         descText.textAlignHorizontal = "LEFT";
         descText.layoutAlign = "STRETCH";
-        const descAvailW = Math.max(50, (fitW !== void 0 ? fitW : card.width) - card.paddingLeft - card.paddingRight);
+        const descAvailW = Math.max(50, (fitW !== void 0 ? fitW : targetW) - card.paddingLeft - card.paddingRight);
         if (Math.abs(descText.width - descAvailW) > 1) {
           descText.resize(descAvailW, descText.height);
         }
@@ -3556,7 +3573,7 @@
           descText.textTruncation = "DISABLED";
         } else {
           const currentH = payload.height || card.height;
-          await updateDescTextTruncation(card, descText, currentH, effectiveDesc);
+          await updateDescTextTruncation(card, descText, currentH, effectiveDesc, targetW);
         }
         await safeSetCharacters(descText, effectiveDesc);
         const hasExistingDescFill = descText.fills === figma.mixed || Array.isArray(descText.fills) && descText.fills.length > 0;

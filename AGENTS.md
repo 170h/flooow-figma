@@ -19,7 +19,7 @@
 
 ## 2. 기존 규칙 가리키기
 
-- **UI/커넥터/리사이즈 작업 전** [`GEMINI.md`](./GEMINI.md) **필수 읽기** — 아이콘·폰트웨이트(450/550)·단자크기·useAutoResize·아코디언·드롭다운 격리 규칙.
+- **UI/커넥터/리사이즈/Size작업 전** [`GEMINI.md`](./GEMINI.md) **필수 읽기** — 아이콘·폰트웨이트(450/550)·단자크기·useAutoResize·아코디언·드롭다운 격리·노드Size활성/비활성(UI3 disabled) 규칙.
 - **버그 수정 전** [`BUG_REPORT.md`](./BUG_REPORT.md) + [`VERIFICATION_REPORT.md`](./VERIFICATION_REPORT.md) 참조 (회귀 기준선).
 
 ---
@@ -51,6 +51,7 @@
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | **신규 액션/메시지 타입**            | [`05-action-index.md`](./docs/harness-analysis/05-action-index.md) + [`02`](./docs/harness-analysis/02-architecture-invariants.md) (INV-03/04) + [`.harness/protocol-rules.json`](./.harness/protocol-rules.json) | `npm run check:protocol`                   |
 | **폼 필드 / DOM 상태 변경**          | [`06-field-ownership.md`](./docs/harness-analysis/06-field-ownership.md) + [`.harness/allowlists.json`](./.harness/allowlists.json)                                                                               | `npm run check:constraints`                |
+| **노드 Size / Preset / 치수 제어**   | [`GEMINI.md`](./GEMINI.md) §12 + [`06-field-ownership.md`](./docs/harness-analysis/06-field-ownership.md) §2-2                                                                                                   | `npm run check:constraints`                |
 | **`code.ts` 수정**                   | [`02`](./docs/harness-analysis/02-architecture-invariants.md) (INV-08) + [`05-action-index.md`](./docs/harness-analysis/05-action-index.md)                                                                       | diff 범위 리뷰(수동)                       |
 | **UI 변경(일반)**                    | [`GEMINI.md`](./GEMINI.md) + [`07-verification-gates.md`](./docs/harness-analysis/07-verification-gates.md)                                                                                                       | `build:all` + 수동 체크                    |
 | **버그 수정**                        | [`failures/`](./docs/harness-analysis/failures/) + [`BUG_REPORT.md`](./BUG_REPORT.md) + [`VERIFICATION_REPORT.md`](./VERIFICATION_REPORT.md)                                                                      | 해당 항목 회귀 검증                        |

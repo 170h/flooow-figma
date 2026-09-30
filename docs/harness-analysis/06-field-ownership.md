@@ -45,6 +45,12 @@
 | 모드 값 (fixed) | DOM   | `size-mode-val-fixed` | SizeSection                               | —                               |
 | 모드 값 (hug)   | DOM   | `size-mode-val-hug`   | SizeSection                               | —                               |
 
+> 💡 **Size UI 타입별 활성/비활성 및 Preset 해제 규칙 (GEMINI §12)**:
+> - **Screen 타입 전용 활성화**: Size 필드 및 Preset은 Screen 타입 노드에서만 활성화됩니다.
+> - **비-Screen 타입 disabled 규격**: Process, Connector 등 타 타입에서는 UI를 숨기지 않고 배경(`var(--color-bg-secondary)`)을 유지한 채 텍스트/라벨/아이콘을 피그마 UI3 비활성 토큰(`var(--color-text-tertiary)`)으로 렌더링하고 `pointer-events: none`을 적용합니다.
+> - **수동 변경 시 Preset 해제**: 사용자가 Width/Height/Radius를 직접 입력(`onChange`)하거나 Size Mode를 변경(`selectSizeMode`)하면 `selectedSizePresetId`를 `null`로 초기화합니다. 프로그램에 의한 변경(Fit Contents 자동 리사이즈 등)은 수동 변경으로 보지 않아 Preset을 유지합니다.
+> - **포커스 입력 보호**: `(isDifferentNode || activeEl !== inputEl)` 가드로 인풋 타이핑 중 리렌더링 시 외부 동기화로 인한 값 덮어쓰기를 원천 방지합니다.
+
 ### 2-3. 외관 (Appearance)
 
 | 필드           | truth | DOM ID               | 읽기/쓰기 위치    | 비고                              |

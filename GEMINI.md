@@ -103,6 +103,21 @@
 - **커넥터 반전(`isReversed`) 시 엔드포인트 노드 바인딩 보존 원칙**:
   - 커넥터 반전(`isReversed: true`) 시 마그넷(`targetMagnet` ↔ `sourceMagnet`)만 바꾸고 노드 ID를 그대로 두면 시작 노드에 타깃 마그넷이 적용되어 연결이 꼬이거나 풀리므로, 반드시 `endpointNodeId`(`startEndpointNodeId` ↔ `endEndpointNodeId`)도 함께 상호 교체해야 합니다.
 
+## 12. 노드 사이즈(Size) UI 활성/비활성 제어 및 피그마 UI3 표준 disabled 렌더링 규칙
+- **Screen 타입 전용 편집 및 레이아웃 유지 원칙**:
+  - Size 관련 UI(Width, Height, Corner Radius 인풋, Size Mode 드롭다운, Size Preset 칩)는 **Screen 타입에서만 활성화**되어 수정 가능합니다.
+  - Process, Connector, Decision, Terminator, Branch 등 고정형 타입에서는 Size UI를 절대 숨기지 않고 기존 레이아웃을 유지한 채 **비활성화(disabled)** 상태로 표시합니다.
+  - 타입 판별은 `normalizeNodeType(selectedNodes[0]?.flowNodeType) === 'Screen'` (단일) / `!summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === 'Screen'` (복수) / `normalizeNodeType(uiState.selectedNodeType) === 'Screen'` (미선택) 규칙을 엄격히 준수합니다.
+- **피그마 UI3 공식 표준 disabled 렌더링 규격**:
+  - 컨테이너 박스 전체에 `opacity: 0.35`를 주어 배경을 날리는 비표준 딤 방식은 엄격히 금지합니다.
+  - 입력 필드(`.input-scrubber-box`) 및 드롭다운(`.size-mode-dropdown-btn`)의 **배경색(`var(--color-bg-secondary)`)과 박스 형태는 온전하게 보존**해야 합니다.
+  - 라벨(`W`, `H`), 모서리 곡률 아이콘, 입력 텍스트, 드롭다운 텍스트 및 셰브론은 피그마 UI3 공식 비활성 토큰인 **`var(--color-text-tertiary, rgba(0, 0, 0, 0.4))`** 및 `-webkit-text-fill-color`로 감쇄하고, `pointer-events: none`, `cursor: default`, 호버/포커스 테두리 차단을 적용합니다.
+- **Preset 적용 후 수동 수정 시 Preset 즉시 해제 원칙**:
+  - Preset이 적용된 상태에서 사용자가 Width, Height, Corner Radius를 직접 입력(`onChange`)하거나 Size Mode를 변경(`selectSizeMode`)하면 `setSelectedSizePresetId(null)`을 호출하여 Preset 선택 상태를 즉시 해제합니다.
+  - 반면 프로그램에 의한 크기 갱신(Fit Contents 자동 크기 계산, 노드 선택 변경 동기화, 타입 변경 등) 시에는 Preset을 해제하지 않고 유지해야 합니다.
+- **인풋 입력 중 리렌더링 시 DOM 값 덮어쓰기 방지 원칙**:
+  - `SizeSection`의 외부 동기화 `useEffect`에서는 현재 사용자가 포커스하여 타이핑 중인 입력 필드(`activeEl === wEl` 등)를 덮어쓰지 않도록 `(isDifferentNode || activeEl !== inputEl)` 가드를 반드시 유지하여 수치 입력이 끊기거나 이전 값으로 되돌아가지 않도록 보장합니다.
+
 
 
 
