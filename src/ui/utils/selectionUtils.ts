@@ -100,9 +100,9 @@ export interface SelectionSummary {
  */
 export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): SelectionSummary {
   const validNodes = (nodes || []).filter((n): n is NodeInfo => Boolean(n));
-  const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode));
+  const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode || (!n.isConnector && (n.flowNodeType || n.nodeType === 'FRAME'))));
   const connectorNodes = validNodes.filter((n) => Boolean(n.isConnector));
-  const figjamNodes = validNodes.filter((n) => !n.isFlowNode && !n.isConnector);
+  const figjamNodes = validNodes.filter((n) => !flowNodes.includes(n) && !n.isConnector);
 
   const totalCount = validNodes.length;
   const flowNodeCount = flowNodes.length;

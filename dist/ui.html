@@ -29293,15 +29293,13 @@
       } else {
         const targetTab = lastNodeTabRef.current || "node";
         setCurrentTab(targetTab);
-        const flowNodes = nodes.filter((n) => n && n.isFlowNode);
+        const flowNodes = nodes.filter((n) => n && (n.isFlowNode || !n.isConnector && (n.flowNodeType || n.nodeType === "FRAME")));
         if (flowNodes.length > 0) {
           const first = flowNodes[0];
           const eOn = Boolean(first.elevationOn);
           const eLevel = typeof first.elevation === "number" ? first.elevation : 0;
           const nodeRadius = typeof first.cornerRadius === "number" ? first.cornerRadius : 0;
-          const rEl = document.getElementById("input-size-radius");
-          if (rEl) rEl.value = String(nodeRadius);
-          const nodeTypeVal = first.flowNodeType || "Screen";
+          const nodeTypeVal = first.flowNodeType || (first.nodeType === "FRAME" ? "Screen" : first.nodeType) || "Screen";
           const hasStatus = Boolean(first.status);
           const hasDesc = Boolean(first.description && first.description.trim());
           const linkVal = first.figmaLink || first.cachedFigmaLink || "";
@@ -29481,12 +29479,9 @@
             prevNodeIdRef.current = currentNodeId;
             if (nodes && nodes.length === 1) {
               const node = nodes[0];
-              if (node.isFlowNode) {
+              if (node.isFlowNode || !node.isConnector && (node.flowNodeType || node.nodeType === "FRAME")) {
                 const titleEl = document.getElementById("node-title-input");
                 const descEl = document.getElementById("node-description-input");
-                const wEl = document.getElementById("input-size-w");
-                const hEl = document.getElementById("input-size-h");
-                const rEl = document.getElementById("input-size-radius");
                 if (isDifferentNode) {
                   const hasDesc = Boolean(node.description && node.description.trim());
                   const descToggleEl = document.getElementById("toggle-description");
@@ -29501,7 +29496,8 @@
                   } else {
                     setLastNodeConfig({ statusOn: false });
                   }
-                  const isScreen = normalizeNodeType(node.flowNodeType) === "Screen";
+                  const nodeTypeVal2 = node.flowNodeType || (node.nodeType === "FRAME" ? "Screen" : node.nodeType);
+                  const isScreen = normalizeNodeType(nodeTypeVal2) === "Screen";
                   const figmaLink = isScreen && node.figmaLink || "";
                   if (figmaLink) {
                     setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
@@ -29517,26 +29513,14 @@
                     if (linkUrlEl) linkUrlEl.value = "";
                   }
                 }
-                if (wEl && node.width) wEl.value = String(node.width);
-                if (hEl && node.height) hEl.value = String(node.height);
-                if (rEl && typeof node.cornerRadius === "number") rEl.value = String(node.cornerRadius);
-                if (node.flowNodeType) {
-                  setUIState({ selectedNodeType: normalizeNodeType(node.flowNodeType) });
+                const nodeTypeVal = node.flowNodeType || (node.nodeType === "FRAME" ? "Screen" : node.nodeType);
+                if (nodeTypeVal) {
+                  setUIState({ selectedNodeType: normalizeNodeType(nodeTypeVal) });
                 }
                 const fixedValEl = document.getElementById("size-mode-val-fixed");
                 const hugValEl = document.getElementById("size-mode-val-hug");
                 if (fixedValEl && node.height) fixedValEl.textContent = String(node.height);
                 if (hugValEl && node.hugHeight) hugValEl.textContent = String(node.hugHeight);
-                if (node.sizeMode) {
-                  setLastNodeConfig({
-                    sizeMode: node.sizeMode,
-                    width: node.width,
-                    height: node.height,
-                    cornerRadius: node.cornerRadius ?? 0
-                  });
-                } else if (typeof node.cornerRadius === "number") {
-                  setLastNodeConfig({ cornerRadius: node.cornerRadius });
-                }
               } else if (!node.isFlowNode && !node.isConnector) {
                 const titleEl = document.getElementById("node-title-input");
                 if (titleEl) titleEl.value = "Figjam object";
@@ -29546,18 +29530,12 @@
                 const titleEl = document.getElementById("node-title-input");
                 const descEl = document.getElementById("node-description-input");
                 const descToggleEl = document.getElementById("toggle-description");
-                const wEl = document.getElementById("input-size-w");
-                const hEl = document.getElementById("input-size-h");
-                const rEl = document.getElementById("input-size-radius");
                 const fixedValEl = document.getElementById("size-mode-val-fixed");
                 const linkToggleEl = document.getElementById("toggle-single-figma-link");
                 const linkUrlEl = document.getElementById("single-screen-url");
                 if (titleEl) titleEl.value = "Screen";
                 if (descEl) descEl.value = "";
                 if (descToggleEl) descToggleEl.checked = false;
-                if (wEl) wEl.value = "250";
-                if (hEl) hEl.value = "90";
-                if (rEl) rEl.value = "0";
                 if (fixedValEl) fixedValEl.textContent = "90";
                 if (linkToggleEl) linkToggleEl.checked = false;
                 if (linkUrlEl) linkUrlEl.value = "";
@@ -29630,9 +29608,9 @@
   }
   function analyzeSelection(nodes) {
     const validNodes = (nodes || []).filter((n) => Boolean(n));
-    const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode));
+    const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode || !n.isConnector && (n.flowNodeType || n.nodeType === "FRAME")));
     const connectorNodes = validNodes.filter((n) => Boolean(n.isConnector));
-    const figjamNodes = validNodes.filter((n) => !n.isFlowNode && !n.isConnector);
+    const figjamNodes = validNodes.filter((n) => !flowNodes.includes(n) && !n.isConnector);
     const totalCount = validNodes.length;
     const flowNodeCount = flowNodes.length;
     const connectorCount = connectorNodes.length;
@@ -31493,8 +31471,24 @@
       showToast
     } = useApp();
     const summary = useSelectionSummary();
-    const currentRawType = summary.isMultiFlowNode ? !summary.nodeType.isMixed ? summary.nodeType.value : void 0 : selectedNodes.length === 1 ? selectedNodes[0]?.flowNodeType || (selectedNodes[0]?.nodeType === "FRAME" ? "Screen" : selectedNodes[0]?.nodeType) || uiState.selectedNodeType : uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
-    const isSizeAllowed = normalizeNodeType(currentRawType) === "Screen" || selectedNodes.length === 1 && selectedNodes[0]?.nodeType === "FRAME" || uiState.selectedNodeType === "Screen";
+    const isSizeAllowed = (() => {
+      if (selectedNodes.length === 1) {
+        const node = selectedNodes[0];
+        const rawType = node?.flowNodeType || (node?.nodeType === "FRAME" ? "Screen" : node?.nodeType);
+        return normalizeNodeType(rawType) === "Screen";
+      }
+      if (selectedNodes.length > 1) {
+        if (summary.isMultiFlowNode) {
+          return !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === "Screen";
+        }
+        return selectedNodes.every((n) => {
+          const rawType = n?.flowNodeType || (n?.nodeType === "FRAME" ? "Screen" : n?.nodeType);
+          return normalizeNodeType(rawType) === "Screen";
+        });
+      }
+      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
+      return normalizeNodeType(creationType) === "Screen";
+    })();
     const activePreset = sizePresets.find(
       (p) => p.w === lastNodeConfig.width && p.h === lastNodeConfig.height
     );
@@ -31502,6 +31496,16 @@
     const dropdownRef = import_react11.default.useRef(null);
     const [dropdownOpen, setDropdownOpen] = import_react11.default.useState(false);
     const lastSelectedNodeIdRef = import_react11.default.useRef(null);
+    const userActionLockRef = import_react11.default.useRef(0);
+    const isFocusedRef = import_react11.default.useRef({
+      w: false,
+      h: false,
+      r: false
+    });
+    const pendingSizeRef = import_react11.default.useRef(null);
+    const [widthInput, setWidthInput] = import_react11.default.useState("");
+    const [heightInput, setHeightInput] = import_react11.default.useState("");
+    const [radiusInput, setRadiusInput] = import_react11.default.useState("");
     import_react11.default.useEffect(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -31541,128 +31545,253 @@
       const isDifferentNode = currentNodeId !== lastSelectedNodeIdRef.current;
       if (isDifferentNode) {
         lastSelectedNodeIdRef.current = currentNodeId;
+        pendingSizeRef.current = null;
       }
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
-      const activeEl = document.activeElement;
+      if (!isDifferentNode && Date.now() - userActionLockRef.current < 600) {
+        return;
+      }
       if (validNodes.length > 0) {
         if (summary.isMultiFlowNode) {
-          if (wEl && (isDifferentNode || activeEl !== wEl)) {
-            wEl.value = isWMixed ? "" : summary.width.value !== void 0 ? String(summary.width.value) : "";
-            wEl.placeholder = isWMixed ? "Mixed" : "";
+          if (!isFocusedRef.current.w) {
+            setWidthInput(isWMixed ? "" : summary.width.value !== void 0 ? String(summary.width.value) : "");
           }
-          if (hEl && (isDifferentNode || activeEl !== hEl)) {
-            hEl.value = isHMixed ? "" : summary.height.value !== void 0 ? String(summary.height.value) : "";
-            hEl.placeholder = isHMixed ? "Mixed" : "";
+          if (!isFocusedRef.current.h) {
+            setHeightInput(isHMixed ? "" : summary.height.value !== void 0 ? String(summary.height.value) : "");
           }
-          if (rEl && (isDifferentNode || activeEl !== rEl)) {
-            rEl.value = isRMixed ? "" : summary.cornerRadius.value !== void 0 ? String(summary.cornerRadius.value) : "";
-            rEl.placeholder = isRMixed ? "Mixed" : "";
+          if (!isFocusedRef.current.r) {
+            setRadiusInput(isRMixed ? "" : summary.cornerRadius.value !== void 0 ? String(summary.cornerRadius.value) : "");
           }
         } else {
           const first = validNodes[0];
-          if (wEl && (isDifferentNode || activeEl !== wEl)) {
-            const targetW = isDifferentNode ? typeof first?.width === "number" ? first.width : lastNodeConfig.width || 250 : lastNodeConfig.width !== void 0 ? lastNodeConfig.width : typeof first?.width === "number" ? first.width : 250;
-            wEl.value = String(targetW);
-            wEl.placeholder = "";
+          let nodeW = typeof first?.width === "number" ? first.width : lastNodeConfig.width || 250;
+          let nodeH = typeof first?.height === "number" ? first.height : lastNodeConfig.height || 90;
+          let nodeR = typeof first?.cornerRadius === "number" ? first.cornerRadius : lastNodeConfig.cornerRadius ?? 0;
+          if (!isDifferentNode && pendingSizeRef.current && pendingSizeRef.current.nodeId === currentNodeId) {
+            const pending = pendingSizeRef.current;
+            const isWMatched = pending.width === void 0 || pending.width === nodeW;
+            const isHMatched = pending.height === void 0 || pending.height === nodeH;
+            const isRMatched = pending.cornerRadius === void 0 || pending.cornerRadius === nodeR;
+            if (isWMatched && isHMatched && isRMatched) {
+              pendingSizeRef.current = null;
+            } else {
+              if (pending.width !== void 0) nodeW = pending.width;
+              if (pending.height !== void 0) nodeH = pending.height;
+              if (pending.cornerRadius !== void 0) nodeR = pending.cornerRadius;
+            }
           }
-          if (hEl && (isDifferentNode || activeEl !== hEl)) {
-            const targetH = isDifferentNode ? typeof first?.height === "number" ? first.height : lastNodeConfig.height || 90 : lastNodeConfig.height !== void 0 ? lastNodeConfig.height : typeof first?.height === "number" ? first.height : 90;
-            hEl.value = String(targetH);
-            hEl.placeholder = "";
+          if (!isFocusedRef.current.w) {
+            setWidthInput(String(nodeW));
           }
-          if (rEl && (isDifferentNode || activeEl !== rEl)) {
-            const targetR = isDifferentNode ? typeof first?.cornerRadius === "number" ? first.cornerRadius : lastNodeConfig.cornerRadius ?? 0 : lastNodeConfig.cornerRadius !== void 0 ? lastNodeConfig.cornerRadius : typeof first?.cornerRadius === "number" ? first.cornerRadius : 0;
-            rEl.value = String(targetR);
-            rEl.placeholder = "";
+          if (!isFocusedRef.current.h) {
+            setHeightInput(String(nodeH));
+          }
+          if (!isFocusedRef.current.r) {
+            setRadiusInput(String(nodeR));
+          }
+          if (isDifferentNode) {
+            const matched = sizePresets.find((p) => p.w === nodeW && p.h === nodeH);
+            setSelectedSizePresetId(matched ? matched.id : null);
           }
         }
       } else {
-        if (wEl && (isDifferentNode || activeEl !== wEl)) {
-          wEl.value = String(lastNodeConfig.width || 250);
-          wEl.placeholder = "";
-        }
-        if (hEl && (isDifferentNode || activeEl !== hEl)) {
-          hEl.value = String(lastNodeConfig.height || 90);
-          hEl.placeholder = "";
-        }
-        if (rEl && (isDifferentNode || activeEl !== rEl)) {
-          rEl.value = String(lastNodeConfig.cornerRadius ?? 0);
-          rEl.placeholder = "";
+        const defW = lastNodeConfig.width || 250;
+        const defH = lastNodeConfig.height || 90;
+        const defR = lastNodeConfig.cornerRadius ?? 0;
+        if (!isFocusedRef.current.w) setWidthInput(String(defW));
+        if (!isFocusedRef.current.h) setHeightInput(String(defH));
+        if (!isFocusedRef.current.r) setRadiusInput(String(defR));
+        if (isDifferentNode) {
+          const matched = sizePresets.find((p) => p.w === defW && p.h === defH);
+          setSelectedSizePresetId(matched ? matched.id : null);
         }
       }
-    }, [summary.isMultiFlowNode, isWMixed, isHMixed, isRMixed, summary.width.value, summary.height.value, summary.cornerRadius.value, selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
+    }, [
+      selectedNodes,
+      summary.isMultiFlowNode,
+      isWMixed,
+      isHMixed,
+      isRMixed,
+      summary.width.value,
+      summary.height.value,
+      summary.cornerRadius.value,
+      lastNodeConfig.width,
+      lastNodeConfig.height,
+      lastNodeConfig.cornerRadius,
+      sizePresets,
+      setSelectedSizePresetId
+    ]);
     function handleWChange(e) {
       setSelectedSizePresetId(null);
-      const val = parseInt(e.target.value, 10);
-      if (!isNaN(val)) {
-        setLastNodeConfig({ width: val });
-      }
+      setWidthInput(e.target.value);
     }
-    function handleHChange(e) {
-      setSelectedSizePresetId(null);
-      const val = parseInt(e.target.value, 10);
-      if (!isNaN(val)) {
-        setLastNodeConfig({ height: val });
-      }
-    }
-    function handleRChange(e) {
-      setSelectedSizePresetId(null);
-      let val = parseInt(e.target.value, 10);
-      if (!isNaN(val)) {
-        if (val > 999) {
-          val = 999;
-          e.target.value = "999";
-          showToast("\uCD5C\uB300\uAC12\uC740 999\uC785\uB2C8\uB2E4.", "warning");
-        } else if (val < 0) {
-          val = 0;
-          e.target.value = "0";
-        }
-        setLastNodeConfig({ cornerRadius: val });
-      }
-    }
-    function triggerApply() {
+    function commitW(explicitVal) {
       if (!isSizeAllowed) return;
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
-      const w = parseInt(wEl?.value || "250", 10) || 250;
-      const h = parseInt(hEl?.value || "90", 10) || 90;
-      let r = parseInt(rEl?.value || "0", 10) || 0;
-      if (r > 999) {
-        r = 999;
-        if (rEl) rEl.value = "999";
-        showToast("\uCD5C\uB300\uAC12\uC740 999\uC785\uB2C8\uB2E4.", "warning");
-      } else if (r < 0) {
-        r = 0;
-        if (rEl) rEl.value = "0";
-      }
+      const raw = explicitVal !== void 0 ? explicitVal : widthInput;
+      const parsed = parseInt(raw, 10);
+      const validW = isNaN(parsed) ? lastNodeConfig.width || 250 : Math.max(50, parsed);
+      setWidthInput(String(validW));
+      userActionLockRef.current = Date.now();
+      setSelectedSizePresetId(null);
+      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
+      const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
+      const targetNodeId = selectedNodes[0]?.id || "NONE";
+      pendingSizeRef.current = {
+        nodeId: targetNodeId,
+        width: validW,
+        height: curH,
+        cornerRadius: curR
+      };
       const sizeModeEl = document.getElementById("select-size-mode");
       if (sizeModeEl) {
         sizeModeEl.value = "fixed";
       }
-      if (!isNaN(w)) setLastNodeConfig({ width: w, sizeMode: "fixed" });
-      if (!isNaN(h)) setLastNodeConfig({ height: h, sizeMode: "fixed" });
-      if (!isNaN(r)) setLastNodeConfig({ cornerRadius: r });
-      applyCurrentNodeState("fixed", void 0, void 0, "Screen", { width: w, height: h, cornerRadius: r });
+      setLastNodeConfig({ width: validW, sizeMode: "fixed" });
+      applyCurrentNodeState("fixed", void 0, void 0, "Screen", {
+        width: validW,
+        height: curH,
+        cornerRadius: curR
+      });
+    }
+    function handleWKeyDown(e) {
+      if (e.key === "Enter") {
+        commitW();
+        e.target.blur();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
+        const step = e.shiftKey ? 10 : 1;
+        const next = current + step;
+        commitW(String(next));
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
+        const step = e.shiftKey ? 10 : 1;
+        const next = Math.max(50, current - step);
+        commitW(String(next));
+      }
+    }
+    function handleHChange(e) {
+      setSelectedSizePresetId(null);
+      setHeightInput(e.target.value);
+    }
+    function commitH(explicitVal) {
+      if (!isSizeAllowed) return;
+      const raw = explicitVal !== void 0 ? explicitVal : heightInput;
+      const parsed = parseInt(raw, 10);
+      const validH = isNaN(parsed) ? lastNodeConfig.height || 90 : Math.max(40, parsed);
+      setHeightInput(String(validH));
+      userActionLockRef.current = Date.now();
+      setSelectedSizePresetId(null);
+      const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
+      const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
+      const targetNodeId = selectedNodes[0]?.id || "NONE";
+      pendingSizeRef.current = {
+        nodeId: targetNodeId,
+        width: curW,
+        height: validH,
+        cornerRadius: curR
+      };
+      const sizeModeEl = document.getElementById("select-size-mode");
+      if (sizeModeEl) {
+        sizeModeEl.value = "fixed";
+      }
+      setLastNodeConfig({ height: validH, sizeMode: "fixed" });
+      applyCurrentNodeState("fixed", void 0, void 0, "Screen", {
+        width: curW,
+        height: validH,
+        cornerRadius: curR
+      });
+    }
+    function handleHKeyDown(e) {
+      if (e.key === "Enter") {
+        commitH();
+        e.target.blur();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
+        const step = e.shiftKey ? 10 : 1;
+        const next = current + step;
+        commitH(String(next));
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
+        const step = e.shiftKey ? 10 : 1;
+        const next = Math.max(40, current - step);
+        commitH(String(next));
+      }
+    }
+    function handleRChange(e) {
+      setSelectedSizePresetId(null);
+      setRadiusInput(e.target.value);
+    }
+    function commitR(explicitVal) {
+      if (!isSizeAllowed) return;
+      const raw = explicitVal !== void 0 ? explicitVal : radiusInput;
+      const parsed = parseInt(raw, 10);
+      let validR = isNaN(parsed) ? lastNodeConfig.cornerRadius ?? 0 : Math.max(0, parsed);
+      if (validR > 999) {
+        validR = 999;
+        showToast("\uCD5C\uB300\uAC12\uC740 999\uC785\uB2C8\uB2E4.", "warning");
+      }
+      setRadiusInput(String(validR));
+      userActionLockRef.current = Date.now();
+      setSelectedSizePresetId(null);
+      const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
+      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
+      const targetNodeId = selectedNodes[0]?.id || "NONE";
+      pendingSizeRef.current = {
+        nodeId: targetNodeId,
+        width: curW,
+        height: curH,
+        cornerRadius: validR
+      };
+      setLastNodeConfig({ cornerRadius: validR });
+      applyCurrentNodeState(currentSizeMode === "mixed" ? void 0 : currentSizeMode, void 0, void 0, "Screen", {
+        width: curW,
+        height: curH,
+        cornerRadius: validR
+      });
+    }
+    function handleRKeyDown(e) {
+      if (e.key === "Enter") {
+        commitR();
+        e.target.blur();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const current = parseInt(radiusInput, 10) || 0;
+        const step = e.shiftKey ? 10 : 1;
+        const next = Math.min(999, current + step);
+        commitR(String(next));
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const current = parseInt(radiusInput, 10) || 0;
+        const step = e.shiftKey ? 10 : 1;
+        const next = Math.max(0, current - step);
+        commitR(String(next));
+      }
     }
     function applySizePreset(p) {
       if (!isSizeAllowed) return;
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
-      if (wEl) wEl.value = String(p.w);
-      if (hEl) hEl.value = String(p.h);
-      if (rEl) rEl.value = String(p.radius ?? 0);
       setSelectedSizePresetId(p.id);
+      setWidthInput(String(p.w));
+      setHeightInput(String(p.h));
+      setRadiusInput(String(p.radius ?? 0));
+      userActionLockRef.current = Date.now();
+      const targetNodeId = selectedNodes[0]?.id || "NONE";
+      pendingSizeRef.current = {
+        nodeId: targetNodeId,
+        width: p.w,
+        height: p.h,
+        cornerRadius: p.radius ?? 0
+      };
+      const targetSizeMode = p.sizeMode || "fixed";
       setLastNodeConfig({
         width: p.w,
         height: p.h,
         cornerRadius: p.radius ?? 0,
-        sizeMode: p.sizeMode || "fixed"
+        sizeMode: targetSizeMode
       });
-      applyCurrentNodeState(p.sizeMode || "fixed", void 0, void 0, "Screen", {
+      applyCurrentNodeState(targetSizeMode, void 0, void 0, "Screen", {
         width: p.w,
         height: p.h,
         cornerRadius: p.radius ?? 0
@@ -31750,18 +31879,19 @@
               {
                 type: "number",
                 id: "input-size-w",
-                defaultValue: 250,
+                value: widthInput,
                 min: 50,
                 placeholder: isWMixed ? "Mixed" : void 0,
                 disabled: !isSizeAllowed,
+                onFocus: () => {
+                  isFocusedRef.current.w = true;
+                },
                 onChange: handleWChange,
-                onBlur: triggerApply,
-                onKeyDown: (e) => {
-                  if (e.key === "Enter") {
-                    triggerApply();
-                    e.target.blur();
-                  }
-                }
+                onBlur: () => {
+                  isFocusedRef.current.w = false;
+                  commitW();
+                },
+                onKeyDown: handleWKeyDown
               }
             )
           ] }),
@@ -31772,18 +31902,19 @@
               {
                 type: "number",
                 id: "input-size-h",
-                defaultValue: 90,
+                value: heightInput,
                 min: 40,
                 placeholder: isHMixed ? "Mixed" : void 0,
                 disabled: !isSizeAllowed,
+                onFocus: () => {
+                  isFocusedRef.current.h = true;
+                },
                 onChange: handleHChange,
-                onBlur: triggerApply,
-                onKeyDown: (e) => {
-                  if (e.key === "Enter") {
-                    triggerApply();
-                    e.target.blur();
-                  }
-                }
+                onBlur: () => {
+                  isFocusedRef.current.h = false;
+                  commitH();
+                },
+                onKeyDown: handleHKeyDown
               }
             )
           ] }),
@@ -31794,19 +31925,20 @@
               {
                 type: "number",
                 id: "input-size-radius",
-                defaultValue: typeof selectedNodes[0]?.cornerRadius === "number" ? selectedNodes[0].cornerRadius : lastNodeConfig.cornerRadius || 0,
+                value: radiusInput,
                 min: 0,
                 max: 999,
                 placeholder: isRMixed ? "Mixed" : void 0,
                 disabled: !isSizeAllowed,
+                onFocus: () => {
+                  isFocusedRef.current.r = true;
+                },
                 onChange: handleRChange,
-                onBlur: triggerApply,
-                onKeyDown: (e) => {
-                  if (e.key === "Enter") {
-                    triggerApply();
-                    e.target.blur();
-                  }
-                }
+                onBlur: () => {
+                  isFocusedRef.current.r = false;
+                  commitR();
+                },
+                onKeyDown: handleRKeyDown
               }
             )
           ] }),

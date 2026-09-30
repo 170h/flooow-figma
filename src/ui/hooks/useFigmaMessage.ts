@@ -46,13 +46,10 @@ export function useFigmaMessage() {
           if (nodes && nodes.length === 1) {
             const node = nodes[0] as NodeInfo;
 
-            if (node.isFlowNode) {
+            if (node.isFlowNode || (!node.isConnector && (node.flowNodeType || node.nodeType === 'FRAME'))) {
               // Node 탭 관련
               const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
               const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
-              const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-              const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-              const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
 
               // 노드 선택 대상이 실제로 변경되었을 때만 텍스트 및 토글 상태를 덮어씀
               if (isDifferentNode) {
@@ -73,7 +70,8 @@ export function useFigmaMessage() {
                 }
 
                 // Figma Screen Link 복원 (스크린 노드만 허용)
-                const isScreen = normalizeNodeType(node.flowNodeType) === 'Screen';
+                const nodeTypeVal = node.flowNodeType || (node.nodeType === 'FRAME' ? 'Screen' : node.nodeType);
+                const isScreen = normalizeNodeType(nodeTypeVal) === 'Screen';
                 const figmaLink = (isScreen && node.figmaLink) || '';
                 if (figmaLink) {
                   setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
@@ -89,29 +87,15 @@ export function useFigmaMessage() {
                   if (linkUrlEl) linkUrlEl.value = '';
                 }
               }
-              if (wEl && node.width) wEl.value = String(node.width);
-              if (hEl && node.height) hEl.value = String(node.height);
-              if (rEl && typeof node.cornerRadius === 'number') rEl.value = String(node.cornerRadius);
-
-              if (node.flowNodeType) {
-                setUIState({ selectedNodeType: normalizeNodeType(node.flowNodeType) });
+              const nodeTypeVal = node.flowNodeType || (node.nodeType === 'FRAME' ? 'Screen' : node.nodeType);
+              if (nodeTypeVal) {
+                setUIState({ selectedNodeType: normalizeNodeType(nodeTypeVal) });
               }
 
               const fixedValEl = document.getElementById('size-mode-val-fixed');
               const hugValEl = document.getElementById('size-mode-val-hug');
               if (fixedValEl && node.height) fixedValEl.textContent = String(node.height);
               if (hugValEl && node.hugHeight) hugValEl.textContent = String(node.hugHeight);
-
-              if (node.sizeMode) {
-                setLastNodeConfig({
-                  sizeMode: node.sizeMode,
-                  width: node.width,
-                  height: node.height,
-                  cornerRadius: node.cornerRadius ?? 0,
-                });
-              } else if (typeof node.cornerRadius === 'number') {
-                setLastNodeConfig({ cornerRadius: node.cornerRadius });
-              }
             } else if (!node.isFlowNode && !node.isConnector) {
               const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
               if (titleEl) titleEl.value = 'Figjam object';
@@ -122,9 +106,6 @@ export function useFigmaMessage() {
               const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
               const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
               const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
-              const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-              const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-              const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
               const fixedValEl = document.getElementById('size-mode-val-fixed');
               const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
               const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
@@ -132,9 +113,6 @@ export function useFigmaMessage() {
               if (titleEl) titleEl.value = 'Screen';
               if (descEl) descEl.value = '';
               if (descToggleEl) descToggleEl.checked = false;
-              if (wEl) wEl.value = '250';
-              if (hEl) hEl.value = '90';
-              if (rEl) rEl.value = '0';
               if (fixedValEl) fixedValEl.textContent = '90';
               if (linkToggleEl) linkToggleEl.checked = false;
               if (linkUrlEl) linkUrlEl.value = '';

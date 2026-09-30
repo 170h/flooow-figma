@@ -1094,17 +1094,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const targetTab = lastNodeTabRef.current || 'node';
       setCurrentTab(targetTab);
 
-      // 플러그인으로 생성된 플로우 노드(isFlowNode === true)인 경우에만 스타일 및 속성 캐시 동기화
-      const flowNodes = nodes.filter(n => n && n.isFlowNode);
+      // 플러그인으로 생성된 플로우 노드(isFlowNode === true) 및 Figma Screen 프레임에 대해 스타일 및 속성 캐시 동기화
+      const flowNodes = nodes.filter(n => n && (n.isFlowNode || (!n.isConnector && (n.flowNodeType || n.nodeType === 'FRAME'))));
       if (flowNodes.length > 0) {
         const first = flowNodes[0];
         const eOn = Boolean(first.elevationOn);
         const eLevel = typeof first.elevation === 'number' ? first.elevation : 0;
         const nodeRadius = typeof first.cornerRadius === 'number' ? first.cornerRadius : 0;
-        const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-        if (rEl) rEl.value = String(nodeRadius);
 
-        const nodeTypeVal = first.flowNodeType || 'Screen';
+        const nodeTypeVal = first.flowNodeType || (first.nodeType === 'FRAME' ? 'Screen' : first.nodeType) || 'Screen';
         const hasStatus = Boolean(first.status);
         const hasDesc = Boolean(first.description && first.description.trim());
         const linkVal = first.figmaLink || first.cachedFigmaLink || '';

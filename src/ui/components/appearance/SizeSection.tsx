@@ -75,14 +75,28 @@ export function SizeSection() {
   const summary = useSelectionSummary();
 
   // 스크린(Screen) 노드 타입일 때만 Size 편집 허용
-  const currentRawType = summary.isMultiFlowNode
-    ? (!summary.nodeType.isMixed ? summary.nodeType.value : undefined)
-    : (selectedNodes.length === 1
-        ? (selectedNodes[0]?.flowNodeType || (selectedNodes[0]?.nodeType === 'FRAME' ? 'Screen' : selectedNodes[0]?.nodeType) || uiState.selectedNodeType)
-        : (uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen'));
-  const isSizeAllowed = normalizeNodeType(currentRawType) === 'Screen' ||
-    (selectedNodes.length === 1 && selectedNodes[0]?.nodeType === 'FRAME') ||
-    (uiState.selectedNodeType === 'Screen');
+  // 우선순위:
+  // 1. 단일 노드 선택: 실제 선택된 노드의 타입이 Screen인지 엄격히 판별
+  // 2. 복수 노드 선택: 모든 선택 노드가 Screen 타입인지 판별 (Mixed일 경우 disabled)
+  // 3. 미선택 (신규 생성 대기 모드): 현재 UI에서 선택된 생성 대상 타입(selectedNodeType)이 Screen인지 판별
+  const isSizeAllowed = (() => {
+    if (selectedNodes.length === 1) {
+      const node = selectedNodes[0];
+      const rawType = node?.flowNodeType || (node?.nodeType === 'FRAME' ? 'Screen' : node?.nodeType);
+      return normalizeNodeType(rawType) === 'Screen';
+    }
+    if (selectedNodes.length > 1) {
+      if (summary.isMultiFlowNode) {
+        return !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === 'Screen';
+      }
+      return selectedNodes.every((n) => {
+        const rawType = n?.flowNodeType || (n?.nodeType === 'FRAME' ? 'Screen' : n?.nodeType);
+        return normalizeNodeType(rawType) === 'Screen';
+      });
+    }
+    const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
+    return normalizeNodeType(creationType) === 'Screen';
+  })();
 
   // 1. 파생 상태 선언 (핸들러 및 Effect보다 먼저 선언)
   const activePreset = sizePresets.find(
@@ -98,6 +112,22 @@ export function SizeSection() {
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const lastSelectedNodeIdRef = React.useRef<string | null>(null);
+  const userActionLockRef = React.useRef<number>(0);
+  const isFocusedRef = React.useRef<{ w: boolean; h: boolean; r: boolean }>({
+    w: false,
+    h: false,
+    r: false,
+  });
+  const pendingSizeRef = React.useRef<{
+    nodeId: string;
+    width?: number;
+    height?: number;
+    cornerRadius?: number;
+  } | null>(null);
+
+  const [widthInput, setWidthInput] = React.useState<string>('');
+  const [heightInput, setHeightInput] = React.useState<string>('');
+  const [radiusInput, setRadiusInput] = React.useState<string>('');
 
   // 드롭다운 외부 클릭 시에만 안전하게 닫기 (mousedown 기준)
   React.useEffect(() => {
@@ -147,144 +177,289 @@ export function SizeSection() {
     const isDifferentNode = currentNodeId !== lastSelectedNodeIdRef.current;
     if (isDifferentNode) {
       lastSelectedNodeIdRef.current = currentNodeId;
+      pendingSizeRef.current = null; // 다른 노드로 선택 변경 시 pending 클리어
     }
 
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-    const activeEl = document.activeElement;
+    // 사용자 조작 직후 600ms 이내에는 동일 노드에 대해 비동기 selection sync로 로컬 입력이 되돌려지거나 깜박이지 않도록 차단
+    if (!isDifferentNode && Date.now() - userActionLockRef.current < 600) {
+      return;
+    }
 
     if (validNodes.length > 0) {
       if (summary.isMultiFlowNode) {
-        if (wEl && (isDifferentNode || activeEl !== wEl)) {
-          wEl.value = isWMixed ? '' : (summary.width.value !== undefined ? String(summary.width.value) : '');
-          wEl.placeholder = isWMixed ? 'Mixed' : '';
+        if (!isFocusedRef.current.w) {
+          setWidthInput(isWMixed ? '' : (summary.width.value !== undefined ? String(summary.width.value) : ''));
         }
-        if (hEl && (isDifferentNode || activeEl !== hEl)) {
-          hEl.value = isHMixed ? '' : (summary.height.value !== undefined ? String(summary.height.value) : '');
-          hEl.placeholder = isHMixed ? 'Mixed' : '';
+        if (!isFocusedRef.current.h) {
+          setHeightInput(isHMixed ? '' : (summary.height.value !== undefined ? String(summary.height.value) : ''));
         }
-        if (rEl && (isDifferentNode || activeEl !== rEl)) {
-          rEl.value = isRMixed ? '' : (summary.cornerRadius.value !== undefined ? String(summary.cornerRadius.value) : '');
-          rEl.placeholder = isRMixed ? 'Mixed' : '';
+        if (!isFocusedRef.current.r) {
+          setRadiusInput(isRMixed ? '' : (summary.cornerRadius.value !== undefined ? String(summary.cornerRadius.value) : ''));
         }
       } else {
         const first = validNodes[0];
-        if (wEl && (isDifferentNode || activeEl !== wEl)) {
-          const targetW = isDifferentNode
-            ? (typeof first?.width === 'number' ? first.width : (lastNodeConfig.width || 250))
-            : (lastNodeConfig.width !== undefined ? lastNodeConfig.width : (typeof first?.width === 'number' ? first.width : 250));
-          wEl.value = String(targetW);
-          wEl.placeholder = '';
+        let nodeW = typeof first?.width === 'number' ? first.width : (lastNodeConfig.width || 250);
+        let nodeH = typeof first?.height === 'number' ? first.height : (lastNodeConfig.height || 90);
+        let nodeR = typeof first?.cornerRadius === 'number' ? first.cornerRadius : (lastNodeConfig.cornerRadius ?? 0);
+
+        // 동일 노드 수정 중 pending 요청이 남아있는 경우:
+        // Core가 보낸 치수가 최신 요청값과 일치하는지 검증하여 stale 응답 롤백 차단
+        if (!isDifferentNode && pendingSizeRef.current && pendingSizeRef.current.nodeId === currentNodeId) {
+          const pending = pendingSizeRef.current;
+          const isWMatched = pending.width === undefined || pending.width === nodeW;
+          const isHMatched = pending.height === undefined || pending.height === nodeH;
+          const isRMatched = pending.cornerRadius === undefined || pending.cornerRadius === nodeR;
+
+          if (isWMatched && isHMatched && isRMatched) {
+            // Core에 최신 요청이 완전히 반영되었으므로 pending 해제
+            pendingSizeRef.current = null;
+          } else {
+            // 아직 지연된 과거(stale) 치수 응답이 도착한 경우: 요청했던 최신 값을 유지하여 롤백 방지
+            if (pending.width !== undefined) nodeW = pending.width;
+            if (pending.height !== undefined) nodeH = pending.height;
+            if (pending.cornerRadius !== undefined) nodeR = pending.cornerRadius;
+          }
         }
-        if (hEl && (isDifferentNode || activeEl !== hEl)) {
-          const targetH = isDifferentNode
-            ? (typeof first?.height === 'number' ? first.height : (lastNodeConfig.height || 90))
-            : (lastNodeConfig.height !== undefined ? lastNodeConfig.height : (typeof first?.height === 'number' ? first.height : 90));
-          hEl.value = String(targetH);
-          hEl.placeholder = '';
+
+        if (!isFocusedRef.current.w) {
+          setWidthInput(String(nodeW));
         }
-        if (rEl && (isDifferentNode || activeEl !== rEl)) {
-          const targetR = isDifferentNode
-            ? (typeof first?.cornerRadius === 'number' ? first.cornerRadius : (lastNodeConfig.cornerRadius ?? 0))
-            : (lastNodeConfig.cornerRadius !== undefined ? lastNodeConfig.cornerRadius : (typeof first?.cornerRadius === 'number' ? first.cornerRadius : 0));
-          rEl.value = String(targetR);
-          rEl.placeholder = '';
+        if (!isFocusedRef.current.h) {
+          setHeightInput(String(nodeH));
+        }
+        if (!isFocusedRef.current.r) {
+          setRadiusInput(String(nodeR));
+        }
+
+        if (isDifferentNode) {
+          const matched = sizePresets.find((p) => p.w === nodeW && p.h === nodeH);
+          setSelectedSizePresetId(matched ? matched.id : null);
         }
       }
     } else {
-      // 선택된 노드가 없을 때 (생성 대기 모드): lastNodeConfig 디폴트값(250, 90, 0) 동기화
-      if (wEl && (isDifferentNode || activeEl !== wEl)) {
-        wEl.value = String(lastNodeConfig.width || 250);
-        wEl.placeholder = '';
-      }
-      if (hEl && (isDifferentNode || activeEl !== hEl)) {
-        hEl.value = String(lastNodeConfig.height || 90);
-        hEl.placeholder = '';
-      }
-      if (rEl && (isDifferentNode || activeEl !== rEl)) {
-        rEl.value = String(lastNodeConfig.cornerRadius ?? 0);
-        rEl.placeholder = '';
+      // 선택된 노드가 없을 때 (생성 대기 모드): lastNodeConfig 디폴트값 동기화
+      const defW = lastNodeConfig.width || 250;
+      const defH = lastNodeConfig.height || 90;
+      const defR = lastNodeConfig.cornerRadius ?? 0;
+
+      if (!isFocusedRef.current.w) setWidthInput(String(defW));
+      if (!isFocusedRef.current.h) setHeightInput(String(defH));
+      if (!isFocusedRef.current.r) setRadiusInput(String(defR));
+
+      if (isDifferentNode) {
+        const matched = sizePresets.find((p) => p.w === defW && p.h === defH);
+        setSelectedSizePresetId(matched ? matched.id : null);
       }
     }
-  }, [summary.isMultiFlowNode, isWMixed, isHMixed, isRMixed, summary.width.value, summary.height.value, summary.cornerRadius.value, selectedNodes, lastNodeConfig.width, lastNodeConfig.height, lastNodeConfig.cornerRadius]);
+  }, [
+    selectedNodes,
+    summary.isMultiFlowNode,
+    isWMixed,
+    isHMixed,
+    isRMixed,
+    summary.width.value,
+    summary.height.value,
+    summary.cornerRadius.value,
+    lastNodeConfig.width,
+    lastNodeConfig.height,
+    lastNodeConfig.cornerRadius,
+    sizePresets,
+    setSelectedSizePresetId,
+  ]);
 
-  // 3. 이벤트 핸들러 함수들
+  // 3. 이벤트 핸들러 및 커밋 함수들
   function handleWChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSelectedSizePresetId(null);
-    const val = parseInt(e.target.value, 10);
-    if (!isNaN(val)) {
-      setLastNodeConfig({ width: val });
+    setWidthInput(e.target.value);
+  }
+
+  function commitW(explicitVal?: string) {
+    if (!isSizeAllowed) return;
+    const raw = explicitVal !== undefined ? explicitVal : widthInput;
+    const parsed = parseInt(raw, 10);
+    const validW = isNaN(parsed) ? (lastNodeConfig.width || 250) : Math.max(50, parsed);
+    setWidthInput(String(validW));
+    userActionLockRef.current = Date.now();
+    setSelectedSizePresetId(null);
+
+    const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
+    const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
+    const targetNodeId = selectedNodes[0]?.id || 'NONE';
+
+    pendingSizeRef.current = {
+      nodeId: targetNodeId,
+      width: validW,
+      height: curH,
+      cornerRadius: curR,
+    };
+
+    const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
+    if (sizeModeEl) {
+      sizeModeEl.value = 'fixed';
+    }
+    setLastNodeConfig({ width: validW, sizeMode: 'fixed' });
+    applyCurrentNodeState('fixed', undefined, undefined, 'Screen', {
+      width: validW,
+      height: curH,
+      cornerRadius: curR,
+    });
+  }
+
+  function handleWKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      commitW();
+      (e.target as HTMLInputElement).blur();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
+      const step = e.shiftKey ? 10 : 1;
+      const next = current + step;
+      commitW(String(next));
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
+      const step = e.shiftKey ? 10 : 1;
+      const next = Math.max(50, current - step);
+      commitW(String(next));
     }
   }
 
   function handleHChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSelectedSizePresetId(null);
-    const val = parseInt(e.target.value, 10);
-    if (!isNaN(val)) {
-      setLastNodeConfig({ height: val });
+    setHeightInput(e.target.value);
+  }
+
+  function commitH(explicitVal?: string) {
+    if (!isSizeAllowed) return;
+    const raw = explicitVal !== undefined ? explicitVal : heightInput;
+    const parsed = parseInt(raw, 10);
+    const validH = isNaN(parsed) ? (lastNodeConfig.height || 90) : Math.max(40, parsed);
+    setHeightInput(String(validH));
+    userActionLockRef.current = Date.now();
+    setSelectedSizePresetId(null);
+
+    const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
+    const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
+    const targetNodeId = selectedNodes[0]?.id || 'NONE';
+
+    pendingSizeRef.current = {
+      nodeId: targetNodeId,
+      width: curW,
+      height: validH,
+      cornerRadius: curR,
+    };
+
+    const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
+    if (sizeModeEl) {
+      sizeModeEl.value = 'fixed';
+    }
+    setLastNodeConfig({ height: validH, sizeMode: 'fixed' });
+    applyCurrentNodeState('fixed', undefined, undefined, 'Screen', {
+      width: curW,
+      height: validH,
+      cornerRadius: curR,
+    });
+  }
+
+  function handleHKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      commitH();
+      (e.target as HTMLInputElement).blur();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
+      const step = e.shiftKey ? 10 : 1;
+      const next = current + step;
+      commitH(String(next));
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
+      const step = e.shiftKey ? 10 : 1;
+      const next = Math.max(40, current - step);
+      commitH(String(next));
     }
   }
 
   function handleRChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSelectedSizePresetId(null);
-    let val = parseInt(e.target.value, 10);
-    if (!isNaN(val)) {
-      if (val > 999) {
-        val = 999;
-        e.target.value = '999';
-        showToast('최대값은 999입니다.', 'warning');
-      } else if (val < 0) {
-        val = 0;
-        e.target.value = '0';
-      }
-      setLastNodeConfig({ cornerRadius: val });
-    }
+    setRadiusInput(e.target.value);
   }
 
-  function triggerApply() {
+  function commitR(explicitVal?: string) {
     if (!isSizeAllowed) return;
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-    const w = parseInt(wEl?.value || '250', 10) || 250;
-    const h = parseInt(hEl?.value || '90', 10) || 90;
-    let r = parseInt(rEl?.value || '0', 10) || 0;
-    if (r > 999) {
-      r = 999;
-      if (rEl) rEl.value = '999';
+    const raw = explicitVal !== undefined ? explicitVal : radiusInput;
+    const parsed = parseInt(raw, 10);
+    let validR = isNaN(parsed) ? (lastNodeConfig.cornerRadius ?? 0) : Math.max(0, parsed);
+    if (validR > 999) {
+      validR = 999;
       showToast('최대값은 999입니다.', 'warning');
-    } else if (r < 0) {
-      r = 0;
-      if (rEl) rEl.value = '0';
     }
-    // W, H 수동 수정 시 fixed 모드로 자동 전환하여 내용물 자동 크기 계산(hug/fit)에 의해 무시되지 않도록 보장
-    const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
-    if (sizeModeEl) {
-      sizeModeEl.value = 'fixed';
+    setRadiusInput(String(validR));
+    userActionLockRef.current = Date.now();
+    setSelectedSizePresetId(null);
+
+    const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
+    const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
+    const targetNodeId = selectedNodes[0]?.id || 'NONE';
+
+    pendingSizeRef.current = {
+      nodeId: targetNodeId,
+      width: curW,
+      height: curH,
+      cornerRadius: validR,
+    };
+
+    setLastNodeConfig({ cornerRadius: validR });
+    applyCurrentNodeState(currentSizeMode === 'mixed' ? undefined : currentSizeMode, undefined, undefined, 'Screen', {
+      width: curW,
+      height: curH,
+      cornerRadius: validR,
+    });
+  }
+
+  function handleRKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      commitR();
+      (e.target as HTMLInputElement).blur();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const current = parseInt(radiusInput, 10) || 0;
+      const step = e.shiftKey ? 10 : 1;
+      const next = Math.min(999, current + step);
+      commitR(String(next));
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const current = parseInt(radiusInput, 10) || 0;
+      const step = e.shiftKey ? 10 : 1;
+      const next = Math.max(0, current - step);
+      commitR(String(next));
     }
-    if (!isNaN(w)) setLastNodeConfig({ width: w, sizeMode: 'fixed' });
-    if (!isNaN(h)) setLastNodeConfig({ height: h, sizeMode: 'fixed' });
-    if (!isNaN(r)) setLastNodeConfig({ cornerRadius: r });
-    applyCurrentNodeState('fixed', undefined, undefined, 'Screen', { width: w, height: h, cornerRadius: r });
   }
 
   function applySizePreset(p: SizePreset) {
     if (!isSizeAllowed) return;
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-    if (wEl) wEl.value = String(p.w);
-    if (hEl) hEl.value = String(p.h);
-    if (rEl) rEl.value = String(p.radius ?? 0);
     setSelectedSizePresetId(p.id);
+    setWidthInput(String(p.w));
+    setHeightInput(String(p.h));
+    setRadiusInput(String(p.radius ?? 0));
+    userActionLockRef.current = Date.now();
+
+    const targetNodeId = selectedNodes[0]?.id || 'NONE';
+    pendingSizeRef.current = {
+      nodeId: targetNodeId,
+      width: p.w,
+      height: p.h,
+      cornerRadius: p.radius ?? 0,
+    };
+
+    const targetSizeMode = p.sizeMode || 'fixed';
     setLastNodeConfig({
       width: p.w,
       height: p.h,
       cornerRadius: p.radius ?? 0,
-      sizeMode: p.sizeMode || 'fixed',
+      sizeMode: targetSizeMode,
     });
-    applyCurrentNodeState(p.sizeMode || 'fixed', undefined, undefined, 'Screen', {
+    applyCurrentNodeState(targetSizeMode, undefined, undefined, 'Screen', {
       width: p.w,
       height: p.h,
       cornerRadius: p.radius ?? 0,
@@ -366,32 +541,49 @@ export function SizeSection() {
         <div className="numeric-inputs-row">
           <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`}>
             <span className="scrubber-label" data-tooltip="Width">W</span>
-            <input type="number" id="input-size-w" defaultValue={250} min={50}
+            <input
+              type="number"
+              id="input-size-w"
+              value={widthInput}
+              min={50}
               placeholder={isWMixed ? 'Mixed' : undefined}
               disabled={!isSizeAllowed}
+              onFocus={() => { isFocusedRef.current.w = true; }}
               onChange={handleWChange}
-              onBlur={triggerApply}
-              onKeyDown={e => { if (e.key === 'Enter') { triggerApply(); (e.target as HTMLInputElement).blur(); } }} />
+              onBlur={() => { isFocusedRef.current.w = false; commitW(); }}
+              onKeyDown={handleWKeyDown}
+            />
           </div>
           <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`}>
             <span className="scrubber-label" data-tooltip="Height">H</span>
-            <input type="number" id="input-size-h" defaultValue={90} min={40}
+            <input
+              type="number"
+              id="input-size-h"
+              value={heightInput}
+              min={40}
               placeholder={isHMixed ? 'Mixed' : undefined}
               disabled={!isSizeAllowed}
+              onFocus={() => { isFocusedRef.current.h = true; }}
               onChange={handleHChange}
-              onBlur={triggerApply}
-              onKeyDown={e => { if (e.key === 'Enter') { triggerApply(); (e.target as HTMLInputElement).blur(); } }} />
+              onBlur={() => { isFocusedRef.current.h = false; commitH(); }}
+              onKeyDown={handleHKeyDown}
+            />
           </div>
           <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`}>
             <svg data-tooltip="Corner radius" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z" fill="currentColor"/></svg>
-            <input type="number" id="input-size-radius"
-              defaultValue={typeof selectedNodes[0]?.cornerRadius === 'number' ? selectedNodes[0].cornerRadius : (lastNodeConfig.cornerRadius || 0)}
-              min={0} max={999}
+            <input
+              type="number"
+              id="input-size-radius"
+              value={radiusInput}
+              min={0}
+              max={999}
               placeholder={isRMixed ? 'Mixed' : undefined}
               disabled={!isSizeAllowed}
+              onFocus={() => { isFocusedRef.current.r = true; }}
               onChange={handleRChange}
-              onBlur={triggerApply}
-              onKeyDown={e => { if (e.key === 'Enter') { triggerApply(); (e.target as HTMLInputElement).blur(); } }} />
+              onBlur={() => { isFocusedRef.current.r = false; commitR(); }}
+              onKeyDown={handleRKeyDown}
+            />
           </div>
 
           {/* 사이즈 모드 드롭다운 */}
