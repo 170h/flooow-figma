@@ -34,7 +34,7 @@ export function ConnectionPanel(_props?: any) {
       const node2Text = document.getElementById('preview-node-2-text');
 
       // code.ts에서 캔버스 2D 공간 배치(위/왼쪽 우선)로 정렬된 전체 엔드포인트 노드명 목록
-      const connNodeNames = selectedNodes[0]?.connectedNodeNames || [];
+      const connNodeNames = Array.from(new Set(selectedNodes.flatMap((n) => n?.connectedNodeNames || [])));
       if (connNodeNames.length > 0) {
         if (node1Text) node1Text.textContent = connNodeNames[0] || 'Node 1';
         if (node2Text) {

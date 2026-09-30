@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
-import type { ConnectorTerminalType, DiagramNodeType } from '../../types';
+import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus } from '../../types';
 import { NODE_TYPE_SHAPE_SPECS } from '../../types';
 
 // ============================================================
@@ -85,6 +85,8 @@ export interface NodeInfo {
   cachedFigmaLink?: string;
   connectorIsReversed?: boolean;
   connectedNodeNames?: string[];
+  x?: number;
+  y?: number;
 }
 
 export interface LastNodeConfig {
@@ -515,6 +517,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const elevToggleEl = document.getElementById('toggle-elevation') as HTMLInputElement | null;
     const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
     const finalElevation = isElevOn ? selectedElevation : null;
+    const statusToggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
+    const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(lastNodeConfigRef.current.statusOn);
+    const finalStatus = isStatusOn ? ((uiStateRef.current.selectedStatus || lastNodeConfigRef.current.status) as WorkflowStatus) : undefined;
     const finalColor = styleOverrides?.colorHex ?? selectedColor;
     const finalStrokeWeight = styleOverrides?.strokeWeight !== undefined
       ? styleOverrides.strokeWeight
@@ -535,6 +540,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       strokeColor: finalStrokeColor,
       elevationOn: isElevOn,
       elevation: selectedElevation,
+      statusOn: isStatusOn,
+      status: finalStatus || '',
       singleLinkOn: isLinkOn,
       singleLinkUrl: figmaUrl,
       sizeMode,
@@ -558,6 +565,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             strokeWeight: finalStrokeWeight,
             strokeColor: finalStrokeColor,
             elevation: finalElevation,
+            status: finalStatus,
             sizeMode,
           }
         }
@@ -809,19 +817,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const figmaLink = isLinkOn ? rawLinkUrl : '';
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
 
-      parent.postMessage({
-        pluginMessage: {
-          type: 'CONNECT_POINTS',
-          payload: {
-            sourceNodeId: nodes[0].id, sourceMagnet,
-            targetNodeId: nodes[1].id, targetMagnet,
-            label, colorHex: color, strokeWeight: weight,
-            routingType: selectedRoutingType, strokePattern: selectedLinePattern,
-            startTerminal: startTerm, endTerminal: endTerm,
-            startOffset: startOff, endOffset: endOff, figmaLink,
+      if (nodes.length === 2) {
+        parent.postMessage({
+          pluginMessage: {
+            type: 'CONNECT_POINTS',
+            payload: {
+              sourceNodeId: nodes[0].id, sourceMagnet,
+              targetNodeId: nodes[1].id, targetMagnet,
+              label, colorHex: color, strokeWeight: weight,
+              routingType: selectedRoutingType, strokePattern: selectedLinePattern,
+              startTerminal: startTerm, endTerminal: endTerm,
+              startOffset: startOff, endOffset: endOff, figmaLink,
+            }
           }
+        }, '*');
+      } else {
+        // 3개 이상 다중 노드 선택: 순차 체인 연결 (1 -> 2 -> ... -> N)
+        for (let i = 0; i < nodes.length - 1; i++) {
+          const src = nodes[i];
+          const tgt = nodes[i + 1];
+
+          let pairSourceMag = sourceMagnet;
+          let pairTargetMag = targetMagnet;
+
+          if (typeof src.x === 'number' && typeof tgt.x === 'number' && typeof src.y === 'number' && typeof tgt.y === 'number') {
+            const dx = tgt.x - src.x;
+            const dy = tgt.y - src.y;
+            if (Math.abs(dx) >= Math.abs(dy)) {
+              pairSourceMag = dx >= 0 ? 'RIGHT' : 'LEFT';
+              pairTargetMag = dx >= 0 ? 'LEFT' : 'RIGHT';
+            } else {
+              pairSourceMag = dy >= 0 ? 'BOTTOM' : 'TOP';
+              pairTargetMag = dy >= 0 ? 'TOP' : 'BOTTOM';
+            }
+          }
+
+          parent.postMessage({
+            pluginMessage: {
+              type: 'CONNECT_POINTS',
+              payload: {
+                sourceNodeId: src.id,
+                sourceMagnet: i === 0 ? sourceMagnet : pairSourceMag,
+                targetNodeId: tgt.id,
+                targetMagnet: i === nodes.length - 2 ? targetMagnet : pairTargetMag,
+                label: i === 0 ? label : '',
+                colorHex: color,
+                strokeWeight: weight,
+                routingType: selectedRoutingType,
+                strokePattern: selectedLinePattern,
+                startTerminal: i === 0 ? startTerm : 'NONE',
+                endTerminal: endTerm,
+                startOffset: startOff,
+                endOffset: endOff,
+                figmaLink: i === 0 ? figmaLink : '',
+              }
+            }
+          }, '*');
         }
-      }, '*');
+      }
       return;
     }
 
@@ -1107,14 +1160,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const flowNodes = nodes.filter(n => n && n.isFlowNode);
         const first = flowNodes[0] || nodes[0];
         if (first) {
-          if (first.elevationOn || (first.elevation !== undefined && first.elevation !== null && first.elevation > 0)) {
+          const hasElevation = first.elevation !== undefined && first.elevation !== null
+            ? first.elevation > 0
+            : Boolean(first.elevationOn);
+          if (hasElevation) {
             setActiveAppearanceSection('elevation');
           } else {
             setActiveAppearanceSection(null);
           }
         }
       } else {
-        if (lastNodeConfigRef.current.elevationOn) {
+        const hasElevation = Boolean(lastNodeConfigRef.current.elevationOn) && (lastNodeConfigRef.current.elevation ?? 0) > 0;
+        if (hasElevation) {
           setActiveAppearanceSection('elevation');
         } else {
           setActiveAppearanceSection(null);

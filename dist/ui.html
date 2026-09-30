@@ -28694,6 +28694,9 @@
       const elevToggleEl = document.getElementById("toggle-elevation");
       const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
       const finalElevation = isElevOn ? selectedElevation : null;
+      const statusToggleEl = document.getElementById("toggle-status");
+      const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(lastNodeConfigRef.current.statusOn);
+      const finalStatus = isStatusOn ? uiStateRef.current.selectedStatus || lastNodeConfigRef.current.status : void 0;
       const finalColor = styleOverrides?.colorHex ?? selectedColor;
       const finalStrokeWeight = styleOverrides?.strokeWeight !== void 0 ? styleOverrides.strokeWeight : uiStateRef.current.selectedStrokeWeight !== void 0 ? uiStateRef.current.selectedStrokeWeight : lastNodeConfigRef.current.strokeWeight;
       const finalStrokeColor = styleOverrides?.strokeColor !== void 0 ? styleOverrides.strokeColor : uiStateRef.current.selectedStrokeColor || lastNodeConfigRef.current.strokeColor;
@@ -28708,6 +28711,8 @@
         strokeColor: finalStrokeColor,
         elevationOn: isElevOn,
         elevation: selectedElevation,
+        statusOn: isStatusOn,
+        status: finalStatus || "",
         singleLinkOn: isLinkOn,
         singleLinkUrl: figmaUrl,
         sizeMode,
@@ -28732,6 +28737,7 @@
               strokeWeight: finalStrokeWeight,
               strokeColor: finalStrokeColor,
               elevation: finalElevation,
+              status: finalStatus,
               sizeMode
             }
           }
@@ -28955,27 +28961,68 @@
         const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : lastConnectorConfigRef.current.linkUrl || "";
         const figmaLink = isLinkOn ? rawLinkUrl : "";
         const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
-        parent.postMessage({
-          pluginMessage: {
-            type: "CONNECT_POINTS",
-            payload: {
-              sourceNodeId: nodes[0].id,
-              sourceMagnet,
-              targetNodeId: nodes[1].id,
-              targetMagnet,
-              label,
-              colorHex: color,
-              strokeWeight: weight,
-              routingType: selectedRoutingType,
-              strokePattern: selectedLinePattern,
-              startTerminal: startTerm,
-              endTerminal: endTerm,
-              startOffset: startOff,
-              endOffset: endOff,
-              figmaLink
+        if (nodes.length === 2) {
+          parent.postMessage({
+            pluginMessage: {
+              type: "CONNECT_POINTS",
+              payload: {
+                sourceNodeId: nodes[0].id,
+                sourceMagnet,
+                targetNodeId: nodes[1].id,
+                targetMagnet,
+                label,
+                colorHex: color,
+                strokeWeight: weight,
+                routingType: selectedRoutingType,
+                strokePattern: selectedLinePattern,
+                startTerminal: startTerm,
+                endTerminal: endTerm,
+                startOffset: startOff,
+                endOffset: endOff,
+                figmaLink
+              }
             }
+          }, "*");
+        } else {
+          for (let i = 0; i < nodes.length - 1; i++) {
+            const src = nodes[i];
+            const tgt = nodes[i + 1];
+            let pairSourceMag = sourceMagnet;
+            let pairTargetMag = targetMagnet;
+            if (typeof src.x === "number" && typeof tgt.x === "number" && typeof src.y === "number" && typeof tgt.y === "number") {
+              const dx = tgt.x - src.x;
+              const dy = tgt.y - src.y;
+              if (Math.abs(dx) >= Math.abs(dy)) {
+                pairSourceMag = dx >= 0 ? "RIGHT" : "LEFT";
+                pairTargetMag = dx >= 0 ? "LEFT" : "RIGHT";
+              } else {
+                pairSourceMag = dy >= 0 ? "BOTTOM" : "TOP";
+                pairTargetMag = dy >= 0 ? "TOP" : "BOTTOM";
+              }
+            }
+            parent.postMessage({
+              pluginMessage: {
+                type: "CONNECT_POINTS",
+                payload: {
+                  sourceNodeId: src.id,
+                  sourceMagnet: i === 0 ? sourceMagnet : pairSourceMag,
+                  targetNodeId: tgt.id,
+                  targetMagnet: i === nodes.length - 2 ? targetMagnet : pairTargetMag,
+                  label: i === 0 ? label : "",
+                  colorHex: color,
+                  strokeWeight: weight,
+                  routingType: selectedRoutingType,
+                  strokePattern: selectedLinePattern,
+                  startTerminal: i === 0 ? startTerm : "NONE",
+                  endTerminal: endTerm,
+                  startOffset: startOff,
+                  endOffset: endOff,
+                  figmaLink: i === 0 ? figmaLink : ""
+                }
+              }
+            }, "*");
           }
-        }, "*");
+        }
         return;
       }
       const titleEl = document.getElementById("node-title-input");
@@ -29218,14 +29265,16 @@
           const flowNodes = nodes.filter((n) => n && n.isFlowNode);
           const first = flowNodes[0] || nodes[0];
           if (first) {
-            if (first.elevationOn || first.elevation !== void 0 && first.elevation !== null && first.elevation > 0) {
+            const hasElevation = first.elevation !== void 0 && first.elevation !== null ? first.elevation > 0 : Boolean(first.elevationOn);
+            if (hasElevation) {
               setActiveAppearanceSection("elevation");
             } else {
               setActiveAppearanceSection(null);
             }
           }
         } else {
-          if (lastNodeConfigRef.current.elevationOn) {
+          const hasElevation = Boolean(lastNodeConfigRef.current.elevationOn) && (lastNodeConfigRef.current.elevation ?? 0) > 0;
+          if (hasElevation) {
             setActiveAppearanceSection("elevation");
           } else {
             setActiveAppearanceSection(null);
@@ -29495,8 +29544,8 @@
       strokeWeight: getCommonProperty(flowNodes, (n) => n.strokeWeight),
       strokeColor: getCommonProperty(flowNodes, (n) => n.strokeColorHex, caseInsensitiveEqual),
       elevation: getCommonProperty(flowNodes, (n) => n.elevation),
-      elevationOn: getCommonProperty(flowNodes, (n) => n.elevationOn !== void 0 ? Boolean(n.elevationOn) : void 0),
-      status: getCommonProperty(flowNodes, (n) => n.status),
+      elevationOn: getCommonProperty(flowNodes, (n) => n.elevationOn ? true : void 0),
+      status: getCommonProperty(flowNodes, (n) => n.status ? n.status : void 0),
       statusOn: getCommonProperty(flowNodes, (n) => n.status ? true : void 0),
       nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || n.nodeType)),
       width: getCommonProperty(flowNodes, (n) => n.width),
@@ -29504,7 +29553,7 @@
       cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius),
       sizeMode: getCommonProperty(flowNodes, (n) => n.sizeMode),
       stepNumber: getCommonProperty(flowNodes, (n) => n.stepNumber),
-      hasStepBadge: getCommonProperty(flowNodes, (n) => n.stepNumber !== void 0),
+      hasStepBadge: getCommonProperty(flowNodes, (n) => n.stepNumber !== void 0 ? true : void 0),
       badgeCorner: getCommonProperty(flowNodes, (n) => n.badgeCorner),
       badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape),
       badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode),
@@ -32898,7 +32947,7 @@
       node1DisplayName = selectedNodes[0]?.connectorSourceNodeName || "Source Node";
       node2DisplayName = selectedNodes[0]?.connectorTargetNodeName || "Target Node";
     } else if (summary.isMultiConnector) {
-      const connNodeNames = selectedNodes[0]?.connectedNodeNames || [];
+      const connNodeNames = Array.from(new Set(selectedNodes.flatMap((n) => n?.connectedNodeNames || [])));
       if (connNodeNames.length > 0) {
         node1DisplayName = connNodeNames[0] || "Node 1";
         if (connNodeNames.length >= 3) {
@@ -33674,7 +33723,7 @@
         if (anchorBox) anchorBox.style.display = "";
         const node1Text = document.getElementById("preview-node-1-text");
         const node2Text = document.getElementById("preview-node-2-text");
-        const connNodeNames = selectedNodes[0]?.connectedNodeNames || [];
+        const connNodeNames = Array.from(new Set(selectedNodes.flatMap((n) => n?.connectedNodeNames || [])));
         if (connNodeNames.length > 0) {
           if (node1Text) node1Text.textContent = connNodeNames[0] || "Node 1";
           if (node2Text) {

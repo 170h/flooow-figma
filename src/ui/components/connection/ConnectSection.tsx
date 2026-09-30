@@ -682,7 +682,7 @@ export function ConnectSection() {
     node1DisplayName = selectedNodes[0]?.connectorSourceNodeName || 'Source Node';
     node2DisplayName = selectedNodes[0]?.connectorTargetNodeName || 'Target Node';
   } else if (summary.isMultiConnector) {
-    const connNodeNames = selectedNodes[0]?.connectedNodeNames || [];
+    const connNodeNames = Array.from(new Set(selectedNodes.flatMap((n) => n?.connectedNodeNames || [])));
     if (connNodeNames.length > 0) {
       node1DisplayName = connNodeNames[0] || 'Node 1';
       if (connNodeNames.length >= 3) {
