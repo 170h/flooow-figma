@@ -803,7 +803,7 @@ export function ConnectSection() {
                 ref={nativeColorInputRef}
                 type="color"
                 style={{ display: 'none' }}
-                value={selectedColor.length === 7 ? selectedColor : '#000000'}
+                value={selectedColor.length === 7 ? selectedColor : (selectedConnectorColor && selectedConnectorColor.length === 7 ? selectedConnectorColor : '#000000')}
                 onChange={(e) => selectColor(e.target.value)}
               />
 

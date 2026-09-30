@@ -180,7 +180,7 @@ export function StepBadgesSection() {
 
   // 현재 노드의 배경색 및 보더색 추출 (Style / White 모드 스와치 표시용)
   const firstNode = selectedNodes[0];
-  const nodeBgColorHex = firstNode?.fillColorHex || "#E11D48";
+  const nodeBgColorHex = firstNode?.fillColorHex || uiState.selectedColor || "#FFFFFF";
   const hasNodeStroke =
     (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
 

@@ -45,6 +45,19 @@ export const DEFAULT_STYLE_PRESETS: StylePreset[] = [
   { id: 'style-black', name: 'Black', fillColor: '#000000', strokeWeight: 0, strokeColor: '#000000', isDefault: true },
 ];
 
+const DEFAULT_STYLE_PRESET_IDS = new Set(['style-white', 'style-black']);
+
+const getCurrentUITheme = (): 'light' | 'dark' => {
+  if (typeof document !== 'undefined' && (
+    document.documentElement.classList.contains('figma-dark') ||
+    document.body.classList.contains('figma-dark') ||
+    document.querySelector('[data-theme="dark"]')
+  )) {
+    return 'dark';
+  }
+  return 'light';
+};
+
 export interface NodeInfo {
   id: string;
   title?: string;
@@ -56,6 +69,7 @@ export interface NodeInfo {
   flowNodeType?: string;
   status?: string;
   figmaLink?: string;
+  theme?: 'light' | 'dark';
   isConnector?: boolean;
   isFlowNode?: boolean;
   connectorColorHex?: string;
@@ -137,7 +151,7 @@ export interface UIState {
   selectedConnectorColor?: string;
 }
 
-import { DesignFrameItem } from '../../types';
+import { DesignFrameItem, BadgePosition, BadgeShape } from '../../types';
 
 // 모달 타입
 export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color';
@@ -492,6 +506,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const rawTitle = overrideTitle !== undefined
       ? overrideTitle
       : (currentTitleVal || (effectiveNodeType === 'Screen' ? 'Screen' : effectiveNodeType));
+    if (rawTitle.length > 32) {
+      showToast('제목은 최대 32자까지 입력할 수 있습니다.', 'warning');
+    }
     const title = rawTitle.slice(0, 32);
     const rawDesc = descEl?.value.trim() || '';
     const isDescOn = descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false);
@@ -557,13 +574,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             title: nodes.length === 1 ? title : (node.title || title),
             description: desc,
             width: w, height: h, cornerRadius: radius,
-            theme: 'light',
+            theme: node.theme || getCurrentUITheme(),
             figmaLink: figmaUrl,
             clearLinkCache: linkOverrides?.clearLinkCache,
             nodeType: effectiveNodeType,
             colorHex: finalColor,
-            strokeWeight: finalStrokeWeight,
-            strokeColor: finalStrokeColor,
+            strokeWeight: finalStrokeWeight !== undefined ? finalStrokeWeight : node.strokeWeight,
+            strokeColor: finalStrokeColor !== undefined ? finalStrokeColor : node.strokeColorHex,
             elevation: finalElevation,
             status: finalStatus,
             sizeMode,
@@ -661,7 +678,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteStylePreset = useCallback((id: string) => {
     const target = stylePresets.find((p) => p.id === id);
-    if (target?.isDefault || target?.id === 'style-white' || target?.id === 'style-black') {
+    if (target?.isDefault || DEFAULT_STYLE_PRESET_IDS.has(target?.id || '')) {
       showToast('기본 스타일은 삭제할 수 없습니다.', 'warning');
       return;
     }
@@ -806,7 +823,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const linkUrlEl = document.getElementById('input-conn-link-url') as HTMLInputElement | null;
 
       const label = labelToggleEl?.checked ? (labelInputEl?.value.trim() || '') : '';
-      const color = colorEl?.value || '#000000';
+      const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || '#000000';
       const weight = parseFloat(weightEl?.value || '1.5') || 1.5;
       const startTerm = startTermEl?.value || 'NONE';
       const endTerm = endTermEl?.value || 'ARROW';
@@ -900,6 +917,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
     const defaultTitle = selectedNodeType === 'Screen' ? 'Screen' : selectedNodeType;
     const rawTitle = titleEl?.value.trim() || defaultTitle;
+    if (rawTitle.length > 32) {
+      showToast('제목은 최대 32자까지 입력할 수 있습니다.', 'warning');
+    }
     const title = rawTitle.slice(0, 32); // 타이틀 글자 수 제한 (입력필드 너비 최적화)
     const isDescOn = descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false);
     const desc = isDescOn ? (descEl?.value.trim() || '') : '';
@@ -960,7 +980,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       parent.postMessage({
         pluginMessage: {
           type: 'UPDATE_FLOW_NODE',
-          payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: 'light', figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
+          payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: nodes[0]?.theme || getCurrentUITheme(), figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
         }
       }, '*');
     } else if (nodes.length >= 2) {
@@ -968,7 +988,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         parent.postMessage({
           pluginMessage: {
             type: 'UPDATE_FLOW_NODE',
-            payload: { nodeId: node.id, title: node.title || title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: 'light', figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
+            payload: { nodeId: node.id, title: node.title || title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: node.theme || getCurrentUITheme(), figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
           }
         }, '*');
       });
@@ -986,19 +1006,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             width: w,
             height: h,
             cornerRadius: radius,
-            theme: 'light',
+            theme: getCurrentUITheme(),
             figmaLink: figmaUrl,
             nodeType: selectedNodeType,
             colorHex: selectedColor,
             strokeWeight: lastNodeConfigRef.current.strokeWeight !== undefined ? lastNodeConfigRef.current.strokeWeight : 1.5,
             strokeColor: lastNodeConfigRef.current.strokeColor,
-            sizeMode: (lastNodeConfigRef.current.sizeMode as any) || 'fixed',
+            sizeMode: (lastNodeConfigRef.current.sizeMode as ('fixed' | 'hug' | 'fit')) || 'fixed',
             elevation: isElevOn ? selectedElevation : undefined,
             status: (!isDescAllowed || !statusToggleEl?.checked) ? undefined : selectedStatus,
             badgeNumber: isStepOn ? targetStepNum : undefined,
-            badgePosition: isStepOn ? (selectedBadgeCorner as any) : undefined,
-            badgeShape: isStepOn ? (selectedBadgeShape as any) : undefined,
-            badgeColorMode: isStepOn ? (uiStateRef.current.selectedBadgeColorMode as any) : undefined,
+            badgePosition: isStepOn ? (selectedBadgeCorner as BadgePosition) : undefined,
+            badgeShape: isStepOn ? (selectedBadgeShape as BadgeShape) : undefined,
+            badgeColorMode: isStepOn ? uiStateRef.current.selectedBadgeColorMode : undefined,
           }
         }
       }, '*');

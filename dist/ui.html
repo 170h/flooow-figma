@@ -28467,6 +28467,13 @@
     { id: "style-white", name: "White", fillColor: "#ffffff", strokeWeight: 1.5, strokeColor: "#000000", isDefault: true },
     { id: "style-black", name: "Black", fillColor: "#000000", strokeWeight: 0, strokeColor: "#000000", isDefault: true }
   ];
+  var DEFAULT_STYLE_PRESET_IDS = /* @__PURE__ */ new Set(["style-white", "style-black"]);
+  var getCurrentUITheme = () => {
+    if (typeof document !== "undefined" && (document.documentElement.classList.contains("figma-dark") || document.body.classList.contains("figma-dark") || document.querySelector('[data-theme="dark"]'))) {
+      return "dark";
+    }
+    return "light";
+  };
   var DEFAULT_LAST_NODE_CONFIG = {
     nodeType: "Screen",
     width: 250,
@@ -28681,6 +28688,9 @@
       const isDescAllowed = spec?.allowDescription ?? false;
       const currentTitleVal = titleEl?.value.trim();
       const rawTitle = overrideTitle !== void 0 ? overrideTitle : currentTitleVal || (effectiveNodeType === "Screen" ? "Screen" : effectiveNodeType);
+      if (rawTitle.length > 32) {
+        showToast("\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "warning");
+      }
       const title = rawTitle.slice(0, 32);
       const rawDesc = descEl?.value.trim() || "";
       const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
@@ -28729,13 +28739,13 @@
               width: w,
               height: h,
               cornerRadius: radius,
-              theme: "light",
+              theme: node.theme || getCurrentUITheme(),
               figmaLink: figmaUrl,
               clearLinkCache: linkOverrides?.clearLinkCache,
               nodeType: effectiveNodeType,
               colorHex: finalColor,
-              strokeWeight: finalStrokeWeight,
-              strokeColor: finalStrokeColor,
+              strokeWeight: finalStrokeWeight !== void 0 ? finalStrokeWeight : node.strokeWeight,
+              strokeColor: finalStrokeColor !== void 0 ? finalStrokeColor : node.strokeColorHex,
               elevation: finalElevation,
               status: finalStatus,
               sizeMode
@@ -28826,7 +28836,7 @@
     }, [stylePresets, saveStylePresets, showToast]);
     const deleteStylePreset = (0, import_react2.useCallback)((id) => {
       const target = stylePresets.find((p) => p.id === id);
-      if (target?.isDefault || target?.id === "style-white" || target?.id === "style-black") {
+      if (target?.isDefault || DEFAULT_STYLE_PRESET_IDS.has(target?.id || "")) {
         showToast("\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
         return;
       }
@@ -28951,7 +28961,7 @@
         const linkToggleEl = document.getElementById("toggle-conn-link");
         const linkUrlEl = document.getElementById("input-conn-link-url");
         const label = labelToggleEl?.checked ? labelInputEl?.value.trim() || "" : "";
-        const color = colorEl?.value || "#000000";
+        const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || "#000000";
         const weight = parseFloat(weightEl?.value || "1.5") || 1.5;
         const startTerm = startTermEl?.value || "NONE";
         const endTerm = endTermEl?.value || "ARROW";
@@ -29045,6 +29055,9 @@
       const descToggleEl = document.getElementById("toggle-description");
       const defaultTitle = selectedNodeType === "Screen" ? "Screen" : selectedNodeType;
       const rawTitle = titleEl?.value.trim() || defaultTitle;
+      if (rawTitle.length > 32) {
+        showToast("\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "warning");
+      }
       const title = rawTitle.slice(0, 32);
       const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
       const desc = isDescOn ? descEl?.value.trim() || "" : "";
@@ -29102,7 +29115,7 @@
         parent.postMessage({
           pluginMessage: {
             type: "UPDATE_FLOW_NODE",
-            payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: "light", figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
+            payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: nodes[0]?.theme || getCurrentUITheme(), figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
           }
         }, "*");
       } else if (nodes.length >= 2) {
@@ -29110,7 +29123,7 @@
           parent.postMessage({
             pluginMessage: {
               type: "UPDATE_FLOW_NODE",
-              payload: { nodeId: node.id, title: node.title || title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: "light", figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
+              payload: { nodeId: node.id, title: node.title || title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: node.theme || getCurrentUITheme(), figmaLink: figmaUrl, nodeType: selectedNodeType, colorHex: selectedColor, elevation: finalElevation }
             }
           }, "*");
         });
@@ -29128,7 +29141,7 @@
               width: w,
               height: h,
               cornerRadius: radius,
-              theme: "light",
+              theme: getCurrentUITheme(),
               figmaLink: figmaUrl,
               nodeType: selectedNodeType,
               colorHex: selectedColor,
@@ -30744,7 +30757,7 @@
       return lum < 0.6;
     }
     const firstNode = selectedNodes[0];
-    const nodeBgColorHex = firstNode?.fillColorHex || "#E11D48";
+    const nodeBgColorHex = firstNode?.fillColorHex || uiState.selectedColor || "#FFFFFF";
     const hasNodeStroke = (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
     (0, import_react10.useEffect)(() => {
       const isUserLocked = Date.now() - userActionLockRef.current < 600;
@@ -31765,7 +31778,7 @@
   // src/ui/components/appearance/StyleSection.tsx
   var import_react12 = __toESM(require_react());
   var import_jsx_runtime12 = __toESM(require_jsx_runtime());
-  var DEFAULT_STYLE_PRESET_IDS = /* @__PURE__ */ new Set(["style-white", "style-black"]);
+  var DEFAULT_STYLE_PRESET_IDS2 = /* @__PURE__ */ new Set(["style-white", "style-black"]);
   var PALETTE_ICON_SVG = /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
     "path",
     {
@@ -31857,7 +31870,7 @@
       }
       return true;
     });
-    const isMoreDisabled = !activeStylePreset || Boolean(activeStylePreset.isDefault) || DEFAULT_STYLE_PRESET_IDS.has(activeStylePreset.id);
+    const isMoreDisabled = !activeStylePreset || Boolean(activeStylePreset.isDefault) || DEFAULT_STYLE_PRESET_IDS2.has(activeStylePreset.id);
     const applyFillColor = (0, import_react12.useCallback)(
       (newColorHex) => {
         const formatted = newColorHex.startsWith("#") ? newColorHex : `#${newColorHex}`;
@@ -33059,7 +33072,7 @@
                       ref: nativeColorInputRef,
                       type: "color",
                       style: { display: "none" },
-                      value: selectedColor.length === 7 ? selectedColor : "#000000",
+                      value: selectedColor.length === 7 ? selectedColor : selectedConnectorColor && selectedConnectorColor.length === 7 ? selectedConnectorColor : "#000000",
                       onChange: (e) => selectColor(e.target.value)
                     }
                   ),
@@ -33895,7 +33908,7 @@
       uiState
     } = useApp();
     if (!contextMenuOpen) return null;
-    const DEFAULT_STYLE_PRESET_IDS2 = /* @__PURE__ */ new Set(["style-white", "style-black"]);
+    const DEFAULT_STYLE_PRESET_IDS3 = /* @__PURE__ */ new Set(["style-white", "style-black"]);
     const DEFAULT_STYLE_COLORS = /* @__PURE__ */ new Set(["#ffffff", "#000000"]);
     function handleEdit(e) {
       e.stopPropagation();
@@ -33904,7 +33917,7 @@
         setActiveModal("edit-size");
       } else if (contextMenuTarget === "style") {
         const color = uiState.selectedColor;
-        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS2.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
+        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS3.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
           showToast("\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
           return;
         }
@@ -33926,7 +33939,7 @@
         showToast("\uC0AC\uC774\uC988 \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
       } else if (contextMenuTarget === "style") {
         const color = uiState.selectedColor;
-        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS2.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
+        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS3.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
           showToast("\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
           return;
         }
@@ -36330,31 +36343,7 @@
       ) });
     }
     return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { className: "title-banner", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { style: { flex: 1, minWidth: 0, marginRight: "8px" }, children: renderTitleBanner() }),
-        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
-          "button",
-          {
-            type: "button",
-            id: "btn-header-settings",
-            className: "btn-action-icon",
-            title: "Settings",
-            "data-tooltip": "Settings",
-            onClick: () => {
-              showToast("Settings \uBA54\uB274\uC785\uB2C8\uB2E4.");
-            },
-            children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
-              "path",
-              {
-                fillRule: "evenodd",
-                clipRule: "evenodd",
-                d: "M13.2118 18.8955C12.8175 18.9644 12.4124 19 11.9999 19C11.6905 19 11.3854 18.9796 11.0858 18.9404L10.788 18.8955C10.092 18.7739 9.74773 18.1555 9.7499 17.6348C9.7512 17.2849 9.57075 16.9479 9.2499 16.7627C8.96936 16.6008 8.64204 16.5896 8.3622 16.707L8.24501 16.7656L8.1581 16.8115C7.70859 17.0267 7.06175 17.0052 6.63662 16.499C6.18276 15.9584 5.8085 15.3474 5.5331 14.6846L5.42177 14.3965C5.1802 13.7332 5.54323 13.1273 5.99501 12.8691C6.2988 12.6953 6.4999 12.3706 6.4999 12C6.49988 11.6294 6.29881 11.3046 5.99501 11.1309C5.54321 10.8727 5.18014 10.2668 5.42177 9.60352C5.70389 8.82934 6.11784 8.11892 6.63662 7.50098C7.08996 6.96123 7.79554 6.9726 8.24501 7.23438C8.54732 7.41038 8.92911 7.42241 9.2499 7.2373C9.57076 7.05205 9.75121 6.71515 9.7499 6.36523C9.74772 5.84453 10.092 5.22612 10.788 5.10449C11.1823 5.0356 11.5873 5 11.9999 5C12.4124 5 12.8175 5.03561 13.2118 5.10449C13.9078 5.22612 14.2521 5.84452 14.2499 6.36523C14.2486 6.71516 14.429 7.05205 14.7499 7.2373C15.0707 7.42244 15.4525 7.41036 15.7548 7.23438C16.2042 6.9726 16.9098 6.96129 17.3632 7.50098C17.882 8.11892 18.2969 8.82934 18.579 9.60352C18.8204 10.2666 18.4574 10.8727 18.0058 11.1309C17.7017 11.3046 17.4999 11.6293 17.4999 12C17.4999 12.3708 17.7017 12.6954 18.0058 12.8691C18.4574 13.1273 18.8204 13.7334 18.579 14.3965C18.2969 15.1707 17.882 15.8811 17.3632 16.499C16.938 17.0052 16.2912 17.0267 15.8417 16.8115L15.7548 16.7656C15.4524 16.5896 15.0707 16.5785 14.7499 16.7637C14.4292 16.9489 14.2486 17.285 14.2499 17.6348C14.2521 18.1555 13.9078 18.7739 13.2118 18.8955ZM10.9599 17.9102C11.2976 17.9692 11.6452 18 11.9999 18C12.3546 18 12.7022 17.9692 13.0399 17.9102C13.167 17.8879 13.2503 17.7687 13.2499 17.6396C13.247 16.9456 13.6058 16.2694 14.2499 15.8975C14.8939 15.5257 15.6591 15.5522 16.2587 15.9014C16.3701 15.9661 16.5147 15.9542 16.5976 15.8555C17.0425 15.3255 17.3971 14.7173 17.6386 14.0547C17.6827 13.9335 17.6216 13.8013 17.5097 13.7373C16.9068 13.3928 16.4999 12.7441 16.4999 12C16.4999 11.2559 16.9068 10.6072 17.5097 10.2627C17.6216 10.1987 17.6827 10.0665 17.6386 9.94531C17.3971 9.28272 17.0425 8.67453 16.5976 8.14453C16.5147 8.04584 16.3701 8.03387 16.2587 8.09863C15.6591 8.44785 14.8939 8.47434 14.2499 8.10254C13.6058 7.73058 13.247 7.05442 13.2499 6.36035C13.2503 6.23134 13.167 6.11205 13.0399 6.08984C12.7022 6.03082 12.3546 6 11.9999 6C11.6452 6 11.2976 6.03081 10.9599 6.08984C10.8328 6.11209 10.7495 6.23137 10.7499 6.36035C10.7528 7.05444 10.394 7.73059 9.7499 8.10254C9.10609 8.47424 8.34161 8.4476 7.74208 8.09863C7.63067 8.03375 7.48514 8.04579 7.40224 8.14453C6.95735 8.67452 6.60272 9.28273 6.36123 9.94531C6.31705 10.0665 6.37909 10.1987 6.49111 10.2627C7.09373 10.6072 7.49988 11.2561 7.4999 12C7.4999 12.7439 7.09372 13.3928 6.49111 13.7373C6.37909 13.8013 6.31705 13.9335 6.36123 14.0547C6.60272 14.7173 6.95735 15.3255 7.40224 15.8555C7.48514 15.9542 7.63067 15.9663 7.74208 15.9014C8.34161 15.5524 9.10609 15.5258 9.7499 15.8975C10.394 16.2694 10.7528 16.9456 10.7499 17.6396C10.7495 17.7686 10.8328 17.8879 10.9599 17.9102ZM12 13.5C12.8284 13.5 13.5 12.8284 13.5 12C13.5 11.1716 12.8284 10.5 12 10.5C11.1715 10.5 10.5 11.1716 10.5 12C10.5 12.8284 11.1715 13.5 12 13.5ZM12 9.5C13.3807 9.5 14.5 10.6193 14.5 12C14.5 13.3807 13.3807 14.5 12 14.5C10.6193 14.5 9.49997 13.3807 9.49997 12C9.49997 10.6193 10.6193 9.5 12 9.5Z",
-                fill: "currentColor"
-              }
-            ) })
-          }
-        )
-      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "title-banner", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }) }),
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
         const isConnectionDisabled = isSingleFigjam || !isConnSel && nodeCount < 2;
         const isAppearanceDisabled = isFigjamSelected || nodeCount === 0 || isConnSel;
