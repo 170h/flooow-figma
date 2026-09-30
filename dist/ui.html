@@ -194,16 +194,12 @@
     html, body {
       width: 100%;
       height: 100%;
-      min-height: 100%;
-      max-height: 100%;
       margin: 0;
       padding: 0;
-      overflow: hidden !important;
-      scrollbar-width: none !important;
-      -ms-overflow-style: none;
     }
 
     body {
+      overflow-y: auto; /* 창보다 콘텐츠가 길 때 Figma 네이티브 스크롤바 활성화 */
       background-color: var(--color-bg);
       color: var(--color-text-primary);
       font-size: 11px;
@@ -211,43 +207,23 @@
       position: relative;
     }
 
-    /* 최상위 윈도우 스크롤바 100% 원천 차단 (iframe 네이티브 스크롤바 방지) */
-    html::-webkit-scrollbar,
-    body::-webkit-scrollbar,
-    #root::-webkit-scrollbar,
-    #plugin-root::-webkit-scrollbar {
-      display: none !important;
-      width: 0 !important;
-      height: 0 !important;
-    }
+
 
     #root {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
       width: 100%;
-      height: 100%;
-      min-height: 0 !important;
-      max-height: 100% !important;
+      min-height: 100%; /* 창 크기에 맞게 축소, 콘텐츠 많으면 자연 확장 */
       margin: 0;
       padding: 0;
-      overflow: hidden !important;
       display: flex;
       flex-direction: column;
     }
 
     #plugin-root {
       width: 100%;
-      height: 100%;
-      min-height: 0 !important;
-      max-height: 100% !important;
-      flex: 1 1 0% !important;
+      flex: 1 1 auto;
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
-      overflow: hidden !important;
       position: relative;
     }
 
@@ -387,13 +363,8 @@
     /* 탭 본문 스크롤 영역 (상단 탭과 하단 푸터 사이 유연한 스크롤)   */
     /* ============================================================ */
     .tab-panels {
-      flex: 1 1 0% !important;
-      min-height: 0 !important;
-      max-height: 100% !important;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
-      scrollbar-width: none !important; /* Firefox 스크롤바 숨김 */
-      -ms-overflow-style: none !important; /* IE/Edge 스크롤바 숨김 */
+      flex: 1 1 auto;
+      overflow: visible;
       padding: 0 16px;
       display: flex;
       flex-direction: column;
@@ -408,12 +379,7 @@
       cursor: not-allowed;
     }
 
-    /* 스크롤바 완전 숨김 (스크롤 기능은 유지하되 4px 레이아웃 시프트 및 깜빡임 원천 차단) */
-    .tab-panels::-webkit-scrollbar {
-      display: none !important;
-      width: 0 !important;
-      height: 0 !important;
-    }
+
 
     .tab-panel {
       display: none;
@@ -30440,6 +30406,7 @@
     const userActionLockRef = import_react9.default.useRef(0);
     const prevSelectedNodeIdRef = import_react9.default.useRef(null);
     const { selectedStatus } = uiState;
+    const isStatusAllowed = summary.isMultiFlowNode ? !summary.nodeType.isMixed && summary.nodeType.value === "Screen" : selectedNodes.length === 1 ? selectedNodes[0]?.flowNodeType === "Screen" : uiState.selectedNodeType === "Screen";
     import_react9.default.useEffect(() => {
       const isUserLocked = Date.now() - userActionLockRef.current < 600;
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
@@ -30490,41 +30457,49 @@
         autoResizeWindow();
       });
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-block", style: { paddingBottom: isOpen ? "12px" : "0px" }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "section-title", children: [
-          "Status",
-          summary.isMultiFlowNode && (summary.statusOn.isMixed || isStatusMixed) && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-          Switch,
-          {
-            id: "toggle-status",
-            checked: isOpen,
-            isMixed: summary.isMultiFlowNode && summary.statusOn.isMixed,
-            onChange: handleToggle
-          }
-        )
-      ] }),
-      isOpen && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "section-body", style: { marginTop: "6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "chip-group active", id: "status-options", style: { display: "flex" }, children: STATUSES.map((s) => {
-        const isChipActive = !isStatusMixed && activeStatus === s.id;
-        return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
-          "button",
-          {
-            type: "button",
-            className: `chip-btn${isChipActive ? " active" : ""}`,
-            "data-status": s.id,
-            "data-bullet-color": s.color,
-            onClick: () => selectStatus(s.id),
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "tab-bullet", style: { backgroundColor: s.color } }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "tab-label", children: s.label })
-            ]
-          },
-          s.id
-        );
-      }) }) })
-    ] });
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+      "div",
+      {
+        className: "section-block",
+        style: { paddingBottom: isOpen && isStatusAllowed ? "12px" : "0px" },
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "section-header toggle-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: `section-title${!isStatusAllowed ? " disabled" : ""}`, children: [
+              "Status",
+              summary.isMultiFlowNode && (summary.statusOn.isMixed || isStatusMixed) && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+              Switch,
+              {
+                id: "toggle-status",
+                checked: isOpen && isStatusAllowed,
+                isMixed: summary.isMultiFlowNode && summary.statusOn.isMixed,
+                onChange: handleToggle,
+                disabled: !isStatusAllowed
+              }
+            )
+          ] }),
+          isOpen && isStatusAllowed && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "section-body", style: { marginTop: "6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "chip-group active", id: "status-options", style: { display: "flex" }, children: STATUSES.map((s) => {
+            const isChipActive = !isStatusMixed && activeStatus === s.id;
+            return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+              "button",
+              {
+                type: "button",
+                className: `chip-btn${isChipActive ? " active" : ""}`,
+                "data-status": s.id,
+                "data-bullet-color": s.color,
+                onClick: () => selectStatus(s.id),
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "tab-bullet", style: { backgroundColor: s.color } }),
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "tab-label", children: s.label })
+                ]
+              },
+              s.id
+            );
+          }) }) })
+        ]
+      }
+    );
   }
 
   // src/ui/components/appearance/StepBadgesSection.tsx

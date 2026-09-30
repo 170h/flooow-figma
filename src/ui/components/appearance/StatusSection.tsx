@@ -16,6 +16,7 @@ const STATUSES = [
 
 /**
  * Status 섹션 - 토글 스위치 + 8종 상태 칩 (토글형)
+ * Screen 타입일 때만 활성화, 그 외 타입은 비활성(dimmed) 처리
  */
 export function StatusSection() {
   const {
@@ -40,6 +41,13 @@ export function StatusSection() {
   const prevSelectedNodeIdRef = React.useRef<string | null>(null);
 
   const { selectedStatus } = uiState;
+
+  // Screen 타입일 때만 Status 허용 (DescriptionSection의 isDescriptionAllowed 패턴과 동일)
+  const isStatusAllowed = summary.isMultiFlowNode
+    ? (!summary.nodeType.isMixed && summary.nodeType.value === 'Screen')
+    : (selectedNodes.length === 1
+        ? selectedNodes[0]?.flowNodeType === 'Screen'
+        : uiState.selectedNodeType === 'Screen');
 
   // 선택된 노드의 상태와 UI 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   React.useEffect(() => {
@@ -98,9 +106,12 @@ export function StatusSection() {
   }
 
   return (
-    <div className="section-block" style={{ paddingBottom: isOpen ? '12px' : '0px' }}>
+    <div
+      className="section-block"
+      style={{ paddingBottom: isOpen && isStatusAllowed ? '12px' : '0px' }}
+    >
       <div className="section-header toggle-row">
-        <span className="section-title">
+        <span className={`section-title${!isStatusAllowed ? ' disabled' : ''}`}>
           Status
           {summary.isMultiFlowNode && (summary.statusOn.isMixed || isStatusMixed) && (
             <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
@@ -110,12 +121,13 @@ export function StatusSection() {
         </span>
         <Switch
           id="toggle-status"
-          checked={isOpen}
+          checked={isOpen && isStatusAllowed}
           isMixed={summary.isMultiFlowNode && summary.statusOn.isMixed}
           onChange={handleToggle}
+          disabled={!isStatusAllowed}
         />
       </div>
-      {isOpen && (
+      {isOpen && isStatusAllowed && (
         <div className="section-body" style={{ marginTop: '6px' }}>
           <div className="chip-group active" id="status-options" style={{ display: 'flex' }}>
             {STATUSES.map(s => {
