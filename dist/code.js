@@ -6253,6 +6253,26 @@
                   }
                 }
                 if (isTitle) {
+                  if (isScreen) {
+                    const card = flowNode;
+                    const sMode = (safeGetPluginData2(card, "size_mode") || safeGetPluginData2(card, "screen_size_mode") || "fixed").toLowerCase();
+                    if (sMode === "fit") {
+                      const fitW = await calculateScreenFitWidth(
+                        card,
+                        textNode.characters,
+                        safeGetPluginData2(card, "workflow_status") || void 0,
+                        safeGetPluginData2(card, "figma_link") || void 0
+                      );
+                      const targetW = clampScreenWidth(fitW);
+                      const currentW = Math.round(card.width);
+                      if (targetW !== currentW) {
+                        internalLayoutNodeIds.add(card.id);
+                        card.minWidth = targetW;
+                        card.maxWidth = targetW;
+                        card.resize(targetW, card.height);
+                      }
+                    }
+                  }
                   await enforceTitleStandardStyle(textNode, flowNode);
                 }
                 if (isScreen) {
@@ -6307,7 +6327,7 @@
                     const titleNode = isTitle ? textNode : headerRow?.children.find(
                       (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
                     );
-                    const titleH = isTitle && titleNode ? Math.max(18, Math.round(titleNode.height)) : headerRow ? Math.round(headerRow.height) : 18;
+                    const titleH = isScreen && sMode === "fit" ? 18 : isTitle && titleNode ? Math.max(18, Math.round(titleNode.height)) : headerRow ? Math.round(headerRow.height) : 18;
                     const descNode = isDesc ? textNode : descText;
                     const descChars = descNode ? descNode.characters : "";
                     const hasDesc = descChars.length > 0;

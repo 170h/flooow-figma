@@ -6025,7 +6025,33 @@ figma.on('documentchange', async (event) => {
                 }
               }
 
+              // T-1 해결: Fit 모드 Screen Title의 경우, enforceTitleStandardStyle의 layoutAlign='STRETCH'에 의해
+              // 기존 카드 폭에서 일시적으로 2줄 래핑되는 현상을 방지하기 위해, 먼저 필요한 너비를 계산하여 카드 폭을 확장한 후 스타일을 적용함
               if (isTitle) {
+                if (isScreen) {
+                  const card = flowNode as FrameNode;
+                  const sMode = (safeGetPluginData(card, 'size_mode') ||
+                    safeGetPluginData(card, 'screen_size_mode') ||
+                    'fixed').toLowerCase() as 'fixed' | 'hug' | 'fit';
+
+                  if (sMode === 'fit') {
+                    const fitW = await calculateScreenFitWidth(
+                      card,
+                      textNode.characters,
+                      safeGetPluginData(card, 'workflow_status') || undefined,
+                      safeGetPluginData(card, 'figma_link') || undefined
+                    );
+                    const targetW = clampScreenWidth(fitW);
+                    const currentW = Math.round(card.width);
+                    if (targetW !== currentW) {
+                      internalLayoutNodeIds.add(card.id);
+                      card.minWidth = targetW;
+                      card.maxWidth = targetW;
+                      card.resize(targetW, card.height);
+                    }
+                  }
+                }
+
                 // 타이틀 텍스트: 블릿, 링크, 볼드, 취소선 등 일체 반영 차단 및 Inter Bold 13px 표준 규격 강제 고정
                 await enforceTitleStandardStyle(textNode, flowNode);
               }
@@ -6108,9 +6134,11 @@ figma.on('documentchange', async (event) => {
                     : (headerRow?.children.find(
                         (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
                       ) as TextNode | undefined);
-                  const titleH = isTitle && titleNode
-                    ? Math.max(18, Math.round(titleNode.height))
-                    : (headerRow ? Math.round(headerRow.height) : 18);
+                  const titleH = isScreen && sMode === 'fit'
+                    ? 18
+                    : (isTitle && titleNode
+                        ? Math.max(18, Math.round(titleNode.height))
+                        : (headerRow ? Math.round(headerRow.height) : 18));
 
                   const descNode = isDesc ? textNode : descText;
                   const descChars = descNode ? descNode.characters : '';
