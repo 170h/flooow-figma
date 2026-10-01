@@ -2601,6 +2601,14 @@
         }
       }
       const pos = getNodeTopLeft(node);
+      let isDescriptionOn = false;
+      if (isFlowNode && flowNodeType === "Screen" && node.type === "FRAME") {
+        const frameNode = node;
+        const descChild = frameNode.children.find(
+          (c) => c.type === "TEXT" && (c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc")
+        );
+        isDescriptionOn = Boolean(descChild);
+      }
       return {
         id: node.id,
         name: node.name,
@@ -2611,6 +2619,7 @@
         status: savedStatus || void 0,
         title,
         description,
+        descriptionOn: isDescriptionOn,
         tag,
         theme: node.getPluginData("node_theme") || "light",
         figmaLink: node.getPluginData("figma_link"),
@@ -3698,7 +3707,20 @@
       const prevDescription = safeGetPluginData2(card, "node_desc") || "";
       const prevStatus = safeGetPluginData2(card, "workflow_status") || "";
       const prevFigmaLink = safeGetPluginData2(card, "figma_link") || safeGetPluginData2(card, "cached_figma_link") || "";
-      const effectiveDesc = isShapeNode ? "" : (payload.description !== void 0 && payload.description !== "" ? payload.description : isChangingToScreen ? prevDescription : payload.description ?? prevDescription).trim();
+      const existingDescNode = card.children.find(
+        (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
+      );
+      const isDescOn = !isShapeNode && (payload.descriptionOn !== void 0 ? payload.descriptionOn : Boolean(existingDescNode || payload.description && payload.description.trim()));
+      let effectiveDesc = "";
+      if (!isShapeNode) {
+        if (payload.description !== void 0 && payload.description.trim() !== "") {
+          effectiveDesc = payload.description.trim();
+        } else if (isChangingToScreen || isDescOn) {
+          effectiveDesc = prevDescription.trim();
+        } else {
+          effectiveDesc = (payload.description !== void 0 ? payload.description : prevDescription).trim();
+        }
+      }
       const effectiveStatus = !isShapeNode ? payload.status ? payload.status : isChangingToScreen ? prevStatus : payload.status ?? prevStatus : "";
       const effectiveLink = !isShapeNode ? payload.figmaLink !== void 0 && payload.figmaLink !== "" ? payload.figmaLink : (isChangingToScreen ? prevFigmaLink : payload.figmaLink ?? prevFigmaLink) || "" : "";
       const existingStatusBadgeOnCard = !isShapeNode ? card.children.find(
@@ -3756,8 +3778,8 @@
         card.paddingLeft = 16;
         card.paddingRight = 16;
         card.paddingTop = 14;
-        card.paddingBottom = hasBottomBar ? 36 : 16;
-        card.primaryAxisAlignItems = !effectiveDesc && !hasBottomBar ? "CENTER" : "MIN";
+        card.paddingBottom = hasBottomBar ? 36 : isDescOn ? 16 : 14;
+        card.primaryAxisAlignItems = !isDescOn && !hasBottomBar ? "CENTER" : "MIN";
         card.counterAxisAlignItems = "MIN";
       }
       if (isShapeNode) {
@@ -3901,7 +3923,7 @@
       let descText = card.children.find(
         (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
       );
-      if (isShapeNode || !effectiveDesc) {
+      if (isShapeNode || !isDescOn || !effectiveDesc) {
         if (descText) {
           descText.remove();
           descText = void 0;
@@ -3962,7 +3984,7 @@
         card.itemSpacing = 0;
       } else {
         card.itemSpacing = 8;
-        if (!effectiveDesc && !hasBottomBar) {
+        if (!isDescOn && !hasBottomBar) {
           card.paddingLeft = 16;
           card.paddingRight = 16;
           card.paddingTop = 14;
@@ -4139,7 +4161,8 @@
       card.setPluginData("node_width", "");
       card.setPluginData("node_height", "");
       if (supportsOption(card, "description")) {
-        card.setPluginData("node_desc", effectiveDesc);
+        const descToSave = effectiveDesc || prevDescription;
+        card.setPluginData("node_desc", descToSave);
       } else {
         card.setPluginData("node_desc", "");
       }
@@ -4401,7 +4424,20 @@
         titleText.layoutAlign = "STRETCH";
         titleText.textAutoResize = "HEIGHT";
         const prevDesc = safeGetPluginData2(card, "node_desc") || "";
-        const effectiveDesc = patch.description !== void 0 ? patch.description : prevDesc;
+        const existingDescChild = card.children.find(
+          (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
+        );
+        const isDescOn = !isShapeNode && (patch.descriptionOn !== void 0 ? patch.descriptionOn : patch.description !== void 0 ? Boolean(patch.description.trim()) : Boolean(existingDescChild || prevDesc.trim()));
+        let effectiveDesc = "";
+        if (!isShapeNode) {
+          if (patch.description !== void 0 && patch.description.trim() !== "") {
+            effectiveDesc = patch.description.trim();
+          } else if (isChangingToScreen || isDescOn) {
+            effectiveDesc = prevDesc.trim();
+          } else {
+            effectiveDesc = (patch.description !== void 0 ? patch.description : prevDesc).trim();
+          }
+        }
         let fitW;
         if (!isShapeNode && effectiveSizeMode === "fit") {
           const effectiveStatus = patch.status !== void 0 ? patch.status : safeGetPluginData2(card, "workflow_status") || void 0;
@@ -4423,7 +4459,7 @@
         let descText = card.children.find(
           (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
         );
-        if (!supportsOption(card, "description") || !effectiveDesc) {
+        if (!supportsOption(card, "description") || !isDescOn || !effectiveDesc) {
           if (descText) {
             descText.remove();
             descText = void 0;
@@ -4676,10 +4712,20 @@
           }
           card.setPluginData("screen_corner_radius", String(targetR));
           card.setPluginData("screen_size_mode", effectiveSizeMode);
-          if (patch.description !== void 0) card.setPluginData("node_desc", patch.description);
+          if (supportsOption(card, "description")) {
+            const descToSave = effectiveDesc || prevDesc;
+            card.setPluginData("node_desc", descToSave);
+          } else {
+            card.setPluginData("node_desc", "");
+          }
           if (patch.figmaLink !== void 0) card.setPluginData("figma_link", patch.figmaLink);
         } else {
-          if (patch.description !== void 0) card.setPluginData("node_desc", patch.description);
+          if (supportsOption(card, "description")) {
+            const descToSave = effectiveDesc || prevDesc;
+            card.setPluginData("node_desc", descToSave);
+          } else {
+            card.setPluginData("node_desc", "");
+          }
           if (patch.figmaLink !== void 0) card.setPluginData("figma_link", patch.figmaLink);
         }
         if (patch.nodeType !== void 0) {

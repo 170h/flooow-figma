@@ -1042,10 +1042,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       showToast('제목은 최대 32자까지 입력할 수 있습니다.', 'warning');
     }
     const title = rawTitle.slice(0, 32);
-    const rawDesc = descEl?.value.trim() || '';
+    const rawDesc = descEl?.value !== undefined ? descEl.value.trim() : '';
     const isDescOn = descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false);
-    // isDescAllowed와 상관없이 입력되어 있던 설명 데이터를 보존하여 전달 (사용자가 직접 지운 경우에만 빈값)
-    const desc = isDescAllowed ? (isDescOn ? rawDesc : '') : rawDesc;
+    // 비활성화(숨김) 시에도 기존 description 데이터를 보존하여 전달 (스위치가 꺼져도 데이터 자체는 유지)
+    const currentDesc = rawDesc || firstNode?.description || '';
+    const desc = isDescOn ? rawDesc : currentDesc;
     const w = overrideSize?.width !== undefined
       ? overrideSize.width
       : (isScreen
@@ -1111,6 +1112,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             nodeId: node.id,
             title: nodes.length === 1 ? title : (node.title || title),
             description: desc,
+            descriptionOn: isDescOn,
             width: w, height: h, cornerRadius: radius,
             theme: node.theme || getCurrentUITheme(),
             figmaLink: figmaUrl,

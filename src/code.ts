@@ -1752,6 +1752,15 @@ async function handleSelectionChange() {
 
     const pos = getNodeTopLeft(node);
 
+    let isDescriptionOn = false;
+    if (isFlowNode && flowNodeType === 'Screen' && node.type === 'FRAME') {
+      const frameNode = node as FrameNode;
+      const descChild = frameNode.children.find(
+        (c) => c.type === 'TEXT' && (c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc')
+      );
+      isDescriptionOn = Boolean(descChild);
+    }
+
     return {
       id: node.id,
       name: node.name,
@@ -1762,6 +1771,7 @@ async function handleSelectionChange() {
       status: savedStatus || undefined,
       title,
       description,
+      descriptionOn: isDescriptionOn,
       tag,
       theme: (node.getPluginData('node_theme') as 'light' | 'dark') || 'light',
       figmaLink: node.getPluginData('figma_link'),
@@ -2966,12 +2976,26 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const prevStatus = (safeGetPluginData(card, 'workflow_status') || '') as WorkflowStatus;
     const prevFigmaLink = safeGetPluginData(card, 'figma_link') || safeGetPluginData(card, 'cached_figma_link') || '';
 
-    // 복원할 유효 설명: Screen 복귀 시 이전 설명 복원, 단 사용자가 직접 빈칸으로 수정한 경우는 제외
-    const effectiveDesc = isShapeNode
-      ? ''
-      : (payload.description !== undefined && payload.description !== ''
-          ? payload.description
-          : (isChangingToScreen ? prevDescription : (payload.description ?? prevDescription))).trim();
+    const existingDescNode = card.children.find(
+      (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
+    ) as TextNode | undefined;
+    const isDescOn = !isShapeNode && (
+      payload.descriptionOn !== undefined
+        ? payload.descriptionOn
+        : Boolean(existingDescNode || (payload.description && payload.description.trim()))
+    );
+
+    // 복원할 유효 설명: Screen 복귀 시 또는 토글 ON 시 이전 설명 복원, 단 사용자가 직접 빈칸으로 수정한 경우는 제외
+    let effectiveDesc = '';
+    if (!isShapeNode) {
+      if (payload.description !== undefined && payload.description.trim() !== '') {
+        effectiveDesc = payload.description.trim();
+      } else if (isChangingToScreen || isDescOn) {
+        effectiveDesc = prevDescription.trim();
+      } else {
+        effectiveDesc = (payload.description !== undefined ? payload.description : prevDescription).trim();
+      }
+    }
     const effectiveStatus = (!isShapeNode
       ? (payload.status
           ? payload.status
@@ -3048,8 +3072,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.paddingLeft = 16;
       card.paddingRight = 16;
       card.paddingTop = 14;
-      card.paddingBottom = hasBottomBar ? 36 : 16;
-      card.primaryAxisAlignItems = (!effectiveDesc && !hasBottomBar) ? 'CENTER' : 'MIN';
+      card.paddingBottom = hasBottomBar ? 36 : (isDescOn ? 16 : 14);
+      card.primaryAxisAlignItems = (!isDescOn && !hasBottomBar) ? 'CENTER' : 'MIN';
       card.counterAxisAlignItems = 'MIN';
     }
 
@@ -3182,7 +3206,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
     ) as TextNode | undefined;
 
-    if (isShapeNode || !effectiveDesc) {
+    if (isShapeNode || !isDescOn || !effectiveDesc) {
       if (descText) {
         descText.remove();
         descText = undefined;
@@ -3249,7 +3273,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.itemSpacing = 0;
     } else {
       card.itemSpacing = 8;
-      if (!effectiveDesc && !hasBottomBar) {
+      if (!isDescOn && !hasBottomBar) {
         card.paddingLeft = 16;
         card.paddingRight = 16;
         card.paddingTop = 14;
@@ -3447,7 +3471,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
     // 노드 속성 및 데이터 개별 기억/보존 (옵션을 지원하는 노드에만 적용, 미지원 노드는 데이터 오염 차단)
     if (supportsOption(card, 'description')) {
-      card.setPluginData('node_desc', effectiveDesc);
+      const descToSave = effectiveDesc || prevDescription;
+      card.setPluginData('node_desc', descToSave);
     } else {
       card.setPluginData('node_desc', '');
     }
@@ -3751,7 +3776,25 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       titleText.textAutoResize = 'HEIGHT';
       // 8. 설명 (Description) 갱신
       const prevDesc = safeGetPluginData(card, 'node_desc') || '';
-      const effectiveDesc = patch.description !== undefined ? patch.description : prevDesc;
+      const existingDescChild = card.children.find(
+        (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
+      ) as TextNode | undefined;
+      const isDescOn = !isShapeNode && (
+        patch.descriptionOn !== undefined
+          ? patch.descriptionOn
+          : (patch.description !== undefined ? Boolean(patch.description.trim()) : Boolean(existingDescChild || prevDesc.trim()))
+      );
+
+      let effectiveDesc = '';
+      if (!isShapeNode) {
+        if (patch.description !== undefined && patch.description.trim() !== '') {
+          effectiveDesc = patch.description.trim();
+        } else if (isChangingToScreen || isDescOn) {
+          effectiveDesc = prevDesc.trim();
+        } else {
+          effectiveDesc = (patch.description !== undefined ? patch.description : prevDesc).trim();
+        }
+      }
 
       let fitW: number | undefined;
 
@@ -3778,7 +3821,7 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
       ) as TextNode | undefined;
 
-      if (!supportsOption(card, 'description') || !effectiveDesc) {
+      if (!supportsOption(card, 'description') || !isDescOn || !effectiveDesc) {
         if (descText) {
           descText.remove();
           descText = undefined;
@@ -4064,10 +4107,20 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         }
         card.setPluginData('screen_corner_radius', String(targetR));
         card.setPluginData('screen_size_mode', effectiveSizeMode);
-        if (patch.description !== undefined) card.setPluginData('node_desc', patch.description);
+        if (supportsOption(card, 'description')) {
+          const descToSave = effectiveDesc || prevDesc;
+          card.setPluginData('node_desc', descToSave);
+        } else {
+          card.setPluginData('node_desc', '');
+        }
         if (patch.figmaLink !== undefined) card.setPluginData('figma_link', patch.figmaLink);
       } else {
-        if (patch.description !== undefined) card.setPluginData('node_desc', patch.description);
+        if (supportsOption(card, 'description')) {
+          const descToSave = effectiveDesc || prevDesc;
+          card.setPluginData('node_desc', descToSave);
+        } else {
+          card.setPluginData('node_desc', '');
+        }
         if (patch.figmaLink !== undefined) card.setPluginData('figma_link', patch.figmaLink);
       }
       if (patch.nodeType !== undefined) {

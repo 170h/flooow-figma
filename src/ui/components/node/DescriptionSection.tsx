@@ -78,7 +78,7 @@ export function DescriptionSection() {
     return computeOptionSwitchState(
       selectedNodes,
       'description',
-      (n) => Boolean(n.description && n.description.trim())
+      (n) => Boolean(n.descriptionOn ?? (n.description && n.description.trim()))
     );
   }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.descriptionOn]);
 
@@ -88,11 +88,11 @@ export function DescriptionSection() {
     ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, 'description')
     : true;
 
-  const isDescDrafted = multiDraft.description !== undefined;
+  const isDescDrafted = multiDraft.description !== undefined || multiDraft.descriptionOn !== undefined;
   const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled
     ? false
     : (isDescDrafted
-        ? Boolean(multiDraft.description)
+        ? Boolean(multiDraft.descriptionOn !== undefined ? multiDraft.descriptionOn : multiDraft.description)
         : (isOn !== null ? isOn : rawOptionState.isOpen));
 
   const effectiveState = useMemo(() => {
@@ -106,13 +106,22 @@ export function DescriptionSection() {
       };
     }
     if (isDescDrafted) {
-      const on = Boolean(multiDraft.description);
+      const on = Boolean(multiDraft.descriptionOn !== undefined ? multiDraft.descriptionOn : multiDraft.description);
       return {
         state: (on ? 'ON' : 'OFF') as OptionSwitchState,
         checked: on,
         isMixed: false,
         disabled: false,
         isOpen: on,
+      };
+    }
+    if (isOn !== null) {
+      return {
+        state: (isOn ? 'ON' : 'OFF') as OptionSwitchState,
+        checked: isOn,
+        isMixed: false,
+        disabled: rawOptionState.disabled,
+        isOpen: isOn,
       };
     }
     return {
@@ -122,7 +131,7 @@ export function DescriptionSection() {
       disabled: rawOptionState.disabled,
       isOpen: effectiveIsOpen,
     };
-  }, [isDraftAllowed, rawOptionState, isDescDrafted, multiDraft.description, effectiveIsOpen]);
+  }, [isDraftAllowed, rawOptionState, isDescDrafted, multiDraft.descriptionOn, multiDraft.description, effectiveIsOpen, isOn]);
 
   // 노드 선택 대상이 실제로 변경되었을 때만 토글 상태 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   useEffect(() => {
@@ -142,12 +151,14 @@ export function DescriptionSection() {
         const supported = rawOptionState.supportedNodes;
         if (supported.length === 1) {
           const node = supported[0];
-          const hasDesc = Boolean(node && node.description && node.description.trim());
-          setHasText(hasDesc);
-          setLastNodeConfig({ descriptionOn: hasDesc });
+          const isDescActive = Boolean(node && (node.descriptionOn ?? (node.description && node.description.trim())));
+          const hasDescText = Boolean(node && node.description && node.description.trim());
+          setHasText(hasDescText);
+          setLastNodeConfig({ descriptionOn: isDescActive });
         } else {
-          const onCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
-          setHasText(onCount > 0);
+          const onCount = supported.filter((n) => Boolean(n.descriptionOn ?? (n.description && n.description.trim()))).length;
+          const hasTextCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
+          setHasText(hasTextCount > 0);
         }
       } else {
         setHasText(false);
@@ -180,15 +191,12 @@ export function DescriptionSection() {
 
     if (selectedNodes.length >= 2) {
       if (!checked) {
-        setHasText(false);
-        const ta = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
-        if (ta) ta.value = '';
-        updateMultiDraft({ description: '' });
+        updateMultiDraft({ descriptionOn: false });
       } else {
         const ta = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
         const val = ta?.value.trim() || '';
         setHasText(Boolean(val));
-        updateMultiDraft({ description: val });
+        updateMultiDraft({ descriptionOn: true, ...(val ? { description: val } : {}) });
       }
       requestAnimationFrame(() => {
         autoResizeWindow();
@@ -199,13 +207,10 @@ export function DescriptionSection() {
     setLastNodeConfig({ descriptionOn: checked });
 
     if (!checked) {
-      // 토글 OFF: textarea 내용 비우고 노드 반영 (디스크립션 텍스트 제거)
-      setHasText(false);
-      const ta = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
-      if (ta) ta.value = '';
+      // 토글 OFF: textarea 내용은 그대로 보존하고 노드 캔버스에서만 설명 텍스트 숨김 (BUG-DESCRIPTION-02 해결)
       setTimeout(() => applyCurrentNodeState(), 0);
     } else {
-      // 토글 ON: textarea 포커스 및 노드 반영
+      // 토글 ON: textarea 포커스 및 노드에 설명 텍스트 복원
       setTimeout(() => {
         const ta = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
         ta?.focus();
@@ -270,7 +275,7 @@ export function DescriptionSection() {
     document.body.removeChild(ta);
   }
 
-  const defaultDescValue = isDescDrafted
+  const defaultDescValue = (isDescDrafted && multiDraft.description !== undefined)
     ? (multiDraft.description || '')
     : (rawOptionState.supportedNodes.length >= 2
         ? (isDescValueMixed ? '' : (rawOptionState.supportedNodes[0]?.description || ''))

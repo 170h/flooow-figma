@@ -538,6 +538,7 @@ export interface UpdateNodePayload {
   nodeId: string;
   title: string;
   description: string;
+  descriptionOn?: boolean;
   tag?: string;
   theme: 'light' | 'dark';
   figmaLink?: string;
@@ -656,6 +657,7 @@ export interface SelectedNodeInfo {
   flowNodeType?: DiagramNodeType;
   title?: string;
   description?: string;
+  descriptionOn?: boolean;
   tag?: string;
   theme?: 'light' | 'dark';
   figmaLink?: string;

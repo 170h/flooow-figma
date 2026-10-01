@@ -29379,9 +29379,10 @@
         showToast("\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "warning");
       }
       const title = rawTitle.slice(0, 32);
-      const rawDesc = descEl?.value.trim() || "";
+      const rawDesc = descEl?.value !== void 0 ? descEl.value.trim() : "";
       const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
-      const desc = isDescAllowed ? isDescOn ? rawDesc : "" : rawDesc;
+      const currentDesc = rawDesc || firstNode?.description || "";
+      const desc = isDescOn ? rawDesc : currentDesc;
       const w = overrideSize?.width !== void 0 ? overrideSize.width : isScreen ? parseInt(wEl?.value || "", 10) || firstNode?.width || lastNodeConfigRef.current.width || 250 : !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
       const h = overrideSize?.height !== void 0 ? overrideSize.height : isScreen ? parseInt(hEl?.value || "", 10) || firstNode?.height || lastNodeConfigRef.current.height || 90 : !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
       const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : isScreen ? rEl?.value !== void 0 && rEl?.value !== "" && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : firstNode?.cornerRadius ?? (lastNodeConfigRef.current.cornerRadius ?? 0) : !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
@@ -29423,6 +29424,7 @@
               nodeId: node.id,
               title: nodes.length === 1 ? title : node.title || title,
               description: desc,
+              descriptionOn: isDescOn,
               width: w,
               height: h,
               cornerRadius: radius,
@@ -30820,13 +30822,13 @@
       return computeOptionSwitchState(
         selectedNodes,
         "description",
-        (n) => Boolean(n.description && n.description.trim())
+        (n) => Boolean(n.descriptionOn ?? (n.description && n.description.trim()))
       );
     }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.descriptionOn]);
     const isTypeDrafted = multiDraft.nodeType !== void 0;
     const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "description") : true;
-    const isDescDrafted = multiDraft.description !== void 0;
-    const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isDescDrafted ? Boolean(multiDraft.description) : isOn !== null ? isOn : rawOptionState.isOpen;
+    const isDescDrafted = multiDraft.description !== void 0 || multiDraft.descriptionOn !== void 0;
+    const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isDescDrafted ? Boolean(multiDraft.descriptionOn !== void 0 ? multiDraft.descriptionOn : multiDraft.description) : isOn !== null ? isOn : rawOptionState.isOpen;
     const effectiveState = (0, import_react7.useMemo)(() => {
       if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
         return {
@@ -30838,13 +30840,22 @@
         };
       }
       if (isDescDrafted) {
-        const on = Boolean(multiDraft.description);
+        const on = Boolean(multiDraft.descriptionOn !== void 0 ? multiDraft.descriptionOn : multiDraft.description);
         return {
           state: on ? "ON" : "OFF",
           checked: on,
           isMixed: false,
           disabled: false,
           isOpen: on
+        };
+      }
+      if (isOn !== null) {
+        return {
+          state: isOn ? "ON" : "OFF",
+          checked: isOn,
+          isMixed: false,
+          disabled: rawOptionState.disabled,
+          isOpen: isOn
         };
       }
       return {
@@ -30854,7 +30865,7 @@
         disabled: rawOptionState.disabled,
         isOpen: effectiveIsOpen
       };
-    }, [isDraftAllowed, rawOptionState, isDescDrafted, multiDraft.description, effectiveIsOpen]);
+    }, [isDraftAllowed, rawOptionState, isDescDrafted, multiDraft.descriptionOn, multiDraft.description, effectiveIsOpen, isOn]);
     (0, import_react7.useEffect)(() => {
       const isUserLocked = Date.now() - userActionLockRef.current < 600;
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
@@ -30868,12 +30879,14 @@
           const supported = rawOptionState.supportedNodes;
           if (supported.length === 1) {
             const node = supported[0];
-            const hasDesc = Boolean(node && node.description && node.description.trim());
-            setHasText(hasDesc);
-            setLastNodeConfig({ descriptionOn: hasDesc });
+            const isDescActive = Boolean(node && (node.descriptionOn ?? (node.description && node.description.trim())));
+            const hasDescText = Boolean(node && node.description && node.description.trim());
+            setHasText(hasDescText);
+            setLastNodeConfig({ descriptionOn: isDescActive });
           } else {
-            const onCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
-            setHasText(onCount > 0);
+            const onCount = supported.filter((n) => Boolean(n.descriptionOn ?? (n.description && n.description.trim()))).length;
+            const hasTextCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
+            setHasText(hasTextCount > 0);
           }
         } else {
           setHasText(false);
@@ -30896,15 +30909,12 @@
       setIsOn(checked);
       if (selectedNodes.length >= 2) {
         if (!checked) {
-          setHasText(false);
-          const ta = document.getElementById("node-description-input");
-          if (ta) ta.value = "";
-          updateMultiDraft({ description: "" });
+          updateMultiDraft({ descriptionOn: false });
         } else {
           const ta = document.getElementById("node-description-input");
           const val = ta?.value.trim() || "";
           setHasText(Boolean(val));
-          updateMultiDraft({ description: val });
+          updateMultiDraft({ descriptionOn: true, ...val ? { description: val } : {} });
         }
         requestAnimationFrame(() => {
           autoResizeWindow();
@@ -30913,9 +30923,6 @@
       }
       setLastNodeConfig({ descriptionOn: checked });
       if (!checked) {
-        setHasText(false);
-        const ta = document.getElementById("node-description-input");
-        if (ta) ta.value = "";
         setTimeout(() => applyCurrentNodeState(), 0);
       } else {
         setTimeout(() => {
@@ -30976,7 +30983,7 @@
       }
       document.body.removeChild(ta);
     }
-    const defaultDescValue = isDescDrafted ? multiDraft.description || "" : rawOptionState.supportedNodes.length >= 2 ? isDescValueMixed ? "" : rawOptionState.supportedNodes[0]?.description || "" : rawOptionState.supportedNodes.length === 1 ? rawOptionState.supportedNodes[0]?.description || "" : "";
+    const defaultDescValue = isDescDrafted && multiDraft.description !== void 0 ? multiDraft.description || "" : rawOptionState.supportedNodes.length >= 2 ? isDescValueMixed ? "" : rawOptionState.supportedNodes[0]?.description || "" : rawOptionState.supportedNodes.length === 1 ? rawOptionState.supportedNodes[0]?.description || "" : "";
     const descPlaceholder = isDescValueMixed ? "Mixed" : "Add a description";
     return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-block", style: { paddingBottom: isDescSectionOpen ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "section-header toggle-row", children: [
