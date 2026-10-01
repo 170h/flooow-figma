@@ -959,6 +959,14 @@
       color: #ffffff;
     }
 
+    /* 탭이 disabled 상태일 때 카운트 배지 스타일 */
+    .chip-btn:disabled .tab-badge,
+    .chip-btn.disabled .tab-badge,
+    .tab-btn:disabled .tab-badge,
+    .tab-btn.disabled .tab-badge {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
     /* Active 시 블릿 처리: 텍스트 색상과 동일하게 반전되어 선명하게 유지 */
     .chip-btn.active .tab-bullet,
     .tab-btn.active .tab-bullet {
@@ -1196,44 +1204,220 @@
       opacity: 1 !important;
     }
 
-    /* 입력필드의 Mixed 상태: 알파값이나 그레이를 적용하지 않고 순수 검정색(#000000) 100% 불투명 적용 */
-    input[placeholder="Mixed"]::placeholder,
-    input[placeholder="Mixed" i]::placeholder,
-    textarea[placeholder="Mixed"]::placeholder,
-    textarea[placeholder="Mixed" i]::placeholder,
-    .input-scrubber-box input[placeholder="Mixed"]::placeholder,
-    .input-scrubber-box input[placeholder="Mixed" i]::placeholder,
-    body.figma-dark .input-scrubber-box input[placeholder="Mixed"]::placeholder,
-    .figma-dark .input-scrubber-box input[placeholder="Mixed"]::placeholder,
-    [data-theme="dark"] .input-scrubber-box input[placeholder="Mixed"]::placeholder,
-    .form-input[placeholder="Mixed"]::placeholder,
-    .form-input[placeholder="Mixed" i]::placeholder,
-    .desc-textarea[placeholder="Mixed"]::placeholder,
-    .desc-textarea[placeholder="Mixed" i]::placeholder,
-    .conn-color-hex-input[placeholder="Mixed"]::placeholder,
-    .conn-color-hex-input[placeholder="Mixed" i]::placeholder,
-    .style-text-input[placeholder="Mixed"]::placeholder,
-    .style-text-input[placeholder="Mixed" i]::placeholder,
-    .style-weight-num-input[placeholder="Mixed"]::placeholder,
-    .style-weight-num-input[placeholder="Mixed" i]::placeholder,
-    .color-wheel-hex-input[placeholder="Mixed"]::placeholder,
-    .color-wheel-hex-input[placeholder="Mixed" i]::placeholder,
-    .figma-link-input[placeholder="Mixed"]::placeholder,
-    .figma-link-input[placeholder="Mixed" i]::placeholder {
+    /* 입력필드의 Mixed 상태: 알파값이나 그레이를 적용하지 않고 순수 검정색(#000000) 100% 불투명 적용 (Enabled 상태 전용) */
+    input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    textarea[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .input-scrubber-box:not(.disabled) input[placeholder="Mixed"]:not(:disabled)::placeholder,
+    .input-scrubber-box:not(.disabled) input[placeholder="Mixed" i]:not(:disabled)::placeholder,
+    body.figma-dark .input-scrubber-box:not(.disabled) input[placeholder="Mixed"]:not(:disabled)::placeholder,
+    .figma-dark .input-scrubber-box:not(.disabled) input[placeholder="Mixed"]:not(:disabled)::placeholder,
+    [data-theme="dark"] .input-scrubber-box:not(.disabled) input[placeholder="Mixed"]:not(:disabled)::placeholder,
+    .form-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .form-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .desc-textarea[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .desc-textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .conn-color-hex-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .conn-color-hex-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .style-text-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .style-text-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .style-weight-num-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .style-weight-num-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .color-wheel-hex-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .color-wheel-hex-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .figma-link-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .figma-link-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder {
       color: #000000 !important;
       -webkit-text-fill-color: #000000 !important;
       opacity: 1 !important;
       font-weight: 400 !important;
     }
 
-    input[value="Mixed"],
-    input[value="Mixed" i],
-    textarea[value="Mixed"],
-    textarea[value="Mixed" i] {
+    input[value="Mixed"]:not(:disabled):not(.disabled),
+    input[value="Mixed" i]:not(:disabled):not(.disabled),
+    textarea[value="Mixed"]:not(:disabled):not(.disabled),
+    textarea[value="Mixed" i]:not(:disabled):not(.disabled) {
       color: #000000 !important;
       -webkit-text-fill-color: #000000 !important;
       opacity: 1 !important;
       font-weight: 400 !important;
+    }
+
+    /* ============================================================ */
+    /* 공통 Disabled 상태 텍스트 컬러 규칙 (Disabled Text Color Rule)  */
+    /* 규칙: Disabled 상태가 모든 텍스트 컬러(Mixed/수치/라벨 등)보다 우선 */
+    /* ============================================================ */
+
+    /* 1. 인풋 및 텍스트에어리어 필드 텍스트 및 값 (Disabled + Mixed, Disabled + 3 등 모든 값) */
+    input:disabled,
+    input.disabled,
+    .disabled input,
+    :has(input:disabled) input,
+    textarea:disabled,
+    textarea.disabled,
+    .disabled textarea,
+    :has(textarea:disabled) textarea,
+    .node-title-input:disabled,
+    .form-input:disabled,
+    .form-input.disabled,
+    .desc-textarea:disabled,
+    .desc-textarea.disabled,
+    .style-text-input:disabled,
+    .style-text-input.disabled,
+    .style-weight-num-input:disabled,
+    .style-weight-num-input.disabled,
+    .input-scrubber-box.disabled input,
+    .input-scrubber-box input:disabled,
+    .input-scrubber-box:has(input:disabled) input {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* 2. 인풋 및 텍스트에어리어의 placeholder (Disabled + Mixed, Disabled placeholder 전체) */
+    input:disabled::placeholder,
+    input.disabled::placeholder,
+    .disabled input::placeholder,
+    :has(input:disabled) input::placeholder,
+    textarea:disabled::placeholder,
+    textarea.disabled::placeholder,
+    .disabled textarea::placeholder,
+    :has(textarea:disabled) textarea::placeholder,
+    .input-scrubber-box.disabled input::placeholder,
+    .input-scrubber-box input:disabled::placeholder,
+    .input-scrubber-box:has(input:disabled) input::placeholder,
+    input[placeholder="Mixed"]:disabled::placeholder,
+    input[placeholder="Mixed"].disabled::placeholder,
+    .disabled input[placeholder="Mixed"]::placeholder,
+    .disabled input[placeholder="Mixed" i]::placeholder,
+    .input-scrubber-box.disabled input[placeholder="Mixed"]::placeholder,
+    .input-scrubber-box.disabled input[placeholder="Mixed" i]::placeholder,
+    .input-scrubber-box:has(input:disabled) input[placeholder="Mixed"]::placeholder,
+    .input-scrubber-box:has(input:disabled) input[placeholder="Mixed" i]::placeholder {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 1 !important;
+    }
+
+    /* 다크모드 대응 */
+    body.figma-dark input:disabled::placeholder,
+    body.figma-dark input.disabled::placeholder,
+    body.figma-dark .disabled input::placeholder,
+    .figma-dark input:disabled::placeholder,
+    .figma-dark input.disabled::placeholder,
+    .figma-dark .disabled input::placeholder,
+    [data-theme="dark"] input:disabled::placeholder,
+    [data-theme="dark"] input.disabled::placeholder,
+    [data-theme="dark"] .disabled input::placeholder {
+      color: var(--color-text-tertiary, rgba(255, 255, 255, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(255, 255, 255, 0.4)) !important;
+    }
+
+    /* 3. 드롭다운 / 메뉴의 선택값 및 텍스트 (Disabled + Rectangle, Disabled + Mixed 등) */
+    .figma-dropdown-btn:disabled,
+    .figma-dropdown-btn.disabled,
+    .disabled .figma-dropdown-btn,
+    .size-mode-dropdown-btn:disabled,
+    .size-mode-dropdown-btn.disabled,
+    .disabled .size-mode-dropdown-btn,
+    .select-dropdown-box:disabled,
+    .select-dropdown-box.disabled,
+    .disabled .select-dropdown-box {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .figma-dropdown-btn:disabled span,
+    .figma-dropdown-btn.disabled span,
+    .disabled .figma-dropdown-btn span,
+    .figma-dropdown-btn:disabled .figma-dropdown-current-text,
+    .figma-dropdown-btn.disabled .figma-dropdown-current-text,
+    .disabled .figma-dropdown-btn .figma-dropdown-current-text,
+    .size-mode-dropdown-btn:disabled span,
+    .size-mode-dropdown-btn.disabled span,
+    .disabled .size-mode-dropdown-btn span,
+    .size-mode-dropdown-btn:disabled .size-mode-current-text,
+    .size-mode-dropdown-btn.disabled .size-mode-current-text,
+    .disabled .size-mode-dropdown-btn .size-mode-current-text {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .figma-dropdown-btn:disabled svg,
+    .figma-dropdown-btn.disabled svg,
+    .disabled .figma-dropdown-btn svg,
+    .figma-dropdown-btn:disabled .figma-dropdown-chevron-icon,
+    .figma-dropdown-btn.disabled .figma-dropdown-chevron-icon,
+    .disabled .figma-dropdown-btn .figma-dropdown-chevron-icon,
+    .size-mode-dropdown-btn:disabled svg,
+    .size-mode-dropdown-btn.disabled svg,
+    .disabled .size-mode-dropdown-btn svg,
+    .size-mode-dropdown-btn:disabled .size-mode-current-icon,
+    .size-mode-dropdown-btn.disabled .size-mode-current-icon,
+    .disabled .size-mode-dropdown-btn .size-mode-current-icon,
+    .size-mode-dropdown-btn:disabled .size-mode-chevron-icon,
+    .size-mode-dropdown-btn.disabled .size-mode-chevron-icon,
+    .disabled .size-mode-dropdown-btn .size-mode-chevron-icon {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      fill: currentColor;
+      opacity: 0.6;
+    }
+
+    /* 4. Option title / label (스크러버 W, H, 라벨 텍스트) */
+    .input-scrubber-box.disabled span,
+    .input-scrubber-box.disabled .scrubber-label,
+    .input-scrubber-box:has(input:disabled) span,
+    .input-scrubber-box:has(input:disabled) .scrubber-label,
+    .disabled .input-scrubber-box span,
+    .disabled .input-scrubber-box .scrubber-label {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .input-scrubber-box.disabled svg,
+    .input-scrubber-box:has(input:disabled) svg,
+    .disabled .input-scrubber-box svg {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 0.6;
+    }
+
+    /* 5. Chip / Tab 내부 텍스트 및 선택 항목의 중복 수량 / count / badge */
+    .chip-btn:disabled,
+    .chip-btn.disabled,
+    .disabled .chip-btn,
+    .tab-btn:disabled,
+    .tab-btn.disabled,
+    .disabled .tab-btn {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .chip-btn:disabled .tab-label,
+    .chip-btn.disabled .tab-label,
+    .disabled .chip-btn .tab-label,
+    .tab-btn:disabled .tab-label,
+    .tab-btn.disabled .tab-label,
+    .disabled .tab-btn .tab-label {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .chip-btn:disabled .tab-badge,
+    .chip-btn.disabled .tab-badge,
+    .disabled .chip-btn .tab-badge,
+    .tab-btn:disabled .tab-badge,
+    .tab-btn.disabled .tab-badge,
+    .disabled .tab-btn .tab-badge {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      background: transparent !important;
+      opacity: 0.6;
     }
 
     .select-dropdown-box {
@@ -1299,6 +1483,8 @@
       border-color: var(--color-border);
     }
 
+    .figma-dropdown-btn:disabled,
+    .figma-dropdown-btn.disabled,
     .size-mode-dropdown-btn:disabled,
     .size-mode-dropdown-btn.disabled {
       background-color: var(--color-bg-secondary) !important;
@@ -1308,14 +1494,25 @@
       user-select: none;
     }
 
+    .figma-dropdown-btn:disabled .figma-dropdown-current-icon,
+    .figma-dropdown-btn.disabled .figma-dropdown-current-icon,
+    .figma-dropdown-btn:disabled .figma-dropdown-chevron-icon,
+    .figma-dropdown-btn.disabled .figma-dropdown-chevron-icon,
     .size-mode-dropdown-btn:disabled .size-mode-current-icon,
     .size-mode-dropdown-btn.disabled .size-mode-current-icon,
-    .size-mode-dropdown-btn:disabled .size-mode-current-text,
-    .size-mode-dropdown-btn.disabled .size-mode-current-text,
     .size-mode-dropdown-btn:disabled .size-mode-chevron-icon,
     .size-mode-dropdown-btn.disabled .size-mode-chevron-icon {
       color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
       opacity: 0.6;
+    }
+
+    .figma-dropdown-btn:disabled .figma-dropdown-current-text,
+    .figma-dropdown-btn.disabled .figma-dropdown-current-text,
+    .size-mode-dropdown-btn:disabled .size-mode-current-text,
+    .size-mode-dropdown-btn.disabled .size-mode-current-text {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 1 !important;
     }
 
     .figma-dropdown-btn:focus,
@@ -2602,8 +2799,54 @@
       flex-shrink: 0;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
       gap: 8px;
+      box-sizing: border-box;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .footer-plan-badge {
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      color: var(--color-text-secondary);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-upgrade {
+      height: 32px;
+      padding: 0 14px;
+      background: transparent;
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm, 5px);
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      box-sizing: border-box;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn-upgrade:hover {
+      background: var(--color-bg-hover);
+      border-color: var(--color-border-strong);
     }
 
     .btn-cta-secondary {
@@ -28753,6 +28996,10 @@
     }
     return "light";
   };
+  function normalizeTerminal(term, fallback = "NONE") {
+    if (!term || term === "BAR" || term === "SQUARE") return fallback;
+    return term;
+  }
   var DEFAULT_LAST_NODE_CONFIG = {
     nodeType: "Screen",
     width: 250,
@@ -28861,7 +29108,7 @@
     }, []);
     const [lastAppliedSnapshot, setLastAppliedSnapshot] = (0, import_react2.useState)(null);
     const lastAppliedSnapshotRef = (0, import_react2.useRef)(null);
-    const canUndo = Boolean(lastAppliedSnapshot);
+    const canUndo = Boolean(lastAppliedSnapshot) || selectedNodes.length >= 2 && hasMultiDraft;
     const applyMultiDraft = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       if (isApplyingMultiDraftRef.current) return;
@@ -29021,8 +29268,9 @@
     const checkHasSingleChanges = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length !== 1) return false;
-      const origNode = originalSelectedNodeRef.current || nodes[0];
-      if (!origNode) return false;
+      const actualNode = nodes[0];
+      const origNode = originalSelectedNodeRef.current || actualNode;
+      if (!origNode || !actualNode) return false;
       const isConn = Boolean(origNode.isConnector || origNode.nodeType === "CONNECTOR");
       if (isConn) {
         const labelToggleEl = document.getElementById("toggle-conn-label");
@@ -29044,10 +29292,10 @@
         const startTermEl = document.getElementById("select-start-terminal");
         const endTermEl = document.getElementById("select-end-terminal");
         const currentStartTerm = startTermEl?.value || "NONE";
-        const origStartTerm = origNode.connectorStartTerminal || "NONE";
+        const origStartTerm = normalizeTerminal(origNode.connectorStartTerminal, "NONE");
         if (currentStartTerm !== origStartTerm) return true;
         const currentEndTerm = endTermEl?.value || "ARROW";
-        const origEndTerm = origNode.connectorEndTerminal || "ARROW";
+        const origEndTerm = normalizeTerminal(origNode.connectorEndTerminal, "ARROW");
         if (currentEndTerm !== origEndTerm) return true;
         const startOffEl = document.getElementById("input-start-offset");
         const endOffEl = document.getElementById("input-end-offset");
@@ -29131,15 +29379,15 @@
       const originalElevation = origNode.elevation !== void 0 && origNode.elevation !== null ? origNode.elevation : null;
       if (currentElevation !== originalElevation) return true;
       const currentColor = (uiStateRef.current.selectedColor || lastNodeConfigRef.current.color || "#ffffff").toLowerCase();
-      const originalColor = (origNode.fillColorHex || "#ffffff").toLowerCase();
-      if (currentColor !== originalColor) return true;
+      const actualColor = (actualNode.fillColorHex || origNode.fillColorHex || "#ffffff").toLowerCase();
+      if (currentColor !== actualColor) return true;
       const currentStrokeWeight = uiStateRef.current.selectedStrokeWeight !== void 0 ? uiStateRef.current.selectedStrokeWeight : lastNodeConfigRef.current.strokeWeight ?? 1.5;
-      const originalStrokeWeight = origNode.strokeWeight ?? 1.5;
-      if (currentStrokeWeight !== originalStrokeWeight) return true;
+      const actualStrokeWeight = actualNode.strokeWeight !== void 0 ? actualNode.strokeWeight : origNode.strokeWeight ?? 1.5;
+      if (Math.abs(currentStrokeWeight - actualStrokeWeight) > 0.01) return true;
       if (currentStrokeWeight > 0) {
         const currentStrokeColor = (uiStateRef.current.selectedStrokeColor || lastNodeConfigRef.current.strokeColor || "#000000").toLowerCase();
-        const originalStrokeColor = (origNode.strokeColorHex || "#000000").toLowerCase();
-        if (currentStrokeColor !== originalStrokeColor) return true;
+        const actualStrokeColor = (actualNode.strokeColorHex || origNode.strokeColorHex || "#000000").toLowerCase();
+        if (currentStrokeColor !== actualStrokeColor) return true;
       }
       if (isScreen) {
         const wEl = document.getElementById("input-size-w");
@@ -29177,9 +29425,9 @@
         const weightEl = document.getElementById("input-stroke-weight");
         if (weightEl) weightEl.value = String(orig.connectorStrokeWeight ?? 1.5);
         const startTermEl = document.getElementById("select-start-terminal");
-        if (startTermEl) startTermEl.value = orig.connectorStartTerminal || "NONE";
+        if (startTermEl) startTermEl.value = normalizeTerminal(orig.connectorStartTerminal, "NONE");
         const endTermEl = document.getElementById("select-end-terminal");
-        if (endTermEl) endTermEl.value = orig.connectorEndTerminal || "ARROW";
+        if (endTermEl) endTermEl.value = normalizeTerminal(orig.connectorEndTerminal, "ARROW");
         const startOffEl = document.getElementById("input-start-offset");
         if (startOffEl) startOffEl.value = String(orig.connectorStartOffset ?? 0);
         const endOffEl = document.getElementById("input-end-offset");
@@ -29268,6 +29516,11 @@
     }, [setUIState, setLastNodeConfig, setLastConnectorConfig, triggerFormChange]);
     const hasSingleChanges = selectedNodes.length === 1 ? checkHasSingleChanges() : false;
     const handleUndo = (0, import_react2.useCallback)(() => {
+      if (selectedNodesRef.current.length >= 2 && Object.keys(multiDraftRef.current).length > 0) {
+        clearMultiDraft();
+        showToast("\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
+        return;
+      }
       const snapshot = lastAppliedSnapshotRef.current;
       if (snapshot) {
         if (snapshot.type === "single" && snapshot.singlePayload) {
@@ -29354,6 +29607,9 @@
     const applyCurrentNodeState = (0, import_react2.useCallback)((overrideSizeMode, styleOverrides, linkOverrides, overrideNodeType, overrideSize, overrideTitle) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
+      if (nodes.length === 1) {
+        isApplyingSingleRef.current = true;
+      }
       const titleEl = document.getElementById("node-title-input");
       const descEl = document.getElementById("node-description-input");
       const descToggleEl = document.getElementById("toggle-description");
@@ -29444,7 +29700,7 @@
       });
     }, [setLastNodeConfig]);
     const addSizePreset = (0, import_react2.useCallback)((preset) => {
-      const newId = `size-${crypto.randomUUID()}`;
+      const newId = `size-${typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`}`;
       const newPreset = {
         ...preset,
         id: newId
@@ -29492,7 +29748,7 @@
       showToast(`"${target?.name || "\uC0AC\uC774\uC988"}" \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
     }, [sizePresets, savePresets, showToast]);
     const addStylePreset = (0, import_react2.useCallback)((preset) => {
-      const newId = `style-${crypto.randomUUID()}`;
+      const newId = `style-${typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`}`;
       const newPreset = {
         ...preset,
         id: newId
@@ -29591,8 +29847,8 @@
           strokeWeight: node.connectorStrokeWeight,
           strokePattern: node.connectorStrokePattern || "SOLID",
           routingType: node.connectorRoutingType || "ORTHOGONAL",
-          startTerminal: node.connectorStartTerminal || "NONE",
-          endTerminal: node.connectorEndTerminal || "ARROW",
+          startTerminal: normalizeTerminal(node.connectorStartTerminal, "NONE"),
+          endTerminal: normalizeTerminal(node.connectorEndTerminal, "ARROW"),
           startOffset: node.connectorStartOffset ?? 0,
           endOffset: node.connectorEndOffset ?? 0,
           sourceMagnet: node.connectorSourceMagnet || "RIGHT",
@@ -29926,6 +30182,7 @@
           isApplyingSingleRef.current = false;
           setLastAppliedSnapshot(null);
           lastAppliedSnapshotRef.current = null;
+          triggerFormChange();
         }
       } else {
         originalSelectedNodeRef.current = null;
@@ -30477,10 +30734,7 @@
       applyCurrentNodeState(void 0, void 0, void 0, type, targetSize, targetTitle);
     }
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "section-block", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "section-title", children: [
-        "Type",
-        isTypeMixed && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
-      ] }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "section-title", children: "Type" }) }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "type-icon-group", id: "node-type-icons", children: NODE_TYPE_OPTIONS.map(({ type, label, tooltip, icon }) => {
         const isActive = !isTypeMixed && activeType === type;
         return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
@@ -31099,7 +31353,7 @@
     const isTypeDrafted = multiDraft.nodeType !== void 0;
     const isDraftAllowed = isTypeDrafted ? supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "figmaLink") : true;
     const isLinkDrafted = multiDraft.figmaLink !== void 0;
-    const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isLinkDrafted ? Boolean(multiDraft.figmaLink) : isOn !== null ? isOn : rawOptionState.isOpen;
+    const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isOn !== null ? isOn : isLinkDrafted ? Boolean(multiDraft.figmaLink) || !multiDraft.clearLinkCache : rawOptionState.isOpen;
     const effectiveState = (0, import_react8.useMemo)(() => {
       if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
         return {
@@ -31108,16 +31362,6 @@
           isMixed: true,
           disabled: true,
           isOpen: false
-        };
-      }
-      if (isLinkDrafted) {
-        const on = Boolean(multiDraft.figmaLink);
-        return {
-          state: on ? "ON" : "OFF",
-          checked: on,
-          isMixed: false,
-          disabled: false,
-          isOpen: on
         };
       }
       if (isOn !== null) {
@@ -31129,6 +31373,16 @@
           isOpen: isOn
         };
       }
+      if (isLinkDrafted) {
+        const on = Boolean(multiDraft.figmaLink) || !multiDraft.clearLinkCache;
+        return {
+          state: on ? "ON" : "OFF",
+          checked: on,
+          isMixed: false,
+          disabled: false,
+          isOpen: on
+        };
+      }
       return {
         state: rawOptionState.state,
         checked: rawOptionState.checked,
@@ -31136,7 +31390,7 @@
         disabled: rawOptionState.disabled,
         isOpen: effectiveIsOpen
       };
-    }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, effectiveIsOpen, isOn]);
+    }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, multiDraft.clearLinkCache, effectiveIsOpen, isOn]);
     (0, import_react8.useEffect)(() => {
       const isUserLocked = Date.now() - userActionLockRef.current < 600;
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
@@ -31144,6 +31398,10 @@
       prevSelectedNodeIdRef.current = currentNodeId;
       if (isDifferentNode) {
         setIsOn(null);
+      }
+      const isInputFocused = document.activeElement === inputRef.current;
+      if (!isDifferentNode && isInputFocused) {
+        return;
       }
       if (!isUserLocked || isDifferentNode) {
         if (rawOptionState.supportedCount > 0) {
@@ -31159,7 +31417,7 @@
               singleLinkOn: Boolean(activeLink),
               singleLinkUrl: displayLink
             });
-          } else {
+          } else if (supported.length > 1) {
             const firstLink = supported[0]?.figmaLink || "";
             const allSame = supported.every((n) => (n.figmaLink || "") === firstLink);
             if (allSame && firstLink) {
@@ -31168,12 +31426,16 @@
             } else {
               setUrl("");
             }
+          } else {
+            const creationUrl = lastNodeConfig.singleLinkUrl || "";
+            setUrl(creationUrl);
+            cachedUrlRef.current = creationUrl;
           }
         } else {
           setUrl("");
         }
       }
-    }, [rawOptionState, selectedNodes, setLastNodeConfig]);
+    }, [rawOptionState, selectedNodes, setLastNodeConfig, lastNodeConfig.singleLinkUrl]);
     const isLinkValueMixed = (0, import_react8.useMemo)(() => {
       if (isLinkDrafted) return false;
       if (effectiveState.disabled) return false;
@@ -31182,21 +31444,21 @@
       const firstLink = supported[0]?.figmaLink || "";
       return supported.some((n) => (n.figmaLink || "") !== firstLink);
     }, [isLinkDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
-    const displayUrl = isLinkDrafted ? multiDraft.figmaLink || "" : isLinkValueMixed ? "" : url;
+    const displayUrl = isLinkDrafted ? multiDraft.figmaLink ?? "" : isLinkValueMixed ? "" : url;
     function commitUrl(currentRawUrl) {
       const trimmed = currentRawUrl.trim();
       if (!trimmed) {
         setUrl("");
         cachedUrlRef.current = "";
         if (selectedNodes.length >= 2) {
-          updateMultiDraft({ figmaLink: "", clearLinkCache: true });
+          updateMultiDraft({ figmaLink: "", clearLinkCache: false });
           return;
         }
         setLastNodeConfig({ singleLinkUrl: "" });
         setTimeout(() => {
           applyCurrentNodeState(void 0, void 0, {
             figmaLink: "",
-            clearLinkCache: true
+            clearLinkCache: false
           });
         }, 0);
         return;
@@ -31223,12 +31485,13 @@
       if (selectedNodes.length >= 2) {
         if (!checked) {
           cachedUrlRef.current = displayUrl;
-          updateMultiDraft({ figmaLink: "", clearLinkCache: false });
+          updateMultiDraft({ figmaLink: "", clearLinkCache: true });
         } else {
           const restoreUrl = displayUrl || cachedUrlRef.current;
           if (restoreUrl.trim()) {
             commitUrl(restoreUrl);
           } else {
+            updateMultiDraft({ figmaLink: "", clearLinkCache: false });
             setTimeout(() => {
               inputRef.current?.focus();
             }, 60);
@@ -31263,6 +31526,12 @@
     }
     function handleUrlChange(value) {
       setUrl(value);
+      cachedUrlRef.current = value;
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({ figmaLink: value, clearLinkCache: false });
+      } else {
+        setLastNodeConfig({ singleLinkUrl: value });
+      }
     }
     function handleKeyDown(e) {
       if (e.key === "Enter") {
@@ -31279,7 +31548,7 @@
       if (selectedNodes.length >= 2) {
         updateMultiDraft({
           figmaLink: "",
-          clearLinkCache: true
+          clearLinkCache: false
         });
         inputRef.current?.focus();
         return;
@@ -31287,7 +31556,7 @@
       setLastNodeConfig({ singleLinkUrl: "" });
       applyCurrentNodeState(void 0, void 0, {
         figmaLink: "",
-        clearLinkCache: true
+        clearLinkCache: false
       });
       inputRef.current?.focus();
     }
@@ -32633,24 +32902,20 @@
     const summary = useSelectionSummary();
     const isSizeAllowed = (() => {
       if (multiDraft.nodeType !== void 0) {
-        return normalizeNodeType(multiDraft.nodeType) === "Screen";
+        return supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "size");
       }
-      if (selectedNodes.length === 1) {
-        const node = selectedNodes[0];
-        const rawType = node?.flowNodeType || (node?.nodeType === "FRAME" ? "Screen" : node?.nodeType);
-        return normalizeNodeType(rawType) === "Screen";
+      const flowNodes = selectedNodes.filter((n) => n && getNodeCategory(n) !== "FigmaObject");
+      if (flowNodes.length === 1) {
+        return supportsOption(flowNodes[0], "size");
       }
-      if (selectedNodes.length > 1) {
-        if (summary.isMultiFlowNode) {
-          return !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === "Screen";
-        }
-        return selectedNodes.every((n) => {
-          const rawType = n?.flowNodeType || (n?.nodeType === "FRAME" ? "Screen" : n?.nodeType);
-          return normalizeNodeType(rawType) === "Screen";
-        });
+      if (flowNodes.length > 1) {
+        return flowNodes.every((n) => supportsOption(n, "size"));
+      }
+      if (selectedNodes.length > 0) {
+        return false;
       }
       const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
-      return normalizeNodeType(creationType) === "Screen";
+      return supportsOption({ flowNodeType: creationType, isFlowNode: true }, "size");
     })();
     const activePreset = sizePresets.find(
       (p) => p.w === lastNodeConfig.width && p.h === lastNodeConfig.height
@@ -32708,7 +32973,7 @@
     const sizePresetCounts = import_react11.default.useMemo(() => {
       if (!isSizeMixed) return {};
       const counts = {};
-      const flowNodes = selectedNodes.filter((n) => n && n.isFlowNode && !n.isConnector);
+      const flowNodes = selectedNodes.filter((n) => n && getNodeCategory(n) !== "FigmaObject");
       for (const n of flowNodes) {
         const matched = sizePresets.find((p) => p.w === n.width && p.h === n.height);
         if (matched) {
@@ -33280,6 +33545,14 @@
   var import_react12 = __toESM(require_react());
   var import_jsx_runtime12 = __toESM(require_jsx_runtime());
   var DEFAULT_STYLE_PRESET_IDS2 = /* @__PURE__ */ new Set(["style-white", "style-black"]);
+  function normalizeColorHex(hex) {
+    if (!hex) return "";
+    const clean = hex.trim().toLowerCase();
+    if (clean.length === 4 && clean.startsWith("#")) {
+      return `#${clean[1]}${clean[1]}${clean[2]}${clean[2]}${clean[3]}${clean[3]}`;
+    }
+    return clean;
+  }
   var PALETTE_ICON_SVG = /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
     "path",
     {
@@ -33361,13 +33634,26 @@
         setWeightInput(String(effectiveStrokeWeight));
       }
     }, [isWeightMixed, effectiveStrokeWeight]);
-    const isNodeColorMixed = summary.isMultiFlowNode && (summary.color.isMixed || summary.strokeWeight.isMixed || summary.strokeColor.isMixed);
+    const isStyleDrafted = multiDraft.colorHex !== void 0 || multiDraft.strokeWeight !== void 0 || multiDraft.strokeColor !== void 0;
+    const hasShapeNode = selectedNodes.some(
+      (n) => normalizeNodeType(
+        n?.flowNodeType || (n?.nodeType === "FRAME" ? "Screen" : n?.nodeType)
+      ) !== "Screen"
+    );
+    const isNodeColorMixed = !isStyleDrafted && summary.isMultiFlowNode && (summary.color.isMixed || !hasShapeNode && (summary.strokeWeight.isMixed || summary.strokeColor.isMixed));
     const activeStylePreset = isNodeColorMixed ? void 0 : stylePresets.find((p) => {
-      const matchFill = p.fillColor.toLowerCase() === effectiveFillColor.toLowerCase();
-      if (!matchFill) return false;
+      const pFill = normalizeColorHex(p.fillColor);
+      const effFill = normalizeColorHex(effectiveFillColor);
+      if (pFill !== effFill) return false;
+      if (hasShapeNode) {
+        if (p.strokeWeight === effectiveStrokeWeight) return true;
+        if (pFill === "#000000" || pFill === "#ffffff") {
+          return true;
+        }
+      }
       if (p.strokeWeight !== effectiveStrokeWeight) return false;
       if (p.strokeWeight > 0) {
-        if (p.strokeColor.toLowerCase() !== effectiveStrokeColor.toLowerCase()) {
+        if (normalizeColorHex(p.strokeColor) !== normalizeColorHex(effectiveStrokeColor)) {
           return false;
         }
       }
@@ -33609,21 +33895,7 @@
     }
     return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "section-header", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "section-title", children: [
-          "Style",
-          isNodeColorMixed && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
-            "span",
-            {
-              style: {
-                fontSize: "11px",
-                color: "var(--figma-color-text-tertiary, #999)",
-                marginLeft: "6px",
-                fontWeight: "normal"
-              },
-              children: "(Mixed)"
-            }
-          )
-        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "section-title", children: "Style" }),
         /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "section-actions", children: [
           /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
             "button",
@@ -33780,7 +34052,7 @@
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "swatches-grid", id: "style-swatches", children: stylePresets.map((preset) => {
           const isSelected = Boolean(
-            activeStylePreset && activeStylePreset.id === preset.id
+            activeStylePreset && activeStylePreset.id === preset.id || isStyleDrafted && selectedStylePresetId === preset.id && normalizeColorHex(preset.fillColor) === normalizeColorHex(effectiveFillColor)
           );
           const hasBorder = preset.strokeWeight > 0;
           const isPresetFillNone = preset.fillColor.toLowerCase() === "none" || preset.fillColor.toLowerCase() === "transparent";
@@ -34056,46 +34328,36 @@
   var import_jsx_runtime15 = __toESM(require_jsx_runtime());
   var TERMINAL_OPTIONS = [
     "NONE",
-    "BAR",
     "ARROW",
     "CIRCLE",
-    "DIAMOND",
-    "SQUARE"
+    "DIAMOND"
   ];
   var TERMINAL_SVGS_BTN = {
     start: {
       NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-      BAR: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M2 3.5V12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
       ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M7 3.5L2 8L7 12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
       CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1"/><circle cx="5.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
-      DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M10 8H50" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5L1 8L5.5 12.5L10 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
-      SQUARE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1"/><rect x="2" y="4.5" width="7" height="7" stroke="currentColor" stroke-width="1" fill="none"/></svg>`
+      DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M10 8H50" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5L1 8L5.5 12.5L10 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`
     },
     end: {
       NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-      BAR: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M50 3.5V12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
       ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M45 3.5L50 8L45 12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
       CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1"/><circle cx="46.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
-      DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H42" stroke="currentColor" stroke-width="1"/><path d="M46.5 3.5L42 8L46.5 12.5L51 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
-      SQUARE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1"/><rect x="43" y="4.5" width="7" height="7" stroke="currentColor" stroke-width="1" fill="none"/></svg>`
+      DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H42" stroke="currentColor" stroke-width="1"/><path d="M46.5 3.5L42 8L46.5 12.5L51 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`
     }
   };
   var TERMINAL_SVGS_SHORT = {
     start: {
       NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-      BAR: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M4 3.5V12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
       ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M8 4L4 8L8 12" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
       CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8 8H32" stroke="currentColor" stroke-width="1"/><circle cx="5" cy="8" r="2.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
-      DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8.5 8H32" stroke="currentColor" stroke-width="1"/><path d="M5 4.5L1.5 8L5 11.5L8.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
-      SQUARE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8 8H32" stroke="currentColor" stroke-width="1"/><rect x="2.5" y="5.5" width="5" height="5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`
+      DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8.5 8H32" stroke="currentColor" stroke-width="1"/><path d="M5 4.5L1.5 8L5 11.5L8.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`
     },
     end: {
       NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-      BAR: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M32 3.5V12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
       ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M28 4L32 8L28 12" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
       CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1"/><circle cx="31" cy="8" r="2.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
-      DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H27.5" stroke="currentColor" stroke-width="1"/><path d="M31 4.5L27.5 8L31 11.5L34.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
-      SQUARE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1"/><rect x="28.5" y="5.5" width="5" height="5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`
+      DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H27.5" stroke="currentColor" stroke-width="1"/><path d="M31 4.5L27.5 8L31 11.5L34.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`
     }
   };
   var CHECK_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
@@ -34984,7 +35246,7 @@
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("select", { id: "select-start-terminal", style: { display: "none" }, value: startTermVal, onChange: () => {
-            }, children: ["MIXED", "NONE", "BAR", "ARROW", "CIRCLE", "DIAMOND", "SQUARE"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
+            }, children: ["MIXED", "NONE", "ARROW", "CIRCLE", "DIAMOND"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
             startTermPopupOpen && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
               "div",
               {
@@ -35082,7 +35344,7 @@
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("select", { id: "select-end-terminal", style: { display: "none" }, value: endTermVal, onChange: () => {
-            }, children: ["MIXED", "NONE", "BAR", "ARROW", "CIRCLE", "DIAMOND", "SQUARE"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
+            }, children: ["MIXED", "NONE", "ARROW", "CIRCLE", "DIAMOND"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
             endTermPopupOpen && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
               "div",
               {
@@ -38054,34 +38316,76 @@
           }
         )
       ] }) }),
-      !isSingleFigjam && (() => {
-        const isSingle = nodeCount === 1;
-        const isCtaDisabled = isFigjamSelected ? !isMultiFigjam : nodeCount >= 2 ? isConnSel ? false : !hasMultiDraft || isApplyingMultiDraft : isSingle ? !hasSingleChanges : false;
-        const showUndo = ctaLabel === "Apply" || ctaLabel === "Apply to All";
-        const isUndoDisabled = isSingle ? !hasSingleChanges : !canUndo;
+      (() => {
+        const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
+        const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected;
         return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("footer", { className: "app-footer", children: [
-          showUndo && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
-            "button",
-            {
-              id: "btn-undo",
-              className: "btn-cta-secondary",
-              type: "button",
-              disabled: isUndoDisabled,
-              onClick: handleUndo,
-              children: "Undo"
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
-            "button",
-            {
-              id: "btn-main-cta",
-              className: `btn-cta-primary${isCtaDisabled ? " disabled" : ""}`,
-              type: "button",
-              disabled: isCtaDisabled,
-              onClick: isSingleFigjam ? void 0 : handleMainAction,
-              children: ctaLabel
-            }
-          )
+          /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "footer-left", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("span", { className: "footer-plan-badge", children: "Free Plan" }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "footer-right", children: isSingleFlow || isSingleFigjam ? (
+            /* 단일 선택: Undo / Apply 미렌더링, Upgrade 버튼 표시 */
+            /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+              "button",
+              {
+                id: "btn-upgrade",
+                className: "btn-cta-secondary btn-upgrade",
+                type: "button",
+                onClick: () => {
+                },
+                children: "Upgrade"
+              }
+            )
+          ) : isMultiFlow ? (
+            /* 복수 선택: Undo + Apply (Draft가 없으면 Apply disabled) */
+            /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(import_jsx_runtime27.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+                "button",
+                {
+                  id: "btn-undo",
+                  className: "btn-cta-secondary",
+                  type: "button",
+                  disabled: !hasMultiDraft && !canUndo,
+                  onClick: handleUndo,
+                  children: "Undo"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+                "button",
+                {
+                  id: "btn-main-cta",
+                  className: `btn-cta-primary${!hasMultiDraft || isApplyingMultiDraft ? " disabled" : ""}`,
+                  type: "button",
+                  disabled: !hasMultiDraft || isApplyingMultiDraft,
+                  onClick: handleMainAction,
+                  children: "Apply to All"
+                }
+              )
+            ] })
+          ) : (
+            /* 기타 상태 (0개 선택 생성 모드, 커넥터 선택 등) */
+            /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(import_jsx_runtime27.Fragment, { children: [
+              isConnSel && canUndo && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+                "button",
+                {
+                  id: "btn-undo",
+                  className: "btn-cta-secondary",
+                  type: "button",
+                  onClick: handleUndo,
+                  children: "Undo"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+                "button",
+                {
+                  id: "btn-main-cta",
+                  className: `btn-cta-primary${isFigjamSelected && !isMultiFigjam ? " disabled" : ""}`,
+                  type: "button",
+                  disabled: isFigjamSelected && !isMultiFigjam,
+                  onClick: handleMainAction,
+                  children: isConnSel ? "Apply" : "Create Node"
+                }
+              )
+            ] })
+          ) })
         ] });
       })(),
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),

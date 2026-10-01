@@ -92,9 +92,11 @@ export function FigmaLinkSection() {
   const isLinkDrafted = multiDraft.figmaLink !== undefined;
   const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled
     ? false
-    : (isLinkDrafted
-        ? Boolean(multiDraft.figmaLink)
-        : (isOn !== null ? isOn : rawOptionState.isOpen));
+    : (isOn !== null
+        ? isOn
+        : (isLinkDrafted
+            ? (Boolean(multiDraft.figmaLink) || !multiDraft.clearLinkCache)
+            : rawOptionState.isOpen));
 
   const effectiveState = useMemo(() => {
     if (!isDraftAllowed || rawOptionState.state === "MIXED_DISABLED") {
@@ -106,16 +108,6 @@ export function FigmaLinkSection() {
         isOpen: false,
       };
     }
-    if (isLinkDrafted) {
-      const on = Boolean(multiDraft.figmaLink);
-      return {
-        state: (on ? "ON" : "OFF") as OptionSwitchState,
-        checked: on,
-        isMixed: false,
-        disabled: false,
-        isOpen: on,
-      };
-    }
     if (isOn !== null) {
       return {
         state: (isOn ? "ON" : "OFF") as OptionSwitchState,
@@ -125,6 +117,16 @@ export function FigmaLinkSection() {
         isOpen: isOn,
       };
     }
+    if (isLinkDrafted) {
+      const on = Boolean(multiDraft.figmaLink) || !multiDraft.clearLinkCache;
+      return {
+        state: (on ? "ON" : "OFF") as OptionSwitchState,
+        checked: on,
+        isMixed: false,
+        disabled: false,
+        isOpen: on,
+      };
+    }
     return {
       state: rawOptionState.state,
       checked: rawOptionState.checked,
@@ -132,7 +134,7 @@ export function FigmaLinkSection() {
       disabled: rawOptionState.disabled,
       isOpen: effectiveIsOpen,
     };
-  }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, effectiveIsOpen, isOn]);
+  }, [isDraftAllowed, rawOptionState, isLinkDrafted, multiDraft.figmaLink, multiDraft.clearLinkCache, effectiveIsOpen, isOn]);
 
   // 노드 선택 대상이 실제로 변경되었을 때만 figmaLink / cachedLink 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   useEffect(() => {
@@ -150,6 +152,12 @@ export function FigmaLinkSection() {
       setIsOn(null);
     }
 
+    // 사용자가 현재 입력필드에 포커스하고 입력 중인 경우 외부 동기화로 인한 값 덮어쓰기 방지 (GEMINI §12 가드)
+    const isInputFocused = document.activeElement === inputRef.current;
+    if (!isDifferentNode && isInputFocused) {
+      return;
+    }
+
     if (!isUserLocked || isDifferentNode) {
       if (rawOptionState.supportedCount > 0) {
         const supported = rawOptionState.supportedNodes;
@@ -164,7 +172,7 @@ export function FigmaLinkSection() {
             singleLinkOn: Boolean(activeLink),
             singleLinkUrl: displayLink,
           });
-        } else {
+        } else if (supported.length > 1) {
           const firstLink = supported[0]?.figmaLink || "";
           const allSame = supported.every((n) => (n.figmaLink || "") === firstLink);
           if (allSame && firstLink) {
@@ -173,12 +181,17 @@ export function FigmaLinkSection() {
           } else {
             setUrl("");
           }
+        } else {
+          // 노드 미선택(생성 모드): 기존에 입력된 singleLinkUrl 유지
+          const creationUrl = lastNodeConfig.singleLinkUrl || "";
+          setUrl(creationUrl);
+          cachedUrlRef.current = creationUrl;
         }
       } else {
         setUrl("");
       }
     }
-  }, [rawOptionState, selectedNodes, setLastNodeConfig]);
+  }, [rawOptionState, selectedNodes, setLastNodeConfig, lastNodeConfig.singleLinkUrl]);
 
   // Mixed URL 여부: 지원 노드가 2개 이상이고 입력된 링크 URL이 서로 다른 경우
   const isLinkValueMixed = useMemo(() => {
@@ -190,7 +203,7 @@ export function FigmaLinkSection() {
     return supported.some((n) => (n.figmaLink || "") !== firstLink);
   }, [isLinkDrafted, effectiveState.disabled, rawOptionState.supportedNodes]);
 
-  const displayUrl = isLinkDrafted ? (multiDraft.figmaLink || "") : (isLinkValueMixed ? "" : url);
+  const displayUrl = isLinkDrafted ? (multiDraft.figmaLink ?? "") : (isLinkValueMixed ? "" : url);
 
   function commitUrl(currentRawUrl: string) {
     const trimmed = currentRawUrl.trim();
@@ -198,14 +211,14 @@ export function FigmaLinkSection() {
       setUrl("");
       cachedUrlRef.current = "";
       if (selectedNodes.length >= 2) {
-        updateMultiDraft({ figmaLink: "", clearLinkCache: true });
+        updateMultiDraft({ figmaLink: "", clearLinkCache: false });
         return;
       }
       setLastNodeConfig({ singleLinkUrl: "" });
       setTimeout(() => {
         applyCurrentNodeState(undefined, undefined, {
           figmaLink: "",
-          clearLinkCache: true,
+          clearLinkCache: false,
         });
       }, 0);
       return;
@@ -234,12 +247,13 @@ export function FigmaLinkSection() {
     if (selectedNodes.length >= 2) {
       if (!checked) {
         cachedUrlRef.current = displayUrl;
-        updateMultiDraft({ figmaLink: "", clearLinkCache: false });
+        updateMultiDraft({ figmaLink: "", clearLinkCache: true });
       } else {
         const restoreUrl = displayUrl || cachedUrlRef.current;
         if (restoreUrl.trim()) {
           commitUrl(restoreUrl);
         } else {
+          updateMultiDraft({ figmaLink: "", clearLinkCache: false });
           setTimeout(() => {
             inputRef.current?.focus();
           }, 60);
@@ -278,6 +292,12 @@ export function FigmaLinkSection() {
 
   function handleUrlChange(value: string) {
     setUrl(value);
+    cachedUrlRef.current = value;
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({ figmaLink: value, clearLinkCache: false });
+    } else {
+      setLastNodeConfig({ singleLinkUrl: value });
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -298,7 +318,7 @@ export function FigmaLinkSection() {
     if (selectedNodes.length >= 2) {
       updateMultiDraft({
         figmaLink: "",
-        clearLinkCache: true,
+        clearLinkCache: false,
       });
       inputRef.current?.focus();
       return;
@@ -306,7 +326,7 @@ export function FigmaLinkSection() {
     setLastNodeConfig({ singleLinkUrl: "" });
     applyCurrentNodeState(undefined, undefined, {
       figmaLink: "",
-      clearLinkCache: true,
+      clearLinkCache: false,
     });
     inputRef.current?.focus();
   }

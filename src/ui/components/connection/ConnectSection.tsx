@@ -11,34 +11,28 @@ import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 // - 드롭다운 메뉴: -short(36x16) 아이콘 (Figma 1027261:5984, 6029, 6009, 6054)
 // ============================================================
 
-export type TerminalOption = 'NONE' | 'BAR' | 'ARROW' | 'CIRCLE' | 'DIAMOND' | 'SQUARE';
+export type TerminalOption = 'NONE' | 'ARROW' | 'CIRCLE' | 'DIAMOND';
 
 const TERMINAL_OPTIONS: TerminalOption[] = [
   'NONE',
-  'BAR',
   'ARROW',
   'CIRCLE',
   'DIAMOND',
-  'SQUARE',
 ];
 
 // 1. 드롭다운 버튼용 아이콘 (52x16 - "-short"가 빠진 기본 아이콘)
 const TERMINAL_SVGS_BTN: Record<'start' | 'end', Record<TerminalOption, string>> = {
   start: {
     NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-    BAR: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M2 3.5V12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M7 3.5L2 8L7 12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1"/><circle cx="5.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
     DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M10 8H50" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5L1 8L5.5 12.5L10 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
-    SQUARE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1"/><rect x="2" y="4.5" width="7" height="7" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
   },
   end: {
     NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-    BAR: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M50 3.5V12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M45 3.5L50 8L45 12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1"/><circle cx="46.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
     DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H42" stroke="currentColor" stroke-width="1"/><path d="M46.5 3.5L42 8L46.5 12.5L51 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
-    SQUARE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1"/><rect x="43" y="4.5" width="7" height="7" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
   },
 };
 
@@ -46,19 +40,15 @@ const TERMINAL_SVGS_BTN: Record<'start' | 'end', Record<TerminalOption, string>>
 const TERMINAL_SVGS_SHORT: Record<'start' | 'end', Record<TerminalOption, string>> = {
   start: {
     NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-    BAR: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M4 3.5V12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M8 4L4 8L8 12" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8 8H32" stroke="currentColor" stroke-width="1"/><circle cx="5" cy="8" r="2.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
     DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8.5 8H32" stroke="currentColor" stroke-width="1"/><path d="M5 4.5L1.5 8L5 11.5L8.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
-    SQUARE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8 8H32" stroke="currentColor" stroke-width="1"/><rect x="2.5" y="5.5" width="5" height="5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
   },
   end: {
     NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-    BAR: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M32 3.5V12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M28 4L32 8L28 12" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1"/><circle cx="31" cy="8" r="2.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
     DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H27.5" stroke="currentColor" stroke-width="1"/><path d="M31 4.5L27.5 8L31 11.5L34.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
-    SQUARE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1"/><rect x="28.5" y="5.5" width="5" height="5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
   },
 };
 
@@ -1051,7 +1041,7 @@ export function ConnectSection() {
 
             {/* 외부 스크립트 호환용 숨겨진 select */}
             <select id="select-start-terminal" style={{ display: 'none' }} value={startTermVal} onChange={() => {}}>
-              {['MIXED', 'NONE', 'BAR', 'ARROW', 'CIRCLE', 'DIAMOND', 'SQUARE'].map((v) => (
+              {['MIXED', 'NONE', 'ARROW', 'CIRCLE', 'DIAMOND'].map((v) => (
                 <option key={v} value={v}>
                   {v === 'MIXED' ? 'Mixed' : v}
                 </option>
@@ -1161,7 +1151,7 @@ export function ConnectSection() {
 
             {/* 외부 스크립트 호환용 숨겨진 select */}
             <select id="select-end-terminal" style={{ display: 'none' }} value={endTermVal} onChange={() => {}}>
-              {['MIXED', 'NONE', 'BAR', 'ARROW', 'CIRCLE', 'DIAMOND', 'SQUARE'].map((v) => (
+              {['MIXED', 'NONE', 'ARROW', 'CIRCLE', 'DIAMOND'].map((v) => (
                 <option key={v} value={v}>
                   {v === 'MIXED' ? 'Mixed' : v}
                 </option>

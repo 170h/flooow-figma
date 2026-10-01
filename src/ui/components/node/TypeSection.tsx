@@ -177,14 +177,7 @@ export function TypeSection() {
   return (
     <div className="section-block">
       <div className="section-header">
-        <span className="section-title">
-          Type
-          {isTypeMixed && (
-            <span className="section-mixed-label">
-              (Mixed)
-            </span>
-          )}
-        </span>
+        <span className="section-title">Type</span>
       </div>
       <div className="section-body">
         <div className="type-icon-group" id="node-type-icons">

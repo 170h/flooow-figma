@@ -953,6 +953,14 @@
       color: #ffffff;
     }
 
+    /* 탭이 disabled 상태일 때 카운트 배지 스타일 */
+    .chip-btn:disabled .tab-badge,
+    .chip-btn.disabled .tab-badge,
+    .tab-btn:disabled .tab-badge,
+    .tab-btn.disabled .tab-badge {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
     /* Active 시 블릿 처리: 텍스트 색상과 동일하게 반전되어 선명하게 유지 */
     .chip-btn.active .tab-bullet,
     .tab-btn.active .tab-bullet {
@@ -1190,44 +1198,220 @@
       opacity: 1 !important;
     }
 
-    /* 입력필드의 Mixed 상태: 알파값이나 그레이를 적용하지 않고 순수 검정색(#000000) 100% 불투명 적용 */
-    input[placeholder="Mixed"]::placeholder,
-    input[placeholder="Mixed" i]::placeholder,
-    textarea[placeholder="Mixed"]::placeholder,
-    textarea[placeholder="Mixed" i]::placeholder,
-    .input-scrubber-box input[placeholder="Mixed"]::placeholder,
-    .input-scrubber-box input[placeholder="Mixed" i]::placeholder,
-    body.figma-dark .input-scrubber-box input[placeholder="Mixed"]::placeholder,
-    .figma-dark .input-scrubber-box input[placeholder="Mixed"]::placeholder,
-    [data-theme="dark"] .input-scrubber-box input[placeholder="Mixed"]::placeholder,
-    .form-input[placeholder="Mixed"]::placeholder,
-    .form-input[placeholder="Mixed" i]::placeholder,
-    .desc-textarea[placeholder="Mixed"]::placeholder,
-    .desc-textarea[placeholder="Mixed" i]::placeholder,
-    .conn-color-hex-input[placeholder="Mixed"]::placeholder,
-    .conn-color-hex-input[placeholder="Mixed" i]::placeholder,
-    .style-text-input[placeholder="Mixed"]::placeholder,
-    .style-text-input[placeholder="Mixed" i]::placeholder,
-    .style-weight-num-input[placeholder="Mixed"]::placeholder,
-    .style-weight-num-input[placeholder="Mixed" i]::placeholder,
-    .color-wheel-hex-input[placeholder="Mixed"]::placeholder,
-    .color-wheel-hex-input[placeholder="Mixed" i]::placeholder,
-    .figma-link-input[placeholder="Mixed"]::placeholder,
-    .figma-link-input[placeholder="Mixed" i]::placeholder {
+    /* 입력필드의 Mixed 상태: 알파값이나 그레이를 적용하지 않고 순수 검정색(#000000) 100% 불투명 적용 (Enabled 상태 전용) */
+    input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    textarea[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .input-scrubber-box:not(.disabled) input[placeholder="Mixed"]:not(:disabled)::placeholder,
+    .input-scrubber-box:not(.disabled) input[placeholder="Mixed" i]:not(:disabled)::placeholder,
+    body.figma-dark .input-scrubber-box:not(.disabled) input[placeholder="Mixed"]:not(:disabled)::placeholder,
+    .figma-dark .input-scrubber-box:not(.disabled) input[placeholder="Mixed"]:not(:disabled)::placeholder,
+    [data-theme="dark"] .input-scrubber-box:not(.disabled) input[placeholder="Mixed"]:not(:disabled)::placeholder,
+    .form-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .form-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .desc-textarea[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .desc-textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .conn-color-hex-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .conn-color-hex-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .style-text-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .style-text-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .style-weight-num-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .style-weight-num-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .color-wheel-hex-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .color-wheel-hex-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .figma-link-input[placeholder="Mixed"]:not(:disabled):not(.disabled)::placeholder,
+    .figma-link-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder {
       color: #000000 !important;
       -webkit-text-fill-color: #000000 !important;
       opacity: 1 !important;
       font-weight: 400 !important;
     }
 
-    input[value="Mixed"],
-    input[value="Mixed" i],
-    textarea[value="Mixed"],
-    textarea[value="Mixed" i] {
+    input[value="Mixed"]:not(:disabled):not(.disabled),
+    input[value="Mixed" i]:not(:disabled):not(.disabled),
+    textarea[value="Mixed"]:not(:disabled):not(.disabled),
+    textarea[value="Mixed" i]:not(:disabled):not(.disabled) {
       color: #000000 !important;
       -webkit-text-fill-color: #000000 !important;
       opacity: 1 !important;
       font-weight: 400 !important;
+    }
+
+    /* ============================================================ */
+    /* 공통 Disabled 상태 텍스트 컬러 규칙 (Disabled Text Color Rule)  */
+    /* 규칙: Disabled 상태가 모든 텍스트 컬러(Mixed/수치/라벨 등)보다 우선 */
+    /* ============================================================ */
+
+    /* 1. 인풋 및 텍스트에어리어 필드 텍스트 및 값 (Disabled + Mixed, Disabled + 3 등 모든 값) */
+    input:disabled,
+    input.disabled,
+    .disabled input,
+    :has(input:disabled) input,
+    textarea:disabled,
+    textarea.disabled,
+    .disabled textarea,
+    :has(textarea:disabled) textarea,
+    .node-title-input:disabled,
+    .form-input:disabled,
+    .form-input.disabled,
+    .desc-textarea:disabled,
+    .desc-textarea.disabled,
+    .style-text-input:disabled,
+    .style-text-input.disabled,
+    .style-weight-num-input:disabled,
+    .style-weight-num-input.disabled,
+    .input-scrubber-box.disabled input,
+    .input-scrubber-box input:disabled,
+    .input-scrubber-box:has(input:disabled) input {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* 2. 인풋 및 텍스트에어리어의 placeholder (Disabled + Mixed, Disabled placeholder 전체) */
+    input:disabled::placeholder,
+    input.disabled::placeholder,
+    .disabled input::placeholder,
+    :has(input:disabled) input::placeholder,
+    textarea:disabled::placeholder,
+    textarea.disabled::placeholder,
+    .disabled textarea::placeholder,
+    :has(textarea:disabled) textarea::placeholder,
+    .input-scrubber-box.disabled input::placeholder,
+    .input-scrubber-box input:disabled::placeholder,
+    .input-scrubber-box:has(input:disabled) input::placeholder,
+    input[placeholder="Mixed"]:disabled::placeholder,
+    input[placeholder="Mixed"].disabled::placeholder,
+    .disabled input[placeholder="Mixed"]::placeholder,
+    .disabled input[placeholder="Mixed" i]::placeholder,
+    .input-scrubber-box.disabled input[placeholder="Mixed"]::placeholder,
+    .input-scrubber-box.disabled input[placeholder="Mixed" i]::placeholder,
+    .input-scrubber-box:has(input:disabled) input[placeholder="Mixed"]::placeholder,
+    .input-scrubber-box:has(input:disabled) input[placeholder="Mixed" i]::placeholder {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 1 !important;
+    }
+
+    /* 다크모드 대응 */
+    body.figma-dark input:disabled::placeholder,
+    body.figma-dark input.disabled::placeholder,
+    body.figma-dark .disabled input::placeholder,
+    .figma-dark input:disabled::placeholder,
+    .figma-dark input.disabled::placeholder,
+    .figma-dark .disabled input::placeholder,
+    [data-theme="dark"] input:disabled::placeholder,
+    [data-theme="dark"] input.disabled::placeholder,
+    [data-theme="dark"] .disabled input::placeholder {
+      color: var(--color-text-tertiary, rgba(255, 255, 255, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(255, 255, 255, 0.4)) !important;
+    }
+
+    /* 3. 드롭다운 / 메뉴의 선택값 및 텍스트 (Disabled + Rectangle, Disabled + Mixed 등) */
+    .figma-dropdown-btn:disabled,
+    .figma-dropdown-btn.disabled,
+    .disabled .figma-dropdown-btn,
+    .size-mode-dropdown-btn:disabled,
+    .size-mode-dropdown-btn.disabled,
+    .disabled .size-mode-dropdown-btn,
+    .select-dropdown-box:disabled,
+    .select-dropdown-box.disabled,
+    .disabled .select-dropdown-box {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .figma-dropdown-btn:disabled span,
+    .figma-dropdown-btn.disabled span,
+    .disabled .figma-dropdown-btn span,
+    .figma-dropdown-btn:disabled .figma-dropdown-current-text,
+    .figma-dropdown-btn.disabled .figma-dropdown-current-text,
+    .disabled .figma-dropdown-btn .figma-dropdown-current-text,
+    .size-mode-dropdown-btn:disabled span,
+    .size-mode-dropdown-btn.disabled span,
+    .disabled .size-mode-dropdown-btn span,
+    .size-mode-dropdown-btn:disabled .size-mode-current-text,
+    .size-mode-dropdown-btn.disabled .size-mode-current-text,
+    .disabled .size-mode-dropdown-btn .size-mode-current-text {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .figma-dropdown-btn:disabled svg,
+    .figma-dropdown-btn.disabled svg,
+    .disabled .figma-dropdown-btn svg,
+    .figma-dropdown-btn:disabled .figma-dropdown-chevron-icon,
+    .figma-dropdown-btn.disabled .figma-dropdown-chevron-icon,
+    .disabled .figma-dropdown-btn .figma-dropdown-chevron-icon,
+    .size-mode-dropdown-btn:disabled svg,
+    .size-mode-dropdown-btn.disabled svg,
+    .disabled .size-mode-dropdown-btn svg,
+    .size-mode-dropdown-btn:disabled .size-mode-current-icon,
+    .size-mode-dropdown-btn.disabled .size-mode-current-icon,
+    .disabled .size-mode-dropdown-btn .size-mode-current-icon,
+    .size-mode-dropdown-btn:disabled .size-mode-chevron-icon,
+    .size-mode-dropdown-btn.disabled .size-mode-chevron-icon,
+    .disabled .size-mode-dropdown-btn .size-mode-chevron-icon {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      fill: currentColor;
+      opacity: 0.6;
+    }
+
+    /* 4. Option title / label (스크러버 W, H, 라벨 텍스트) */
+    .input-scrubber-box.disabled span,
+    .input-scrubber-box.disabled .scrubber-label,
+    .input-scrubber-box:has(input:disabled) span,
+    .input-scrubber-box:has(input:disabled) .scrubber-label,
+    .disabled .input-scrubber-box span,
+    .disabled .input-scrubber-box .scrubber-label {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .input-scrubber-box.disabled svg,
+    .input-scrubber-box:has(input:disabled) svg,
+    .disabled .input-scrubber-box svg {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 0.6;
+    }
+
+    /* 5. Chip / Tab 내부 텍스트 및 선택 항목의 중복 수량 / count / badge */
+    .chip-btn:disabled,
+    .chip-btn.disabled,
+    .disabled .chip-btn,
+    .tab-btn:disabled,
+    .tab-btn.disabled,
+    .disabled .tab-btn {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .chip-btn:disabled .tab-label,
+    .chip-btn.disabled .tab-label,
+    .disabled .chip-btn .tab-label,
+    .tab-btn:disabled .tab-label,
+    .tab-btn.disabled .tab-label,
+    .disabled .tab-btn .tab-label {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .chip-btn:disabled .tab-badge,
+    .chip-btn.disabled .tab-badge,
+    .disabled .chip-btn .tab-badge,
+    .tab-btn:disabled .tab-badge,
+    .tab-btn.disabled .tab-badge,
+    .disabled .tab-btn .tab-badge {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      background: transparent !important;
+      opacity: 0.6;
     }
 
     .select-dropdown-box {
@@ -1293,6 +1477,8 @@
       border-color: var(--color-border);
     }
 
+    .figma-dropdown-btn:disabled,
+    .figma-dropdown-btn.disabled,
     .size-mode-dropdown-btn:disabled,
     .size-mode-dropdown-btn.disabled {
       background-color: var(--color-bg-secondary) !important;
@@ -1302,14 +1488,25 @@
       user-select: none;
     }
 
+    .figma-dropdown-btn:disabled .figma-dropdown-current-icon,
+    .figma-dropdown-btn.disabled .figma-dropdown-current-icon,
+    .figma-dropdown-btn:disabled .figma-dropdown-chevron-icon,
+    .figma-dropdown-btn.disabled .figma-dropdown-chevron-icon,
     .size-mode-dropdown-btn:disabled .size-mode-current-icon,
     .size-mode-dropdown-btn.disabled .size-mode-current-icon,
-    .size-mode-dropdown-btn:disabled .size-mode-current-text,
-    .size-mode-dropdown-btn.disabled .size-mode-current-text,
     .size-mode-dropdown-btn:disabled .size-mode-chevron-icon,
     .size-mode-dropdown-btn.disabled .size-mode-chevron-icon {
       color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
       opacity: 0.6;
+    }
+
+    .figma-dropdown-btn:disabled .figma-dropdown-current-text,
+    .figma-dropdown-btn.disabled .figma-dropdown-current-text,
+    .size-mode-dropdown-btn:disabled .size-mode-current-text,
+    .size-mode-dropdown-btn.disabled .size-mode-current-text {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 1 !important;
     }
 
     .figma-dropdown-btn:focus,
@@ -2596,8 +2793,54 @@
       flex-shrink: 0;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
       gap: 8px;
+      box-sizing: border-box;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .footer-plan-badge {
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      color: var(--color-text-secondary);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-upgrade {
+      height: 32px;
+      padding: 0 14px;
+      background: transparent;
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm, 5px);
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      box-sizing: border-box;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn-upgrade:hover {
+      background: var(--color-bg-hover);
+      border-color: var(--color-border-strong);
     }
 
     .btn-cta-secondary {

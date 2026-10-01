@@ -169,6 +169,11 @@ export interface UIState {
 
 import { DesignFrameItem, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, MagnetPosition } from '../../types';
 
+function normalizeTerminal(term?: string, fallback: string = 'NONE'): string {
+  if (!term || term === 'BAR' || term === 'SQUARE') return fallback;
+  return term;
+}
+
 // 모달 타입
 export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color';
 
@@ -415,7 +420,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // 1회성 Undo 스냅샷 상태 관리 (가장 최근의 Apply 또는 Apply to All 1회만 되돌림)
   const [lastAppliedSnapshot, setLastAppliedSnapshot] = useState<UndoSnapshot | null>(null);
   const lastAppliedSnapshotRef = useRef<UndoSnapshot | null>(null);
-  const canUndo = Boolean(lastAppliedSnapshot);
+  const canUndo = Boolean(lastAppliedSnapshot) || (selectedNodes.length >= 2 && hasMultiDraft);
 
 
   const applyMultiDraft = useCallback(() => {
@@ -584,8 +589,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const checkHasSingleChanges = useCallback((): boolean => {
     const nodes = selectedNodesRef.current;
     if (!nodes || nodes.length !== 1) return false;
-    const origNode = originalSelectedNodeRef.current || nodes[0];
-    if (!origNode) return false;
+    const actualNode = nodes[0];
+    const origNode = originalSelectedNodeRef.current || actualNode;
+    if (!origNode || !actualNode) return false;
 
     const isConn = Boolean(origNode.isConnector || origNode.nodeType === 'CONNECTOR');
     if (isConn) {
@@ -615,10 +621,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
       const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
       const currentStartTerm = startTermEl?.value || 'NONE';
-      const origStartTerm = origNode.connectorStartTerminal || 'NONE';
+      const origStartTerm = normalizeTerminal(origNode.connectorStartTerminal, 'NONE');
       if (currentStartTerm !== origStartTerm) return true;
       const currentEndTerm = endTermEl?.value || 'ARROW';
-      const origEndTerm = origNode.connectorEndTerminal || 'ARROW';
+      const origEndTerm = normalizeTerminal(origNode.connectorEndTerminal, 'ARROW');
       if (currentEndTerm !== origEndTerm) return true;
 
       // 5. Offsets
@@ -731,18 +737,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // 8. Color (Fill)
     const currentColor = (uiStateRef.current.selectedColor || lastNodeConfigRef.current.color || '#ffffff').toLowerCase();
-    const originalColor = (origNode.fillColorHex || '#ffffff').toLowerCase();
-    if (currentColor !== originalColor) return true;
+    const actualColor = (actualNode.fillColorHex || origNode.fillColorHex || '#ffffff').toLowerCase();
+    if (currentColor !== actualColor) return true;
 
     // 9. Stroke
     const currentStrokeWeight = uiStateRef.current.selectedStrokeWeight !== undefined ? uiStateRef.current.selectedStrokeWeight : (lastNodeConfigRef.current.strokeWeight ?? 1.5);
-    const originalStrokeWeight = origNode.strokeWeight ?? 1.5;
-    if (currentStrokeWeight !== originalStrokeWeight) return true;
+    const actualStrokeWeight = actualNode.strokeWeight !== undefined ? actualNode.strokeWeight : (origNode.strokeWeight ?? 1.5);
+    if (Math.abs(currentStrokeWeight - actualStrokeWeight) > 0.01) return true;
 
     if (currentStrokeWeight > 0) {
       const currentStrokeColor = (uiStateRef.current.selectedStrokeColor || lastNodeConfigRef.current.strokeColor || '#000000').toLowerCase();
-      const originalStrokeColor = (origNode.strokeColorHex || '#000000').toLowerCase();
-      if (currentStrokeColor !== originalStrokeColor) return true;
+      const actualStrokeColor = (actualNode.strokeColorHex || origNode.strokeColorHex || '#000000').toLowerCase();
+      if (currentStrokeColor !== actualStrokeColor) return true;
     }
 
     // 10. Size (Screen 타입)
@@ -789,10 +795,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (weightEl) weightEl.value = String(orig.connectorStrokeWeight ?? 1.5);
 
       const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-      if (startTermEl) startTermEl.value = orig.connectorStartTerminal || 'NONE';
+      if (startTermEl) startTermEl.value = normalizeTerminal(orig.connectorStartTerminal, 'NONE');
 
       const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-      if (endTermEl) endTermEl.value = orig.connectorEndTerminal || 'ARROW';
+      if (endTermEl) endTermEl.value = normalizeTerminal(orig.connectorEndTerminal, 'ARROW');
 
       const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
       if (startOffEl) startOffEl.value = String(orig.connectorStartOffset ?? 0);
@@ -899,6 +905,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const hasSingleChanges = selectedNodes.length === 1 ? checkHasSingleChanges() : false;
 
   const handleUndo = useCallback(() => {
+    if (selectedNodesRef.current.length >= 2 && Object.keys(multiDraftRef.current).length > 0) {
+      clearMultiDraft();
+      showToast('변경사항이 취소되었습니다.', 'info');
+      return;
+    }
     const snapshot = lastAppliedSnapshotRef.current;
     if (snapshot) {
       if (snapshot.type === 'single' && snapshot.singlePayload) {
@@ -1012,6 +1023,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   ) => {
     const nodes = selectedNodesRef.current;
     if (!nodes || nodes.length === 0) return;
+
+    if (nodes.length === 1) {
+      isApplyingSingleRef.current = true;
+    }
 
     const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
     const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
@@ -1131,7 +1146,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [setLastNodeConfig]);
 
   const addSizePreset = useCallback((preset: Omit<SizePreset, 'id'>) => {
-    const newId = `size-${crypto.randomUUID()}`;
+    const newId = `size-${typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`}`;
     const newPreset: SizePreset = {
       ...preset,
       id: newId,
@@ -1183,7 +1198,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [sizePresets, savePresets, showToast]);
 
   const addStylePreset = useCallback((preset: Omit<StylePreset, 'id'>) => {
-    const newId = `style-${crypto.randomUUID()}`;
+    const newId = `style-${typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`}`;
     const newPreset: StylePreset = {
       ...preset,
       id: newId,
@@ -1292,8 +1307,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         strokeWeight: node.connectorStrokeWeight,
         strokePattern: (node.connectorStrokePattern as ConnectorStrokePattern) || 'SOLID',
         routingType: (node.connectorRoutingType as ConnectorRoutingType) || 'ORTHOGONAL',
-        startTerminal: (node.connectorStartTerminal as ConnectorTerminalType) || 'NONE',
-        endTerminal: (node.connectorEndTerminal as ConnectorTerminalType) || 'ARROW',
+        startTerminal: normalizeTerminal(node.connectorStartTerminal, 'NONE') as ConnectorTerminalType,
+        endTerminal: normalizeTerminal(node.connectorEndTerminal, 'ARROW') as ConnectorTerminalType,
         startOffset: node.connectorStartOffset ?? 0,
         endOffset: node.connectorEndOffset ?? 0,
         sourceMagnet: (node.connectorSourceMagnet as MagnetPosition) || 'RIGHT',
@@ -1669,6 +1684,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isApplyingSingleRef.current = false;
         setLastAppliedSnapshot(null);
         lastAppliedSnapshotRef.current = null;
+        triggerFormChange();
       }
     } else {
       originalSelectedNodeRef.current = null;

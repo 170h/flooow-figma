@@ -390,39 +390,77 @@ export function App() {
         )}
       </main>
 
-      {/* 4. 푸터: 피그잼 단일 오브젝트 선택이 아닐 때 CTA 버튼 노출 (Node, Appearance, Connection 전체 통일) */}
-      {!isSingleFigjam && (() => {
-        const isSingle = nodeCount === 1;
-        const isCtaDisabled = isFigjamSelected
-          ? !isMultiFigjam
-          : (nodeCount >= 2
-            ? (isConnSel ? false : (!hasMultiDraft || isApplyingMultiDraft))
-            : (isSingle ? !hasSingleChanges : false));
+      {/* 4. 푸터: 왼쪽 구독 상태(Free Plan) + 오른쪽 액션 영역 */}
+      {(() => {
+        const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
+        const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected;
 
-        const showUndo = ctaLabel === 'Apply' || ctaLabel === 'Apply to All';
-        const isUndoDisabled = isSingle ? !hasSingleChanges : !canUndo;
         return (
           <footer className="app-footer">
-            {showUndo && (
-              <button
-                id="btn-undo"
-                className="btn-cta-secondary"
-                type="button"
-                disabled={isUndoDisabled}
-                onClick={handleUndo}
-              >
-                Undo
-              </button>
-            )}
-            <button
-              id="btn-main-cta"
-              className={`btn-cta-primary${isCtaDisabled ? ' disabled' : ''}`}
-              type="button"
-              disabled={isCtaDisabled}
-              onClick={isSingleFigjam ? undefined : handleMainAction}
-            >
-              {ctaLabel}
-            </button>
+            {/* 왼쪽: 현재 구독 상태 항상 표시 */}
+            <div className="footer-left">
+              <span className="footer-plan-badge">Free Plan</span>
+            </div>
+
+            {/* 오른쪽: 선택 상태에 따른 액션 버튼 */}
+            <div className="footer-right">
+              {isSingleFlow || isSingleFigjam ? (
+                /* 단일 선택: Undo / Apply 미렌더링, Upgrade 버튼 표시 */
+                <button
+                  id="btn-upgrade"
+                  className="btn-cta-secondary btn-upgrade"
+                  type="button"
+                  onClick={() => {}}
+                >
+                  Upgrade
+                </button>
+              ) : isMultiFlow ? (
+                /* 복수 선택: Undo + Apply (Draft가 없으면 Apply disabled) */
+                <>
+                  <button
+                    id="btn-undo"
+                    className="btn-cta-secondary"
+                    type="button"
+                    disabled={!hasMultiDraft && !canUndo}
+                    onClick={handleUndo}
+                  >
+                    Undo
+                  </button>
+                  <button
+                    id="btn-main-cta"
+                    className={`btn-cta-primary${(!hasMultiDraft || isApplyingMultiDraft) ? ' disabled' : ''}`}
+                    type="button"
+                    disabled={!hasMultiDraft || isApplyingMultiDraft}
+                    onClick={handleMainAction}
+                  >
+                    Apply to All
+                  </button>
+                </>
+              ) : (
+                /* 기타 상태 (0개 선택 생성 모드, 커넥터 선택 등) */
+                <>
+                  {(isConnSel && canUndo) && (
+                    <button
+                      id="btn-undo"
+                      className="btn-cta-secondary"
+                      type="button"
+                      onClick={handleUndo}
+                    >
+                      Undo
+                    </button>
+                  )}
+                  <button
+                    id="btn-main-cta"
+                    className={`btn-cta-primary${(isFigjamSelected && !isMultiFigjam) ? ' disabled' : ''}`}
+                    type="button"
+                    disabled={isFigjamSelected && !isMultiFigjam}
+                    onClick={handleMainAction}
+                  >
+                    {isConnSel ? 'Apply' : 'Create Node'}
+                  </button>
+                </>
+              )}
+            </div>
           </footer>
         );
       })()}

@@ -468,11 +468,9 @@ export type ConnectorStrokePattern = 'SOLID' | 'DASHED' | 'DOTTED';
 export type ConnectorRoutingType = 'ORTHOGONAL' | 'S_CURVE' | 'CURVED' | 'STRAIGHT';
 export type ConnectorTerminalType =
   | 'NONE'
-  | 'BAR'
   | 'ARROW'
   | 'CIRCLE'
   | 'DIAMOND'
-  | 'SQUARE'
   | 'TRIANGLE_ARROW'
   | 'REVERSED_TRIANGLE_ARROW'
   | 'MIXED';

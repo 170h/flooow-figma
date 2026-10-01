@@ -4,7 +4,9 @@ import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 import { MixedDashChip } from '../shared/icons';
 import {
+  getNodeCategory,
   normalizeNodeType,
+  supportsOption,
   SCREEN_NODE_CONSTRAINTS,
   clampScreenWidth,
   clampScreenHeight,
@@ -82,31 +84,30 @@ export function SizeSection() {
 
   const summary = useSelectionSummary();
 
-  // 스크린(Screen) 노드 타입일 때만 Size 편집 허용
+  // 스크린(Screen) 노드 타입일 때만 Size 편집 허용 (Multi-selection Capability Rule)
   // 우선순위:
-  // 1. 단일 노드 선택: 실제 선택된 노드의 타입이 Screen인지 엄격히 판별
-  // 2. 복수 노드 선택: 모든 선택 노드가 Screen 타입인지 판별 (Mixed일 경우 disabled)
-  // 3. 미선택 (신규 생성 대기 모드): 현재 UI에서 선택된 생성 대상 타입(selectedNodeType)이 Screen인지 판별
+  // 1. 다중 노드 타입 변경 드래프트 중인 경우 해당 타입 기준으로 판별
+  // 2. 선택된 Flow Node 대상 평가 (Figma native object는 capability 평가에서 제외):
+  //    - 모든 Flow Node가 지원 -> Allowed (Enabled / Mixed+Editable)
+  //    - 하나라도 unsupported -> Not allowed (Disabled)
+  // 3. 미선택 (신규 생성 대기 모드): 현재 선택된 생성 대상 타입의 지원 여부 판별
   const isSizeAllowed = (() => {
     if (multiDraft.nodeType !== undefined) {
-      return normalizeNodeType(multiDraft.nodeType) === 'Screen';
+      return supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, 'size');
     }
-    if (selectedNodes.length === 1) {
-      const node = selectedNodes[0];
-      const rawType = node?.flowNodeType || (node?.nodeType === 'FRAME' ? 'Screen' : node?.nodeType);
-      return normalizeNodeType(rawType) === 'Screen';
+    const flowNodes = selectedNodes.filter((n) => n && getNodeCategory(n) !== 'FigmaObject');
+    if (flowNodes.length === 1) {
+      return supportsOption(flowNodes[0], 'size');
     }
-    if (selectedNodes.length > 1) {
-      if (summary.isMultiFlowNode) {
-        return !summary.nodeType.isMixed && normalizeNodeType(summary.nodeType.value) === 'Screen';
-      }
-      return selectedNodes.every((n) => {
-        const rawType = n?.flowNodeType || (n?.nodeType === 'FRAME' ? 'Screen' : n?.nodeType);
-        return normalizeNodeType(rawType) === 'Screen';
-      });
+    if (flowNodes.length > 1) {
+      return flowNodes.every((n) => supportsOption(n, 'size'));
+    }
+    if (selectedNodes.length > 0) {
+      // Flow Node가 0개인데 선택된 객체가 있는 경우 (Figma native object 또는 커넥터만 선택됨)
+      return false;
     }
     const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
-    return normalizeNodeType(creationType) === 'Screen';
+    return supportsOption({ flowNodeType: creationType, isFlowNode: true }, 'size');
   })();
 
   // 1. 파생 상태 선언 (핸들러 및 Effect보다 먼저 선언)
@@ -187,7 +188,7 @@ export function SizeSection() {
   const sizePresetCounts = React.useMemo(() => {
     if (!isSizeMixed) return {};
     const counts: Record<string, number> = {};
-    const flowNodes = selectedNodes.filter((n) => n && n.isFlowNode && !n.isConnector);
+    const flowNodes = selectedNodes.filter((n) => n && getNodeCategory(n) !== 'FigmaObject');
     for (const n of flowNodes) {
       const matched = sizePresets.find((p) => p.w === n.width && p.h === n.height);
       if (matched) {

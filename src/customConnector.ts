@@ -58,11 +58,10 @@ export function terminalToStrokeCap(terminal?: ConnectorTerminalType): StrokeCap
     case 'CIRCLE':
       return 'CIRCLE_FILLED';
     case 'DIAMOND':
-    case 'SQUARE':
-    case 'BAR':
+      return 'DIAMOND_FILLED';
     case 'NONE':
     default:
-      return 'ROUND';
+      return 'NONE';
   }
 }
 
@@ -160,7 +159,7 @@ export function calculateRoutingPoints(
   }
 }
 
-// 라우팅 타입별 및 단자 형태별 버텍스와 세그먼트 생성 (SQUARE 사각형 박스, BAR 막대 커스텀 지오메트리 및 Fill 지원)
+// 라우팅 타입별 및 단자 형태별 버텍스와 세그먼트 생성 (Circle, Diamond, Arrow는 피그마 네이티브 StrokeCap 지원)
 export function buildVectorNetwork(
   localPoints: Point[],
   routingType: ConnectorRoutingType = 'ORTHOGONAL',
@@ -227,152 +226,6 @@ export function buildVectorNetwork(
   }
 
   const regions: VectorRegion[] = [];
-  // ★ [크기 영구 고정 규칙 - 임의 변경 금지]
-  // BAR 길이: strokeWeight 1.5 기준 약 7px
-  const barLen = Math.max(7, Math.round(strokeWeight * 4.8));
-
-  // 1. 시작점 BAR 막대
-  if (len >= 2 && startTerminal === 'BAR') {
-    const p0 = localPoints[0];
-    const p1 = localPoints[1];
-    const d0 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-    if (d0 > 0.1) {
-      const ux = (p1.x - p0.x) / d0;
-      const uy = (p1.y - p0.y) / d0;
-      const nx = -uy;
-      const ny = ux;
-      const vStart = vertices.length;
-      vertices.push(
-        { x: p0.x + (barLen / 2) * nx, y: p0.y + (barLen / 2) * ny, strokeCap: 'ROUND', strokeJoin: 'ROUND', cornerRadius: 0 },
-        { x: p0.x - (barLen / 2) * nx, y: p0.y - (barLen / 2) * ny, strokeCap: 'ROUND', strokeJoin: 'ROUND', cornerRadius: 0 }
-      );
-      segments.push({ start: vStart, end: vStart + 1 });
-    }
-  }
-
-  // 2. 끝점 BAR 막대
-  if (len >= 2 && endTerminal === 'BAR') {
-    const pn = localPoints[len - 1];
-    const prev = localPoints[len - 2];
-    const dn = Math.hypot(pn.x - prev.x, pn.y - prev.y);
-    if (dn > 0.1) {
-      const ux = (pn.x - prev.x) / dn;
-      const uy = (pn.y - prev.y) / dn;
-      const nx = -uy;
-      const ny = ux;
-      const vStart = vertices.length;
-      vertices.push(
-        { x: pn.x + (barLen / 2) * nx, y: pn.y + (barLen / 2) * ny, strokeCap: 'ROUND', strokeJoin: 'ROUND', cornerRadius: 0 },
-        { x: pn.x - (barLen / 2) * nx, y: pn.y - (barLen / 2) * ny, strokeCap: 'ROUND', strokeJoin: 'ROUND', cornerRadius: 0 }
-      );
-      segments.push({ start: vStart, end: vStart + 1 });
-    }
-  }
-
-  // ★ [크기 영구 고정 규칙 - 임의 변경 금지]
-  // SQUARE 한 변 크기: strokeWeight 1.5 기준 6px (6x6px)
-  // 주의: 사각형 내부에 대각선(X자) 세그먼트를 추가하면 피그마에서 면이 뚫리거나 X자 금/구멍처럼 보이므로 외곽 4변만 유지할 것!
-  // 3. 시작점 SQUARE 사각형 박스
-  if (len >= 2 && startTerminal === 'SQUARE') {
-    const p0 = localPoints[0];
-    const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
-    const half = sqSize / 2;
-    const vStart = vertices.length;
-    const sStart = segments.length;
-    vertices.push(
-      { x: p0.x - half, y: p0.y - half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: p0.x + half, y: p0.y - half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: p0.x + half, y: p0.y + half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: p0.x - half, y: p0.y + half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
-    );
-    segments.push(
-      { start: vStart, end: vStart + 1 },
-      { start: vStart + 1, end: vStart + 2 },
-      { start: vStart + 2, end: vStart + 3 },
-      { start: vStart + 3, end: vStart }
-    );
-    regions.push({
-      windingRule: 'NONZERO',
-      loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]],
-    });
-  }
-
-  // 4. 끝점 SQUARE 사각형 박스
-  if (len >= 2 && endTerminal === 'SQUARE') {
-    const pn = localPoints[len - 1];
-    const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
-    const half = sqSize / 2;
-    const vStart = vertices.length;
-    const sStart = segments.length;
-    vertices.push(
-      { x: pn.x - half, y: pn.y - half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: pn.x + half, y: pn.y - half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: pn.x + half, y: pn.y + half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: pn.x - half, y: pn.y + half, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
-    );
-    segments.push(
-      { start: vStart, end: vStart + 1 },
-      { start: vStart + 1, end: vStart + 2 },
-      { start: vStart + 2, end: vStart + 3 },
-      { start: vStart + 3, end: vStart }
-    );
-    regions.push({
-      windingRule: 'NONZERO',
-      loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]],
-    });
-  }
-
-  // ★ [크기 영구 고정 규칙 - 임의 변경 금지]
-  // DIAMOND 반지름: strokeWeight 1.5 기준 약 3.8~4px (대각선 전폭 약 7.6~8px)
-  // SQUARE(6x6px) 및 CIRCLE(직경 6px)과 시각적 부피감이 동등하게 최적화된 수치이므로 절대 임의 변경 금지!
-  // 5. 시작점 DIAMOND 마름모 박스
-  if (len >= 2 && startTerminal === 'DIAMOND') {
-    const p0 = localPoints[0];
-    const diaRadius = Math.max(3.8, Math.round(strokeWeight * 2.6));
-    const vStart = vertices.length;
-    const sStart = segments.length;
-    vertices.push(
-      { x: p0.x, y: p0.y - diaRadius, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: p0.x + diaRadius, y: p0.y, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: p0.x, y: p0.y + diaRadius, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: p0.x - diaRadius, y: p0.y, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
-    );
-    segments.push(
-      { start: vStart, end: vStart + 1 },
-      { start: vStart + 1, end: vStart + 2 },
-      { start: vStart + 2, end: vStart + 3 },
-      { start: vStart + 3, end: vStart }
-    );
-    regions.push({
-      windingRule: 'NONZERO',
-      loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]],
-    });
-  }
-
-  // 6. 끝점 DIAMOND 마름모 박스
-  if (len >= 2 && endTerminal === 'DIAMOND') {
-    const pn = localPoints[len - 1];
-    const diaRadius = Math.max(3.8, Math.round(strokeWeight * 2.6));
-    const vStart = vertices.length;
-    const sStart = segments.length;
-    vertices.push(
-      { x: pn.x, y: pn.y - diaRadius, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: pn.x + diaRadius, y: pn.y, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: pn.x, y: pn.y + diaRadius, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 },
-      { x: pn.x - diaRadius, y: pn.y, strokeCap: 'NONE', strokeJoin: 'MITER', cornerRadius: 0 }
-    );
-    segments.push(
-      { start: vStart, end: vStart + 1 },
-      { start: vStart + 1, end: vStart + 2 },
-      { start: vStart + 2, end: vStart + 3 },
-      { start: vStart + 3, end: vStart }
-    );
-    regions.push({
-      windingRule: 'NONZERO',
-      loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]],
-    });
-  }
-
   return { vertices, segments, regions };
 }
 
@@ -731,14 +584,10 @@ export async function createOrthogonalVectorConnector(
   const endTerminal = options.endTerminal || 'ARROW';
   const strokePattern = options.strokePattern || 'SOLID';
 
-  // 마커가 노드 보더라인 중심에 걸치도록 Bounding Box 여백(pad) 확보
-  const hasSquare = startTerminal === 'SQUARE' || endTerminal === 'SQUARE' || startTerminal === 'BAR' || endTerminal === 'BAR';
-  const pad = hasSquare ? Math.max(5, Math.round(strokeWeight * 3)) : 0;
-
-  const minX = Math.min(...allX) - pad;
-  const minY = Math.min(...allY) - pad;
-  const maxX = Math.max(...allX) + pad;
-  const maxY = Math.max(...allY) + pad;
+  const minX = Math.min(...allX);
+  const minY = Math.min(...allY);
+  const maxX = Math.max(...allX);
+  const maxY = Math.max(...allY);
 
   // 최소 1px 크기 보장 (1자 직선일 때 width/height가 0이 되는 현상 방지)
   const width = Math.max(maxX - minX, 1);
@@ -755,8 +604,8 @@ export async function createOrthogonalVectorConnector(
   vector.y = minY;
   vector.resize(width, height);
 
-  // 라우팅 타입 및 단자 형태별 버텍스와 세그먼트 구성 (SQUARE, BAR 등 커스텀 단자 포함)
-  const { vertices, segments, regions } = buildVectorNetwork(
+  // Circle, Diamond, Arrow 단자는 피그마 네이티브 StrokeCap으로 단일 VectorNode에 직접 렌더링
+  const net = buildVectorNetwork(
     localPoints,
     routingType,
     startTerminal,
@@ -764,16 +613,11 @@ export async function createOrthogonalVectorConnector(
     strokeWeight,
     strokeColor
   );
-
-  await vector.setVectorNetworkAsync({ vertices, segments, regions });
+  await vector.setVectorNetworkAsync(net);
 
   vector.strokes = [{ type: 'SOLID', color: strokeColor }];
   vector.strokeWeight = strokeWeight;
-  if (regions.length > 0) {
-    vector.fills = [{ type: 'SOLID', color: strokeColor }];
-  } else {
-    vector.fills = [];
-  }
+  vector.fills = [];
   if (strokePattern === 'DASHED') {
     vector.dashPattern = [4, 4];
   } else if (strokePattern === 'DOTTED') {
@@ -791,6 +635,7 @@ export async function createOrthogonalVectorConnector(
   // 플러그인 메타데이터 보존
   vector.setPluginData('is_flow_connector', 'true');
   vector.setPluginData('is_custom_connector', 'true');
+  vector.setPluginData('connector_role', 'line');
   vector.setPluginData('source_node_id', sourceNode.id);
   vector.setPluginData('target_node_id', targetNode.id);
   vector.setPluginData('source_magnet', sourceMagnet);
@@ -874,7 +719,6 @@ export async function createOrthogonalVectorConnector(
     figma.currentPage.appendChild(group); // 최상위 레이어로 올려 노드 뒤에 가려짐 방지
     group.name = vector.name;
     copyConnectorData(vector, group);
-
     registerConnectorInRegistry(group);
     return group;
   }
@@ -1125,11 +969,17 @@ export async function updateOrthogonalVectorConnector(
 
   // VectorNode 및 라벨 탐색
   let vector: VectorNode | null = null;
+  let termVector: VectorNode | null = null;
   let labelFrame: FrameNode | null = null;
 
   if (rootNode.type === 'GROUP') {
     const group = rootNode as GroupNode;
-    vector = (group.children.find((c) => c.type === 'VECTOR') as VectorNode) || null;
+    const isTerm = (c: SceneNode) =>
+      c.type === 'VECTOR' &&
+      (safeGetPluginData(c, 'connector_role') === 'terminal' || c.name === 'ConnectorTerminals');
+    vector = (group.children.find((c) => c.type === 'VECTOR' && !isTerm(c)) as VectorNode) ||
+             (group.children.find((c) => c.type === 'VECTOR') as VectorNode) || null;
+    termVector = (group.children.find(isTerm) as VectorNode) || null;
     labelFrame =
       (group.children.find(
         (c) => safeGetPluginData(c, 'is_connector_label') === 'true' || c.name === 'ConnectorLabel'
@@ -1237,18 +1087,10 @@ export async function updateOrthogonalVectorConnector(
     strokeColor = vector.strokes[0].color;
   }
 
-  // 마커가 노드 보더라인 중심에 걸치도록 Bounding Box 여백(pad) 확보
-  const hasBarOrSquare =
-    startTerminal === 'BAR' ||
-    endTerminal === 'BAR' ||
-    startTerminal === 'SQUARE' ||
-    endTerminal === 'SQUARE';
-  const pad = hasBarOrSquare ? Math.max(5, Math.round(strokeWeight * 3.5)) : 0;
-
-  const minX = Math.min(...allX) - pad;
-  const minY = Math.min(...allY) - pad;
-  const maxX = Math.max(...allX) + pad;
-  const maxY = Math.max(...allY) + pad;
+  const minX = Math.min(...allX);
+  const minY = Math.min(...allY);
+  const maxX = Math.max(...allX);
+  const maxY = Math.max(...allY);
 
   const width = Math.max(maxX - minX, 1);
   const height = Math.max(maxY - minY, 1);
@@ -1261,8 +1103,17 @@ export async function updateOrthogonalVectorConnector(
   vector.x = minX;
   vector.y = minY;
   vector.resize(width, height);
+  vector.setPluginData('connector_role', 'line');
 
-  // 라우팅 타입 및 단자 형태별 버텍스와 세그먼트 구성 (SQUARE, BAR 등 커스텀 단자 모두 벡터에 직접 포함)
+  // 과거 생성된 별도 단자 벡터(ConnectorTerminals)가 남아있다면 네이티브 Cap 통합에 따라 제거
+  if (termVector) {
+    try {
+      termVector.remove();
+    } catch (_) {}
+    termVector = null;
+  }
+
+  // Circle, Diamond, Arrow 단자는 피그마 네이티브 StrokeCap으로 단일 VectorNode에 렌더링
   const { vertices, segments, regions } = buildVectorNetwork(
     localPoints,
     routingType,
@@ -1273,12 +1124,7 @@ export async function updateOrthogonalVectorConnector(
   );
 
   await vector.setVectorNetworkAsync({ vertices, segments, regions });
-
-  if (regions.length > 0) {
-    vector.fills = [{ type: 'SOLID', color: strokeColor }];
-  } else {
-    vector.fills = [];
-  }
+  vector.fills = [];
   vector.strokeJoin = routingType === 'S_CURVE' || routingType === 'CURVED' ? 'ROUND' : 'MITER';
   if (routingType === 'STRAIGHT') {
     vector.strokeCap = 'ROUND';

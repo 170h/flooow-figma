@@ -252,11 +252,10 @@
       case "CIRCLE":
         return "CIRCLE_FILLED";
       case "DIAMOND":
-      case "SQUARE":
-      case "BAR":
+        return "DIAMOND_FILLED";
       case "NONE":
       default:
-        return "ROUND";
+        return "NONE";
     }
   }
   function getMagnetDirectionVector(magnet) {
@@ -368,131 +367,6 @@
       segments.push({ start: i, end: i + 1 });
     }
     const regions = [];
-    const barLen = Math.max(7, Math.round(strokeWeight * 4.8));
-    if (len >= 2 && startTerminal === "BAR") {
-      const p0 = localPoints[0];
-      const p1 = localPoints[1];
-      const d0 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-      if (d0 > 0.1) {
-        const ux = (p1.x - p0.x) / d0;
-        const uy = (p1.y - p0.y) / d0;
-        const nx = -uy;
-        const ny = ux;
-        const vStart = vertices.length;
-        vertices.push(
-          { x: p0.x + barLen / 2 * nx, y: p0.y + barLen / 2 * ny, strokeCap: "ROUND", strokeJoin: "ROUND", cornerRadius: 0 },
-          { x: p0.x - barLen / 2 * nx, y: p0.y - barLen / 2 * ny, strokeCap: "ROUND", strokeJoin: "ROUND", cornerRadius: 0 }
-        );
-        segments.push({ start: vStart, end: vStart + 1 });
-      }
-    }
-    if (len >= 2 && endTerminal === "BAR") {
-      const pn = localPoints[len - 1];
-      const prev = localPoints[len - 2];
-      const dn = Math.hypot(pn.x - prev.x, pn.y - prev.y);
-      if (dn > 0.1) {
-        const ux = (pn.x - prev.x) / dn;
-        const uy = (pn.y - prev.y) / dn;
-        const nx = -uy;
-        const ny = ux;
-        const vStart = vertices.length;
-        vertices.push(
-          { x: pn.x + barLen / 2 * nx, y: pn.y + barLen / 2 * ny, strokeCap: "ROUND", strokeJoin: "ROUND", cornerRadius: 0 },
-          { x: pn.x - barLen / 2 * nx, y: pn.y - barLen / 2 * ny, strokeCap: "ROUND", strokeJoin: "ROUND", cornerRadius: 0 }
-        );
-        segments.push({ start: vStart, end: vStart + 1 });
-      }
-    }
-    if (len >= 2 && startTerminal === "SQUARE") {
-      const p0 = localPoints[0];
-      const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
-      const half = sqSize / 2;
-      const vStart = vertices.length;
-      const sStart = segments.length;
-      vertices.push(
-        { x: p0.x - half, y: p0.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: p0.x + half, y: p0.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: p0.x + half, y: p0.y + half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: p0.x - half, y: p0.y + half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
-      );
-      segments.push(
-        { start: vStart, end: vStart + 1 },
-        { start: vStart + 1, end: vStart + 2 },
-        { start: vStart + 2, end: vStart + 3 },
-        { start: vStart + 3, end: vStart }
-      );
-      regions.push({
-        windingRule: "NONZERO",
-        loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]]
-      });
-    }
-    if (len >= 2 && endTerminal === "SQUARE") {
-      const pn = localPoints[len - 1];
-      const sqSize = Math.max(6, Math.round(strokeWeight * 3.5));
-      const half = sqSize / 2;
-      const vStart = vertices.length;
-      const sStart = segments.length;
-      vertices.push(
-        { x: pn.x - half, y: pn.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: pn.x + half, y: pn.y - half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: pn.x + half, y: pn.y + half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: pn.x - half, y: pn.y + half, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
-      );
-      segments.push(
-        { start: vStart, end: vStart + 1 },
-        { start: vStart + 1, end: vStart + 2 },
-        { start: vStart + 2, end: vStart + 3 },
-        { start: vStart + 3, end: vStart }
-      );
-      regions.push({
-        windingRule: "NONZERO",
-        loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]]
-      });
-    }
-    if (len >= 2 && startTerminal === "DIAMOND") {
-      const p0 = localPoints[0];
-      const diaRadius = Math.max(3.8, Math.round(strokeWeight * 2.6));
-      const vStart = vertices.length;
-      const sStart = segments.length;
-      vertices.push(
-        { x: p0.x, y: p0.y - diaRadius, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: p0.x + diaRadius, y: p0.y, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: p0.x, y: p0.y + diaRadius, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: p0.x - diaRadius, y: p0.y, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
-      );
-      segments.push(
-        { start: vStart, end: vStart + 1 },
-        { start: vStart + 1, end: vStart + 2 },
-        { start: vStart + 2, end: vStart + 3 },
-        { start: vStart + 3, end: vStart }
-      );
-      regions.push({
-        windingRule: "NONZERO",
-        loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]]
-      });
-    }
-    if (len >= 2 && endTerminal === "DIAMOND") {
-      const pn = localPoints[len - 1];
-      const diaRadius = Math.max(3.8, Math.round(strokeWeight * 2.6));
-      const vStart = vertices.length;
-      const sStart = segments.length;
-      vertices.push(
-        { x: pn.x, y: pn.y - diaRadius, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: pn.x + diaRadius, y: pn.y, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: pn.x, y: pn.y + diaRadius, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 },
-        { x: pn.x - diaRadius, y: pn.y, strokeCap: "NONE", strokeJoin: "MITER", cornerRadius: 0 }
-      );
-      segments.push(
-        { start: vStart, end: vStart + 1 },
-        { start: vStart + 1, end: vStart + 2 },
-        { start: vStart + 2, end: vStart + 3 },
-        { start: vStart + 3, end: vStart }
-      );
-      regions.push({
-        windingRule: "NONZERO",
-        loops: [[sStart, sStart + 1, sStart + 2, sStart + 3]]
-      });
-    }
     return { vertices, segments, regions };
   }
   function getLabelCenterPoint(worldPoints, routingType = "ORTHOGONAL") {
@@ -718,12 +592,10 @@
     const startTerminal = options.startTerminal || "NONE";
     const endTerminal = options.endTerminal || "ARROW";
     const strokePattern = options.strokePattern || "SOLID";
-    const hasSquare = startTerminal === "SQUARE" || endTerminal === "SQUARE" || startTerminal === "BAR" || endTerminal === "BAR";
-    const pad = hasSquare ? Math.max(5, Math.round(strokeWeight * 3)) : 0;
-    const minX = Math.min(...allX) - pad;
-    const minY = Math.min(...allY) - pad;
-    const maxX = Math.max(...allX) + pad;
-    const maxY = Math.max(...allY) + pad;
+    const minX = Math.min(...allX);
+    const minY = Math.min(...allY);
+    const maxX = Math.max(...allX);
+    const maxY = Math.max(...allY);
     const width = Math.max(maxX - minX, 1);
     const height = Math.max(maxY - minY, 1);
     const localPoints = worldPoints.map((p) => ({
@@ -734,7 +606,7 @@
     vector.x = minX;
     vector.y = minY;
     vector.resize(width, height);
-    const { vertices, segments, regions } = buildVectorNetwork(
+    const net = buildVectorNetwork(
       localPoints,
       routingType,
       startTerminal,
@@ -742,14 +614,10 @@
       strokeWeight,
       strokeColor
     );
-    await vector.setVectorNetworkAsync({ vertices, segments, regions });
+    await vector.setVectorNetworkAsync(net);
     vector.strokes = [{ type: "SOLID", color: strokeColor }];
     vector.strokeWeight = strokeWeight;
-    if (regions.length > 0) {
-      vector.fills = [{ type: "SOLID", color: strokeColor }];
-    } else {
-      vector.fills = [];
-    }
+    vector.fills = [];
     if (strokePattern === "DASHED") {
       vector.dashPattern = [4, 4];
     } else if (strokePattern === "DOTTED") {
@@ -765,6 +633,7 @@
     vector.name = `[Connector] ${sourceNode.name} \u2192 ${targetNode.name}`;
     vector.setPluginData("is_flow_connector", "true");
     vector.setPluginData("is_custom_connector", "true");
+    vector.setPluginData("connector_role", "line");
     vector.setPluginData("source_node_id", sourceNode.id);
     vector.setPluginData("target_node_id", targetNode.id);
     vector.setPluginData("source_magnet", sourceMagnet);
@@ -983,10 +852,13 @@
     const targetNode = figma.getNodeById(tgtId);
     if (!sourceNode || !targetNode) return;
     let vector = null;
+    let termVector = null;
     let labelFrame = null;
     if (rootNode.type === "GROUP") {
       const group = rootNode;
-      vector = group.children.find((c) => c.type === "VECTOR") || null;
+      const isTerm = (c) => c.type === "VECTOR" && (safeGetPluginData(c, "connector_role") === "terminal" || c.name === "ConnectorTerminals");
+      vector = group.children.find((c) => c.type === "VECTOR" && !isTerm(c)) || group.children.find((c) => c.type === "VECTOR") || null;
+      termVector = group.children.find(isTerm) || null;
       labelFrame = group.children.find(
         (c) => safeGetPluginData(c, "is_connector_label") === "true" || c.name === "ConnectorLabel"
       ) || null;
@@ -1054,12 +926,10 @@
     if (Array.isArray(vector.strokes) && vector.strokes.length > 0 && vector.strokes[0].type === "SOLID") {
       strokeColor = vector.strokes[0].color;
     }
-    const hasBarOrSquare = startTerminal === "BAR" || endTerminal === "BAR" || startTerminal === "SQUARE" || endTerminal === "SQUARE";
-    const pad = hasBarOrSquare ? Math.max(5, Math.round(strokeWeight * 3.5)) : 0;
-    const minX = Math.min(...allX) - pad;
-    const minY = Math.min(...allY) - pad;
-    const maxX = Math.max(...allX) + pad;
-    const maxY = Math.max(...allY) + pad;
+    const minX = Math.min(...allX);
+    const minY = Math.min(...allY);
+    const maxX = Math.max(...allX);
+    const maxY = Math.max(...allY);
     const width = Math.max(maxX - minX, 1);
     const height = Math.max(maxY - minY, 1);
     const localPoints = worldPoints.map((p) => ({
@@ -1069,6 +939,14 @@
     vector.x = minX;
     vector.y = minY;
     vector.resize(width, height);
+    vector.setPluginData("connector_role", "line");
+    if (termVector) {
+      try {
+        termVector.remove();
+      } catch (_) {
+      }
+      termVector = null;
+    }
     const { vertices, segments, regions } = buildVectorNetwork(
       localPoints,
       routingType,
@@ -1078,11 +956,7 @@
       strokeColor
     );
     await vector.setVectorNetworkAsync({ vertices, segments, regions });
-    if (regions.length > 0) {
-      vector.fills = [{ type: "SOLID", color: strokeColor }];
-    } else {
-      vector.fills = [];
-    }
+    vector.fills = [];
     vector.strokeJoin = routingType === "S_CURVE" || routingType === "CURVED" ? "ROUND" : "MITER";
     if (routingType === "STRAIGHT") {
       vector.strokeCap = "ROUND";
@@ -1203,6 +1077,13 @@
   function rgbToHexColor(rgb) {
     const toHex = (c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, "0");
     return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`.toUpperCase();
+  }
+  function normalizeConnectorTerminal(term, defaultTerm = "NONE") {
+    if (!term || term === "BAR" || term === "SQUARE") return defaultTerm;
+    if (term === "ARROW" || term === "CIRCLE" || term === "DIAMOND" || term === "NONE" || term === "MIXED" || term === "TRIANGLE_ARROW" || term === "REVERSED_TRIANGLE_ARROW") {
+      return term;
+    }
+    return defaultTerm;
   }
   figma.showUI(__html__, {
     width: 360,
@@ -2314,8 +2195,6 @@
           }
           const mapCapToTerm = (cap) => {
             const upper = String(cap || "").toUpperCase();
-            if (upper.includes("BAR") || upper.includes("EXACTLY_ONE")) return "BAR";
-            if (upper.includes("SQUARE")) return "SQUARE";
             if (upper.includes("REVERSED_TRIANGLE")) return "REVERSED_TRIANGLE_ARROW";
             if (upper.includes("TRIANGLE") || upper.includes("ARROW") || upper.includes("EQUILATERAL")) return "ARROW";
             if (upper.includes("DIAMOND")) return "DIAMOND";
@@ -2324,8 +2203,8 @@
           };
           const savedStartTerm = node.getPluginData("start_terminal");
           const savedEndTerm = node.getPluginData("end_terminal");
-          connectorStartTerminal = savedStartTerm || mapCapToTerm(String(conn.connectorStartStrokeCap || "NONE"));
-          connectorEndTerminal = savedEndTerm || mapCapToTerm(String(conn.connectorEndStrokeCap || "NONE"));
+          connectorStartTerminal = normalizeConnectorTerminal(savedStartTerm, mapCapToTerm(String(conn.connectorStartStrokeCap || "NONE")));
+          connectorEndTerminal = normalizeConnectorTerminal(savedEndTerm, mapCapToTerm(String(conn.connectorEndStrokeCap || "ARROW")));
           const rawStartOff = node.getPluginData("start_offset");
           const rawEndOff = node.getPluginData("end_offset");
           connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
@@ -2401,8 +2280,8 @@
           const savedWeight = node.getPluginData("connector_weight");
           connectorStrokeWeight = savedWeight ? parseFloat(savedWeight) : void 0;
           connectorStrokePattern = node.getPluginData("connector_pattern") || "SOLID";
-          connectorStartTerminal = node.getPluginData("start_terminal") || "NONE";
-          connectorEndTerminal = node.getPluginData("end_terminal") || "ARROW";
+          connectorStartTerminal = normalizeConnectorTerminal(node.getPluginData("start_terminal"), "NONE");
+          connectorEndTerminal = normalizeConnectorTerminal(node.getPluginData("end_terminal"), "ARROW");
           const rawStartOff = node.getPluginData("start_offset");
           const rawEndOff = node.getPluginData("end_offset");
           connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
@@ -4199,7 +4078,11 @@
         card.setPluginData("node_elevation", "");
         card.effects = [];
       }
-      figma.currentPage.selection = [card];
+      const currentSel = figma.currentPage.selection;
+      const isAlreadyOnlySelected = currentSel.length === 1 && currentSel[0].id === card.id;
+      if (!isAlreadyOnlySelected) {
+        figma.currentPage.selection = [card];
+      }
       handleSelectionChange();
       notify(`[${title}] \uB178\uB4DC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, "success");
     } catch (err) {
@@ -4269,8 +4152,9 @@
           isBgDark: isDark
         } : getTextFillsByBackground(bgColor, isDark);
         const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
+        const vectorPathData = getShapeVectorData(nodeType, card.width, card.height);
         if (patch.colorHex !== void 0) {
-          if (isShapeNode) {
+          if (vectorPathData) {
             card.fills = [];
           } else if (isFillNone) {
             card.fills = [];
@@ -4280,6 +4164,11 @@
         }
         if (card.layoutMode !== "VERTICAL") {
           card.layoutMode = "VERTICAL";
+        }
+        card.counterAxisAlignItems = isShapeNode ? "CENTER" : "MIN";
+        card.primaryAxisAlignItems = isShapeNode ? "CENTER" : "MIN";
+        if (isShapeNode) {
+          card.itemSpacing = 0;
         }
         let existingStrokeWeight = 1.5;
         let existingStrokeColor = null;
@@ -4301,7 +4190,7 @@
         let cardStrokeWeight = existingStrokeWeight;
         if (patch.strokeWeight !== void 0 || patch.strokeColor !== void 0) {
           cardStrokeWeight = patch.strokeWeight !== void 0 ? clampStrokeWeight(patch.strokeWeight) : cardStrokeWeight;
-          if (!isShapeNode) {
+          if (!vectorPathData) {
             if (cardStrokeWeight === 0) {
               card.strokes = [];
             } else {
@@ -4377,52 +4266,77 @@
         card.paddingTop = pt;
         const hasBottomBar = Boolean(safeGetPluginData2(card, "workflow_status") || patch.status || safeGetPluginData2(card, "figma_link") || patch.figmaLink);
         card.paddingBottom = hasBottomBar ? 36 : isShapeNode ? 12 : 16;
-        let headerRow = card.children.find(isHeaderFrame);
-        let titleText;
-        if (headerRow) {
-          titleText = headerRow.children.find((c) => c.type === "TEXT");
-        }
-        if (!headerRow) {
-          headerRow = figma.createFrame();
-          headerRow.name = "Header";
-          headerRow.fills = [];
-          headerRow.layoutMode = "VERTICAL";
-          headerRow.layoutAlign = "STRETCH";
-          headerRow.primaryAxisSizingMode = "AUTO";
-          headerRow.counterAxisSizingMode = "AUTO";
-          headerRow.primaryAxisAlignItems = "MIN";
-          headerRow.counterAxisAlignItems = "MIN";
-          headerRow.itemSpacing = 0;
-          headerRow.paddingLeft = 0;
-          headerRow.paddingRight = 0;
-          headerRow.paddingTop = 0;
-          headerRow.paddingBottom = 0;
-          card.appendChild(headerRow);
+        let titleText = card.findOne(
+          (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
+        );
+        if (isShapeNode) {
+          const existingHeader = card.children.find(isHeaderFrame);
+          if (existingHeader) {
+            if (!titleText) {
+              titleText = existingHeader.children.find((c) => c.type === "TEXT");
+            }
+            if (titleText && titleText.parent === existingHeader) {
+              card.appendChild(titleText);
+            }
+            existingHeader.remove();
+          }
+          if (!titleText) {
+            titleText = figma.createText();
+            titleText.name = "TitleText";
+            titleText.fontName = { family: "Inter", style: "Bold" };
+            titleText.fontSize = 13;
+            titleText.setPluginData("node_role", "title");
+            card.appendChild(titleText);
+          }
+          titleText.layoutAlign = "STRETCH";
+          titleText.textAlignHorizontal = "CENTER";
+          titleText.textAlignVertical = "CENTER";
+          titleText.lineHeight = { value: 18, unit: "PIXELS" };
+          titleText.textAutoResize = "HEIGHT";
         } else {
-          headerRow.layoutMode = "VERTICAL";
-          headerRow.layoutAlign = "STRETCH";
-          headerRow.primaryAxisSizingMode = "AUTO";
-          headerRow.counterAxisSizingMode = "AUTO";
-          headerRow.paddingLeft = 0;
-          headerRow.paddingRight = 0;
-          headerRow.paddingTop = 0;
-          headerRow.paddingBottom = 0;
+          let headerRow = card.children.find(isHeaderFrame);
+          if (!headerRow) {
+            headerRow = figma.createFrame();
+            headerRow.name = "Header";
+            headerRow.fills = [];
+            headerRow.layoutMode = "VERTICAL";
+            headerRow.layoutAlign = "STRETCH";
+            headerRow.primaryAxisSizingMode = "AUTO";
+            headerRow.counterAxisSizingMode = "AUTO";
+            headerRow.primaryAxisAlignItems = "MIN";
+            headerRow.counterAxisAlignItems = "MIN";
+            headerRow.itemSpacing = 0;
+            headerRow.paddingLeft = 0;
+            headerRow.paddingRight = 0;
+            headerRow.paddingTop = 0;
+            headerRow.paddingBottom = 0;
+            card.appendChild(headerRow);
+          } else {
+            headerRow.layoutMode = "VERTICAL";
+            headerRow.layoutAlign = "STRETCH";
+            headerRow.primaryAxisSizingMode = "AUTO";
+            headerRow.counterAxisSizingMode = "AUTO";
+            headerRow.paddingLeft = 0;
+            headerRow.paddingRight = 0;
+            headerRow.paddingTop = 0;
+            headerRow.paddingBottom = 0;
+          }
+          if (!titleText) {
+            titleText = figma.createText();
+            titleText.name = "TitleText";
+            titleText.fontName = { family: "Inter", style: "Bold" };
+            titleText.fontSize = 13;
+            titleText.setPluginData("node_role", "title");
+            headerRow.appendChild(titleText);
+          } else if (titleText.parent !== headerRow) {
+            headerRow.appendChild(titleText);
+          }
+          titleText.lineHeight = { value: 18, unit: "PIXELS" };
+          titleText.textAlignHorizontal = "LEFT";
+          titleText.textAlignVertical = "TOP";
+          titleText.layoutAlign = "STRETCH";
+          titleText.textAutoResize = "HEIGHT";
         }
-        if (!titleText) {
-          titleText = figma.createText();
-          titleText.name = "TitleText";
-          titleText.fontName = { family: "Inter", style: "Bold" };
-          titleText.fontSize = 13;
-          titleText.setPluginData("node_role", "title");
-          headerRow.appendChild(titleText);
-        } else if (titleText.parent !== headerRow) {
-          headerRow.appendChild(titleText);
-        }
-        titleText.lineHeight = { value: 18, unit: "PIXELS" };
-        titleText.textAlignHorizontal = isShapeNode ? "CENTER" : "LEFT";
-        titleText.textAlignVertical = "TOP";
-        titleText.layoutAlign = "STRETCH";
-        titleText.textAutoResize = "HEIGHT";
         const prevDesc = safeGetPluginData2(card, "node_desc") || "";
         const existingDescChild = card.children.find(
           (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
@@ -4451,7 +4365,7 @@
           titleText.textAutoResize = "HEIGHT";
           await safeSetCharacters(titleText, effectiveTitle);
         } else {
-          titleText.textAutoResize = "HEIGHT";
+          await safeSetCharacters(titleText, effectiveTitle);
         }
         if (patch.colorHex !== void 0) {
           titleText.fills = [titleFill];
@@ -4955,6 +4869,52 @@
         return;
       }
       await loadRequiredFonts();
+      const targetSourceId = sourceNode.id;
+      const targetDestId = targetNode.id;
+      let existingConnector = null;
+      try {
+        const matchNode = figma.currentPage.findOne((n) => {
+          try {
+            if (!n) return false;
+            if (n.type === "CONNECTOR") {
+              const conn = n;
+              const cSrc = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
+              const cTgt = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
+              return (cSrc === targetSourceId || cSrc === payload.sourceNodeId) && (cTgt === targetDestId || cTgt === payload.targetNodeId);
+            }
+            if (n.type === "GROUP" || n.type === "VECTOR") {
+              const isCustom = safeGetPluginData2(n, "is_custom_connector") === "true" || safeGetPluginData2(n, "is_flow_connector") === "true";
+              if (!isCustom) return false;
+              if (safeGetPluginData2(n, "is_connector_label") === "true" || n.name === "ConnectorLabel") return false;
+              let cSrc = safeGetPluginData2(n, "source_node_id");
+              let cTgt = safeGetPluginData2(n, "target_node_id");
+              if ((!cSrc || !cTgt) && n.type === "GROUP") {
+                const vChild = n.findOne((child) => child.type === "VECTOR");
+                if (vChild) {
+                  cSrc = cSrc || safeGetPluginData2(vChild, "source_node_id");
+                  cTgt = cTgt || safeGetPluginData2(vChild, "target_node_id");
+                }
+              }
+              return (cSrc === targetSourceId || cSrc === payload.sourceNodeId) && (cTgt === targetDestId || cTgt === payload.targetNodeId);
+            }
+            return false;
+          } catch (_) {
+            return false;
+          }
+        });
+        if (matchNode) {
+          existingConnector = findConnectorNode(matchNode) || matchNode;
+        }
+      } catch (err) {
+        console.warn("\uAE30\uC874 \uCEE4\uB125\uD130 \uD0D0\uC0C9 \uC911 \uC624\uB958 (\uC0DD\uC131 \uACC4\uC18D \uC9C4\uD589):", err);
+      }
+      if (existingConnector && existingConnector.id !== sourceNode.id && existingConnector.id !== targetNode.id) {
+        try {
+          existingConnector.remove();
+        } catch (err) {
+          console.warn("\uAE30\uC874 \uCEE4\uB125\uD130 \uC81C\uAC70 \uC2E4\uD328:", err);
+        }
+      }
       const connector = await createSingleConnector(
         sourceNode,
         payload.sourceMagnet,
@@ -5160,8 +5120,8 @@
             const strokeWeight = typeof payload.strokeWeight === "number" ? payload.strokeWeight : typeof conn.strokeWeight === "number" ? conn.strokeWeight : 1.5;
             const strokePattern = payload.strokePattern || (Array.isArray(conn.dashPattern) && conn.dashPattern.length > 0 ? conn.dashPattern[0] <= 2 ? "DOTTED" : "DASHED" : "SOLID");
             const routingType = payload.routingType || (conn.connectorLineType === "STRAIGHT" ? "STRAIGHT" : "ORTHOGONAL");
-            const startTerm = effectiveStartTerm && effectiveStartTerm !== "MIXED" ? effectiveStartTerm : conn.getPluginData("start_terminal") || "NONE";
-            const endTerm = effectiveEndTerm && effectiveEndTerm !== "MIXED" ? effectiveEndTerm : conn.getPluginData("end_terminal") || "ARROW";
+            const startTerm = effectiveStartTerm && effectiveStartTerm !== "MIXED" ? effectiveStartTerm : normalizeConnectorTerminal(conn.getPluginData("start_terminal"), "NONE");
+            const endTerm = effectiveEndTerm && effectiveEndTerm !== "MIXED" ? effectiveEndTerm : normalizeConnectorTerminal(conn.getPluginData("end_terminal"), "ARROW");
             const label = payload.hasLabel && payload.label !== void 0 ? payload.label.trim() : conn.text ? conn.text.characters : "";
             const sourceMag = effectiveStartMagnet || (conn.connectorStart && "magnet" in conn.connectorStart ? conn.connectorStart.magnet : "RIGHT");
             const targetMag = effectiveEndMagnet || (conn.connectorEnd && "magnet" in conn.connectorEnd ? conn.connectorEnd.magnet : "LEFT");
@@ -5215,15 +5175,12 @@
           switch (term) {
             case "ARROW":
             case "TRIANGLE_ARROW":
+            case "REVERSED_TRIANGLE_ARROW":
               return "ARROW_LINES";
-            case "BAR":
-              return "ERD_EXACTLY_ONE";
             case "DIAMOND":
               return "DIAMOND_FILLED";
             case "CIRCLE":
               return "CIRCLE_FILLED";
-            case "SQUARE":
-              return "TRIANGLE_FILLED";
             default:
               return "NONE";
           }
@@ -5257,10 +5214,14 @@
         }
       } else {
         let vectorNode = null;
+        let termVectorNode = null;
         if (connectorRootNode.type === "VECTOR") {
           vectorNode = connectorRootNode;
-        } else if ("findOne" in connectorRootNode) {
-          vectorNode = connectorRootNode.findOne((n) => n.type === "VECTOR");
+        } else if (connectorRootNode.type === "GROUP") {
+          const group = connectorRootNode;
+          const isTerm = (c) => c.type === "VECTOR" && (safeGetPluginData2(c, "connector_role") === "terminal" || c.name === "ConnectorTerminals");
+          vectorNode = group.children.find((c) => c.type === "VECTOR" && !isTerm(c)) || group.children.find((c) => c.type === "VECTOR") || null;
+          termVectorNode = group.children.find(isTerm) || null;
         }
         const rgb = payload.colorHex ? hexToRgbColor(payload.colorHex) : void 0;
         if (vectorNode) {
@@ -5279,6 +5240,14 @@
               vectorNode.dashPattern = [];
             }
           }
+          vectorNode.setPluginData("connector_role", "line");
+        }
+        if (termVectorNode) {
+          try {
+            termVectorNode.remove();
+          } catch (_) {
+          }
+          termVectorNode = null;
         }
         let labelFrame = null;
         if (connectorRootNode.type === "GROUP") {
@@ -6217,6 +6186,7 @@
   figma.on("documentchange", async (event) => {
     const movedNodeIds = /* @__PURE__ */ new Set();
     let connectorSelectionChanged = false;
+    let flowNodePropertyChanged = false;
     let shouldUpdateSelectionOnMove = false;
     for (const change of event.documentChanges) {
       if (change.type === "CREATE") {
@@ -6489,6 +6459,16 @@
             }
           }
         }
+        if (change.properties.includes("fills") || change.properties.includes("strokes") || change.properties.includes("strokeWeight")) {
+          const changedNode = figma.getNodeById(change.id);
+          const flowNode = changedNode ? findFlowNode(changedNode) : null;
+          if (flowNode) {
+            const currentSelection = figma.currentPage.selection;
+            if (currentSelection.some((sel) => sel.id === flowNode.id)) {
+              flowNodePropertyChanged = true;
+            }
+          }
+        }
       }
     }
     if (movedNodeIds.size > 0) {
@@ -6496,7 +6476,7 @@
       if (shouldUpdateSelectionOnMove) {
         handleSelectionChange();
       }
-    } else if (connectorSelectionChanged) {
+    } else if (connectorSelectionChanged || flowNodePropertyChanged) {
       handleSelectionChange();
     }
   });

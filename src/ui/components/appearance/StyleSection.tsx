@@ -2,12 +2,25 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useApp, StylePreset } from "../../context/AppContext";
 import { useSelectionSummary } from "../../hooks/useSelectionSummary";
 import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
+import { normalizeNodeType } from "../../../types";
 
 /**
  * 기본 스타일 프리셋 ID 목록 (첫 번째: 흰색 + 1.5px 블랙 보더, 두 번째: 블랙 + 0px 보더)
  * 기본 스타일은 수정 및 삭제가 불가능하여 More(···) 버튼이 비활성화됩니다.
  */
 const DEFAULT_STYLE_PRESET_IDS = new Set(["style-white", "style-black"]);
+
+/**
+ * 색상 HEX 문자열 정규화 (소문자, 3자리 확장)
+ */
+function normalizeColorHex(hex?: string): string {
+  if (!hex) return "";
+  const clean = hex.trim().toLowerCase();
+  if (clean.length === 4 && clean.startsWith("#")) {
+    return `#${clean[1]}${clean[1]}${clean[2]}${clean[2]}${clean[3]}${clean[3]}`;
+  }
+  return clean;
+}
 
 /**
  * 피그마 UI3 공식 24×24px 컬러 팔레트 SVG 아이콘
@@ -170,24 +183,52 @@ export function StyleSection() {
     }
   }, [isWeightMixed, effectiveStrokeWeight]);
 
+  // 드래프트 상태 판별 (복수 선택 시 사용자가 새 스타일을 선택했는지 여부)
+  const isStyleDrafted =
+    multiDraft.colorHex !== undefined ||
+    multiDraft.strokeWeight !== undefined ||
+    multiDraft.strokeColor !== undefined;
+
+  // 선택된 노드 중 Shape 노드(Screen이 아닌 도형) 포함 여부 판별
+  const hasShapeNode = selectedNodes.some(
+    (n) =>
+      normalizeNodeType(
+        n?.flowNodeType ||
+          (n?.nodeType === "FRAME" ? "Screen" : n?.nodeType),
+      ) !== "Screen",
+  );
+
   // 다중 노드 선택 시 전체 스타일 Mixed 여부 판별
+  // 사용자가 새 스타일을 드래프트 선택한 경우에는 Mixed가 해제됨
   const isNodeColorMixed =
+    !isStyleDrafted &&
     summary.isMultiFlowNode &&
     (summary.color.isMixed ||
-      summary.strokeWeight.isMixed ||
-      summary.strokeColor.isMixed);
+      (!hasShapeNode &&
+        (summary.strokeWeight.isMixed || summary.strokeColor.isMixed)));
 
   // 현재 선택된 컬러 및 보더와 일치하는 프리셋 탐색
   const activeStylePreset = isNodeColorMixed
     ? undefined
     : stylePresets.find((p) => {
-        const matchFill =
-          p.fillColor.toLowerCase() === effectiveFillColor.toLowerCase();
-        if (!matchFill) return false;
+        const pFill = normalizeColorHex(p.fillColor);
+        const effFill = normalizeColorHex(effectiveFillColor);
+        if (pFill !== effFill) return false;
+
+        // Shape 노드가 포함되어 있거나 단일 Shape 노드인 경우
+        if (hasShapeNode) {
+          if (p.strokeWeight === effectiveStrokeWeight) return true;
+          // 검은색/흰색 등 기본 프리셋은 Shape의 stroke 차이와 무관하게 Fill 색상 일치 시 매칭
+          if (pFill === "#000000" || pFill === "#ffffff") {
+            return true;
+          }
+        }
+
         if (p.strokeWeight !== effectiveStrokeWeight) return false;
         if (p.strokeWeight > 0) {
           if (
-            p.strokeColor.toLowerCase() !== effectiveStrokeColor.toLowerCase()
+            normalizeColorHex(p.strokeColor) !==
+            normalizeColorHex(effectiveStrokeColor)
           ) {
             return false;
           }
@@ -513,21 +554,7 @@ export function StyleSection() {
     <div className="section-block">
       {/* 1. 상단 섹션 헤더 */}
       <div className="section-header">
-        <span className="section-title">
-          Style
-          {isNodeColorMixed && (
-            <span
-              style={{
-                fontSize: "11px",
-                color: "var(--figma-color-text-tertiary, #999)",
-                marginLeft: "6px",
-                fontWeight: "normal",
-              }}
-            >
-              (Mixed)
-            </span>
-          )}
-        </span>
+        <span className="section-title">Style</span>
         <div className="section-actions">
           <button
             className="btn-action-icon"
@@ -703,7 +730,11 @@ export function StyleSection() {
         <div className="swatches-grid" id="style-swatches">
           {stylePresets.map((preset) => {
             const isSelected = Boolean(
-              activeStylePreset && activeStylePreset.id === preset.id,
+              (activeStylePreset && activeStylePreset.id === preset.id) ||
+                (isStyleDrafted &&
+                  selectedStylePresetId === preset.id &&
+                  normalizeColorHex(preset.fillColor) ===
+                    normalizeColorHex(effectiveFillColor)),
             );
             const hasBorder = preset.strokeWeight > 0;
             const isPresetFillNone =
