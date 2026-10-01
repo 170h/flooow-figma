@@ -811,11 +811,11 @@ function isHeaderFrame(c: SceneNode): boolean {
 }
 
 // 카드의 전체 내용(헤더 + 패딩 + 설명 텍스트 전체 + 상태 뱃지 여백)을 모두 수용하기 위한 최소 Hug 높이 정밀 산출
-// 피그마 네이티브 오토레이아웃 렌더링 엔진을 Source of Truth로 사용하여 1픽셀의 오차도 없이 일원화
+// 피그마 네이티브 오토레이아웃 렌더링 엔진을 Source of Truth로 사용하여 1픽셀의 오차도 없이 일원화 (최소 49px 보장)
 function calculateCardHugHeight(card: FrameNode, textCharacters?: string): number {
   const isAuto = card.primaryAxisSizingMode === 'AUTO';
   if (isAuto && textCharacters === undefined) {
-    return Math.round(card.height);
+    return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
   }
 
   const prevSizingMode = card.primaryAxisSizingMode;
@@ -854,10 +854,137 @@ function calculateCardHugHeight(card: FrameNode, textCharacters?: string): numbe
       }
     }
 
-    return hugH;
+    return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, hugH);
   } catch (_) {
-    return Math.round(card.height);
+    return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
   }
+}
+
+/**
+ * 텍스트가 줄바꿈 없이 한 줄로 표시될 때의 실제 픽셀 너비를 정확하게 측정합니다.
+ * Figma C++ 코어 엔진이 글리프 메트릭(HarfBuzz)을 계산할 수 있도록 일시적으로 currentPage에 마운트한 후 측정하고 즉시 제거합니다.
+ */
+async function measureSingleLineTextWidth(
+  text: string,
+  fontName: FontName,
+  fontSize: number
+): Promise<number> {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+
+  await figma.loadFontAsync(fontName);
+  const measureNode = figma.createText();
+  // 캔버스 렌더 트리에 마운트하여 글리프 셰이핑과 textAutoResize가 정상 작동하도록 보장
+  measureNode.x = -99999;
+  measureNode.y = -99999;
+  figma.currentPage.appendChild(measureNode);
+
+  try {
+    measureNode.fontName = fontName;
+    measureNode.fontSize = fontSize;
+    measureNode.lineHeight = { value: 18, unit: 'PIXELS' };
+    measureNode.textAutoResize = 'WIDTH_AND_HEIGHT';
+
+    let maxLineW = 0;
+    // 줄바꿈이 있는 경우 각 라인 중 가장 긴 라인의 너비 측정
+    const lines = trimmed.split('\n');
+    for (const line of lines) {
+      const l = line.trim();
+      if (l) {
+        measureNode.characters = l;
+        // 서브픽셀 렌더링 및 Figma 오토레이아웃 줄바꿈 방지를 위해 올림 + 2px 안전 여유분 부여
+        const w = Math.ceil(measureNode.width) + 2;
+        if (w > maxLineW) {
+          maxLineW = w;
+        }
+      }
+    }
+    return maxLineW;
+  } finally {
+    measureNode.remove();
+  }
+}
+
+/**
+ * Screen 노드의 내부 고정/비가변 요소(Status 뱃지, Figma Link 아이콘 등)가
+ * 노드 박스 밖으로 탈출하거나 서로 겹치거나 잘리지 않고 정상 배치되기 위한 최소 너비를 계산합니다.
+ */
+async function calculateMinimumInternalContentWidth(
+  status: string | undefined,
+  figmaLink: string | undefined
+): Promise<number> {
+  const hasStatus = Boolean(status && STATUS_CONFIG[status as WorkflowStatus]);
+  const hasLink = Boolean(figmaLink && figmaLink.trim());
+
+  if (!hasStatus && !hasLink) {
+    return SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
+  }
+
+  let statusBadgeW = 0;
+  if (hasStatus) {
+    const cfg = STATUS_CONFIG[status as WorkflowStatus];
+    const label = (cfg.label || status || '').toUpperCase();
+    const statusFont: FontName = { family: 'Inter', style: 'Bold' };
+    const labelW = await measureSingleLineTextWidth(label, statusFont, 9);
+    statusBadgeW = labelW + 18; // 좌우 패딩 9 + 9 = 18
+  }
+
+  if (hasStatus && hasLink) {
+    // Link 좌측(16) + Link 폭(16) + 최소 gap(8) + Status 뱃지 폭 + 우측 마진(10)
+    return 16 + 16 + 8 + statusBadgeW + 10;
+  }
+
+  if (hasStatus) {
+    // Status만 존재: Status 좌측 정렬 여백(16) + Status 뱃지 폭 + 우측 마진(10)
+    // 카드의 좌측 기본 패딩 16px와 정렬되어 박스 밖 탈출(-44px 버그)을 완벽 차단함
+    return 16 + statusBadgeW + 10;
+  }
+
+  // Link만 존재: Link 좌측(16) + Link 폭(16) + 우측 패딩(16)
+  return 16 + 16 + 16;
+}
+
+/**
+ * Screen 노드의 Fit Contents 모드에 필요한 자동 너비를 정밀하게 계산합니다.
+ * 
+ * 최종 공식:
+ * Fit Width = clampScreenWidth(max(
+ *   MIN_WIDTH (49),
+ *   Title 1줄을 수용하는 최소 Width (Title 실측 1줄폭 + 좌우 패딩 32px),
+ *   내부 고정 요소들이 정상 배치되는 최소 Width (Status, Link가 겹치거나 밖으로 나가지 않는 최소 크기)
+ * ))
+ * 
+ * Description은 Width 결정 기준이 아니며, 확정된 너비 안에서 wrapping되어 Height에만 반영됩니다.
+ */
+async function calculateScreenFitWidth(
+  card: FrameNode,
+  title: string,
+  status: string | undefined,
+  figmaLink: string | undefined
+): Promise<number> {
+  const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
+  const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
+  const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 1.5) * 2;
+
+  // 1. Title 측정 (Inter Bold 13px, 줄바꿈 없는 1줄 폭)
+  const trimmedTitle = (title || '').trim();
+  let measuredTitleW = 0;
+  if (trimmedTitle) {
+    const titleFont: FontName = { family: 'Inter', style: 'Bold' };
+    measuredTitleW = await measureSingleLineTextWidth(trimmedTitle, titleFont, 13);
+  }
+  // Title 1줄 실측 폭 + 좌우 패딩(32px) + 스트로크 보더 오프셋(약 3px) + 단어 래핑 방지 호흡 여유(4px)
+  const titleRequiredW = measuredTitleW > 0
+    ? measuredTitleW + pl + pr + Math.ceil(strokeOffset) + 4
+    : SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
+
+  // 2. 내부 고정/비가변 요소(Status, Link)가 겹치거나 밖으로 나가지 않기 위한 최소 너비
+  const internalRequiredW = await calculateMinimumInternalContentWidth(status, figmaLink);
+
+  // 3. 최종 Fit Width = max(49, titleRequiredW, internalRequiredW)
+  const fitW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, titleRequiredW, internalRequiredW);
+
+  return clampScreenWidth(fitW);
 }
 
 // 텍스트 노드의 현재 폰트를 안전하게 사전 로드하는 헬퍼
@@ -1708,13 +1835,15 @@ async function lockTextFontSizeAndAutoResize(textNode: TextNode, targetSize: num
 
     if (textNode.parent && 'layoutMode' in textNode.parent) {
       const parentFrame = textNode.parent as FrameNode;
-      const card = (parentFrame.parent && 'layoutMode' in parentFrame.parent) ? (parentFrame.parent as FrameNode) : parentFrame;
-      const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
-      const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
-      const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
-      const availW = Math.max(10, card.width - pl - pr - strokeOffset);
-      if (Math.abs(textNode.width - availW) > 1) {
-        try { textNode.resize(availW, textNode.height); } catch (_) {}
+      if (parentFrame.layoutMode === 'NONE') {
+        const card = (parentFrame.parent && 'layoutMode' in parentFrame.parent) ? (parentFrame.parent as FrameNode) : parentFrame;
+        const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
+        const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
+        const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+        const availW = Math.max(10, card.width - pl - pr - strokeOffset);
+        if (Math.abs(textNode.width - availW) > 1) {
+          try { textNode.resize(availW, textNode.height); } catch (_) {}
+        }
       }
     }
 
@@ -1727,8 +1856,19 @@ async function lockTextFontSizeAndAutoResize(textNode: TextNode, targetSize: num
       textNode.textAutoResize = 'HEIGHT';
     }
 
-    // 영역 초과 시 말줄임(...) 처리
-    textNode.textTruncation = 'ENDING';
+    // 영역 초과 시 말줄임(...) 처리 (Fit/Hug Screen 노드는 전체 내용 수용을 위해 DISABLED 유지, Fixed 및 비Screen은 ENDING 유지)
+    const flowNodeCandidate = findFlowNode(textNode);
+    const isScreenCard = flowNodeCandidate && flowNodeCandidate.type === 'FRAME' && normalizeNodeType(safeGetPluginData(flowNodeCandidate, 'node_type')) === 'Screen';
+    const sMode = isScreenCard ? (safeGetPluginData(flowNodeCandidate, 'size_mode') || safeGetPluginData(flowNodeCandidate, 'screen_size_mode') || 'fixed') : null;
+    if (sMode === 'fit' || sMode === 'hug') {
+      if (textNode.textTruncation !== 'DISABLED') {
+        textNode.textTruncation = 'DISABLED';
+      }
+    } else {
+      if (textNode.textTruncation !== 'ENDING') {
+        textNode.textTruncation = 'ENDING';
+      }
+    }
   } catch (err) {
     console.warn('폰트 사이즈 및 리사이즈 모드 고정 실패:', err);
   }
@@ -2274,8 +2414,8 @@ async function createFlowNode(payload: FlowNodePayload) {
     const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
     const isShapeNode = !spec.allowDescription;
 
-    const rawTitle = (payload.title && payload.title.trim()) || (nodeType === 'Screen' ? 'Screen' : nodeType);
-    const title = rawTitle.slice(0, 32); // 타이틀 글자 수 제한 (입력필드 너비 최적화)
+    const rawTitle = payload.title !== undefined ? payload.title.trim() : (nodeType === 'Screen' ? 'Screen' : nodeType);
+    const title = rawTitle; // 긴 타이틀도 잘리지 않고 온전한 1줄 폭으로 계산되도록 보존
     // 도형 노드인 경우 스펙 규격(Process: 120x120, Connector: 120x120, Decision: 140x140, Terminator: 180x90) 최우선 보장
     const width = isShapeNode ? spec.width : (payload.width ? clampScreenWidth(payload.width) : spec.width);
     const height = isShapeNode ? spec.height : (payload.height ? clampScreenHeight(payload.height) : spec.height);
@@ -2331,6 +2471,10 @@ async function createFlowNode(payload: FlowNodePayload) {
       }
     }
     card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
+
+    let effectiveCreateW = width;
+    const isCreateFit = !isShapeNode && payload.sizeMode === 'fit';
+    const isCreateHug = !isShapeNode && (payload.sizeMode === 'hug' || (!payload.sizeMode && nodeType === 'Screen'));
 
     // 캔버스 기즈모 리사이즈 원천 차단 (현재 크기로 min/max 완전 고정)
     card.minWidth = width;
@@ -2412,6 +2556,10 @@ async function createFlowNode(payload: FlowNodePayload) {
       headerRow.primaryAxisAlignItems = 'MIN';
       headerRow.counterAxisAlignItems = 'MIN';
       headerRow.itemSpacing = 0;
+      headerRow.paddingLeft = 0;
+      headerRow.paddingRight = 0;
+      headerRow.paddingTop = 0;
+      headerRow.paddingBottom = 0;
       headerRow.fills = [];
 
       // 3. 타이틀 텍스트 (13px Bold 고정, 글자 수 길어지면 자동 줄바꿈)
@@ -2424,27 +2572,26 @@ async function createFlowNode(payload: FlowNodePayload) {
       titleText.fills = [titleFill];
       titleText.textAutoResize = 'HEIGHT';
 
-      let effectiveCreateW = width;
-      if (!isShapeNode && payload.sizeMode === 'fit') {
-        const measureText = figma.createText();
-        const titleFont: FontName = { family: 'Inter', style: 'Bold' };
-        await figma.loadFontAsync(titleFont);
-        measureText.fontName = titleFont;
-        measureText.fontSize = 13;
-        measureText.lineHeight = { value: 18, unit: 'PIXELS' };
-        measureText.textAutoResize = 'WIDTH_AND_HEIGHT';
-        measureText.characters = title.trim() || ' ';
-        const measuredTitleW = Math.ceil(measureText.width);
-        measureText.remove();
+      if (isCreateFit) {
+        effectiveCreateW = await calculateScreenFitWidth(
+          card,
+          title,
+          payload.status,
+          payload.figmaLink
+        );
+      } else if (isCreateHug) {
+        effectiveCreateW = clampScreenWidth(width);
+      }
 
-        effectiveCreateW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, measuredTitleW + card.paddingLeft + card.paddingRight);
+      if (isCreateFit || isCreateHug) {
         card.counterAxisSizingMode = 'FIXED';
         card.primaryAxisSizingMode = 'AUTO';
         card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
+        card.maxHeight = null;
         card.minWidth = effectiveCreateW;
         card.maxWidth = effectiveCreateW;
         card.resize(effectiveCreateW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, card.height));
-        card.setPluginData('size_mode', 'fit');
+        card.setPluginData('size_mode', isCreateFit ? 'fit' : 'hug');
       }
 
       titleText.textTruncation = 'DISABLED';
@@ -2474,7 +2621,7 @@ async function createFlowNode(payload: FlowNodePayload) {
         const descAvailW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - descStrokeOffset);
         descText.resize(descAvailW, descText.height);
         descText.textAutoResize = 'HEIGHT';
-        if (!isShapeNode && payload.sizeMode === 'fit') {
+        if (!isShapeNode && (payload.sizeMode === 'fit' || payload.sizeMode === 'hug')) {
           descText.maxLines = null;
           descText.textTruncation = 'DISABLED';
         } else {
@@ -2494,7 +2641,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       card.setPluginData('screen_width', String(width));
       card.setPluginData('screen_height', String(height));
       card.setPluginData('screen_corner_radius', String(cornerRadius));
-      card.setPluginData('screen_size_mode', payload.sizeMode || 'fixed');
+      card.setPluginData('screen_size_mode', payload.sizeMode || (nodeType === 'Screen' ? 'hug' : 'fixed'));
     } else if (payload.description) {
       card.setPluginData('node_desc', payload.description);
     }
@@ -2542,6 +2689,25 @@ async function createFlowNode(payload: FlowNodePayload) {
     // Figma Screen Link 펜 아이콘 뱃지(하단 왼쪽) 생성 (Screen 노드 등에서만 허용)
     if (!isShapeNode) {
       await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark);
+
+      if (isCreateFit || isCreateHug) {
+        const finalCreateH = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
+        card.resize(effectiveCreateW, finalCreateH);
+        const statusBadge = card.children.find(
+          (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
+        ) as FrameNode | undefined;
+        if (statusBadge) {
+          statusBadge.x = effectiveCreateW - statusBadge.width - 10;
+          statusBadge.y = card.height - statusBadge.height - 10;
+        }
+        const linkBadge = card.children.find(
+          (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+        ) as FrameNode | undefined;
+        if (linkBadge) {
+          linkBadge.x = 16;
+          linkBadge.y = card.height - linkBadge.height - 10;
+        }
+      }
     }
 
     // 엘리베이션(그림자) 효과 적용
@@ -2612,9 +2778,9 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
     await loadRequiredFonts();
 
-    const rawTitle = payload.title.trim() || 'Untitled';
-    const title = rawTitle.slice(0, 32); // 타이틀 글자 수 제한 (입력필드 너비 최적화)
-    const description = payload.description.trim() || '';
+    const rawTitle = payload.title !== undefined ? payload.title.trim() : (safeGetPluginData(flowNode, 'node_title') || '');
+    const title = rawTitle; // 긴 타이틀도 잘리지 않고 온전한 1줄 폭으로 계산되도록 보존
+    const description = payload.description !== undefined ? payload.description.trim() : '';
     const isDark = payload.theme === 'dark';
     const isFillNone = payload.colorHex?.toLowerCase() === 'none' || payload.colorHex?.toLowerCase() === 'transparent';
     let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
@@ -2686,8 +2852,9 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
     const restoredScreenR = savedScreenR !== '' && savedScreenR !== undefined ? parseInt(savedScreenR, 10) : (spec.cornerRadius ?? 0);
 
-    const prevSizeMode = safeGetPluginData(card, 'size_mode') || 'fixed';
-    const isChangingFromFitToFixed = prevSizeMode === 'fit' && payload.sizeMode === 'fixed';
+    const prevSizeMode = (safeGetPluginData(card, 'size_mode') as 'fixed' | 'hug' | 'fit') || 'fixed';
+    const effectiveSizeMode = (!isShapeNode && payload.sizeMode !== undefined) ? payload.sizeMode : prevSizeMode;
+    const isChangingFromFitToFixed = prevSizeMode === 'fit' && effectiveSizeMode === 'fixed';
 
     // Screen 복귀 시 또는 Fit에서 Fixed 복귀 시: 이전에 저장된 screen_width/height를 payload 기본값보다 우선 복원
     // payload.width=250 같은 타입 기본값이 truthy여서 사용자 설정값(300 등)을 덮어쓰던 버그 수정
@@ -2730,6 +2897,17 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     const hasStatus = Boolean(existingStatusBadgeOnCard || (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]));
     const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
     const hasBottomBar = hasStatus || hasLink;
+
+    let fitW: number | undefined;
+    if (!isShapeNode && effectiveSizeMode === 'fit') {
+      fitW = await calculateScreenFitWidth(
+        card,
+        effectiveTitle,
+        effectiveStatus,
+        effectiveLink
+      );
+    }
+
     // 카드 레이아웃 모드 및 정렬 방향 선행 보장 (Auto Layout이 켜져 있어야 strokesIncludedInLayout 설정 가능)
     if (card.layoutMode !== 'VERTICAL') {
       card.layoutMode = 'VERTICAL';
@@ -2771,9 +2949,10 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     if (!isShapeNode) {
       // Screen 노드의 최종 크기 및 Auto Layout 속성(패딩, 간격, 정렬)을 자식 구성 전에 최우선 확정
       // 다른 타입 → Screen 복귀 시 자식 요소들이 이전 도형 크기나 엉뚱한 좌표로 렌더링되는 중간 상태 원천 차단
+      const initialW = (effectiveSizeMode === 'fit' && fitW !== undefined) ? fitW : targetW;
       card.primaryAxisSizingMode = 'FIXED';
       card.counterAxisSizingMode = 'FIXED';
-      card.resize(targetW, targetH);
+      card.resize(initialW, targetH);
       card.itemSpacing = 8;
       card.paddingLeft = 16;
       card.paddingRight = 16;
@@ -2797,7 +2976,6 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     }
 
     // 헤더 행 및 타이틀 텍스트 갱신 (도형 노드는 Header 없이 직속 자식으로 정중앙 배치)
-    let fitW: number | undefined;
     let titleText = card.findOne(
       (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
     ) as TextNode | null;
@@ -2866,6 +3044,10 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       headerRow.primaryAxisAlignItems = 'MIN';
       headerRow.counterAxisAlignItems = 'MIN';
       headerRow.itemSpacing = 0;
+      headerRow.paddingLeft = 0;
+      headerRow.paddingRight = 0;
+      headerRow.paddingTop = 0;
+      headerRow.paddingBottom = 0;
 
       if (!titleText) {
         titleText = figma.createText();
@@ -2883,27 +3065,17 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       titleText.textAlignVertical = 'TOP';
       titleText.layoutAlign = 'STRETCH';
 
-      if (!isShapeNode && payload.sizeMode === 'fit') {
-        const measureText = figma.createText();
-        const titleFont: FontName = { family: 'Inter', style: 'Bold' };
-        await figma.loadFontAsync(titleFont);
-        measureText.fontName = titleFont;
-        measureText.fontSize = 13;
-        measureText.lineHeight = { value: 18, unit: 'PIXELS' };
-        measureText.textAutoResize = 'WIDTH_AND_HEIGHT';
-        measureText.characters = effectiveTitle.trim() || ' ';
-        const measuredTitleW = Math.ceil(measureText.width);
-        measureText.remove();
-
-        fitW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, measuredTitleW + pl + pr);
-
-        titleText.textAutoResize = 'HEIGHT';
-        await safeSetCharacters(titleText, effectiveTitle);
-      } else {
-        titleText.textAutoResize = 'HEIGHT';
-        titleText.fontName = { family: 'Inter', style: 'Bold' };
-        titleText.characters = effectiveTitle;
+      if (fitW === undefined && !isShapeNode && effectiveSizeMode === 'fit') {
+        fitW = await calculateScreenFitWidth(
+          card,
+          effectiveTitle,
+          effectiveStatus,
+          effectiveLink
+        );
       }
+      titleText.textAutoResize = 'HEIGHT';
+      titleText.fontName = { family: 'Inter', style: 'Bold' };
+      await safeSetCharacters(titleText, effectiveTitle);
 
       titleText.textTruncation = 'DISABLED';
       titleText.maxLines = null;
@@ -2942,11 +3114,11 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       descText.textAutoResize = 'HEIGHT';
       descText.resize(descAvailW, descText.height || 16);
 
-      if (!isShapeNode && payload.sizeMode === 'fit') {
+      if (!isShapeNode && (effectiveSizeMode === 'fit' || effectiveSizeMode === 'hug')) {
         descText.maxLines = null;
         try { descText.maxHeight = null; } catch (_) {}
         descText.textTruncation = 'DISABLED';
-      } else if (isChangingToScreen || payload.sizeMode === 'fixed' || !payload.sizeMode) {
+      } else if (isChangingToScreen || effectiveSizeMode === 'fixed') {
         // Screen 복귀 시: card를 AUTO로 바꾸는 calculateCardHugHeight 없이 가용 높이로 직접 Truncation 계산
         descText.textTruncation = 'ENDING';
         const pb = hasBottomBar ? 36 : 16;
@@ -3087,8 +3259,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     }
 
     // 내부 자식(DescText, Header, Badges 등) 정리 완료 후 최종 크기 조정 및 min/max 재잠금
-    const isHug = !isShapeNode && payload.sizeMode === 'hug';
-    const isFit = !isShapeNode && payload.sizeMode === 'fit';
+    const isHug = !isShapeNode && effectiveSizeMode === 'hug';
+    const isFit = !isShapeNode && effectiveSizeMode === 'fit';
     const finalW = isFit && fitW !== undefined ? fitW : (nodeType === 'Screen' ? clampScreenWidth(targetW) : Math.max(50, targetW));
     const finalH = nodeType === 'Screen' ? clampScreenHeight(targetH) : Math.max(40, targetH);
 
@@ -3097,36 +3269,26 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     card.minHeight = null;
     card.maxHeight = null;
 
-    if (isHug) {
-      if (descText) {
-        descText.maxLines = null;
-      }
-      const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : null;
-      if (card.width !== finalW || (minH !== null && card.height < minH)) {
-        card.counterAxisSizingMode = 'FIXED';
-        card.resize(finalW, minH !== null ? Math.max(minH, card.height) : card.height);
-      }
-      card.counterAxisSizingMode = 'FIXED';
-      card.primaryAxisSizingMode = 'AUTO';
-      card.minWidth = finalW;
-      card.maxWidth = finalW;
-      card.minHeight = minH;
-      card.maxHeight = null;
-      card.setPluginData('size_mode', 'hug');
-    } else if (isFit) {
+    if (isHug || isFit) {
       if (descText) {
         descText.maxLines = null;
         try { descText.maxHeight = null; } catch (_) {}
+        descText.textTruncation = 'DISABLED';
+        const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+        const descAvailW = Math.max(10, finalW - card.paddingLeft - card.paddingRight - descStrokeOffset);
+        try { descText.resize(descAvailW, descText.height); } catch (_) {}
       }
+      const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
       card.counterAxisSizingMode = 'FIXED';
       card.primaryAxisSizingMode = 'AUTO';
-      const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
-      card.minHeight = minH;
-      card.maxHeight = null;
       card.minWidth = finalW;
       card.maxWidth = finalW;
-      card.resize(finalW, Math.max(minH, card.height));
-      card.setPluginData('size_mode', 'fit');
+      card.minHeight = minH;
+      card.maxHeight = null;
+
+      const autoH = Math.max(minH, Math.round(card.height));
+      card.resize(finalW, autoH);
+      card.setPluginData('size_mode', isFit ? 'fit' : 'hug');
     } else {
       card.primaryAxisSizingMode = 'FIXED';
       card.counterAxisSizingMode = 'FIXED';
@@ -3466,12 +3628,20 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         headerRow.primaryAxisAlignItems = 'MIN';
         headerRow.counterAxisAlignItems = 'MIN';
         headerRow.itemSpacing = 0;
+        headerRow.paddingLeft = 0;
+        headerRow.paddingRight = 0;
+        headerRow.paddingTop = 0;
+        headerRow.paddingBottom = 0;
         card.appendChild(headerRow);
       } else {
         headerRow.layoutMode = 'VERTICAL';
         headerRow.layoutAlign = 'STRETCH';
         headerRow.primaryAxisSizingMode = 'AUTO';
         headerRow.counterAxisSizingMode = 'AUTO';
+        headerRow.paddingLeft = 0;
+        headerRow.paddingRight = 0;
+        headerRow.paddingTop = 0;
+        headerRow.paddingBottom = 0;
       }
       if (!titleText) {
         titleText = figma.createText();
@@ -3488,22 +3658,21 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       titleText.textAlignVertical = 'TOP';
       titleText.layoutAlign = 'STRETCH';
       titleText.textAutoResize = 'HEIGHT';
-      titleText.textTruncation = 'DISABLED';
+      // 8. 설명 (Description) 갱신
+      const prevDesc = safeGetPluginData(card, 'node_desc') || '';
+      const effectiveDesc = patch.description !== undefined ? patch.description : prevDesc;
+
       let fitW: number | undefined;
 
       if (!isShapeNode && effectiveSizeMode === 'fit') {
-        const measureText = figma.createText();
-        const titleFont: FontName = { family: 'Inter', style: 'Bold' };
-        await figma.loadFontAsync(titleFont);
-        measureText.fontName = titleFont;
-        measureText.fontSize = 13;
-        measureText.lineHeight = { value: 18, unit: 'PIXELS' };
-        measureText.textAutoResize = 'WIDTH_AND_HEIGHT';
-        measureText.characters = effectiveTitle.trim() || ' ';
-        const measuredTitleW = Math.ceil(measureText.width);
-        measureText.remove();
-
-        fitW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, measuredTitleW + pl + pr);
+        const effectiveStatus = patch.status !== undefined ? patch.status : (safeGetPluginData(card, 'workflow_status') || undefined);
+        const effectiveLink = patch.figmaLink !== undefined ? patch.figmaLink : (safeGetPluginData(card, 'figma_link') || undefined);
+        fitW = await calculateScreenFitWidth(
+          card,
+          effectiveTitle,
+          effectiveStatus,
+          effectiveLink
+        );
 
         titleText.textAutoResize = 'HEIGHT';
         await safeSetCharacters(titleText, effectiveTitle);
@@ -3514,9 +3683,6 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         titleText.fills = [titleFill];
       }
 
-      // 8. 설명 (Description) 갱신
-      const prevDesc = safeGetPluginData(card, 'node_desc') || '';
-      const effectiveDesc = patch.description !== undefined ? patch.description : prevDesc;
       let descText = card.children.find(
         (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
       ) as TextNode | undefined;
@@ -3542,7 +3708,7 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         if (patch.colorHex !== undefined) {
           descText.fills = [descFill];
         }
-        if (!isShapeNode && effectiveSizeMode === 'fit') {
+        if (!isShapeNode && (effectiveSizeMode === 'fit' || effectiveSizeMode === 'hug')) {
           descText.maxLines = null;
           try { descText.maxHeight = null; } catch (_) {}
           descText.textTruncation = 'DISABLED';
@@ -3703,36 +3869,31 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       const finalW = isFit && fitW !== undefined ? fitW : (nodeType === 'Screen' ? clampScreenWidth(targetW) : Math.max(50, targetW));
       const finalH = nodeType === 'Screen' ? clampScreenHeight(targetH) : Math.max(40, targetH);
 
-      if (isHug) {
-        if (descText) {
-          descText.maxLines = null;
-        }
-        const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : null;
-        if (card.width !== finalW || (minH !== null && card.height < minH)) {
-          card.counterAxisSizingMode = 'FIXED';
-          card.resize(finalW, minH !== null ? Math.max(minH, card.height) : card.height);
-        }
-        card.counterAxisSizingMode = 'FIXED';
-        card.primaryAxisSizingMode = 'AUTO';
-        card.minWidth = finalW;
-        card.maxWidth = finalW;
-        card.minHeight = minH;
-        card.maxHeight = null;
-        card.setPluginData('size_mode', 'hug');
-      } else if (isFit) {
+      card.minWidth = null;
+      card.maxWidth = null;
+      card.minHeight = null;
+      card.maxHeight = null;
+
+      if (isHug || isFit) {
         if (descText) {
           descText.maxLines = null;
           try { descText.maxHeight = null; } catch (_) {}
+          descText.textTruncation = 'DISABLED';
+          const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+          const descAvailW = Math.max(10, finalW - card.paddingLeft - card.paddingRight - descStrokeOffset);
+          try { descText.resize(descAvailW, descText.height); } catch (_) {}
         }
+        const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
         card.counterAxisSizingMode = 'FIXED';
         card.primaryAxisSizingMode = 'AUTO';
-        const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
-        card.minHeight = minH;
-        card.maxHeight = null;
         card.minWidth = finalW;
         card.maxWidth = finalW;
-        card.resize(finalW, Math.max(minH, card.height));
-        card.setPluginData('size_mode', 'fit');
+        card.minHeight = minH;
+        card.maxHeight = null;
+
+        const autoH = Math.max(minH, Math.round(card.height));
+        card.resize(finalW, autoH);
+        card.setPluginData('size_mode', isFit ? 'fit' : 'hug');
       } else {
         card.primaryAxisSizingMode = 'FIXED';
         card.counterAxisSizingMode = 'FIXED';
@@ -4764,6 +4925,22 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
         if (oldBadgeInHeader) oldBadgeInHeader.remove();
         if (statusBadge) statusBadge.remove();
 
+        const sMode = safeGetPluginData(card, 'size_mode');
+        if (sMode === 'fit') {
+          const effectiveTitle = safeGetPluginData(card, 'node_title') || extractNodeText(card).title;
+          const currentLink = safeGetPluginData(card, 'figma_link') || undefined;
+          const newFitW = await calculateScreenFitWidth(card, effectiveTitle, undefined, currentLink);
+          card.minWidth = newFitW;
+          card.maxWidth = newFitW;
+          card.counterAxisSizingMode = 'FIXED';
+          card.primaryAxisSizingMode = 'AUTO';
+          card.resize(newFitW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+        } else if (sMode === 'hug') {
+          card.counterAxisSizingMode = 'FIXED';
+          card.primaryAxisSizingMode = 'AUTO';
+          card.resize(card.width, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+        }
+
         const descText = card.children.find(
           (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
         ) as TextNode | undefined;
@@ -4830,6 +5007,22 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
           await safeSetCharacters(textNode, cfg.label.toUpperCase());
           textNode.fills = [{ type: 'SOLID', color: badgeTextColor }];
           textNode.locked = true; // 캔버스에서 텍스트 직접 수정 차단
+        }
+
+        const sMode = safeGetPluginData(card, 'size_mode');
+        if (sMode === 'fit') {
+          const effectiveTitle = safeGetPluginData(card, 'node_title') || extractNodeText(card).title;
+          const currentLink = safeGetPluginData(card, 'figma_link') || undefined;
+          const newFitW = await calculateScreenFitWidth(card, effectiveTitle, status as string, currentLink);
+          card.minWidth = newFitW;
+          card.maxWidth = newFitW;
+          card.counterAxisSizingMode = 'FIXED';
+          card.primaryAxisSizingMode = 'AUTO';
+          card.resize(newFitW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+        } else if (sMode === 'hug') {
+          card.counterAxisSizingMode = 'FIXED';
+          card.primaryAxisSizingMode = 'AUTO';
+          card.resize(card.width, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
         }
 
         // 3. 하단 오른쪽 박스 안쪽에 절대 위치 배치
@@ -5670,6 +5863,11 @@ figma.on('documentchange', async (event) => {
         const flowNode = findFlowNode(node);
         if (flowNode && flowNode.type === 'FRAME' && safeGetPluginData(flowNode, 'is_flow_node') === 'true') {
           const frame = flowNode as FrameNode;
+          const currentSizeMode = safeGetPluginData(frame, 'size_mode') as 'fixed' | 'hug' | 'fit';
+          // Hug 또는 Fit 모드인 경우: 높이는 컨텐츠에 따른 AUTO이므로 임의의 FIXED 높이로 강제 원복하지 않음
+          if (currentSizeMode === 'hug' || currentSizeMode === 'fit') {
+            continue;
+          }
           const savedW = (frame.minWidth && frame.minWidth > 0) ? frame.minWidth : parseInt(safeGetPluginData(frame, 'node_width'), 10);
           const savedH = (frame.minHeight && frame.minHeight > 0) ? frame.minHeight : parseInt(safeGetPluginData(frame, 'node_height'), 10);
           if (savedW && savedH && (Math.round(frame.width) !== savedW || Math.round(frame.height) !== savedH)) {
@@ -5691,32 +5889,190 @@ figma.on('documentchange', async (event) => {
       }
 
       // 3. 캔버스에서 텍스트 직접 편집 시 타이틀(13px Bold) 및 설명(11px Regular) 스타일 실시간 보정 및 유지
-      const textNodeCandidate = figma.getNodeById(change.id);
-      if (textNodeCandidate && textNodeCandidate.type === 'TEXT') {
-        const textNode = textNodeCandidate as TextNode;
-        const role = safeGetPluginData(textNode, 'node_role');
-        const isHeaderChild = textNode.parent && textNode.parent.name === 'Header';
-        const isTitle = role === 'title' || textNode.name === 'TitleText' || isHeaderChild;
-        const isDesc = role === 'desc' || textNode.name === 'DescText';
+      // 실제 텍스트 내용(characters) 변경 시에만 진입하여 서식/레이아웃 변경으로 인한 무한 재진입 차단
+      if (change.properties.includes('characters')) {
+        const textNodeCandidate = figma.getNodeById(change.id);
+        if (textNodeCandidate && textNodeCandidate.type === 'TEXT') {
+          const textNode = textNodeCandidate as TextNode;
+          const role = safeGetPluginData(textNode, 'node_role');
+          const isHeaderChild = textNode.parent && textNode.parent.name === 'Header';
+          const isTitle = role === 'title' || textNode.name === 'TitleText' || isHeaderChild;
+          const isDesc = role === 'desc' || textNode.name === 'DescText';
 
-        if (isTitle || isDesc) {
-          const flowNode = findFlowNode(textNode);
-          if (flowNode) {
-            if (isTitle) {
-              // 타이틀 텍스트: 블릿, 링크, 볼드, 취소선 등 일체 반영 차단 및 Inter Bold 13px 표준 규격 강제 고정
-              await enforceTitleStandardStyle(textNode, flowNode);
-              // 스크린 노드 타이틀이 줄바꿈되어 높이가 변한 경우, 디스크립션 말줄임 재계산
-              if (flowNode.type === 'FRAME') {
-                const descText = flowNode.children.find(
-                  (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
-                ) as TextNode | undefined;
-                if (descText) {
-                  await updateDescTextTruncation(flowNode, descText, flowNode.height);
+          if (isTitle || isDesc) {
+            const flowNode = findFlowNode(textNode);
+            if (flowNode) {
+              const isScreen =
+                flowNode.type === 'FRAME' &&
+                normalizeNodeType(safeGetPluginData(flowNode, 'node_type')) === 'Screen';
+
+              // [기능 B] Canvas Screen Title 32자 제한 (UI maxLength={32}와 일치)
+              if (isTitle && isScreen) {
+                const charArray = Array.from(textNode.characters);
+                if (charArray.length > 32) {
+                  const truncatedTitle = charArray.slice(0, 32).join('');
+                  await safeSetCharacters(textNode, truncatedTitle);
                 }
               }
-            } else if (isDesc) {
-              // 설명 텍스트: 11px 폰트 사이즈 및 리사이즈 모드 고정, 나머지 서식(굵기, 색상, 이탤릭 등)은 모두 자유롭게 허용
-              await lockTextFontSizeAndAutoResize(textNode, 11);
+
+              if (isTitle) {
+                // 타이틀 텍스트: 블릿, 링크, 볼드, 취소선 등 일체 반영 차단 및 Inter Bold 13px 표준 규격 강제 고정
+                await enforceTitleStandardStyle(textNode, flowNode);
+              } else if (isDesc) {
+                // 설명 텍스트: 11px 폰트 사이즈 및 리사이즈 모드 고정, 나머지 서식(굵기, 색상, 이탤릭 등)은 모두 자유롭게 허용
+                await lockTextFontSizeAndAutoResize(textNode, 11);
+              }
+
+              // Screen 카드에 대한 size_mode별 자동 크기 재계산 (Screen 노드 한정)
+              if (isScreen) {
+                const card = flowNode as FrameNode;
+                const sMode = (safeGetPluginData(card, 'size_mode') ||
+                  safeGetPluginData(card, 'screen_size_mode') ||
+                  'fixed') as 'fixed' | 'hug' | 'fit';
+
+                const descText = card.children.find(
+                  (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
+                ) as TextNode | undefined;
+
+                if (sMode === 'fixed') {
+                  // Fixed: 크기 자동 조절 없음 (기존 너비/높이 유지)
+                  if (descText) {
+                    await updateDescTextTruncation(card, descText, card.height);
+                  }
+                  if (isDesc) {
+                    card.setPluginData('node_desc', textNode.characters);
+                  }
+                } else if (sMode === 'fit' || sMode === 'hug') {
+                  const currentW = Math.round(card.width);
+                  const currentH = Math.round(card.height);
+
+                  let targetW = currentW;
+
+                  if (sMode === 'fit' && isTitle) {
+                    // Fit 모드 + Title 직접 수정: Width와 Height 모두 다시 계산
+                    // 기존 Fit 규칙: Title 1줄 유지, Description 긴 길이는 Width 미결정, Status/Link 내부 최소 Width 보장
+                    const fitW = await calculateScreenFitWidth(
+                      card,
+                      textNode.characters,
+                      safeGetPluginData(card, 'workflow_status') || undefined,
+                      safeGetPluginData(card, 'figma_link') || undefined
+                    );
+                    targetW = clampScreenWidth(fitW);
+                  } else {
+                    // Fit 모드 + Desc 직접 수정 또는 Hug 모드(Title/Desc 직접 수정):
+                    // Width는 사용자가 설정한 현재 Width를 유지 (49 ~ 800px 클램프)
+                    targetW = clampScreenWidth(
+                      Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, currentW)
+                    );
+                  }
+
+                  // Description 텍스트 박스 가용 폭 갱신 및 말줄임 해제 (Fit/Hug는 전체 내용 수용)
+                  // ※ TextNode를 매 글자마다 강제로 resize하지 않고, STRETCH 및 HEIGHT 모드를 유지하여 피그마 오토레이아웃에 위임
+                  if (descText) {
+                    descText.maxLines = null;
+                    try {
+                      descText.maxHeight = null;
+                    } catch (_) {}
+                    if (descText.textTruncation !== 'DISABLED') {
+                      descText.textTruncation = 'DISABLED';
+                    }
+                    if (descText.layoutAlign !== 'STRETCH') {
+                      descText.layoutAlign = 'STRETCH';
+                    }
+                    if (descText.textAutoResize !== 'HEIGHT') {
+                      descText.textAutoResize = 'HEIGHT';
+                    }
+                  }
+
+                  // Fit 모드에서 Title 변경으로 인해 너비가 바뀐 경우에만 임시 반영하여 정확한 오토레이아웃 높이 산출 준비
+                  if (targetW !== currentW) {
+                    card.resize(targetW, card.height);
+                  }
+
+                  // 실제 TextNode layout 기반 Screen 콘텐츠 높이 산출 (사이드이펙트/딜레이 없는 즉시 계산)
+                  const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+                  const titleNode = isTitle
+                    ? textNode
+                    : (headerRow?.children.find(
+                        (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
+                      ) as TextNode | undefined);
+                  const titleChars = titleNode ? titleNode.characters : '';
+                  const titleLineCount = titleChars.length > 0 ? (titleChars.match(/\n/g) || []).length + 1 : 1;
+                  const titleH = titleNode
+                    ? Math.max(18, Math.round(titleNode.height), titleLineCount * 18)
+                    : (headerRow ? Math.round(headerRow.height) : 18);
+
+                  const descNode = isDesc ? textNode : descText;
+                  const descChars = descNode ? descNode.characters : '';
+                  const hasDesc = descChars.length > 0;
+                  const descLineCount = hasDesc ? (descChars.match(/\n/g) || []).length + 1 : 0;
+                  const descH = hasDesc && descNode
+                    ? Math.max(Math.round(descNode.height), Math.round(descLineCount * 13.5))
+                    : 0;
+
+                  const pt = typeof card.paddingTop === 'number' ? card.paddingTop : 14;
+                  const hasStatus = Boolean(safeGetPluginData(card, 'workflow_status'));
+                  const hasLink = Boolean(safeGetPluginData(card, 'figma_link'));
+                  const hasBottomBadge = hasStatus || hasLink;
+                  const pb = hasBottomBadge ? 36 : (hasDesc ? 16 : 14);
+                  const itemSpacing = hasDesc ? (typeof card.itemSpacing === 'number' ? card.itemSpacing : 8) : 0;
+
+                  const calculatedContentH = Math.round(pt + titleH + itemSpacing + descH + pb);
+                  const targetH = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, calculatedContentH);
+
+                  if (isDesc) {
+                    card.setPluginData('node_desc', textNode.characters);
+                  }
+
+                  // 실제 변경이 있을 때만 resize 호출 (동일 크기 시 불필요한 resize 및 무한 루프 방지)
+                  if (targetW !== currentW || targetH !== currentH) {
+                    card.counterAxisSizingMode = 'FIXED';
+                    card.primaryAxisSizingMode = 'AUTO';
+                    card.minWidth = targetW;
+                    card.maxWidth = targetW;
+                    card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
+                    card.maxHeight = null;
+
+                    card.resize(targetW, targetH);
+
+                    if (sMode === 'hug') {
+                      card.setPluginData('screen_height', String(targetH));
+                    }
+
+                    // 부착된 배지들 위치 동기화
+                    const statusBadge = card.children.find(
+                      (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
+                    ) as FrameNode | undefined;
+                    if (statusBadge) {
+                      statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+                      statusBadge.x = targetW - statusBadge.width - 10;
+                      statusBadge.y = targetH - statusBadge.height - 10;
+                    }
+
+                    const linkBadge = card.children.find(
+                      (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+                    ) as FrameNode | undefined;
+                    if (linkBadge) {
+                      linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
+                      linkBadge.x = 16;
+                      linkBadge.y = targetH - linkBadge.height - 10;
+                    }
+
+                    const stepBadge = card.children.find(
+                      (c) => safeGetPluginData(c, 'is_step_badge') === 'true' || c.name === 'StepBadge'
+                    ) as FrameNode | undefined;
+                    if (stepBadge) {
+                      const stepCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
+                      const bw = Math.max(24, Math.round(stepBadge.width));
+                      const bh = 24;
+                      const badgeCoords = getStepBadgeCoordinates('Screen', targetW, targetH, bw, bh, stepCorner);
+                      stepBadge.x = badgeCoords.x;
+                      stepBadge.y = badgeCoords.y;
+                      stepBadge.constraints = badgeCoords.constraints;
+                    }
+                  }
+                }
+              }
             }
           }
         }

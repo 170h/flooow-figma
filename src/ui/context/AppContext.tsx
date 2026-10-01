@@ -17,11 +17,15 @@ import { NODE_TYPE_SHAPE_SPECS, normalizeNodeType } from '../../types';
 export type MultiNodeDraft = NodePatchPayload;
 
 export interface UndoSnapshot {
-  type: 'single' | 'batch';
+  type: 'single' | 'batch' | 'connector';
   singlePayload?: UpdateNodePayload;
   batchItems?: Array<{
     nodeId: string;
     patch: NodePatchPayload;
+  }>;
+  connectorItems?: Array<{
+    connectorId: string;
+    payload: any;
   }>;
 }
 
@@ -36,7 +40,7 @@ export interface SizePreset {
 }
 
 export const DEFAULT_SIZE_PRESETS: SizePreset[] = [
-  { id: 'default', name: 'Default', w: 250, h: 100, radius: 0, sizeMode: 'fixed', isDefault: true },
+  { id: 'default', name: 'Default', w: 250, h: 90, radius: 0, sizeMode: 'hug', isDefault: true },
   { id: 'square', name: 'Square', w: 180, h: 180, radius: 0, sizeMode: 'fixed', isDefault: true },
   { id: 'web', name: 'Web', w: 320, h: 180, radius: 0, sizeMode: 'fixed', isDefault: true },
   { id: 'mobile', name: 'Mobile', w: 160, h: 280, radius: 0, sizeMode: 'fixed', isDefault: true },
@@ -163,7 +167,7 @@ export interface UIState {
   selectedConnectorColor?: string;
 }
 
-import { DesignFrameItem, BadgePosition, BadgeShape } from '../../types';
+import { DesignFrameItem, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, MagnetPosition } from '../../types';
 
 // 모달 타입
 export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color';
@@ -249,6 +253,7 @@ export interface AppContextValue {
   applyStepBadges: (startNumber?: number, corner?: string, shape?: string, colorMode?: 'White' | 'Black' | 'Style') => void;
   removeStepBadgesFromNodes: () => void;
   applyCurrentConnectorState: (customStartOffset?: number, customEndOffset?: number) => void;
+  connectSelectedNodes: () => void;
   handleMainAction: () => void;
   handleSelectionChange: (count: number, nodes: NodeInfo[], meta: {
     flowNodeCount?: number;
@@ -264,6 +269,8 @@ export interface AppContextValue {
   clearMultiDraft: () => void;
   clearMultiDraftKeys: (keys: (keyof MultiNodeDraft)[]) => void;
   isApplyingMultiDraft: boolean;
+  hasSingleChanges: boolean;
+  triggerFormChange: () => void;
   canUndo: boolean;
   handleUndo: () => void;
 }
@@ -275,9 +282,9 @@ export interface AppContextValue {
 const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
   nodeType: 'Screen',
   width: 250,
-  height: 100,
+  height: 90,
   cornerRadius: 0,
-  sizeMode: 'fixed',
+  sizeMode: 'hug',
   color: '#ffffff',
   elevationOn: false,
   elevation: 0,
@@ -397,48 +404,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     parent.postMessage({ pluginMessage: { type: 'NOTIFY', message: msg, level } }, '*');
   }, []);
 
+  // 단일 선택 원본 노드 스냅샷 및 적용 상태 관리
+  const originalSelectedNodeRef = useRef<NodeInfo | null>(null);
+  const isApplyingSingleRef = useRef(false);
+  const [formChangeTick, setFormChangeTick] = useState(0);
+  const triggerFormChange = useCallback(() => {
+    setFormChangeTick(t => t + 1);
+  }, []);
+
   // 1회성 Undo 스냅샷 상태 관리 (가장 최근의 Apply 또는 Apply to All 1회만 되돌림)
   const [lastAppliedSnapshot, setLastAppliedSnapshot] = useState<UndoSnapshot | null>(null);
   const lastAppliedSnapshotRef = useRef<UndoSnapshot | null>(null);
   const canUndo = Boolean(lastAppliedSnapshot);
 
-  const handleUndo = useCallback(() => {
-    const snapshot = lastAppliedSnapshotRef.current;
-    if (!snapshot) return;
-
-    if (snapshot.type === 'single' && snapshot.singlePayload) {
-      parent.postMessage({
-        pluginMessage: {
-          type: 'UPDATE_FLOW_NODE',
-          payload: snapshot.singlePayload,
-        }
-      }, '*');
-      showToast('작업이 되돌려졌습니다.', 'info');
-    } else if (snapshot.type === 'batch' && snapshot.batchItems && snapshot.batchItems.length > 0) {
-      const patchGroups = new Map<string, { nodeIds: string[]; patch: NodePatchPayload }>();
-      snapshot.batchItems.forEach(item => {
-        const key = JSON.stringify(item.patch);
-        const existing = patchGroups.get(key);
-        if (existing) {
-          existing.nodeIds.push(item.nodeId);
-        } else {
-          patchGroups.set(key, { nodeIds: [item.nodeId], patch: item.patch });
-        }
-      });
-      patchGroups.forEach(({ nodeIds, patch }) => {
-        parent.postMessage({
-          pluginMessage: {
-            type: 'BATCH_UPDATE_FLOW_NODES',
-            payload: { nodeIds, patch }
-          }
-        }, '*');
-      });
-      showToast('작업이 되돌려졌습니다.', 'info');
-    }
-
-    setLastAppliedSnapshot(null);
-    lastAppliedSnapshotRef.current = null;
-  }, [showToast]);
 
   const applyMultiDraft = useCallback(() => {
     const nodes = selectedNodesRef.current;
@@ -603,6 +581,373 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLastConnectorConfigRaw(prev => ({ ...prev, ...partial }));
   }, []);
 
+  const checkHasSingleChanges = useCallback((): boolean => {
+    const nodes = selectedNodesRef.current;
+    if (!nodes || nodes.length !== 1) return false;
+    const origNode = originalSelectedNodeRef.current || nodes[0];
+    if (!origNode) return false;
+
+    const isConn = Boolean(origNode.isConnector || origNode.nodeType === 'CONNECTOR');
+    if (isConn) {
+      // 1. Label
+      const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
+      const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
+      const currentHasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
+      const currentLabel = currentHasLabel ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || 'Text').trim()) : '';
+      const origHasLabel = Boolean(origNode.connectorLabel);
+      const origLabel = (origNode.connectorLabel || '').trim();
+      if (currentHasLabel !== origHasLabel) return true;
+      if (currentHasLabel && currentLabel !== origLabel) return true;
+
+      // 2. Color
+      const colorEl = document.getElementById('conn-line-color') as HTMLSelectElement | null;
+      const currentColor = (colorEl?.value || uiStateRef.current.selectedConnectorColor || '#000000').toUpperCase();
+      const origColor = (origNode.connectorColorHex || '#000000').toUpperCase();
+      if (currentColor !== origColor) return true;
+
+      // 3. Weight
+      const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+      const currentWeight = weightEl?.value ? parseFloat(weightEl.value) : 1.5;
+      const origWeight = origNode.connectorStrokeWeight ?? 1.5;
+      if (Math.abs(currentWeight - origWeight) > 0.01) return true;
+
+      // 4. Terminals
+      const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+      const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+      const currentStartTerm = startTermEl?.value || 'NONE';
+      const origStartTerm = origNode.connectorStartTerminal || 'NONE';
+      if (currentStartTerm !== origStartTerm) return true;
+      const currentEndTerm = endTermEl?.value || 'ARROW';
+      const origEndTerm = origNode.connectorEndTerminal || 'ARROW';
+      if (currentEndTerm !== origEndTerm) return true;
+
+      // 5. Offsets
+      const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+      const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+      const currentStartOff = startOffEl?.value ? parseFloat(startOffEl.value) : 0;
+      const origStartOff = origNode.connectorStartOffset ?? 0;
+      if (Math.abs(currentStartOff - origStartOff) > 0.01) return true;
+      const currentEndOff = endOffEl?.value ? parseFloat(endOffEl.value) : 0;
+      const origEndOff = origNode.connectorEndOffset ?? 0;
+      if (Math.abs(currentEndOff - origEndOff) > 0.01) return true;
+
+      // 6. Routing / Pattern / Magnets
+      const currentRouting = uiStateRef.current.selectedRoutingType || 'ORTHOGONAL';
+      const origRouting = origNode.connectorRoutingType || 'ORTHOGONAL';
+      if (currentRouting !== origRouting) return true;
+
+      const currentPattern = uiStateRef.current.selectedLinePattern || 'SOLID';
+      const origPattern = origNode.connectorStrokePattern || 'SOLID';
+      if (currentPattern !== origPattern) return true;
+
+      const currentSourceMag = uiStateRef.current.sourceMagnet || 'RIGHT';
+      const origSourceMag = origNode.connectorSourceMagnet || 'RIGHT';
+      if (currentSourceMag !== origSourceMag) return true;
+
+      const currentTargetMag = uiStateRef.current.targetMagnet || 'LEFT';
+      const origTargetMag = origNode.connectorTargetMagnet || 'LEFT';
+      if (currentTargetMag !== origTargetMag) return true;
+
+      return false;
+    }
+
+    const nodeActualType = origNode.flowNodeType || (origNode.nodeType === 'FRAME' ? 'Screen' : origNode.nodeType) || 'Screen';
+    const effectiveNodeType = normalizeNodeType(uiStateRef.current.selectedNodeType || lastNodeConfigRef.current.nodeType || nodeActualType);
+    const originalNodeType = normalizeNodeType(nodeActualType);
+
+    // 1. Node Type
+    if (effectiveNodeType !== originalNodeType) return true;
+
+    const spec = NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
+    const isDescAllowed = spec?.allowDescription ?? false;
+    const isScreen = effectiveNodeType === 'Screen';
+
+    // 2. Title
+    const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
+    const currentTitle = titleEl ? titleEl.value.trim() : (origNode.title || origNode.name || (isScreen ? 'Screen' : originalNodeType)).trim();
+    const originalTitle = (origNode.title || origNode.name || (isScreen ? 'Screen' : originalNodeType)).trim();
+    if (currentTitle !== originalTitle) return true;
+
+    // 3. Description
+    if (isDescAllowed) {
+      const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
+      const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
+      const isDescOn = descToggleEl ? descToggleEl.checked : Boolean(lastNodeConfigRef.current.descriptionOn);
+      const currentDesc = isDescOn ? (descEl ? descEl.value.trim() : (origNode.description || '').trim()) : '';
+      const originalDesc = (origNode.description || '').trim();
+      if (currentDesc !== originalDesc) return true;
+    }
+
+    // 4. Status
+    if (isDescAllowed) {
+      const statusToggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
+      const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(lastNodeConfigRef.current.statusOn);
+      const currentStatus = isStatusOn ? (uiStateRef.current.selectedStatus || lastNodeConfigRef.current.status || 'draft') : '';
+      const originalStatus = origNode.status || '';
+      if (currentStatus !== originalStatus) return true;
+    }
+
+    // 5. Figma Link
+    if (isDescAllowed) {
+      const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
+      const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
+      const isLinkOn = linkToggleEl ? linkToggleEl.checked : Boolean(lastNodeConfigRef.current.singleLinkOn);
+      const rawCurrentLink = isLinkOn ? (linkUrlEl ? linkUrlEl.value.trim() : (origNode.figmaLink || '').trim()) : '';
+      const currentLink = rawCurrentLink ? (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawCurrentLink) ? rawCurrentLink : `https://${rawCurrentLink}`) : '';
+      const originalLink = (origNode.figmaLink || '').trim();
+      if (currentLink !== originalLink) return true;
+    }
+
+    // 6. Step Badges
+    const stepToggleEl = document.getElementById('toggle-step-badges') as HTMLInputElement | null;
+    const isStepOn = stepToggleEl ? stepToggleEl.checked : Boolean(lastNodeConfigRef.current.stepBadgesOn);
+    const originalStepOn = origNode.stepNumber !== undefined;
+    if (isStepOn !== originalStepOn) return true;
+    if (isStepOn) {
+      const stepNumEl = document.getElementById('input-step-number') as HTMLInputElement | null;
+      const currentStepNum = stepNumEl ? parseInt(stepNumEl.value, 10) || 1 : (origNode.stepNumber || 1);
+      const originalStepNum = origNode.stepNumber || 1;
+      if (currentStepNum !== originalStepNum) return true;
+
+      const currentBadgeCorner = uiStateRef.current.selectedBadgeCorner || lastNodeConfigRef.current.badgeCorner || 'TOP_LEFT';
+      const originalBadgeCorner = origNode.badgeCorner || 'TOP_LEFT';
+      if (currentBadgeCorner !== originalBadgeCorner) return true;
+
+      const currentBadgeShape = uiStateRef.current.selectedBadgeShape || lastNodeConfigRef.current.badgeShape || 'Square';
+      const originalBadgeShape = origNode.badgeShape || 'Square';
+      if (currentBadgeShape !== originalBadgeShape) return true;
+
+      const currentBadgeColorMode = uiStateRef.current.selectedBadgeColorMode || lastNodeConfigRef.current.badgeColorMode || 'Style';
+      const originalBadgeColorMode = origNode.badgeColorMode || 'Style';
+      if (currentBadgeColorMode !== originalBadgeColorMode) return true;
+    }
+
+    // 7. Elevation
+    const elevToggleEl = document.getElementById('toggle-elevation') as HTMLInputElement | null;
+    const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
+    const currentElevation = isElevOn ? (uiStateRef.current.selectedElevation ?? lastNodeConfigRef.current.elevation ?? 0) : null;
+    const originalElevation = (origNode.elevation !== undefined && origNode.elevation !== null) ? origNode.elevation : null;
+    if (currentElevation !== originalElevation) return true;
+
+    // 8. Color (Fill)
+    const currentColor = (uiStateRef.current.selectedColor || lastNodeConfigRef.current.color || '#ffffff').toLowerCase();
+    const originalColor = (origNode.fillColorHex || '#ffffff').toLowerCase();
+    if (currentColor !== originalColor) return true;
+
+    // 9. Stroke
+    const currentStrokeWeight = uiStateRef.current.selectedStrokeWeight !== undefined ? uiStateRef.current.selectedStrokeWeight : (lastNodeConfigRef.current.strokeWeight ?? 1.5);
+    const originalStrokeWeight = origNode.strokeWeight ?? 1.5;
+    if (currentStrokeWeight !== originalStrokeWeight) return true;
+
+    if (currentStrokeWeight > 0) {
+      const currentStrokeColor = (uiStateRef.current.selectedStrokeColor || lastNodeConfigRef.current.strokeColor || '#000000').toLowerCase();
+      const originalStrokeColor = (origNode.strokeColorHex || '#000000').toLowerCase();
+      if (currentStrokeColor !== originalStrokeColor) return true;
+    }
+
+    // 10. Size (Screen 타입)
+    if (isScreen) {
+      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
+      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+      const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+
+      if (wEl && wEl.value !== '') {
+        const parsedW = parseInt(wEl.value, 10);
+        if (!isNaN(parsedW) && typeof origNode.width === 'number' && parsedW !== origNode.width) return true;
+      }
+      if (hEl && hEl.value !== '') {
+        const parsedH = parseInt(hEl.value, 10);
+        if (!isNaN(parsedH) && typeof origNode.height === 'number' && parsedH !== origNode.height) return true;
+      }
+      if (rEl && rEl.value !== '') {
+        const parsedR = parseInt(rEl.value, 10);
+        const origR = origNode.cornerRadius ?? 0;
+        if (!isNaN(parsedR) && parsedR !== origR) return true;
+      }
+
+      const currentSizeMode = lastNodeConfigRef.current.sizeMode || 'fixed';
+      const originalSizeMode = origNode.sizeMode || 'fixed';
+      if (currentSizeMode !== originalSizeMode) return true;
+    }
+
+    return false;
+  }, []);
+
+  const revertSingleNodeForm = useCallback((orig: NodeInfo) => {
+    const isConn = Boolean(orig.isConnector || orig.nodeType === 'CONNECTOR');
+    if (isConn) {
+      const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
+      const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
+      const hasLabel = Boolean(orig.connectorLabel);
+      if (labelToggleEl) labelToggleEl.checked = hasLabel;
+      if (labelInputEl) labelInputEl.value = orig.connectorLabel || '';
+
+      const colorEl = document.getElementById('conn-line-color') as HTMLInputElement | null;
+      if (colorEl && orig.connectorColorHex) colorEl.value = orig.connectorColorHex;
+
+      const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+      if (weightEl) weightEl.value = String(orig.connectorStrokeWeight ?? 1.5);
+
+      const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+      if (startTermEl) startTermEl.value = orig.connectorStartTerminal || 'NONE';
+
+      const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+      if (endTermEl) endTermEl.value = orig.connectorEndTerminal || 'ARROW';
+
+      const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+      if (startOffEl) startOffEl.value = String(orig.connectorStartOffset ?? 0);
+
+      const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+      if (endOffEl) endOffEl.value = String(orig.connectorEndOffset ?? 0);
+
+      setUIState({
+        selectedConnectorColor: orig.connectorColorHex || '#000000',
+        selectedRoutingType: orig.connectorRoutingType || 'ORTHOGONAL',
+        selectedLinePattern: orig.connectorStrokePattern || 'SOLID',
+        sourceMagnet: orig.connectorSourceMagnet || 'RIGHT',
+        targetMagnet: orig.connectorTargetMagnet || 'LEFT',
+      });
+
+      setLastConnectorConfig({
+        labelOn: hasLabel,
+        labelText: orig.connectorLabel || '',
+      });
+
+      triggerFormChange();
+      return;
+    }
+
+    const origType = normalizeNodeType(orig.flowNodeType || (orig.nodeType === 'FRAME' ? 'Screen' : orig.nodeType) || 'Screen');
+    const isScreen = origType === 'Screen';
+    const spec = NODE_TYPE_SHAPE_SPECS[origType];
+    const isDescAllowed = spec?.allowDescription ?? false;
+
+    const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
+    if (titleEl) titleEl.value = orig.title || orig.name || (isScreen ? 'Screen' : origType);
+
+    const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
+    const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
+    const hasDesc = Boolean(orig.description && orig.description.trim());
+    if (descToggleEl) descToggleEl.checked = hasDesc;
+    if (descEl) descEl.value = orig.description || '';
+
+    const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
+    const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
+    const hasLink = Boolean(orig.figmaLink);
+    if (linkToggleEl) linkToggleEl.checked = hasLink;
+    if (linkUrlEl) linkUrlEl.value = orig.figmaLink || '';
+
+    const statusToggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
+    if (statusToggleEl) statusToggleEl.checked = Boolean(orig.status);
+
+    const stepToggleEl = document.getElementById('toggle-step-badges') as HTMLInputElement | null;
+    const stepNumEl = document.getElementById('input-step-number') as HTMLInputElement | null;
+    const hasStep = orig.stepNumber !== undefined;
+    if (stepToggleEl) stepToggleEl.checked = hasStep;
+    if (stepNumEl && hasStep) stepNumEl.value = String(orig.stepNumber);
+
+    const elevToggleEl = document.getElementById('toggle-elevation') as HTMLInputElement | null;
+    const hasElev = orig.elevation !== undefined && orig.elevation !== null;
+    if (elevToggleEl) elevToggleEl.checked = hasElev;
+
+    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
+    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+    if (wEl && orig.width) wEl.value = String(orig.width);
+    if (hEl && orig.height) hEl.value = String(orig.height);
+    if (rEl) rEl.value = String(orig.cornerRadius ?? 0);
+
+    const colorUpdates: Partial<UIState> = {
+      selectedNodeType: origType,
+      selectedColor: orig.fillColorHex || '#ffffff',
+      selectedStrokeWeight: orig.strokeWeight,
+      selectedStrokeColor: orig.strokeColorHex,
+      selectedElevation: hasElev ? orig.elevation : 0,
+      selectedStatus: orig.status || 'draft',
+      selectedBadgeCorner: orig.badgeCorner || 'TOP_LEFT',
+      selectedBadgeShape: orig.badgeShape || 'Square',
+      selectedBadgeColorMode: orig.badgeColorMode || 'Style',
+    };
+    setUIState(colorUpdates);
+
+    setLastNodeConfig({
+      nodeType: origType,
+      width: orig.width || (isScreen ? 250 : spec?.width || 250),
+      height: orig.height || (isScreen ? 90 : spec?.height || 90),
+      cornerRadius: orig.cornerRadius ?? 0,
+      color: orig.fillColorHex || '#ffffff',
+      strokeWeight: orig.strokeWeight,
+      strokeColor: orig.strokeColorHex,
+      sizeMode: orig.sizeMode || 'fixed',
+      elevationOn: hasElev,
+      elevation: orig.elevation ?? 0,
+      statusOn: Boolean(orig.status),
+      status: orig.status || 'draft',
+      stepBadgesOn: hasStep,
+      stepNumber: orig.stepNumber || 1,
+      badgeCorner: orig.badgeCorner || 'TOP_LEFT',
+      badgeShape: orig.badgeShape || 'Square',
+      badgeColorMode: orig.badgeColorMode || 'Style',
+      descriptionOn: isDescAllowed ? hasDesc : false,
+      singleLinkOn: isDescAllowed ? hasLink : false,
+      singleLinkUrl: orig.figmaLink || '',
+    });
+
+    triggerFormChange();
+  }, [setUIState, setLastNodeConfig, setLastConnectorConfig, triggerFormChange]);
+
+  const hasSingleChanges = selectedNodes.length === 1 ? checkHasSingleChanges() : false;
+
+  const handleUndo = useCallback(() => {
+    const snapshot = lastAppliedSnapshotRef.current;
+    if (snapshot) {
+      if (snapshot.type === 'single' && snapshot.singlePayload) {
+        parent.postMessage({
+          pluginMessage: {
+            type: 'UPDATE_FLOW_NODE',
+            payload: snapshot.singlePayload,
+          }
+        }, '*');
+        showToast('작업이 되돌려졌습니다.', 'info');
+      } else if (snapshot.type === 'batch' && snapshot.batchItems && snapshot.batchItems.length > 0) {
+        const patchGroups = new Map<string, { nodeIds: string[]; patch: NodePatchPayload }>();
+        snapshot.batchItems.forEach(item => {
+          const key = JSON.stringify(item.patch);
+          const existing = patchGroups.get(key);
+          if (existing) {
+            existing.nodeIds.push(item.nodeId);
+          } else {
+            patchGroups.set(key, { nodeIds: [item.nodeId], patch: item.patch });
+          }
+        });
+        patchGroups.forEach(({ nodeIds, patch }) => {
+          parent.postMessage({
+            pluginMessage: {
+              type: 'BATCH_UPDATE_FLOW_NODES',
+              payload: { nodeIds, patch }
+            }
+          }, '*');
+        });
+        showToast('작업이 되돌려졌습니다.', 'info');
+      } else if (snapshot.type === 'connector' && snapshot.connectorItems && snapshot.connectorItems.length > 0) {
+        snapshot.connectorItems.forEach(item => {
+          parent.postMessage({
+            pluginMessage: {
+              type: 'UPDATE_CONNECTOR_PROPERTIES',
+              payload: item.payload,
+            }
+          }, '*');
+        });
+        showToast('작업이 되돌려졌습니다.', 'info');
+      }
+      setLastAppliedSnapshot(null);
+      lastAppliedSnapshotRef.current = null;
+    } else if (originalSelectedNodeRef.current && selectedNodesRef.current.length === 1) {
+      revertSingleNodeForm(originalSelectedNodeRef.current);
+      showToast('변경사항이 취소되었습니다.', 'info');
+    }
+  }, [showToast, revertSingleNodeForm]);
+
   const lastResizeHeightRef = useRef(0);
   const resizeTimerRef = useRef<number | null>(null);
 
@@ -709,8 +1054,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const h = overrideSize?.height !== undefined
       ? overrideSize.height
       : (isScreen
-          ? (parseInt(hEl?.value || '', 10) || firstNode?.height || lastNodeConfigRef.current.height || 100)
-          : (!isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '100', 10) || 100)));
+          ? (parseInt(hEl?.value || '', 10) || firstNode?.height || lastNodeConfigRef.current.height || 90)
+          : (!isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90)));
     const radius = overrideSize?.cornerRadius !== undefined
       ? overrideSize.cornerRadius
       : (isScreen
@@ -933,6 +1278,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const connNodes = nodes.filter(n => n && n.isConnector);
     if (connNodes.length === 0) return;
 
+    if (connNodes.length === 1) {
+      isApplyingSingleRef.current = true;
+    }
+
+    const snapshotItems = connNodes.map(node => ({
+      connectorId: node.id,
+      payload: {
+        connectorId: node.id,
+        colorHex: node.connectorColorHex,
+        strokeWeight: node.connectorStrokeWeight,
+        strokePattern: (node.connectorStrokePattern as ConnectorStrokePattern) || 'SOLID',
+        routingType: (node.connectorRoutingType as ConnectorRoutingType) || 'ORTHOGONAL',
+        startTerminal: (node.connectorStartTerminal as ConnectorTerminalType) || 'NONE',
+        endTerminal: (node.connectorEndTerminal as ConnectorTerminalType) || 'ARROW',
+        startOffset: node.connectorStartOffset ?? 0,
+        endOffset: node.connectorEndOffset ?? 0,
+        sourceMagnet: (node.connectorSourceMagnet as MagnetPosition) || 'RIGHT',
+        targetMagnet: (node.connectorTargetMagnet as MagnetPosition) || 'LEFT',
+        label: node.connectorLabel || '',
+        hasLabel: Boolean(node.connectorLabel),
+        isReversed: node.connectorIsReversed || false,
+      }
+    }));
+    const newSnapshot: UndoSnapshot = {
+      type: 'connector',
+      connectorItems: snapshotItems,
+    };
+    setLastAppliedSnapshot(newSnapshot);
+    lastAppliedSnapshotRef.current = newSnapshot;
+
     const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
     const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
     const colorEl = document.getElementById('conn-line-color') as HTMLSelectElement | null;
@@ -990,101 +1365,107 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const handleMainAction = useCallback(() => {
+  const connectSelectedNodes = useCallback(() => {
     const nodes = selectedNodesRef.current;
     const isConn = isConnectorSelectedRef.current || (nodes.length > 0 && nodes.every(n => n && n.isConnector));
 
-    if (isConn || currentTabRef.current === 'connection') {
-      // 커넥터 수정 또는 연결
-      if (isConn && nodes.length >= 1 && nodes.every(n => n && n.isConnector)) {
-        applyCurrentConnectorState();
-        return;
-      }
-      if (nodes.length < 2) {
-        showToast('Select 2 or more nodes to connect.');
-        return;
-      }
-      const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
-      const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
-      const colorEl = document.getElementById('conn-line-color') as HTMLSelectElement | null;
-      const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-      const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-      const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-      const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
-      const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
-      const linkToggleEl = document.getElementById('toggle-conn-link') as HTMLInputElement | null;
-      const linkUrlEl = document.getElementById('input-conn-link-url') as HTMLInputElement | null;
+    if (isConn && nodes.length >= 1 && nodes.every(n => n && n.isConnector)) {
+      applyCurrentConnectorState();
+      return;
+    }
+    if (nodes.length < 2) {
+      showToast('Select 2 or more nodes to connect.');
+      return;
+    }
+    const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
+    const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
+    const colorEl = document.getElementById('conn-line-color') as HTMLSelectElement | null;
+    const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+    const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+    const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+    const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+    const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+    const linkToggleEl = document.getElementById('toggle-conn-link') as HTMLInputElement | null;
+    const linkUrlEl = document.getElementById('input-conn-link-url') as HTMLInputElement | null;
 
-      const label = labelToggleEl?.checked ? (labelInputEl?.value.trim() || '') : '';
-      const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || '#000000';
-      const weight = parseFloat(weightEl?.value || '1.5') || 1.5;
-      const startTerm = startTermEl?.value || 'NONE';
-      const endTerm = endTermEl?.value || 'ARROW';
-      const startOff = parseFloat(startOffEl?.value || '0') || 0;
-      const endOff = parseFloat(endOffEl?.value || '0') || 0;
-      const isLinkOn = linkToggleEl ? linkToggleEl.checked : (lastConnectorConfigRef.current.linkOn || false);
-      const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : (lastConnectorConfigRef.current.linkUrl || '');
-      const figmaLink = isLinkOn ? rawLinkUrl : '';
-      const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+    const label = labelToggleEl?.checked ? (labelInputEl?.value.trim() || '') : '';
+    const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || '#000000';
+    const weight = parseFloat(weightEl?.value || '1.5') || 1.5;
+    const startTerm = startTermEl?.value || 'NONE';
+    const endTerm = endTermEl?.value || 'ARROW';
+    const startOff = parseFloat(startOffEl?.value || '0') || 0;
+    const endOff = parseFloat(endOffEl?.value || '0') || 0;
+    const isLinkOn = linkToggleEl ? linkToggleEl.checked : (lastConnectorConfigRef.current.linkOn || false);
+    const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : (lastConnectorConfigRef.current.linkUrl || '');
+    const figmaLink = isLinkOn ? rawLinkUrl : '';
+    const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
 
-      if (nodes.length === 2) {
+    if (nodes.length === 2) {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'CONNECT_POINTS',
+          payload: {
+            sourceNodeId: nodes[0].id, sourceMagnet,
+            targetNodeId: nodes[1].id, targetMagnet,
+            label, colorHex: color, strokeWeight: weight,
+            routingType: selectedRoutingType, strokePattern: selectedLinePattern,
+            startTerminal: startTerm, endTerminal: endTerm,
+            startOffset: startOff, endOffset: endOff, figmaLink,
+          }
+        }
+      }, '*');
+    } else {
+      // 3개 이상 다중 노드 선택: 순차 체인 연결 (1 -> 2 -> ... -> N)
+      for (let i = 0; i < nodes.length - 1; i++) {
+        const src = nodes[i];
+        const tgt = nodes[i + 1];
+
+        let pairSourceMag = sourceMagnet;
+        let pairTargetMag = targetMagnet;
+
+        if (typeof src.x === 'number' && typeof tgt.x === 'number' && typeof src.y === 'number' && typeof tgt.y === 'number') {
+          const dx = tgt.x - src.x;
+          const dy = tgt.y - src.y;
+          if (Math.abs(dx) >= Math.abs(dy)) {
+            pairSourceMag = dx >= 0 ? 'RIGHT' : 'LEFT';
+            pairTargetMag = dx >= 0 ? 'LEFT' : 'RIGHT';
+          } else {
+            pairSourceMag = dy >= 0 ? 'BOTTOM' : 'TOP';
+            pairTargetMag = dy >= 0 ? 'TOP' : 'BOTTOM';
+          }
+        }
+
         parent.postMessage({
           pluginMessage: {
             type: 'CONNECT_POINTS',
             payload: {
-              sourceNodeId: nodes[0].id, sourceMagnet,
-              targetNodeId: nodes[1].id, targetMagnet,
-              label, colorHex: color, strokeWeight: weight,
-              routingType: selectedRoutingType, strokePattern: selectedLinePattern,
-              startTerminal: startTerm, endTerminal: endTerm,
-              startOffset: startOff, endOffset: endOff, figmaLink,
+              sourceNodeId: src.id,
+              sourceMagnet: i === 0 ? sourceMagnet : pairSourceMag,
+              targetNodeId: tgt.id,
+              targetMagnet: i === nodes.length - 2 ? targetMagnet : pairTargetMag,
+              label: i === 0 ? label : '',
+              colorHex: color,
+              strokeWeight: weight,
+              routingType: selectedRoutingType,
+              strokePattern: selectedLinePattern,
+              startTerminal: i === 0 ? startTerm : 'NONE',
+              endTerminal: endTerm,
+              startOffset: startOff,
+              endOffset: endOff,
+              figmaLink: i === 0 ? figmaLink : '',
             }
           }
         }, '*');
-      } else {
-        // 3개 이상 다중 노드 선택: 순차 체인 연결 (1 -> 2 -> ... -> N)
-        for (let i = 0; i < nodes.length - 1; i++) {
-          const src = nodes[i];
-          const tgt = nodes[i + 1];
-
-          let pairSourceMag = sourceMagnet;
-          let pairTargetMag = targetMagnet;
-
-          if (typeof src.x === 'number' && typeof tgt.x === 'number' && typeof src.y === 'number' && typeof tgt.y === 'number') {
-            const dx = tgt.x - src.x;
-            const dy = tgt.y - src.y;
-            if (Math.abs(dx) >= Math.abs(dy)) {
-              pairSourceMag = dx >= 0 ? 'RIGHT' : 'LEFT';
-              pairTargetMag = dx >= 0 ? 'LEFT' : 'RIGHT';
-            } else {
-              pairSourceMag = dy >= 0 ? 'BOTTOM' : 'TOP';
-              pairTargetMag = dy >= 0 ? 'TOP' : 'BOTTOM';
-            }
-          }
-
-          parent.postMessage({
-            pluginMessage: {
-              type: 'CONNECT_POINTS',
-              payload: {
-                sourceNodeId: src.id,
-                sourceMagnet: i === 0 ? sourceMagnet : pairSourceMag,
-                targetNodeId: tgt.id,
-                targetMagnet: i === nodes.length - 2 ? targetMagnet : pairTargetMag,
-                label: i === 0 ? label : '',
-                colorHex: color,
-                strokeWeight: weight,
-                routingType: selectedRoutingType,
-                strokePattern: selectedLinePattern,
-                startTerminal: i === 0 ? startTerm : 'NONE',
-                endTerminal: endTerm,
-                startOffset: startOff,
-                endOffset: endOff,
-                figmaLink: i === 0 ? figmaLink : '',
-              }
-            }
-          }, '*');
-        }
       }
+    }
+  }, [applyCurrentConnectorState, showToast]);
+
+  const handleMainAction = useCallback(() => {
+    const nodes = selectedNodesRef.current;
+    const isConn = isConnectorSelectedRef.current || (nodes.length > 0 && nodes.every(n => n && n.isConnector));
+
+    if (isConn && nodes.length >= 1 && nodes.every(n => n && n.isConnector)) {
+      applyCurrentConnectorState();
       return;
     }
 
@@ -1125,7 +1506,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const effectiveDesc = isDescAllowed ? desc : '';
 
     const w = !isDescAllowed && spec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250);
-    const h = !isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '100', 10) || 100);
+    const h = !isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90);
     let radius = !isDescAllowed && spec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0);
     if (radius > 999) {
       radius = 999;
@@ -1161,7 +1542,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       nodeType: selectedNodeType, color: selectedColor,
       strokeWeight: lastNodeConfigRef.current.strokeWeight,
       strokeColor: lastNodeConfigRef.current.strokeColor,
-      sizeMode: lastNodeConfigRef.current.sizeMode || 'fixed',
+      sizeMode: lastNodeConfigRef.current.sizeMode || (selectedNodeType === 'Screen' ? 'hug' : 'fixed'),
       elevationOn: isElevOn, elevation: selectedElevation,
       statusOn: statusToggleEl?.checked || false, status: selectedStatus,
       stepBadgesOn: isStepOn,
@@ -1176,6 +1557,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLastNodeConfig(newConfig);
 
     if (nodes.length === 1) {
+      isApplyingSingleRef.current = true;
       const targetNode = nodes[0];
       const prevSinglePayload: UpdateNodePayload = {
         nodeId: targetNode.id,
@@ -1222,7 +1604,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             colorHex: selectedColor,
             strokeWeight: lastNodeConfigRef.current.strokeWeight !== undefined ? lastNodeConfigRef.current.strokeWeight : 1.5,
             strokeColor: lastNodeConfigRef.current.strokeColor,
-            sizeMode: (lastNodeConfigRef.current.sizeMode as ('fixed' | 'hug' | 'fit')) || 'fixed',
+            sizeMode: (lastNodeConfigRef.current.sizeMode as ('fixed' | 'hug' | 'fit')) || (selectedNodeType === 'Screen' ? 'hug' : 'fixed'),
             elevation: isElevOn ? selectedElevation : undefined,
             status: (!isDescAllowed || !statusToggleEl?.checked) ? undefined : selectedStatus,
             badgeNumber: isStepOn ? targetStepNum : undefined,
@@ -1279,6 +1661,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSelectedNodes(nodes);
     selectedNodesRef.current = nodes;
 
+    if (nodes && nodes.length === 1) {
+      if (isSelectionChanged || isApplyingSingleRef.current || !originalSelectedNodeRef.current || originalSelectedNodeRef.current.id !== nodes[0].id) {
+        originalSelectedNodeRef.current = { ...nodes[0] };
+        isApplyingSingleRef.current = false;
+        setLastAppliedSnapshot(null);
+        lastAppliedSnapshotRef.current = null;
+      }
+    } else {
+      originalSelectedNodeRef.current = null;
+      isApplyingSingleRef.current = false;
+    }
+
     const flowNodeCount = typeof meta?.flowNodeCount === 'number'
       ? meta.flowNodeCount
       : nodes.filter(n => n && (n.isFlowNode || (!n.isConnector && n.flowNodeType))).length;
@@ -1299,6 +1693,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (newIsConnSel) {
       setCurrentTab('connection');
+      if (nodes.length === 1 && nodes[0]) {
+        const firstConn = nodes[0];
+        setLastConnectorConfig({
+          labelOn: Boolean(firstConn.connectorLabel),
+          labelText: firstConn.connectorLabel || 'Text',
+        });
+        setUIState({
+          selectedConnectorColor: firstConn.connectorColorHex || '#000000',
+          selectedRoutingType: firstConn.connectorRoutingType || 'ORTHOGONAL',
+          selectedLinePattern: firstConn.connectorStrokePattern || 'SOLID',
+          sourceMagnet: firstConn.connectorSourceMagnet || 'RIGHT',
+          targetMagnet: firstConn.connectorTargetMagnet || 'LEFT',
+        });
+      }
     } else if (count === 0) {
       // 바탕화면 클릭 (신규 생성 모드): 항상 node 탭이 기본 (플러그인 노드의 이전 속성 캐시를 유지하여 UI 동기화)
       setCurrentTab('node');
@@ -1479,6 +1887,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     applyStepBadges,
     removeStepBadgesFromNodes,
     applyCurrentConnectorState,
+    connectSelectedNodes,
     handleMainAction,
     handleSelectionChange,
     closeAllPopovers,
@@ -1490,6 +1899,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     clearMultiDraft,
     clearMultiDraftKeys,
     isApplyingMultiDraft,
+    hasSingleChanges,
+    triggerFormChange,
     canUndo,
     handleUndo,
   };

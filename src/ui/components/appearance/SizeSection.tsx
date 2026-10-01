@@ -236,7 +236,7 @@ export function SizeSection() {
       } else {
         const first = validNodes[0];
         let nodeW = typeof first?.width === 'number' ? first.width : (lastNodeConfig.width || 250);
-        let nodeH = typeof first?.height === 'number' ? first.height : (lastNodeConfig.height || 100);
+        let nodeH = typeof first?.height === 'number' ? first.height : (lastNodeConfig.height || 90);
         let nodeR = typeof first?.cornerRadius === 'number' ? first.cornerRadius : (lastNodeConfig.cornerRadius ?? 0);
 
         // 동일 노드 수정 중 pending 요청이 남아있는 경우:
@@ -276,7 +276,7 @@ export function SizeSection() {
     } else {
       // 선택된 노드가 없을 때 (생성 대기 모드): lastNodeConfig 디폴트값 동기화
       const defW = lastNodeConfig.width || 250;
-      const defH = lastNodeConfig.height || 100;
+      const defH = lastNodeConfig.height || 90;
       const defR = lastNodeConfig.cornerRadius ?? 0;
 
       if (!isFocusedRef.current.w) setWidthInput(String(defW));
@@ -331,7 +331,7 @@ export function SizeSection() {
       return;
     }
 
-    const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 100;
+    const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
     const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
     const targetNodeId = selectedNodes[0]?.id || 'NONE';
 
@@ -382,7 +382,7 @@ export function SizeSection() {
     if (!isSizeAllowed) return;
     const raw = explicitVal !== undefined ? explicitVal : heightInput;
     const parsed = parseInt(raw, 10);
-    let validH = isNaN(parsed) ? (lastNodeConfig.height || 100) : parsed;
+    let validH = isNaN(parsed) ? (lastNodeConfig.height || 90) : parsed;
     if (validH < SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT) {
       validH = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
       showToast(`최소 높이는 ${SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT}px입니다.`, 'warning');
@@ -428,13 +428,13 @@ export function SizeSection() {
       (e.target as HTMLInputElement).blur();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 100);
+      const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
       const step = e.shiftKey ? 10 : 1;
       const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT, current + step);
       commitH(String(next));
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 100);
+      const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
       const step = e.shiftKey ? 10 : 1;
       const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, current - step);
       commitH(String(next));
@@ -467,7 +467,7 @@ export function SizeSection() {
     }
 
     const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
-    const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 100;
+    const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
     const targetNodeId = selectedNodes[0]?.id || 'NONE';
 
     pendingSizeRef.current = {
@@ -576,6 +576,7 @@ export function SizeSection() {
 
   function selectSizeMode(mode: string) {
     if (!isSizeAllowed) return;
+    pendingSizeRef.current = null;
     if (selectedNodes.length >= 2) {
       if (mode !== 'mixed') {
         updateMultiDraft({ sizeMode: mode as 'fixed' | 'hug' | 'fit' });

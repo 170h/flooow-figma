@@ -95,7 +95,7 @@
     }
   }
   var NODE_TYPE_SHAPE_SPECS = {
-    Screen: { width: 250, height: 100, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
+    Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
     Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
@@ -200,9 +200,9 @@
     return OPTION_CAPABILITY_MATRIX[category]?.[option] ?? false;
   }
   var SCREEN_NODE_CONSTRAINTS = {
-    MIN_WIDTH: 140,
+    MIN_WIDTH: 49,
     MAX_WIDTH: 800,
-    MIN_HEIGHT: 100,
+    MIN_HEIGHT: 49,
     MAX_HEIGHT: 600,
     MIN_CORNER_RADIUS: 0,
     MAX_CORNER_RADIUS: 20,
@@ -1830,7 +1830,7 @@
   function calculateCardHugHeight(card, textCharacters) {
     const isAuto = card.primaryAxisSizingMode === "AUTO";
     if (isAuto && textCharacters === void 0) {
-      return Math.round(card.height);
+      return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
     }
     const prevSizingMode = card.primaryAxisSizingMode;
     const prevHeight = card.height;
@@ -1862,10 +1862,77 @@
           descText.characters = prevDescChars;
         }
       }
-      return hugH;
+      return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, hugH);
     } catch (_) {
-      return Math.round(card.height);
+      return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
     }
+  }
+  async function measureSingleLineTextWidth(text, fontName, fontSize) {
+    const trimmed = text.trim();
+    if (!trimmed) return 0;
+    await figma.loadFontAsync(fontName);
+    const measureNode = figma.createText();
+    measureNode.x = -99999;
+    measureNode.y = -99999;
+    figma.currentPage.appendChild(measureNode);
+    try {
+      measureNode.fontName = fontName;
+      measureNode.fontSize = fontSize;
+      measureNode.lineHeight = { value: 18, unit: "PIXELS" };
+      measureNode.textAutoResize = "WIDTH_AND_HEIGHT";
+      let maxLineW = 0;
+      const lines = trimmed.split("\n");
+      for (const line of lines) {
+        const l = line.trim();
+        if (l) {
+          measureNode.characters = l;
+          const w = Math.ceil(measureNode.width) + 2;
+          if (w > maxLineW) {
+            maxLineW = w;
+          }
+        }
+      }
+      return maxLineW;
+    } finally {
+      measureNode.remove();
+    }
+  }
+  async function calculateMinimumInternalContentWidth(status, figmaLink) {
+    const hasStatus = Boolean(status && STATUS_CONFIG[status]);
+    const hasLink = Boolean(figmaLink && figmaLink.trim());
+    if (!hasStatus && !hasLink) {
+      return SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
+    }
+    let statusBadgeW = 0;
+    if (hasStatus) {
+      const cfg = STATUS_CONFIG[status];
+      const label = (cfg.label || status || "").toUpperCase();
+      const statusFont = { family: "Inter", style: "Bold" };
+      const labelW = await measureSingleLineTextWidth(label, statusFont, 9);
+      statusBadgeW = labelW + 18;
+    }
+    if (hasStatus && hasLink) {
+      return 16 + 16 + 8 + statusBadgeW + 10;
+    }
+    if (hasStatus) {
+      return 16 + statusBadgeW + 10;
+    }
+    return 16 + 16 + 16;
+  }
+  async function calculateScreenFitWidth(card, title, status, figmaLink) {
+    const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
+    const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
+    const strokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 1.5) * 2;
+    const trimmedTitle = (title || "").trim();
+    let measuredTitleW = 0;
+    if (trimmedTitle) {
+      const titleFont = { family: "Inter", style: "Bold" };
+      measuredTitleW = await measureSingleLineTextWidth(trimmedTitle, titleFont, 13);
+    }
+    const titleRequiredW = measuredTitleW > 0 ? measuredTitleW + pl + pr + Math.ceil(strokeOffset) + 4 : SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
+    const internalRequiredW = await calculateMinimumInternalContentWidth(status, figmaLink);
+    const fitW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, titleRequiredW, internalRequiredW);
+    return clampScreenWidth(fitW);
   }
   async function ensureTextNodeFontsLoaded(textNode) {
     if (!textNode) return;
@@ -2632,15 +2699,17 @@
       }
       if (textNode.parent && "layoutMode" in textNode.parent) {
         const parentFrame = textNode.parent;
-        const card = parentFrame.parent && "layoutMode" in parentFrame.parent ? parentFrame.parent : parentFrame;
-        const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
-        const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
-        const strokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
-        const availW = Math.max(10, card.width - pl - pr - strokeOffset);
-        if (Math.abs(textNode.width - availW) > 1) {
-          try {
-            textNode.resize(availW, textNode.height);
-          } catch (_) {
+        if (parentFrame.layoutMode === "NONE") {
+          const card = parentFrame.parent && "layoutMode" in parentFrame.parent ? parentFrame.parent : parentFrame;
+          const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
+          const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
+          const strokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
+          const availW = Math.max(10, card.width - pl - pr - strokeOffset);
+          if (Math.abs(textNode.width - availW) > 1) {
+            try {
+              textNode.resize(availW, textNode.height);
+            } catch (_) {
+            }
           }
         }
       }
@@ -2650,7 +2719,18 @@
       if (textNode.textAutoResize !== "HEIGHT") {
         textNode.textAutoResize = "HEIGHT";
       }
-      textNode.textTruncation = "ENDING";
+      const flowNodeCandidate = findFlowNode(textNode);
+      const isScreenCard = flowNodeCandidate && flowNodeCandidate.type === "FRAME" && normalizeNodeType(safeGetPluginData2(flowNodeCandidate, "node_type")) === "Screen";
+      const sMode = isScreenCard ? safeGetPluginData2(flowNodeCandidate, "size_mode") || safeGetPluginData2(flowNodeCandidate, "screen_size_mode") || "fixed" : null;
+      if (sMode === "fit" || sMode === "hug") {
+        if (textNode.textTruncation !== "DISABLED") {
+          textNode.textTruncation = "DISABLED";
+        }
+      } else {
+        if (textNode.textTruncation !== "ENDING") {
+          textNode.textTruncation = "ENDING";
+        }
+      }
     } catch (err) {
       console.warn("\uD3F0\uD2B8 \uC0AC\uC774\uC988 \uBC0F \uB9AC\uC0AC\uC774\uC988 \uBAA8\uB4DC \uACE0\uC815 \uC2E4\uD328:", err);
     }
@@ -3169,8 +3249,8 @@
       const nodeType = normalizeNodeType(payload.nodeType || "Screen");
       const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
       const isShapeNode = !spec.allowDescription;
-      const rawTitle = payload.title && payload.title.trim() || (nodeType === "Screen" ? "Screen" : nodeType);
-      const title = rawTitle.slice(0, 32);
+      const rawTitle = payload.title !== void 0 ? payload.title.trim() : nodeType === "Screen" ? "Screen" : nodeType;
+      const title = rawTitle;
       const width = isShapeNode ? spec.width : payload.width ? clampScreenWidth(payload.width) : spec.width;
       const height = isShapeNode ? spec.height : payload.height ? clampScreenHeight(payload.height) : spec.height;
       const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
@@ -3214,6 +3294,9 @@
         }
       }
       card.clipsContent = false;
+      let effectiveCreateW = width;
+      const isCreateFit = !isShapeNode && payload.sizeMode === "fit";
+      const isCreateHug = !isShapeNode && (payload.sizeMode === "hug" || !payload.sizeMode && nodeType === "Screen");
       card.minWidth = width;
       card.maxWidth = width;
       card.minHeight = height;
@@ -3281,6 +3364,10 @@
         headerRow.primaryAxisAlignItems = "MIN";
         headerRow.counterAxisAlignItems = "MIN";
         headerRow.itemSpacing = 0;
+        headerRow.paddingLeft = 0;
+        headerRow.paddingRight = 0;
+        headerRow.paddingTop = 0;
+        headerRow.paddingBottom = 0;
         headerRow.fills = [];
         const titleText = figma.createText();
         titleText.name = "TitleText";
@@ -3290,26 +3377,25 @@
         titleText.characters = title;
         titleText.fills = [titleFill];
         titleText.textAutoResize = "HEIGHT";
-        let effectiveCreateW = width;
-        if (!isShapeNode && payload.sizeMode === "fit") {
-          const measureText = figma.createText();
-          const titleFont = { family: "Inter", style: "Bold" };
-          await figma.loadFontAsync(titleFont);
-          measureText.fontName = titleFont;
-          measureText.fontSize = 13;
-          measureText.lineHeight = { value: 18, unit: "PIXELS" };
-          measureText.textAutoResize = "WIDTH_AND_HEIGHT";
-          measureText.characters = title.trim() || " ";
-          const measuredTitleW = Math.ceil(measureText.width);
-          measureText.remove();
-          effectiveCreateW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, measuredTitleW + card.paddingLeft + card.paddingRight);
+        if (isCreateFit) {
+          effectiveCreateW = await calculateScreenFitWidth(
+            card,
+            title,
+            payload.status,
+            payload.figmaLink
+          );
+        } else if (isCreateHug) {
+          effectiveCreateW = clampScreenWidth(width);
+        }
+        if (isCreateFit || isCreateHug) {
           card.counterAxisSizingMode = "FIXED";
           card.primaryAxisSizingMode = "AUTO";
           card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
+          card.maxHeight = null;
           card.minWidth = effectiveCreateW;
           card.maxWidth = effectiveCreateW;
           card.resize(effectiveCreateW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, card.height));
-          card.setPluginData("size_mode", "fit");
+          card.setPluginData("size_mode", isCreateFit ? "fit" : "hug");
         }
         titleText.textTruncation = "DISABLED";
         titleText.maxLines = null;
@@ -3334,7 +3420,7 @@
           const descAvailW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - descStrokeOffset);
           descText.resize(descAvailW, descText.height);
           descText.textAutoResize = "HEIGHT";
-          if (!isShapeNode && payload.sizeMode === "fit") {
+          if (!isShapeNode && (payload.sizeMode === "fit" || payload.sizeMode === "hug")) {
             descText.maxLines = null;
             descText.textTruncation = "DISABLED";
           } else {
@@ -3352,7 +3438,7 @@
         card.setPluginData("screen_width", String(width));
         card.setPluginData("screen_height", String(height));
         card.setPluginData("screen_corner_radius", String(cornerRadius));
-        card.setPluginData("screen_size_mode", payload.sizeMode || "fixed");
+        card.setPluginData("screen_size_mode", payload.sizeMode || (nodeType === "Screen" ? "hug" : "fixed"));
       } else if (payload.description) {
         card.setPluginData("node_desc", payload.description);
       }
@@ -3396,6 +3482,24 @@
       }
       if (!isShapeNode) {
         await updateFigmaLinkBadge(card, payload.figmaLink, isBgDark);
+        if (isCreateFit || isCreateHug) {
+          const finalCreateH = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
+          card.resize(effectiveCreateW, finalCreateH);
+          const statusBadge = card.children.find(
+            (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
+          );
+          if (statusBadge) {
+            statusBadge.x = effectiveCreateW - statusBadge.width - 10;
+            statusBadge.y = card.height - statusBadge.height - 10;
+          }
+          const linkBadge = card.children.find(
+            (c) => safeGetPluginData2(c, "is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
+          );
+          if (linkBadge) {
+            linkBadge.x = 16;
+            linkBadge.y = card.height - linkBadge.height - 10;
+          }
+        }
       }
       if (supportsOption(card, "elevation") && typeof payload.elevation === "number") {
         card.setPluginData("node_elevation", `${payload.elevation}`);
@@ -3449,9 +3553,9 @@
         flowNode = await convertShapeToFrameNode(flowNode);
       }
       await loadRequiredFonts();
-      const rawTitle = payload.title.trim() || "Untitled";
-      const title = rawTitle.slice(0, 32);
-      const description = payload.description.trim() || "";
+      const rawTitle = payload.title !== void 0 ? payload.title.trim() : safeGetPluginData2(flowNode, "node_title") || "";
+      const title = rawTitle;
+      const description = payload.description !== void 0 ? payload.description.trim() : "";
       const isDark = payload.theme === "dark";
       const isFillNone = payload.colorHex?.toLowerCase() === "none" || payload.colorHex?.toLowerCase() === "transparent";
       let bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
@@ -3516,7 +3620,8 @@
       const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
       const restoredScreenR = savedScreenR !== "" && savedScreenR !== void 0 ? parseInt(savedScreenR, 10) : spec.cornerRadius ?? 0;
       const prevSizeMode = safeGetPluginData2(card, "size_mode") || "fixed";
-      const isChangingFromFitToFixed = prevSizeMode === "fit" && payload.sizeMode === "fixed";
+      const effectiveSizeMode = !isShapeNode && payload.sizeMode !== void 0 ? payload.sizeMode : prevSizeMode;
+      const isChangingFromFitToFixed = prevSizeMode === "fit" && effectiveSizeMode === "fixed";
       const targetW = isShapeNode ? spec.width : isChangingToScreen ? payload.width ? clampScreenWidth(payload.width) : restoredScreenW ? clampScreenWidth(restoredScreenW) : spec.width : isChangingFromFitToFixed ? payload.width ? clampScreenWidth(payload.width) : restoredScreenW ? clampScreenWidth(restoredScreenW) : clampScreenWidth(card.width) : payload.width ? clampScreenWidth(payload.width) : clampScreenWidth(card.width);
       const targetH = isShapeNode ? spec.height : isChangingToScreen ? payload.height ? clampScreenHeight(payload.height) : restoredScreenH ? clampScreenHeight(restoredScreenH) : spec.height : payload.height ? clampScreenHeight(payload.height) : clampScreenHeight(card.height);
       const prevDescription = safeGetPluginData2(card, "node_desc") || "";
@@ -3531,6 +3636,15 @@
       const hasStatus = Boolean(existingStatusBadgeOnCard || !isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]);
       const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
       const hasBottomBar = hasStatus || hasLink;
+      let fitW;
+      if (!isShapeNode && effectiveSizeMode === "fit") {
+        fitW = await calculateScreenFitWidth(
+          card,
+          effectiveTitle,
+          effectiveStatus,
+          effectiveLink
+        );
+      }
       if (card.layoutMode !== "VERTICAL") {
         card.layoutMode = "VERTICAL";
       }
@@ -3563,9 +3677,10 @@
         }
       }
       if (!isShapeNode) {
+        const initialW = effectiveSizeMode === "fit" && fitW !== void 0 ? fitW : targetW;
         card.primaryAxisSizingMode = "FIXED";
         card.counterAxisSizingMode = "FIXED";
-        card.resize(targetW, targetH);
+        card.resize(initialW, targetH);
         card.itemSpacing = 8;
         card.paddingLeft = 16;
         card.paddingRight = 16;
@@ -3584,7 +3699,6 @@
         );
         if (existingLinkBadge) existingLinkBadge.remove();
       }
-      let fitW;
       let titleText = card.findOne(
         (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
       );
@@ -3673,6 +3787,10 @@
         headerRow.primaryAxisAlignItems = "MIN";
         headerRow.counterAxisAlignItems = "MIN";
         headerRow.itemSpacing = 0;
+        headerRow.paddingLeft = 0;
+        headerRow.paddingRight = 0;
+        headerRow.paddingTop = 0;
+        headerRow.paddingBottom = 0;
         if (!titleText) {
           titleText = figma.createText();
           titleText.name = "TitleText";
@@ -3687,25 +3805,17 @@
         titleText.textAlignHorizontal = "LEFT";
         titleText.textAlignVertical = "TOP";
         titleText.layoutAlign = "STRETCH";
-        if (!isShapeNode && payload.sizeMode === "fit") {
-          const measureText = figma.createText();
-          const titleFont = { family: "Inter", style: "Bold" };
-          await figma.loadFontAsync(titleFont);
-          measureText.fontName = titleFont;
-          measureText.fontSize = 13;
-          measureText.lineHeight = { value: 18, unit: "PIXELS" };
-          measureText.textAutoResize = "WIDTH_AND_HEIGHT";
-          measureText.characters = effectiveTitle.trim() || " ";
-          const measuredTitleW = Math.ceil(measureText.width);
-          measureText.remove();
-          fitW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, measuredTitleW + pl + pr);
-          titleText.textAutoResize = "HEIGHT";
-          await safeSetCharacters(titleText, effectiveTitle);
-        } else {
-          titleText.textAutoResize = "HEIGHT";
-          titleText.fontName = { family: "Inter", style: "Bold" };
-          titleText.characters = effectiveTitle;
+        if (fitW === void 0 && !isShapeNode && effectiveSizeMode === "fit") {
+          fitW = await calculateScreenFitWidth(
+            card,
+            effectiveTitle,
+            effectiveStatus,
+            effectiveLink
+          );
         }
+        titleText.textAutoResize = "HEIGHT";
+        titleText.fontName = { family: "Inter", style: "Bold" };
+        await safeSetCharacters(titleText, effectiveTitle);
         titleText.textTruncation = "DISABLED";
         titleText.maxLines = null;
         try {
@@ -3741,14 +3851,14 @@
         descText.characters = effectiveDesc;
         descText.textAutoResize = "HEIGHT";
         descText.resize(descAvailW, descText.height || 16);
-        if (!isShapeNode && payload.sizeMode === "fit") {
+        if (!isShapeNode && (effectiveSizeMode === "fit" || effectiveSizeMode === "hug")) {
           descText.maxLines = null;
           try {
             descText.maxHeight = null;
           } catch (_) {
           }
           descText.textTruncation = "DISABLED";
-        } else if (isChangingToScreen || payload.sizeMode === "fixed" || !payload.sizeMode) {
+        } else if (isChangingToScreen || effectiveSizeMode === "fixed") {
           descText.textTruncation = "ENDING";
           const pb = hasBottomBar ? 36 : 16;
           const headerRow = card.children.find(isHeaderFrame);
@@ -3868,47 +3978,39 @@
           applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
         }
       }
-      const isHug = !isShapeNode && payload.sizeMode === "hug";
-      const isFit = !isShapeNode && payload.sizeMode === "fit";
+      const isHug = !isShapeNode && effectiveSizeMode === "hug";
+      const isFit = !isShapeNode && effectiveSizeMode === "fit";
       const finalW = isFit && fitW !== void 0 ? fitW : nodeType === "Screen" ? clampScreenWidth(targetW) : Math.max(50, targetW);
       const finalH = nodeType === "Screen" ? clampScreenHeight(targetH) : Math.max(40, targetH);
       card.minWidth = null;
       card.maxWidth = null;
       card.minHeight = null;
       card.maxHeight = null;
-      if (isHug) {
-        if (descText) {
-          descText.maxLines = null;
-        }
-        const minH = nodeType === "Screen" ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : null;
-        if (card.width !== finalW || minH !== null && card.height < minH) {
-          card.counterAxisSizingMode = "FIXED";
-          card.resize(finalW, minH !== null ? Math.max(minH, card.height) : card.height);
-        }
-        card.counterAxisSizingMode = "FIXED";
-        card.primaryAxisSizingMode = "AUTO";
-        card.minWidth = finalW;
-        card.maxWidth = finalW;
-        card.minHeight = minH;
-        card.maxHeight = null;
-        card.setPluginData("size_mode", "hug");
-      } else if (isFit) {
+      if (isHug || isFit) {
         if (descText) {
           descText.maxLines = null;
           try {
             descText.maxHeight = null;
           } catch (_) {
           }
+          descText.textTruncation = "DISABLED";
+          const descStrokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
+          const descAvailW = Math.max(10, finalW - card.paddingLeft - card.paddingRight - descStrokeOffset);
+          try {
+            descText.resize(descAvailW, descText.height);
+          } catch (_) {
+          }
         }
+        const minH = nodeType === "Screen" ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
         card.counterAxisSizingMode = "FIXED";
         card.primaryAxisSizingMode = "AUTO";
-        const minH = nodeType === "Screen" ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
-        card.minHeight = minH;
-        card.maxHeight = null;
         card.minWidth = finalW;
         card.maxWidth = finalW;
-        card.resize(finalW, Math.max(minH, card.height));
-        card.setPluginData("size_mode", "fit");
+        card.minHeight = minH;
+        card.maxHeight = null;
+        const autoH = Math.max(minH, Math.round(card.height));
+        card.resize(finalW, autoH);
+        card.setPluginData("size_mode", isFit ? "fit" : "hug");
       } else {
         card.primaryAxisSizingMode = "FIXED";
         card.counterAxisSizingMode = "FIXED";
@@ -4197,12 +4299,20 @@
           headerRow.primaryAxisAlignItems = "MIN";
           headerRow.counterAxisAlignItems = "MIN";
           headerRow.itemSpacing = 0;
+          headerRow.paddingLeft = 0;
+          headerRow.paddingRight = 0;
+          headerRow.paddingTop = 0;
+          headerRow.paddingBottom = 0;
           card.appendChild(headerRow);
         } else {
           headerRow.layoutMode = "VERTICAL";
           headerRow.layoutAlign = "STRETCH";
           headerRow.primaryAxisSizingMode = "AUTO";
           headerRow.counterAxisSizingMode = "AUTO";
+          headerRow.paddingLeft = 0;
+          headerRow.paddingRight = 0;
+          headerRow.paddingTop = 0;
+          headerRow.paddingBottom = 0;
         }
         if (!titleText) {
           titleText = figma.createText();
@@ -4219,20 +4329,18 @@
         titleText.textAlignVertical = "TOP";
         titleText.layoutAlign = "STRETCH";
         titleText.textAutoResize = "HEIGHT";
-        titleText.textTruncation = "DISABLED";
+        const prevDesc = safeGetPluginData2(card, "node_desc") || "";
+        const effectiveDesc = patch.description !== void 0 ? patch.description : prevDesc;
         let fitW;
         if (!isShapeNode && effectiveSizeMode === "fit") {
-          const measureText = figma.createText();
-          const titleFont = { family: "Inter", style: "Bold" };
-          await figma.loadFontAsync(titleFont);
-          measureText.fontName = titleFont;
-          measureText.fontSize = 13;
-          measureText.lineHeight = { value: 18, unit: "PIXELS" };
-          measureText.textAutoResize = "WIDTH_AND_HEIGHT";
-          measureText.characters = effectiveTitle.trim() || " ";
-          const measuredTitleW = Math.ceil(measureText.width);
-          measureText.remove();
-          fitW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, measuredTitleW + pl + pr);
+          const effectiveStatus = patch.status !== void 0 ? patch.status : safeGetPluginData2(card, "workflow_status") || void 0;
+          const effectiveLink = patch.figmaLink !== void 0 ? patch.figmaLink : safeGetPluginData2(card, "figma_link") || void 0;
+          fitW = await calculateScreenFitWidth(
+            card,
+            effectiveTitle,
+            effectiveStatus,
+            effectiveLink
+          );
           titleText.textAutoResize = "HEIGHT";
           await safeSetCharacters(titleText, effectiveTitle);
         } else {
@@ -4241,8 +4349,6 @@
         if (patch.colorHex !== void 0) {
           titleText.fills = [titleFill];
         }
-        const prevDesc = safeGetPluginData2(card, "node_desc") || "";
-        const effectiveDesc = patch.description !== void 0 ? patch.description : prevDesc;
         let descText = card.children.find(
           (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
         );
@@ -4267,7 +4373,7 @@
           if (patch.colorHex !== void 0) {
             descText.fills = [descFill];
           }
-          if (!isShapeNode && effectiveSizeMode === "fit") {
+          if (!isShapeNode && (effectiveSizeMode === "fit" || effectiveSizeMode === "hug")) {
             descText.maxLines = null;
             try {
               descText.maxHeight = null;
@@ -4408,39 +4514,35 @@
         const isFit = nodeType === "Screen" && effectiveSizeMode === "fit";
         const finalW = isFit && fitW !== void 0 ? fitW : nodeType === "Screen" ? clampScreenWidth(targetW) : Math.max(50, targetW);
         const finalH = nodeType === "Screen" ? clampScreenHeight(targetH) : Math.max(40, targetH);
-        if (isHug) {
-          if (descText) {
-            descText.maxLines = null;
-          }
-          const minH = nodeType === "Screen" ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : null;
-          if (card.width !== finalW || minH !== null && card.height < minH) {
-            card.counterAxisSizingMode = "FIXED";
-            card.resize(finalW, minH !== null ? Math.max(minH, card.height) : card.height);
-          }
-          card.counterAxisSizingMode = "FIXED";
-          card.primaryAxisSizingMode = "AUTO";
-          card.minWidth = finalW;
-          card.maxWidth = finalW;
-          card.minHeight = minH;
-          card.maxHeight = null;
-          card.setPluginData("size_mode", "hug");
-        } else if (isFit) {
+        card.minWidth = null;
+        card.maxWidth = null;
+        card.minHeight = null;
+        card.maxHeight = null;
+        if (isHug || isFit) {
           if (descText) {
             descText.maxLines = null;
             try {
               descText.maxHeight = null;
             } catch (_) {
             }
+            descText.textTruncation = "DISABLED";
+            const descStrokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
+            const descAvailW = Math.max(10, finalW - card.paddingLeft - card.paddingRight - descStrokeOffset);
+            try {
+              descText.resize(descAvailW, descText.height);
+            } catch (_) {
+            }
           }
+          const minH = nodeType === "Screen" ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
           card.counterAxisSizingMode = "FIXED";
           card.primaryAxisSizingMode = "AUTO";
-          const minH = nodeType === "Screen" ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
-          card.minHeight = minH;
-          card.maxHeight = null;
           card.minWidth = finalW;
           card.maxWidth = finalW;
-          card.resize(finalW, Math.max(minH, card.height));
-          card.setPluginData("size_mode", "fit");
+          card.minHeight = minH;
+          card.maxHeight = null;
+          const autoH = Math.max(minH, Math.round(card.height));
+          card.resize(finalW, autoH);
+          card.setPluginData("size_mode", isFit ? "fit" : "hug");
         } else {
           card.primaryAxisSizingMode = "FIXED";
           card.counterAxisSizingMode = "FIXED";
@@ -5282,6 +5384,21 @@
           card.paddingBottom = 16;
           if (oldBadgeInHeader) oldBadgeInHeader.remove();
           if (statusBadge) statusBadge.remove();
+          const sMode = safeGetPluginData2(card, "size_mode");
+          if (sMode === "fit") {
+            const effectiveTitle = safeGetPluginData2(card, "node_title") || extractNodeText(card).title;
+            const currentLink = safeGetPluginData2(card, "figma_link") || void 0;
+            const newFitW = await calculateScreenFitWidth(card, effectiveTitle, void 0, currentLink);
+            card.minWidth = newFitW;
+            card.maxWidth = newFitW;
+            card.counterAxisSizingMode = "FIXED";
+            card.primaryAxisSizingMode = "AUTO";
+            card.resize(newFitW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+          } else if (sMode === "hug") {
+            card.counterAxisSizingMode = "FIXED";
+            card.primaryAxisSizingMode = "AUTO";
+            card.resize(card.width, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+          }
           const descText = card.children.find(
             (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
           );
@@ -5340,6 +5457,21 @@
             await safeSetCharacters(textNode, cfg.label.toUpperCase());
             textNode.fills = [{ type: "SOLID", color: badgeTextColor }];
             textNode.locked = true;
+          }
+          const sMode = safeGetPluginData2(card, "size_mode");
+          if (sMode === "fit") {
+            const effectiveTitle = safeGetPluginData2(card, "node_title") || extractNodeText(card).title;
+            const currentLink = safeGetPluginData2(card, "figma_link") || void 0;
+            const newFitW = await calculateScreenFitWidth(card, effectiveTitle, status, currentLink);
+            card.minWidth = newFitW;
+            card.maxWidth = newFitW;
+            card.counterAxisSizingMode = "FIXED";
+            card.primaryAxisSizingMode = "AUTO";
+            card.resize(newFitW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+          } else if (sMode === "hug") {
+            card.counterAxisSizingMode = "FIXED";
+            card.primaryAxisSizingMode = "AUTO";
+            card.resize(card.width, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
           }
           if (card.layoutMode !== "NONE") {
             statusBadge.layoutPositioning = "ABSOLUTE";
@@ -5996,6 +6128,10 @@
           const flowNode = findFlowNode(node);
           if (flowNode && flowNode.type === "FRAME" && safeGetPluginData2(flowNode, "is_flow_node") === "true") {
             const frame = flowNode;
+            const currentSizeMode = safeGetPluginData2(frame, "size_mode");
+            if (currentSizeMode === "hug" || currentSizeMode === "fit") {
+              continue;
+            }
             const savedW = frame.minWidth && frame.minWidth > 0 ? frame.minWidth : parseInt(safeGetPluginData2(frame, "node_width"), 10);
             const savedH = frame.minHeight && frame.minHeight > 0 ? frame.minHeight : parseInt(safeGetPluginData2(frame, "node_height"), 10);
             if (savedW && savedH && (Math.round(frame.width) !== savedW || Math.round(frame.height) !== savedH)) {
@@ -6013,28 +6149,144 @@
             }
           }
         }
-        const textNodeCandidate = figma.getNodeById(change.id);
-        if (textNodeCandidate && textNodeCandidate.type === "TEXT") {
-          const textNode = textNodeCandidate;
-          const role = safeGetPluginData2(textNode, "node_role");
-          const isHeaderChild = textNode.parent && textNode.parent.name === "Header";
-          const isTitle = role === "title" || textNode.name === "TitleText" || isHeaderChild;
-          const isDesc = role === "desc" || textNode.name === "DescText";
-          if (isTitle || isDesc) {
-            const flowNode = findFlowNode(textNode);
-            if (flowNode) {
-              if (isTitle) {
-                await enforceTitleStandardStyle(textNode, flowNode);
-                if (flowNode.type === "FRAME") {
-                  const descText = flowNode.children.find(
-                    (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
-                  );
-                  if (descText) {
-                    await updateDescTextTruncation(flowNode, descText, flowNode.height);
+        if (change.properties.includes("characters")) {
+          const textNodeCandidate = figma.getNodeById(change.id);
+          if (textNodeCandidate && textNodeCandidate.type === "TEXT") {
+            const textNode = textNodeCandidate;
+            const role = safeGetPluginData2(textNode, "node_role");
+            const isHeaderChild = textNode.parent && textNode.parent.name === "Header";
+            const isTitle = role === "title" || textNode.name === "TitleText" || isHeaderChild;
+            const isDesc = role === "desc" || textNode.name === "DescText";
+            if (isTitle || isDesc) {
+              const flowNode = findFlowNode(textNode);
+              if (flowNode) {
+                const isScreen = flowNode.type === "FRAME" && normalizeNodeType(safeGetPluginData2(flowNode, "node_type")) === "Screen";
+                if (isTitle && isScreen) {
+                  const charArray = Array.from(textNode.characters);
+                  if (charArray.length > 32) {
+                    const truncatedTitle = charArray.slice(0, 32).join("");
+                    await safeSetCharacters(textNode, truncatedTitle);
                   }
                 }
-              } else if (isDesc) {
-                await lockTextFontSizeAndAutoResize(textNode, 11);
+                if (isTitle) {
+                  await enforceTitleStandardStyle(textNode, flowNode);
+                } else if (isDesc) {
+                  await lockTextFontSizeAndAutoResize(textNode, 11);
+                }
+                if (isScreen) {
+                  const card = flowNode;
+                  const sMode = safeGetPluginData2(card, "size_mode") || safeGetPluginData2(card, "screen_size_mode") || "fixed";
+                  const descText = card.children.find(
+                    (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
+                  );
+                  if (sMode === "fixed") {
+                    if (descText) {
+                      await updateDescTextTruncation(card, descText, card.height);
+                    }
+                    if (isDesc) {
+                      card.setPluginData("node_desc", textNode.characters);
+                    }
+                  } else if (sMode === "fit" || sMode === "hug") {
+                    const currentW = Math.round(card.width);
+                    const currentH = Math.round(card.height);
+                    let targetW = currentW;
+                    if (sMode === "fit" && isTitle) {
+                      const fitW = await calculateScreenFitWidth(
+                        card,
+                        textNode.characters,
+                        safeGetPluginData2(card, "workflow_status") || void 0,
+                        safeGetPluginData2(card, "figma_link") || void 0
+                      );
+                      targetW = clampScreenWidth(fitW);
+                    } else {
+                      targetW = clampScreenWidth(
+                        Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, currentW)
+                      );
+                    }
+                    if (descText) {
+                      descText.maxLines = null;
+                      try {
+                        descText.maxHeight = null;
+                      } catch (_) {
+                      }
+                      if (descText.textTruncation !== "DISABLED") {
+                        descText.textTruncation = "DISABLED";
+                      }
+                      if (descText.layoutAlign !== "STRETCH") {
+                        descText.layoutAlign = "STRETCH";
+                      }
+                      if (descText.textAutoResize !== "HEIGHT") {
+                        descText.textAutoResize = "HEIGHT";
+                      }
+                    }
+                    if (targetW !== currentW) {
+                      card.resize(targetW, card.height);
+                    }
+                    const headerRow = card.children.find(isHeaderFrame);
+                    const titleNode = isTitle ? textNode : headerRow?.children.find(
+                      (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
+                    );
+                    const titleChars = titleNode ? titleNode.characters : "";
+                    const titleLineCount = titleChars.length > 0 ? (titleChars.match(/\n/g) || []).length + 1 : 1;
+                    const titleH = titleNode ? Math.max(18, Math.round(titleNode.height), titleLineCount * 18) : headerRow ? Math.round(headerRow.height) : 18;
+                    const descNode = isDesc ? textNode : descText;
+                    const descChars = descNode ? descNode.characters : "";
+                    const hasDesc = descChars.length > 0;
+                    const descLineCount = hasDesc ? (descChars.match(/\n/g) || []).length + 1 : 0;
+                    const descH = hasDesc && descNode ? Math.max(Math.round(descNode.height), Math.round(descLineCount * 13.5)) : 0;
+                    const pt = typeof card.paddingTop === "number" ? card.paddingTop : 14;
+                    const hasStatus = Boolean(safeGetPluginData2(card, "workflow_status"));
+                    const hasLink = Boolean(safeGetPluginData2(card, "figma_link"));
+                    const hasBottomBadge = hasStatus || hasLink;
+                    const pb = hasBottomBadge ? 36 : hasDesc ? 16 : 14;
+                    const itemSpacing = hasDesc ? typeof card.itemSpacing === "number" ? card.itemSpacing : 8 : 0;
+                    const calculatedContentH = Math.round(pt + titleH + itemSpacing + descH + pb);
+                    const targetH = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, calculatedContentH);
+                    if (isDesc) {
+                      card.setPluginData("node_desc", textNode.characters);
+                    }
+                    if (targetW !== currentW || targetH !== currentH) {
+                      card.counterAxisSizingMode = "FIXED";
+                      card.primaryAxisSizingMode = "AUTO";
+                      card.minWidth = targetW;
+                      card.maxWidth = targetW;
+                      card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
+                      card.maxHeight = null;
+                      card.resize(targetW, targetH);
+                      if (sMode === "hug") {
+                        card.setPluginData("screen_height", String(targetH));
+                      }
+                      const statusBadge = card.children.find(
+                        (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
+                      );
+                      if (statusBadge) {
+                        statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+                        statusBadge.x = targetW - statusBadge.width - 10;
+                        statusBadge.y = targetH - statusBadge.height - 10;
+                      }
+                      const linkBadge = card.children.find(
+                        (c) => safeGetPluginData2(c, "is_figma_link_badge") === "true" || c.name === "FigmaLinkBadge"
+                      );
+                      if (linkBadge) {
+                        linkBadge.constraints = { horizontal: "MIN", vertical: "MAX" };
+                        linkBadge.x = 16;
+                        linkBadge.y = targetH - linkBadge.height - 10;
+                      }
+                      const stepBadge = card.children.find(
+                        (c) => safeGetPluginData2(c, "is_step_badge") === "true" || c.name === "StepBadge"
+                      );
+                      if (stepBadge) {
+                        const stepCorner = safeGetPluginData2(card, "badge_corner") || "TOP_LEFT";
+                        const bw = Math.max(24, Math.round(stepBadge.width));
+                        const bh = 24;
+                        const badgeCoords = getStepBadgeCoordinates("Screen", targetW, targetH, bw, bh, stepCorner);
+                        stepBadge.x = badgeCoords.x;
+                        stepBadge.y = badgeCoords.y;
+                        stepBadge.constraints = badgeCoords.constraints;
+                      }
+                    }
+                  }
+                }
               }
             }
           }

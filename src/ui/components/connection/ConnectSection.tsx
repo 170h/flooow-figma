@@ -98,6 +98,7 @@ export function ConnectSection() {
     setUIState,
     setActiveModal,
     applyCurrentConnectorState,
+    connectSelectedNodes,
     handleMainAction,
     selectedNodes,
     stylePresets,
@@ -1353,7 +1354,7 @@ export function ConnectSection() {
                 id="btn-section-connect"
                 className="btn-add-step-badges"
                 disabled={isConnectDisabled}
-                onClick={handleMainAction}
+                onClick={connectSelectedNodes}
                 title={
                   isAllConnectors
                     ? selectedNodes.length === 1

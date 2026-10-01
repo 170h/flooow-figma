@@ -29,17 +29,8 @@ const TABS = [
 // 메인 CTA 버튼 텍스트 결정 (원본 updateFooterForTab 로직)
 // ============================================================
 function getCtaLabel(
-  currentTab: string,
-  isConnectorSelected: boolean,
   nodeCount: number,
 ): string {
-  if (isConnectorSelected) {
-    if (nodeCount === 1) return 'Update Connector';
-    return 'Connect';
-  }
-  if (currentTab === 'connection') {
-    return 'Connect';
-  }
   if (nodeCount >= 2) return 'Apply to All';
   if (nodeCount === 1) return 'Apply';
   return 'Create Node';
@@ -77,6 +68,8 @@ export function App() {
     hasMultiDraft,
     updateMultiDraft,
     isApplyingMultiDraft,
+    hasSingleChanges,
+    triggerFormChange,
     canUndo,
     handleUndo,
   } = useApp();
@@ -107,8 +100,8 @@ export function App() {
   const isMultiConn = nodeCount >= 2 && allConnectors;
   const isConnSel = isSingleConn || isMultiConn;
 
-  // CTA 레이블
-  const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
+  // CTA 레이블 (Node, Appearance, Connection 통합 적용 버튼)
+  const ctaLabel = getCtaLabel(nodeCount);
 
   // 탭 자동 전환 제어 (선택 조건에 따른 적절한 탭으로 자동 이동)
   useEffect(() => {
@@ -317,7 +310,7 @@ export function App() {
   }
 
   return (
-    <div id="plugin-root" onClick={handleRootClick}>
+    <div id="plugin-root" onClick={handleRootClick} onInput={triggerFormChange} onChange={triggerFormChange}>
       {/* 1. 타이틀 배너 */}
       <div className="title-banner">
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -397,10 +390,17 @@ export function App() {
         )}
       </main>
 
-      {/* 4. 푸터: connection 탭이 아닐 때 CTA 버튼 노출 (FigJam 단일 선택 포함) */}
-      {currentTab !== 'connection' && (() => {
-        const isCtaDisabled = isFigjamSelected || (nodeCount >= 2 && (!hasMultiDraft || isApplyingMultiDraft));
+      {/* 4. 푸터: 피그잼 단일 오브젝트 선택이 아닐 때 CTA 버튼 노출 (Node, Appearance, Connection 전체 통일) */}
+      {!isSingleFigjam && (() => {
+        const isSingle = nodeCount === 1;
+        const isCtaDisabled = isFigjamSelected
+          ? !isMultiFigjam
+          : (nodeCount >= 2
+            ? (isConnSel ? false : (!hasMultiDraft || isApplyingMultiDraft))
+            : (isSingle ? !hasSingleChanges : false));
+
         const showUndo = ctaLabel === 'Apply' || ctaLabel === 'Apply to All';
+        const isUndoDisabled = isSingle ? !hasSingleChanges : !canUndo;
         return (
           <footer className="app-footer">
             {showUndo && (
@@ -408,7 +408,7 @@ export function App() {
                 id="btn-undo"
                 className="btn-cta-secondary"
                 type="button"
-                disabled={!canUndo}
+                disabled={isUndoDisabled}
                 onClick={handleUndo}
               >
                 Undo
@@ -419,7 +419,7 @@ export function App() {
               className={`btn-cta-primary${isCtaDisabled ? ' disabled' : ''}`}
               type="button"
               disabled={isCtaDisabled}
-              onClick={isFigjamSelected ? undefined : handleMainAction}
+              onClick={isSingleFigjam ? undefined : handleMainAction}
             >
               {ctaLabel}
             </button>

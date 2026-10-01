@@ -28540,7 +28540,7 @@
     }
   }
   var NODE_TYPE_SHAPE_SPECS = {
-    Screen: { width: 250, height: 100, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
+    Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
     Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
@@ -28702,9 +28702,9 @@
     };
   }
   var SCREEN_NODE_CONSTRAINTS = {
-    MIN_WIDTH: 140,
+    MIN_WIDTH: 49,
     MAX_WIDTH: 800,
-    MIN_HEIGHT: 100,
+    MIN_HEIGHT: 49,
     MAX_HEIGHT: 600,
     MIN_CORNER_RADIUS: 0,
     MAX_CORNER_RADIUS: 20,
@@ -28737,7 +28737,7 @@
   // src/ui/context/AppContext.tsx
   var import_jsx_runtime = __toESM(require_jsx_runtime());
   var DEFAULT_SIZE_PRESETS = [
-    { id: "default", name: "Default", w: 250, h: 100, radius: 0, sizeMode: "fixed", isDefault: true },
+    { id: "default", name: "Default", w: 250, h: 90, radius: 0, sizeMode: "hug", isDefault: true },
     { id: "square", name: "Square", w: 180, h: 180, radius: 0, sizeMode: "fixed", isDefault: true },
     { id: "web", name: "Web", w: 320, h: 180, radius: 0, sizeMode: "fixed", isDefault: true },
     { id: "mobile", name: "Mobile", w: 160, h: 280, radius: 0, sizeMode: "fixed", isDefault: true }
@@ -28756,9 +28756,9 @@
   var DEFAULT_LAST_NODE_CONFIG = {
     nodeType: "Screen",
     width: 250,
-    height: 100,
+    height: 90,
     cornerRadius: 0,
-    sizeMode: "fixed",
+    sizeMode: "hug",
     color: "#ffffff",
     elevationOn: false,
     elevation: 0,
@@ -28853,44 +28853,15 @@
       if (!msg) return;
       parent.postMessage({ pluginMessage: { type: "NOTIFY", message: msg, level } }, "*");
     }, []);
+    const originalSelectedNodeRef = (0, import_react2.useRef)(null);
+    const isApplyingSingleRef = (0, import_react2.useRef)(false);
+    const [formChangeTick, setFormChangeTick] = (0, import_react2.useState)(0);
+    const triggerFormChange = (0, import_react2.useCallback)(() => {
+      setFormChangeTick((t) => t + 1);
+    }, []);
     const [lastAppliedSnapshot, setLastAppliedSnapshot] = (0, import_react2.useState)(null);
     const lastAppliedSnapshotRef = (0, import_react2.useRef)(null);
     const canUndo = Boolean(lastAppliedSnapshot);
-    const handleUndo = (0, import_react2.useCallback)(() => {
-      const snapshot = lastAppliedSnapshotRef.current;
-      if (!snapshot) return;
-      if (snapshot.type === "single" && snapshot.singlePayload) {
-        parent.postMessage({
-          pluginMessage: {
-            type: "UPDATE_FLOW_NODE",
-            payload: snapshot.singlePayload
-          }
-        }, "*");
-        showToast("\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.", "info");
-      } else if (snapshot.type === "batch" && snapshot.batchItems && snapshot.batchItems.length > 0) {
-        const patchGroups = /* @__PURE__ */ new Map();
-        snapshot.batchItems.forEach((item) => {
-          const key = JSON.stringify(item.patch);
-          const existing = patchGroups.get(key);
-          if (existing) {
-            existing.nodeIds.push(item.nodeId);
-          } else {
-            patchGroups.set(key, { nodeIds: [item.nodeId], patch: item.patch });
-          }
-        });
-        patchGroups.forEach(({ nodeIds, patch }) => {
-          parent.postMessage({
-            pluginMessage: {
-              type: "BATCH_UPDATE_FLOW_NODES",
-              payload: { nodeIds, patch }
-            }
-          }, "*");
-        });
-        showToast("\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.", "info");
-      }
-      setLastAppliedSnapshot(null);
-      lastAppliedSnapshotRef.current = null;
-    }, [showToast]);
     const applyMultiDraft = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       if (isApplyingMultiDraftRef.current) return;
@@ -29047,6 +29018,304 @@
       lastConnectorConfigRef.current = { ...lastConnectorConfigRef.current, ...partial };
       setLastConnectorConfigRaw((prev) => ({ ...prev, ...partial }));
     }, []);
+    const checkHasSingleChanges = (0, import_react2.useCallback)(() => {
+      const nodes = selectedNodesRef.current;
+      if (!nodes || nodes.length !== 1) return false;
+      const origNode = originalSelectedNodeRef.current || nodes[0];
+      if (!origNode) return false;
+      const isConn = Boolean(origNode.isConnector || origNode.nodeType === "CONNECTOR");
+      if (isConn) {
+        const labelToggleEl = document.getElementById("toggle-conn-label");
+        const labelInputEl = document.getElementById("input-conn-label");
+        const currentHasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
+        const currentLabel = currentHasLabel ? labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || "Text").trim() : "";
+        const origHasLabel = Boolean(origNode.connectorLabel);
+        const origLabel = (origNode.connectorLabel || "").trim();
+        if (currentHasLabel !== origHasLabel) return true;
+        if (currentHasLabel && currentLabel !== origLabel) return true;
+        const colorEl = document.getElementById("conn-line-color");
+        const currentColor2 = (colorEl?.value || uiStateRef.current.selectedConnectorColor || "#000000").toUpperCase();
+        const origColor = (origNode.connectorColorHex || "#000000").toUpperCase();
+        if (currentColor2 !== origColor) return true;
+        const weightEl = document.getElementById("input-stroke-weight");
+        const currentWeight = weightEl?.value ? parseFloat(weightEl.value) : 1.5;
+        const origWeight = origNode.connectorStrokeWeight ?? 1.5;
+        if (Math.abs(currentWeight - origWeight) > 0.01) return true;
+        const startTermEl = document.getElementById("select-start-terminal");
+        const endTermEl = document.getElementById("select-end-terminal");
+        const currentStartTerm = startTermEl?.value || "NONE";
+        const origStartTerm = origNode.connectorStartTerminal || "NONE";
+        if (currentStartTerm !== origStartTerm) return true;
+        const currentEndTerm = endTermEl?.value || "ARROW";
+        const origEndTerm = origNode.connectorEndTerminal || "ARROW";
+        if (currentEndTerm !== origEndTerm) return true;
+        const startOffEl = document.getElementById("input-start-offset");
+        const endOffEl = document.getElementById("input-end-offset");
+        const currentStartOff = startOffEl?.value ? parseFloat(startOffEl.value) : 0;
+        const origStartOff = origNode.connectorStartOffset ?? 0;
+        if (Math.abs(currentStartOff - origStartOff) > 0.01) return true;
+        const currentEndOff = endOffEl?.value ? parseFloat(endOffEl.value) : 0;
+        const origEndOff = origNode.connectorEndOffset ?? 0;
+        if (Math.abs(currentEndOff - origEndOff) > 0.01) return true;
+        const currentRouting = uiStateRef.current.selectedRoutingType || "ORTHOGONAL";
+        const origRouting = origNode.connectorRoutingType || "ORTHOGONAL";
+        if (currentRouting !== origRouting) return true;
+        const currentPattern = uiStateRef.current.selectedLinePattern || "SOLID";
+        const origPattern = origNode.connectorStrokePattern || "SOLID";
+        if (currentPattern !== origPattern) return true;
+        const currentSourceMag = uiStateRef.current.sourceMagnet || "RIGHT";
+        const origSourceMag = origNode.connectorSourceMagnet || "RIGHT";
+        if (currentSourceMag !== origSourceMag) return true;
+        const currentTargetMag = uiStateRef.current.targetMagnet || "LEFT";
+        const origTargetMag = origNode.connectorTargetMagnet || "LEFT";
+        if (currentTargetMag !== origTargetMag) return true;
+        return false;
+      }
+      const nodeActualType = origNode.flowNodeType || (origNode.nodeType === "FRAME" ? "Screen" : origNode.nodeType) || "Screen";
+      const effectiveNodeType = normalizeNodeType(uiStateRef.current.selectedNodeType || lastNodeConfigRef.current.nodeType || nodeActualType);
+      const originalNodeType = normalizeNodeType(nodeActualType);
+      if (effectiveNodeType !== originalNodeType) return true;
+      const spec = NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
+      const isDescAllowed = spec?.allowDescription ?? false;
+      const isScreen = effectiveNodeType === "Screen";
+      const titleEl = document.getElementById("node-title-input");
+      const currentTitle = titleEl ? titleEl.value.trim() : (origNode.title || origNode.name || (isScreen ? "Screen" : originalNodeType)).trim();
+      const originalTitle = (origNode.title || origNode.name || (isScreen ? "Screen" : originalNodeType)).trim();
+      if (currentTitle !== originalTitle) return true;
+      if (isDescAllowed) {
+        const descToggleEl = document.getElementById("toggle-description");
+        const descEl = document.getElementById("node-description-input");
+        const isDescOn = descToggleEl ? descToggleEl.checked : Boolean(lastNodeConfigRef.current.descriptionOn);
+        const currentDesc = isDescOn ? descEl ? descEl.value.trim() : (origNode.description || "").trim() : "";
+        const originalDesc = (origNode.description || "").trim();
+        if (currentDesc !== originalDesc) return true;
+      }
+      if (isDescAllowed) {
+        const statusToggleEl = document.getElementById("toggle-status");
+        const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(lastNodeConfigRef.current.statusOn);
+        const currentStatus = isStatusOn ? uiStateRef.current.selectedStatus || lastNodeConfigRef.current.status || "draft" : "";
+        const originalStatus = origNode.status || "";
+        if (currentStatus !== originalStatus) return true;
+      }
+      if (isDescAllowed) {
+        const linkToggleEl = document.getElementById("toggle-single-figma-link");
+        const linkUrlEl = document.getElementById("single-screen-url");
+        const isLinkOn = linkToggleEl ? linkToggleEl.checked : Boolean(lastNodeConfigRef.current.singleLinkOn);
+        const rawCurrentLink = isLinkOn ? linkUrlEl ? linkUrlEl.value.trim() : (origNode.figmaLink || "").trim() : "";
+        const currentLink = rawCurrentLink ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawCurrentLink) ? rawCurrentLink : `https://${rawCurrentLink}` : "";
+        const originalLink = (origNode.figmaLink || "").trim();
+        if (currentLink !== originalLink) return true;
+      }
+      const stepToggleEl = document.getElementById("toggle-step-badges");
+      const isStepOn = stepToggleEl ? stepToggleEl.checked : Boolean(lastNodeConfigRef.current.stepBadgesOn);
+      const originalStepOn = origNode.stepNumber !== void 0;
+      if (isStepOn !== originalStepOn) return true;
+      if (isStepOn) {
+        const stepNumEl = document.getElementById("input-step-number");
+        const currentStepNum = stepNumEl ? parseInt(stepNumEl.value, 10) || 1 : origNode.stepNumber || 1;
+        const originalStepNum = origNode.stepNumber || 1;
+        if (currentStepNum !== originalStepNum) return true;
+        const currentBadgeCorner = uiStateRef.current.selectedBadgeCorner || lastNodeConfigRef.current.badgeCorner || "TOP_LEFT";
+        const originalBadgeCorner = origNode.badgeCorner || "TOP_LEFT";
+        if (currentBadgeCorner !== originalBadgeCorner) return true;
+        const currentBadgeShape = uiStateRef.current.selectedBadgeShape || lastNodeConfigRef.current.badgeShape || "Square";
+        const originalBadgeShape = origNode.badgeShape || "Square";
+        if (currentBadgeShape !== originalBadgeShape) return true;
+        const currentBadgeColorMode = uiStateRef.current.selectedBadgeColorMode || lastNodeConfigRef.current.badgeColorMode || "Style";
+        const originalBadgeColorMode = origNode.badgeColorMode || "Style";
+        if (currentBadgeColorMode !== originalBadgeColorMode) return true;
+      }
+      const elevToggleEl = document.getElementById("toggle-elevation");
+      const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
+      const currentElevation = isElevOn ? uiStateRef.current.selectedElevation ?? lastNodeConfigRef.current.elevation ?? 0 : null;
+      const originalElevation = origNode.elevation !== void 0 && origNode.elevation !== null ? origNode.elevation : null;
+      if (currentElevation !== originalElevation) return true;
+      const currentColor = (uiStateRef.current.selectedColor || lastNodeConfigRef.current.color || "#ffffff").toLowerCase();
+      const originalColor = (origNode.fillColorHex || "#ffffff").toLowerCase();
+      if (currentColor !== originalColor) return true;
+      const currentStrokeWeight = uiStateRef.current.selectedStrokeWeight !== void 0 ? uiStateRef.current.selectedStrokeWeight : lastNodeConfigRef.current.strokeWeight ?? 1.5;
+      const originalStrokeWeight = origNode.strokeWeight ?? 1.5;
+      if (currentStrokeWeight !== originalStrokeWeight) return true;
+      if (currentStrokeWeight > 0) {
+        const currentStrokeColor = (uiStateRef.current.selectedStrokeColor || lastNodeConfigRef.current.strokeColor || "#000000").toLowerCase();
+        const originalStrokeColor = (origNode.strokeColorHex || "#000000").toLowerCase();
+        if (currentStrokeColor !== originalStrokeColor) return true;
+      }
+      if (isScreen) {
+        const wEl = document.getElementById("input-size-w");
+        const hEl = document.getElementById("input-size-h");
+        const rEl = document.getElementById("input-size-radius");
+        if (wEl && wEl.value !== "") {
+          const parsedW = parseInt(wEl.value, 10);
+          if (!isNaN(parsedW) && typeof origNode.width === "number" && parsedW !== origNode.width) return true;
+        }
+        if (hEl && hEl.value !== "") {
+          const parsedH = parseInt(hEl.value, 10);
+          if (!isNaN(parsedH) && typeof origNode.height === "number" && parsedH !== origNode.height) return true;
+        }
+        if (rEl && rEl.value !== "") {
+          const parsedR = parseInt(rEl.value, 10);
+          const origR = origNode.cornerRadius ?? 0;
+          if (!isNaN(parsedR) && parsedR !== origR) return true;
+        }
+        const currentSizeMode = lastNodeConfigRef.current.sizeMode || "fixed";
+        const originalSizeMode = origNode.sizeMode || "fixed";
+        if (currentSizeMode !== originalSizeMode) return true;
+      }
+      return false;
+    }, []);
+    const revertSingleNodeForm = (0, import_react2.useCallback)((orig) => {
+      const isConn = Boolean(orig.isConnector || orig.nodeType === "CONNECTOR");
+      if (isConn) {
+        const labelToggleEl = document.getElementById("toggle-conn-label");
+        const labelInputEl = document.getElementById("input-conn-label");
+        const hasLabel = Boolean(orig.connectorLabel);
+        if (labelToggleEl) labelToggleEl.checked = hasLabel;
+        if (labelInputEl) labelInputEl.value = orig.connectorLabel || "";
+        const colorEl = document.getElementById("conn-line-color");
+        if (colorEl && orig.connectorColorHex) colorEl.value = orig.connectorColorHex;
+        const weightEl = document.getElementById("input-stroke-weight");
+        if (weightEl) weightEl.value = String(orig.connectorStrokeWeight ?? 1.5);
+        const startTermEl = document.getElementById("select-start-terminal");
+        if (startTermEl) startTermEl.value = orig.connectorStartTerminal || "NONE";
+        const endTermEl = document.getElementById("select-end-terminal");
+        if (endTermEl) endTermEl.value = orig.connectorEndTerminal || "ARROW";
+        const startOffEl = document.getElementById("input-start-offset");
+        if (startOffEl) startOffEl.value = String(orig.connectorStartOffset ?? 0);
+        const endOffEl = document.getElementById("input-end-offset");
+        if (endOffEl) endOffEl.value = String(orig.connectorEndOffset ?? 0);
+        setUIState({
+          selectedConnectorColor: orig.connectorColorHex || "#000000",
+          selectedRoutingType: orig.connectorRoutingType || "ORTHOGONAL",
+          selectedLinePattern: orig.connectorStrokePattern || "SOLID",
+          sourceMagnet: orig.connectorSourceMagnet || "RIGHT",
+          targetMagnet: orig.connectorTargetMagnet || "LEFT"
+        });
+        setLastConnectorConfig({
+          labelOn: hasLabel,
+          labelText: orig.connectorLabel || ""
+        });
+        triggerFormChange();
+        return;
+      }
+      const origType = normalizeNodeType(orig.flowNodeType || (orig.nodeType === "FRAME" ? "Screen" : orig.nodeType) || "Screen");
+      const isScreen = origType === "Screen";
+      const spec = NODE_TYPE_SHAPE_SPECS[origType];
+      const isDescAllowed = spec?.allowDescription ?? false;
+      const titleEl = document.getElementById("node-title-input");
+      if (titleEl) titleEl.value = orig.title || orig.name || (isScreen ? "Screen" : origType);
+      const descToggleEl = document.getElementById("toggle-description");
+      const descEl = document.getElementById("node-description-input");
+      const hasDesc = Boolean(orig.description && orig.description.trim());
+      if (descToggleEl) descToggleEl.checked = hasDesc;
+      if (descEl) descEl.value = orig.description || "";
+      const linkToggleEl = document.getElementById("toggle-single-figma-link");
+      const linkUrlEl = document.getElementById("single-screen-url");
+      const hasLink = Boolean(orig.figmaLink);
+      if (linkToggleEl) linkToggleEl.checked = hasLink;
+      if (linkUrlEl) linkUrlEl.value = orig.figmaLink || "";
+      const statusToggleEl = document.getElementById("toggle-status");
+      if (statusToggleEl) statusToggleEl.checked = Boolean(orig.status);
+      const stepToggleEl = document.getElementById("toggle-step-badges");
+      const stepNumEl = document.getElementById("input-step-number");
+      const hasStep = orig.stepNumber !== void 0;
+      if (stepToggleEl) stepToggleEl.checked = hasStep;
+      if (stepNumEl && hasStep) stepNumEl.value = String(orig.stepNumber);
+      const elevToggleEl = document.getElementById("toggle-elevation");
+      const hasElev = orig.elevation !== void 0 && orig.elevation !== null;
+      if (elevToggleEl) elevToggleEl.checked = hasElev;
+      const wEl = document.getElementById("input-size-w");
+      const hEl = document.getElementById("input-size-h");
+      const rEl = document.getElementById("input-size-radius");
+      if (wEl && orig.width) wEl.value = String(orig.width);
+      if (hEl && orig.height) hEl.value = String(orig.height);
+      if (rEl) rEl.value = String(orig.cornerRadius ?? 0);
+      const colorUpdates = {
+        selectedNodeType: origType,
+        selectedColor: orig.fillColorHex || "#ffffff",
+        selectedStrokeWeight: orig.strokeWeight,
+        selectedStrokeColor: orig.strokeColorHex,
+        selectedElevation: hasElev ? orig.elevation : 0,
+        selectedStatus: orig.status || "draft",
+        selectedBadgeCorner: orig.badgeCorner || "TOP_LEFT",
+        selectedBadgeShape: orig.badgeShape || "Square",
+        selectedBadgeColorMode: orig.badgeColorMode || "Style"
+      };
+      setUIState(colorUpdates);
+      setLastNodeConfig({
+        nodeType: origType,
+        width: orig.width || (isScreen ? 250 : spec?.width || 250),
+        height: orig.height || (isScreen ? 90 : spec?.height || 90),
+        cornerRadius: orig.cornerRadius ?? 0,
+        color: orig.fillColorHex || "#ffffff",
+        strokeWeight: orig.strokeWeight,
+        strokeColor: orig.strokeColorHex,
+        sizeMode: orig.sizeMode || "fixed",
+        elevationOn: hasElev,
+        elevation: orig.elevation ?? 0,
+        statusOn: Boolean(orig.status),
+        status: orig.status || "draft",
+        stepBadgesOn: hasStep,
+        stepNumber: orig.stepNumber || 1,
+        badgeCorner: orig.badgeCorner || "TOP_LEFT",
+        badgeShape: orig.badgeShape || "Square",
+        badgeColorMode: orig.badgeColorMode || "Style",
+        descriptionOn: isDescAllowed ? hasDesc : false,
+        singleLinkOn: isDescAllowed ? hasLink : false,
+        singleLinkUrl: orig.figmaLink || ""
+      });
+      triggerFormChange();
+    }, [setUIState, setLastNodeConfig, setLastConnectorConfig, triggerFormChange]);
+    const hasSingleChanges = selectedNodes.length === 1 ? checkHasSingleChanges() : false;
+    const handleUndo = (0, import_react2.useCallback)(() => {
+      const snapshot = lastAppliedSnapshotRef.current;
+      if (snapshot) {
+        if (snapshot.type === "single" && snapshot.singlePayload) {
+          parent.postMessage({
+            pluginMessage: {
+              type: "UPDATE_FLOW_NODE",
+              payload: snapshot.singlePayload
+            }
+          }, "*");
+          showToast("\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.", "info");
+        } else if (snapshot.type === "batch" && snapshot.batchItems && snapshot.batchItems.length > 0) {
+          const patchGroups = /* @__PURE__ */ new Map();
+          snapshot.batchItems.forEach((item) => {
+            const key = JSON.stringify(item.patch);
+            const existing = patchGroups.get(key);
+            if (existing) {
+              existing.nodeIds.push(item.nodeId);
+            } else {
+              patchGroups.set(key, { nodeIds: [item.nodeId], patch: item.patch });
+            }
+          });
+          patchGroups.forEach(({ nodeIds, patch }) => {
+            parent.postMessage({
+              pluginMessage: {
+                type: "BATCH_UPDATE_FLOW_NODES",
+                payload: { nodeIds, patch }
+              }
+            }, "*");
+          });
+          showToast("\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.", "info");
+        } else if (snapshot.type === "connector" && snapshot.connectorItems && snapshot.connectorItems.length > 0) {
+          snapshot.connectorItems.forEach((item) => {
+            parent.postMessage({
+              pluginMessage: {
+                type: "UPDATE_CONNECTOR_PROPERTIES",
+                payload: item.payload
+              }
+            }, "*");
+          });
+          showToast("\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.", "info");
+        }
+        setLastAppliedSnapshot(null);
+        lastAppliedSnapshotRef.current = null;
+      } else if (originalSelectedNodeRef.current && selectedNodesRef.current.length === 1) {
+        revertSingleNodeForm(originalSelectedNodeRef.current);
+        showToast("\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
+      }
+    }, [showToast, revertSingleNodeForm]);
     const lastResizeHeightRef = (0, import_react2.useRef)(0);
     const resizeTimerRef = (0, import_react2.useRef)(null);
     const autoResizeWindow = (0, import_react2.useCallback)(() => {
@@ -29114,7 +29383,7 @@
       const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
       const desc = isDescAllowed ? isDescOn ? rawDesc : "" : rawDesc;
       const w = overrideSize?.width !== void 0 ? overrideSize.width : isScreen ? parseInt(wEl?.value || "", 10) || firstNode?.width || lastNodeConfigRef.current.width || 250 : !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
-      const h = overrideSize?.height !== void 0 ? overrideSize.height : isScreen ? parseInt(hEl?.value || "", 10) || firstNode?.height || lastNodeConfigRef.current.height || 100 : !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "100", 10) || 100;
+      const h = overrideSize?.height !== void 0 ? overrideSize.height : isScreen ? parseInt(hEl?.value || "", 10) || firstNode?.height || lastNodeConfigRef.current.height || 90 : !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
       const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : isScreen ? rEl?.value !== void 0 && rEl?.value !== "" && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : firstNode?.cornerRadius ?? (lastNodeConfigRef.current.cornerRadius ?? 0) : !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
       const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
       const rawFigmaUrl = linkOverrides?.figmaLink !== void 0 ? linkOverrides.figmaLink : urlEl ? urlEl.value.trim() : "";
@@ -29309,6 +29578,34 @@
       if (!isConnectorSelectedRef.current || !nodes || nodes.length === 0) return;
       const connNodes = nodes.filter((n) => n && n.isConnector);
       if (connNodes.length === 0) return;
+      if (connNodes.length === 1) {
+        isApplyingSingleRef.current = true;
+      }
+      const snapshotItems = connNodes.map((node) => ({
+        connectorId: node.id,
+        payload: {
+          connectorId: node.id,
+          colorHex: node.connectorColorHex,
+          strokeWeight: node.connectorStrokeWeight,
+          strokePattern: node.connectorStrokePattern || "SOLID",
+          routingType: node.connectorRoutingType || "ORTHOGONAL",
+          startTerminal: node.connectorStartTerminal || "NONE",
+          endTerminal: node.connectorEndTerminal || "ARROW",
+          startOffset: node.connectorStartOffset ?? 0,
+          endOffset: node.connectorEndOffset ?? 0,
+          sourceMagnet: node.connectorSourceMagnet || "RIGHT",
+          targetMagnet: node.connectorTargetMagnet || "LEFT",
+          label: node.connectorLabel || "",
+          hasLabel: Boolean(node.connectorLabel),
+          isReversed: node.connectorIsReversed || false
+        }
+      }));
+      const newSnapshot = {
+        type: "connector",
+        connectorItems: snapshotItems
+      };
+      setLastAppliedSnapshot(newSnapshot);
+      lastAppliedSnapshotRef.current = newSnapshot;
       const labelToggleEl = document.getElementById("toggle-conn-label");
       const labelInputEl = document.getElementById("input-conn-label");
       const colorEl = document.getElementById("conn-line-color");
@@ -29356,101 +29653,106 @@
         }, "*");
       });
     }, []);
-    const handleMainAction = (0, import_react2.useCallback)(() => {
+    const connectSelectedNodes = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       const isConn = isConnectorSelectedRef.current || nodes.length > 0 && nodes.every((n) => n && n.isConnector);
-      if (isConn || currentTabRef.current === "connection") {
-        if (isConn && nodes.length >= 1 && nodes.every((n) => n && n.isConnector)) {
-          applyCurrentConnectorState();
-          return;
-        }
-        if (nodes.length < 2) {
-          showToast("Select 2 or more nodes to connect.");
-          return;
-        }
-        const labelToggleEl = document.getElementById("toggle-conn-label");
-        const labelInputEl = document.getElementById("input-conn-label");
-        const colorEl = document.getElementById("conn-line-color");
-        const weightEl = document.getElementById("input-stroke-weight");
-        const startTermEl = document.getElementById("select-start-terminal");
-        const endTermEl = document.getElementById("select-end-terminal");
-        const startOffEl = document.getElementById("input-start-offset");
-        const endOffEl = document.getElementById("input-end-offset");
-        const linkToggleEl = document.getElementById("toggle-conn-link");
-        const linkUrlEl = document.getElementById("input-conn-link-url");
-        const label = labelToggleEl?.checked ? labelInputEl?.value.trim() || "" : "";
-        const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || "#000000";
-        const weight = parseFloat(weightEl?.value || "1.5") || 1.5;
-        const startTerm = startTermEl?.value || "NONE";
-        const endTerm = endTermEl?.value || "ARROW";
-        const startOff = parseFloat(startOffEl?.value || "0") || 0;
-        const endOff = parseFloat(endOffEl?.value || "0") || 0;
-        const isLinkOn = linkToggleEl ? linkToggleEl.checked : lastConnectorConfigRef.current.linkOn || false;
-        const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : lastConnectorConfigRef.current.linkUrl || "";
-        const figmaLink = isLinkOn ? rawLinkUrl : "";
-        const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
-        if (nodes.length === 2) {
+      if (isConn && nodes.length >= 1 && nodes.every((n) => n && n.isConnector)) {
+        applyCurrentConnectorState();
+        return;
+      }
+      if (nodes.length < 2) {
+        showToast("Select 2 or more nodes to connect.");
+        return;
+      }
+      const labelToggleEl = document.getElementById("toggle-conn-label");
+      const labelInputEl = document.getElementById("input-conn-label");
+      const colorEl = document.getElementById("conn-line-color");
+      const weightEl = document.getElementById("input-stroke-weight");
+      const startTermEl = document.getElementById("select-start-terminal");
+      const endTermEl = document.getElementById("select-end-terminal");
+      const startOffEl = document.getElementById("input-start-offset");
+      const endOffEl = document.getElementById("input-end-offset");
+      const linkToggleEl = document.getElementById("toggle-conn-link");
+      const linkUrlEl = document.getElementById("input-conn-link-url");
+      const label = labelToggleEl?.checked ? labelInputEl?.value.trim() || "" : "";
+      const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || "#000000";
+      const weight = parseFloat(weightEl?.value || "1.5") || 1.5;
+      const startTerm = startTermEl?.value || "NONE";
+      const endTerm = endTermEl?.value || "ARROW";
+      const startOff = parseFloat(startOffEl?.value || "0") || 0;
+      const endOff = parseFloat(endOffEl?.value || "0") || 0;
+      const isLinkOn = linkToggleEl ? linkToggleEl.checked : lastConnectorConfigRef.current.linkOn || false;
+      const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : lastConnectorConfigRef.current.linkUrl || "";
+      const figmaLink = isLinkOn ? rawLinkUrl : "";
+      const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+      if (nodes.length === 2) {
+        parent.postMessage({
+          pluginMessage: {
+            type: "CONNECT_POINTS",
+            payload: {
+              sourceNodeId: nodes[0].id,
+              sourceMagnet,
+              targetNodeId: nodes[1].id,
+              targetMagnet,
+              label,
+              colorHex: color,
+              strokeWeight: weight,
+              routingType: selectedRoutingType,
+              strokePattern: selectedLinePattern,
+              startTerminal: startTerm,
+              endTerminal: endTerm,
+              startOffset: startOff,
+              endOffset: endOff,
+              figmaLink
+            }
+          }
+        }, "*");
+      } else {
+        for (let i = 0; i < nodes.length - 1; i++) {
+          const src = nodes[i];
+          const tgt = nodes[i + 1];
+          let pairSourceMag = sourceMagnet;
+          let pairTargetMag = targetMagnet;
+          if (typeof src.x === "number" && typeof tgt.x === "number" && typeof src.y === "number" && typeof tgt.y === "number") {
+            const dx = tgt.x - src.x;
+            const dy = tgt.y - src.y;
+            if (Math.abs(dx) >= Math.abs(dy)) {
+              pairSourceMag = dx >= 0 ? "RIGHT" : "LEFT";
+              pairTargetMag = dx >= 0 ? "LEFT" : "RIGHT";
+            } else {
+              pairSourceMag = dy >= 0 ? "BOTTOM" : "TOP";
+              pairTargetMag = dy >= 0 ? "TOP" : "BOTTOM";
+            }
+          }
           parent.postMessage({
             pluginMessage: {
               type: "CONNECT_POINTS",
               payload: {
-                sourceNodeId: nodes[0].id,
-                sourceMagnet,
-                targetNodeId: nodes[1].id,
-                targetMagnet,
-                label,
+                sourceNodeId: src.id,
+                sourceMagnet: i === 0 ? sourceMagnet : pairSourceMag,
+                targetNodeId: tgt.id,
+                targetMagnet: i === nodes.length - 2 ? targetMagnet : pairTargetMag,
+                label: i === 0 ? label : "",
                 colorHex: color,
                 strokeWeight: weight,
                 routingType: selectedRoutingType,
                 strokePattern: selectedLinePattern,
-                startTerminal: startTerm,
+                startTerminal: i === 0 ? startTerm : "NONE",
                 endTerminal: endTerm,
                 startOffset: startOff,
                 endOffset: endOff,
-                figmaLink
+                figmaLink: i === 0 ? figmaLink : ""
               }
             }
           }, "*");
-        } else {
-          for (let i = 0; i < nodes.length - 1; i++) {
-            const src = nodes[i];
-            const tgt = nodes[i + 1];
-            let pairSourceMag = sourceMagnet;
-            let pairTargetMag = targetMagnet;
-            if (typeof src.x === "number" && typeof tgt.x === "number" && typeof src.y === "number" && typeof tgt.y === "number") {
-              const dx = tgt.x - src.x;
-              const dy = tgt.y - src.y;
-              if (Math.abs(dx) >= Math.abs(dy)) {
-                pairSourceMag = dx >= 0 ? "RIGHT" : "LEFT";
-                pairTargetMag = dx >= 0 ? "LEFT" : "RIGHT";
-              } else {
-                pairSourceMag = dy >= 0 ? "BOTTOM" : "TOP";
-                pairTargetMag = dy >= 0 ? "TOP" : "BOTTOM";
-              }
-            }
-            parent.postMessage({
-              pluginMessage: {
-                type: "CONNECT_POINTS",
-                payload: {
-                  sourceNodeId: src.id,
-                  sourceMagnet: i === 0 ? sourceMagnet : pairSourceMag,
-                  targetNodeId: tgt.id,
-                  targetMagnet: i === nodes.length - 2 ? targetMagnet : pairTargetMag,
-                  label: i === 0 ? label : "",
-                  colorHex: color,
-                  strokeWeight: weight,
-                  routingType: selectedRoutingType,
-                  strokePattern: selectedLinePattern,
-                  startTerminal: i === 0 ? startTerm : "NONE",
-                  endTerminal: endTerm,
-                  startOffset: startOff,
-                  endOffset: endOff,
-                  figmaLink: i === 0 ? figmaLink : ""
-                }
-              }
-            }, "*");
-          }
         }
+      }
+    }, [applyCurrentConnectorState, showToast]);
+    const handleMainAction = (0, import_react2.useCallback)(() => {
+      const nodes = selectedNodesRef.current;
+      const isConn = isConnectorSelectedRef.current || nodes.length > 0 && nodes.every((n) => n && n.isConnector);
+      if (isConn && nodes.length >= 1 && nodes.every((n) => n && n.isConnector)) {
+        applyCurrentConnectorState();
         return;
       }
       if (nodes.length >= 2) {
@@ -29485,7 +29787,7 @@
       const desc = isDescOn ? descEl?.value.trim() || "" : "";
       const effectiveDesc = isDescAllowed ? desc : "";
       const w = !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
-      const h = !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "100", 10) || 100;
+      const h = !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
       let radius = !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
       if (radius > 999) {
         radius = 999;
@@ -29518,7 +29820,7 @@
         color: selectedColor,
         strokeWeight: lastNodeConfigRef.current.strokeWeight,
         strokeColor: lastNodeConfigRef.current.strokeColor,
-        sizeMode: lastNodeConfigRef.current.sizeMode || "fixed",
+        sizeMode: lastNodeConfigRef.current.sizeMode || (selectedNodeType === "Screen" ? "hug" : "fixed"),
         elevationOn: isElevOn,
         elevation: selectedElevation,
         statusOn: statusToggleEl?.checked || false,
@@ -29534,6 +29836,7 @@
       };
       setLastNodeConfig(newConfig);
       if (nodes.length === 1) {
+        isApplyingSingleRef.current = true;
         const targetNode = nodes[0];
         const prevSinglePayload = {
           nodeId: targetNode.id,
@@ -29578,7 +29881,7 @@
               colorHex: selectedColor,
               strokeWeight: lastNodeConfigRef.current.strokeWeight !== void 0 ? lastNodeConfigRef.current.strokeWeight : 1.5,
               strokeColor: lastNodeConfigRef.current.strokeColor,
-              sizeMode: lastNodeConfigRef.current.sizeMode || "fixed",
+              sizeMode: lastNodeConfigRef.current.sizeMode || (selectedNodeType === "Screen" ? "hug" : "fixed"),
               elevation: isElevOn ? selectedElevation : void 0,
               status: !isDescAllowed || !statusToggleEl?.checked ? void 0 : selectedStatus,
               badgeNumber: isStepOn ? targetStepNum : void 0,
@@ -29615,6 +29918,17 @@
       }
       setSelectedNodes(nodes);
       selectedNodesRef.current = nodes;
+      if (nodes && nodes.length === 1) {
+        if (isSelectionChanged || isApplyingSingleRef.current || !originalSelectedNodeRef.current || originalSelectedNodeRef.current.id !== nodes[0].id) {
+          originalSelectedNodeRef.current = { ...nodes[0] };
+          isApplyingSingleRef.current = false;
+          setLastAppliedSnapshot(null);
+          lastAppliedSnapshotRef.current = null;
+        }
+      } else {
+        originalSelectedNodeRef.current = null;
+        isApplyingSingleRef.current = false;
+      }
       const flowNodeCount = typeof meta?.flowNodeCount === "number" ? meta.flowNodeCount : nodes.filter((n) => n && (n.isFlowNode || !n.isConnector && n.flowNodeType)).length;
       const otherObjectCount = typeof meta?.otherObjectCount === "number" ? meta.otherObjectCount : Math.max(0, count - flowNodeCount - (meta?.connectorCount || 0));
       const connectorCount = typeof meta?.connectorCount === "number" ? meta.connectorCount : nodes.filter((n) => n && n.isConnector).length;
@@ -29626,6 +29940,20 @@
       isConnectorSelectedRef.current = newIsConnSel;
       if (newIsConnSel) {
         setCurrentTab("connection");
+        if (nodes.length === 1 && nodes[0]) {
+          const firstConn = nodes[0];
+          setLastConnectorConfig({
+            labelOn: Boolean(firstConn.connectorLabel),
+            labelText: firstConn.connectorLabel || "Text"
+          });
+          setUIState({
+            selectedConnectorColor: firstConn.connectorColorHex || "#000000",
+            selectedRoutingType: firstConn.connectorRoutingType || "ORTHOGONAL",
+            selectedLinePattern: firstConn.connectorStrokePattern || "SOLID",
+            sourceMagnet: firstConn.connectorSourceMagnet || "RIGHT",
+            targetMagnet: firstConn.connectorTargetMagnet || "LEFT"
+          });
+        }
       } else if (count === 0) {
         setCurrentTab("node");
         setUIState({
@@ -29786,6 +30114,7 @@
       applyStepBadges,
       removeStepBadgesFromNodes,
       applyCurrentConnectorState,
+      connectSelectedNodes,
       handleMainAction,
       handleSelectionChange,
       closeAllPopovers,
@@ -29797,6 +30126,8 @@
       clearMultiDraft,
       clearMultiDraftKeys,
       isApplyingMultiDraft,
+      hasSingleChanges,
+      triggerFormChange,
       canUndo,
       handleUndo
     };
@@ -29894,14 +30225,15 @@
                 if (titleEl) titleEl.value = "Screen";
                 if (descEl) descEl.value = "";
                 if (descToggleEl) descToggleEl.checked = false;
-                if (fixedValEl) fixedValEl.textContent = "100";
+                if (fixedValEl) fixedValEl.textContent = "90";
                 if (linkToggleEl) linkToggleEl.checked = false;
                 if (linkUrlEl) linkUrlEl.value = "";
                 setLastNodeConfig({
                   nodeType: "Screen",
                   width: 250,
-                  height: 100,
+                  height: 90,
                   cornerRadius: 0,
+                  sizeMode: "hug",
                   descriptionOn: false,
                   singleLinkOn: false,
                   singleLinkUrl: ""
@@ -32411,7 +32743,7 @@
         } else {
           const first = validNodes[0];
           let nodeW = typeof first?.width === "number" ? first.width : lastNodeConfig.width || 250;
-          let nodeH = typeof first?.height === "number" ? first.height : lastNodeConfig.height || 100;
+          let nodeH = typeof first?.height === "number" ? first.height : lastNodeConfig.height || 90;
           let nodeR = typeof first?.cornerRadius === "number" ? first.cornerRadius : lastNodeConfig.cornerRadius ?? 0;
           if (!isDifferentNode && pendingSizeRef.current && pendingSizeRef.current.nodeId === currentNodeId) {
             const pending = pendingSizeRef.current;
@@ -32442,7 +32774,7 @@
         }
       } else {
         const defW = lastNodeConfig.width || 250;
-        const defH = lastNodeConfig.height || 100;
+        const defH = lastNodeConfig.height || 90;
         const defR = lastNodeConfig.cornerRadius ?? 0;
         if (!isFocusedRef.current.w) setWidthInput(String(defW));
         if (!isFocusedRef.current.h) setHeightInput(String(defH));
@@ -32490,7 +32822,7 @@
         updateMultiDraft({ width: validW, sizeMode: "fixed" });
         return;
       }
-      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 100;
+      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
       const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
       const targetNodeId = selectedNodes[0]?.id || "NONE";
       pendingSizeRef.current = {
@@ -32536,7 +32868,7 @@
       if (!isSizeAllowed) return;
       const raw = explicitVal !== void 0 ? explicitVal : heightInput;
       const parsed = parseInt(raw, 10);
-      let validH = isNaN(parsed) ? lastNodeConfig.height || 100 : parsed;
+      let validH = isNaN(parsed) ? lastNodeConfig.height || 90 : parsed;
       if (validH < SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT) {
         validH = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
         showToast(`\uCD5C\uC18C \uB192\uC774\uB294 ${SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT}px\uC785\uB2C8\uB2E4.`, "warning");
@@ -32577,13 +32909,13 @@
         e.target.blur();
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 100);
+        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
         const step = e.shiftKey ? 10 : 1;
         const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT, current + step);
         commitH(String(next));
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 100);
+        const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
         const step = e.shiftKey ? 10 : 1;
         const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, current - step);
         commitH(String(next));
@@ -32612,7 +32944,7 @@
         return;
       }
       const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
-      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 100;
+      const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
       const targetNodeId = selectedNodes[0]?.id || "NONE";
       pendingSizeRef.current = {
         nodeId: targetNodeId,
@@ -32710,6 +33042,7 @@
     }
     function selectSizeMode(mode) {
       if (!isSizeAllowed) return;
+      pendingSizeRef.current = null;
       if (selectedNodes.length >= 2) {
         if (mode !== "mixed") {
           updateMultiDraft({ sizeMode: mode });
@@ -33778,6 +34111,7 @@
       setUIState,
       setActiveModal,
       applyCurrentConnectorState,
+      connectSelectedNodes,
       handleMainAction,
       selectedNodes,
       stylePresets,
@@ -34913,7 +35247,7 @@
                     id: "btn-section-connect",
                     className: "btn-add-step-badges",
                     disabled: isConnectDisabled,
-                    onClick: handleMainAction,
+                    onClick: connectSelectedNodes,
                     title: isAllConnectors ? selectedNodes.length === 1 ? "Update Connector" : "Update Connectors" : selectedNodes.length >= 2 ? "Connect selected nodes" : "Select 2 or more nodes to connect",
                     children: [
                       /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
@@ -37464,14 +37798,7 @@
     { id: "appearance", label: "Appearance" },
     { id: "connection", label: "Connection" }
   ];
-  function getCtaLabel(currentTab, isConnectorSelected, nodeCount) {
-    if (isConnectorSelected) {
-      if (nodeCount === 1) return "Update Connector";
-      return "Connect";
-    }
-    if (currentTab === "connection") {
-      return "Connect";
-    }
+  function getCtaLabel(nodeCount) {
     if (nodeCount >= 2) return "Apply to All";
     if (nodeCount === 1) return "Apply";
     return "Create Node";
@@ -37508,6 +37835,8 @@
       hasMultiDraft,
       updateMultiDraft,
       isApplyingMultiDraft,
+      hasSingleChanges,
+      triggerFormChange,
       canUndo,
       handleUndo
     } = useApp();
@@ -37527,7 +37856,7 @@
     const isSingleConn = nodeCount === 1 && allConnectors;
     const isMultiConn = nodeCount >= 2 && allConnectors;
     const isConnSel = isSingleConn || isMultiConn;
-    const ctaLabel = getCtaLabel(currentTab, isConnSel, nodeCount);
+    const ctaLabel = getCtaLabel(nodeCount);
     (0, import_react25.useEffect)(() => {
       if (isSingleFigjam) {
         if (currentTab !== "node") setCurrentTab("node");
@@ -37667,7 +37996,7 @@
         activeNodeId
       ) });
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, onInput: triggerFormChange, onChange: triggerFormChange, children: [
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "title-banner", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }) }),
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
         const isConnectionDisabled = isSingleFigjam || !isConnSel && nodeCount < 2;
@@ -37718,9 +38047,11 @@
           }
         )
       ] }) }),
-      currentTab !== "connection" && (() => {
-        const isCtaDisabled = isFigjamSelected || nodeCount >= 2 && (!hasMultiDraft || isApplyingMultiDraft);
+      !isSingleFigjam && (() => {
+        const isSingle = nodeCount === 1;
+        const isCtaDisabled = isFigjamSelected ? !isMultiFigjam : nodeCount >= 2 ? isConnSel ? false : !hasMultiDraft || isApplyingMultiDraft : isSingle ? !hasSingleChanges : false;
         const showUndo = ctaLabel === "Apply" || ctaLabel === "Apply to All";
+        const isUndoDisabled = isSingle ? !hasSingleChanges : !canUndo;
         return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("footer", { className: "app-footer", children: [
           showUndo && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
             "button",
@@ -37728,7 +38059,7 @@
               id: "btn-undo",
               className: "btn-cta-secondary",
               type: "button",
-              disabled: !canUndo,
+              disabled: isUndoDisabled,
               onClick: handleUndo,
               children: "Undo"
             }
@@ -37740,7 +38071,7 @@
               className: `btn-cta-primary${isCtaDisabled ? " disabled" : ""}`,
               type: "button",
               disabled: isCtaDisabled,
-              onClick: isFigjamSelected ? void 0 : handleMainAction,
+              onClick: isSingleFigjam ? void 0 : handleMainAction,
               children: ctaLabel
             }
           )
