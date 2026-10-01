@@ -1832,6 +1832,49 @@
     if (isAuto && textCharacters === void 0) {
       return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
     }
+    if (card.layoutMode === "VERTICAL") {
+      try {
+        const headerRow = card.children.find(isHeaderFrame);
+        const titleText = headerRow ? headerRow.children.find((c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")) : card.children.find((c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title"));
+        const titleH = headerRow ? Math.round(headerRow.height) : titleText ? Math.max(18, Math.round(titleText.height)) : 18;
+        const descText2 = card.children.find(
+          (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
+        );
+        let descH = 0;
+        if (descText2) {
+          const prevChars = descText2.characters;
+          const targetChars = textCharacters !== void 0 ? textCharacters : prevChars;
+          if (targetChars.length > 0) {
+            const prevMaxLines2 = descText2.maxLines;
+            const needRestoreMaxLines = prevMaxLines2 !== null;
+            const needRestoreChars = textCharacters !== void 0 && textCharacters !== prevChars;
+            if (needRestoreMaxLines) {
+              descText2.maxLines = null;
+            }
+            if (needRestoreChars) {
+              descText2.characters = textCharacters;
+            }
+            descH = Math.round(descText2.height);
+            if (needRestoreMaxLines) {
+              descText2.maxLines = prevMaxLines2;
+            }
+            if (needRestoreChars) {
+              descText2.characters = prevChars;
+            }
+          }
+        }
+        const pt = typeof card.paddingTop === "number" ? card.paddingTop : 14;
+        const hasStatus = Boolean(safeGetPluginData2(card, "workflow_status"));
+        const hasLink = Boolean(safeGetPluginData2(card, "figma_link"));
+        const hasBottomBadge = hasStatus || hasLink;
+        const hasDesc = descH > 0;
+        const pb = typeof card.paddingBottom === "number" ? card.paddingBottom : hasBottomBadge ? 36 : hasDesc ? 16 : 14;
+        const itemSpacing = hasDesc ? typeof card.itemSpacing === "number" ? card.itemSpacing : 8 : 0;
+        const calculatedH = Math.round(pt + titleH + itemSpacing + descH + pb);
+        return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, calculatedH);
+      } catch (_) {
+      }
+    }
     const prevSizingMode = card.primaryAxisSizingMode;
     const prevHeight = card.height;
     const prevMinHeight = card.minHeight;
@@ -1991,7 +2034,6 @@
         } catch (_) {
         }
       }
-      descText.textTruncation = "ENDING";
       descText.textAlignHorizontal = "LEFT";
       if (descText.layoutAlign !== "STRETCH") {
         descText.layoutAlign = "STRETCH";
@@ -2010,10 +2052,19 @@
         } catch (_) {
         }
       }
-      const isHug = card.primaryAxisSizingMode === "AUTO";
-      if (isHug) {
-        descText.maxLines = null;
+      const sMode = (safeGetPluginData2(card, "size_mode") || safeGetPluginData2(card, "screen_size_mode") || "").toLowerCase();
+      const isFitOrHug = sMode === "fit" || sMode === "hug" || card.primaryAxisSizingMode === "AUTO";
+      if (isFitOrHug) {
+        if (descText.textTruncation !== "DISABLED") {
+          descText.textTruncation = "DISABLED";
+        }
+        if (descText.maxLines !== null) {
+          descText.maxLines = null;
+        }
         return;
+      }
+      if (descText.textTruncation !== "ENDING") {
+        descText.textTruncation = "ENDING";
       }
       const hugH = calculateCardHugHeight(card, textCharacters);
       if (currentHeight >= hugH - 4) {
@@ -2668,20 +2719,40 @@
       await ensureTextNodeFontsLoaded(textNode);
       const len = textNode.characters.length;
       if (len > 0) {
+        let needsFont = true;
+        let needsSize = true;
         try {
-          textNode.setRangeFontName(0, len, descFont);
-        } catch (_) {
-          try {
-            textNode.fontName = descFont;
-          } catch (_2) {
+          const fn = textNode.getRangeFontName(0, 1);
+          if (fn !== figma.mixed && fn.family === descFont.family && fn.style === descFont.style) {
+            needsFont = false;
           }
+        } catch (_) {
         }
         try {
-          textNode.setRangeFontSize(0, len, targetSize);
+          const fs = textNode.getRangeFontSize(0, 1);
+          if (fs !== figma.mixed && fs === targetSize) {
+            needsSize = false;
+          }
         } catch (_) {
+        }
+        if (needsFont) {
           try {
-            textNode.fontSize = targetSize;
-          } catch (_2) {
+            textNode.setRangeFontName(0, len, descFont);
+          } catch (_) {
+            try {
+              textNode.fontName = descFont;
+            } catch (_2) {
+            }
+          }
+        }
+        if (needsSize) {
+          try {
+            textNode.setRangeFontSize(0, len, targetSize);
+          } catch (_) {
+            try {
+              textNode.fontSize = targetSize;
+            } catch (_2) {
+            }
           }
         }
       } else {
@@ -6096,9 +6167,11 @@
         break;
     }
   };
+  var internalLayoutNodeIds = /* @__PURE__ */ new Set();
   figma.on("documentchange", async (event) => {
     const movedNodeIds = /* @__PURE__ */ new Set();
     let connectorSelectionChanged = false;
+    let shouldUpdateSelectionOnMove = false;
     for (const change of event.documentChanges) {
       if (change.type === "CREATE") {
         const createdNode = figma.getNodeById(change.id);
@@ -6110,8 +6183,8 @@
         if (change.properties.includes("x") || change.properties.includes("y") || change.properties.includes("width") || change.properties.includes("height")) {
           movedNodeIds.add(change.id);
           const changedNode = figma.getNodeById(change.id);
+          const flowNode = changedNode ? findFlowNode(changedNode) : null;
           if (changedNode) {
-            const flowNode = findFlowNode(changedNode);
             if (flowNode) {
               movedNodeIds.add(flowNode.id);
             }
@@ -6120,6 +6193,16 @@
               movedNodeIds.add(p.id);
               p = p.parent;
             }
+          }
+          const hasPositionChange = change.properties.includes("x") || change.properties.includes("y");
+          const targetId = flowNode ? flowNode.id : change.id;
+          const isInternalResize = internalLayoutNodeIds.has(change.id) || internalLayoutNodeIds.has(targetId);
+          if (hasPositionChange || !isInternalResize) {
+            shouldUpdateSelectionOnMove = true;
+          }
+          if (isInternalResize) {
+            internalLayoutNodeIds.delete(change.id);
+            if (flowNode) internalLayoutNodeIds.delete(flowNode.id);
           }
         }
         if (change.properties.includes("width") || change.properties.includes("height")) {
@@ -6139,6 +6222,7 @@
               frame.maxWidth = null;
               frame.minHeight = null;
               frame.maxHeight = null;
+              internalLayoutNodeIds.add(frame.id);
               frame.resize(savedW, savedH);
               frame.primaryAxisSizingMode = "FIXED";
               frame.counterAxisSizingMode = "FIXED";
@@ -6170,8 +6254,6 @@
                 }
                 if (isTitle) {
                   await enforceTitleStandardStyle(textNode, flowNode);
-                } else if (isDesc) {
-                  await lockTextFontSizeAndAutoResize(textNode, 11);
                 }
                 if (isScreen) {
                   const card = flowNode;
@@ -6187,6 +6269,20 @@
                       card.setPluginData("node_desc", textNode.characters);
                     }
                   } else if (sMode === "fit" || sMode === "hug") {
+                    if (isDesc) {
+                      const prevDesc = safeGetPluginData2(card, "node_desc") || "";
+                      const currDesc = textNode.characters;
+                      card.setPluginData("node_desc", currDesc);
+                      const prevNewlines = (prevDesc.match(/\n/g) || []).length;
+                      const currNewlines = (currDesc.match(/\n/g) || []).length;
+                      const isNewlineAdded = currNewlines > prevNewlines;
+                      const isNewlineRemoved = currNewlines < prevNewlines;
+                      if (currDesc === prevDesc && !isNewlineAdded && !isNewlineRemoved) {
+                        continue;
+                      }
+                    }
+                    await new Promise((resolve) => setTimeout(resolve, 20));
+                    if (card.removed || textNode.removed) continue;
                     const currentW = Math.round(card.width);
                     const currentH = Math.round(card.height);
                     let targetW = currentW;
@@ -6203,42 +6299,24 @@
                         Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, currentW)
                       );
                     }
-                    if (descText) {
-                      descText.maxLines = null;
-                      try {
-                        descText.maxHeight = null;
-                      } catch (_) {
-                      }
-                      if (descText.textTruncation !== "DISABLED") {
-                        descText.textTruncation = "DISABLED";
-                      }
-                      if (descText.layoutAlign !== "STRETCH") {
-                        descText.layoutAlign = "STRETCH";
-                      }
-                      if (descText.textAutoResize !== "HEIGHT") {
-                        descText.textAutoResize = "HEIGHT";
-                      }
-                    }
                     if (targetW !== currentW) {
+                      internalLayoutNodeIds.add(card.id);
                       card.resize(targetW, card.height);
                     }
                     const headerRow = card.children.find(isHeaderFrame);
                     const titleNode = isTitle ? textNode : headerRow?.children.find(
                       (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
                     );
-                    const titleChars = titleNode ? titleNode.characters : "";
-                    const titleLineCount = titleChars.length > 0 ? (titleChars.match(/\n/g) || []).length + 1 : 1;
-                    const titleH = titleNode ? Math.max(18, Math.round(titleNode.height), titleLineCount * 18) : headerRow ? Math.round(headerRow.height) : 18;
+                    const titleH = isTitle && titleNode ? Math.max(18, Math.round(titleNode.height)) : headerRow ? Math.round(headerRow.height) : 18;
                     const descNode = isDesc ? textNode : descText;
                     const descChars = descNode ? descNode.characters : "";
                     const hasDesc = descChars.length > 0;
-                    const descLineCount = hasDesc ? (descChars.match(/\n/g) || []).length + 1 : 0;
-                    const descH = hasDesc && descNode ? Math.max(Math.round(descNode.height), Math.round(descLineCount * 13.5)) : 0;
+                    const descH = hasDesc && descNode ? Math.round(descNode.height) : 0;
                     const pt = typeof card.paddingTop === "number" ? card.paddingTop : 14;
                     const hasStatus = Boolean(safeGetPluginData2(card, "workflow_status"));
                     const hasLink = Boolean(safeGetPluginData2(card, "figma_link"));
                     const hasBottomBadge = hasStatus || hasLink;
-                    const pb = hasBottomBadge ? 36 : hasDesc ? 16 : 14;
+                    const pb = typeof card.paddingBottom === "number" ? card.paddingBottom : hasBottomBadge ? 36 : hasDesc ? 16 : 14;
                     const itemSpacing = hasDesc ? typeof card.itemSpacing === "number" ? card.itemSpacing : 8 : 0;
                     const calculatedContentH = Math.round(pt + titleH + itemSpacing + descH + pb);
                     const targetH = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, calculatedContentH);
@@ -6252,6 +6330,7 @@
                       card.maxWidth = targetW;
                       card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
                       card.maxHeight = null;
+                      internalLayoutNodeIds.add(card.id);
                       card.resize(targetW, targetH);
                       if (sMode === "hug") {
                         card.setPluginData("screen_height", String(targetH));
@@ -6348,7 +6427,9 @@
     }
     if (movedNodeIds.size > 0) {
       await syncConnectorsForMovedNodes(movedNodeIds);
-      handleSelectionChange();
+      if (shouldUpdateSelectionOnMove) {
+        handleSelectionChange();
+      }
     } else if (connectorSelectionChanged) {
       handleSelectionChange();
     }

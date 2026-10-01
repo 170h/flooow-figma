@@ -818,6 +818,65 @@ function calculateCardHugHeight(card: FrameNode, textCharacters?: string): numbe
     return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
   }
 
+  // VERTICAL 오토레이아웃 노드(Screen 카드 등)인 경우:
+  // 프레임 자체의 sizingMode / resize / min·maxHeight를 임시 변경하지 않고,
+  // 내부 자식 요소(Header, DescText)와 패딩/간격의 실측치로 Hug 높이를 산출하여 documentchange mutation을 원천 차단함
+  if (card.layoutMode === 'VERTICAL') {
+    try {
+      const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+      const titleText = headerRow
+        ? (headerRow.children.find((c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')) as TextNode | undefined)
+        : (card.children.find((c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')) as TextNode | undefined);
+      const titleH = headerRow ? Math.round(headerRow.height) : (titleText ? Math.max(18, Math.round(titleText.height)) : 18);
+
+      const descText = card.children.find(
+        (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
+      ) as TextNode | undefined;
+
+      let descH = 0;
+      if (descText) {
+        const prevChars = descText.characters;
+        const targetChars = textCharacters !== undefined ? textCharacters : prevChars;
+        if (targetChars.length > 0) {
+          const prevMaxLines = descText.maxLines;
+          const needRestoreMaxLines = prevMaxLines !== null;
+          const needRestoreChars = textCharacters !== undefined && textCharacters !== prevChars;
+
+          if (needRestoreMaxLines) {
+            descText.maxLines = null;
+          }
+          if (needRestoreChars) {
+            descText.characters = textCharacters;
+          }
+
+          descH = Math.round(descText.height);
+
+          if (needRestoreMaxLines) {
+            descText.maxLines = prevMaxLines;
+          }
+          if (needRestoreChars) {
+            descText.characters = prevChars;
+          }
+        }
+      }
+
+      const pt = typeof card.paddingTop === 'number' ? card.paddingTop : 14;
+      const hasStatus = Boolean(safeGetPluginData(card, 'workflow_status'));
+      const hasLink = Boolean(safeGetPluginData(card, 'figma_link'));
+      const hasBottomBadge = hasStatus || hasLink;
+      const hasDesc = descH > 0;
+      const pb = typeof card.paddingBottom === 'number'
+        ? card.paddingBottom
+        : (hasBottomBadge ? 36 : (hasDesc ? 16 : 14));
+      const itemSpacing = hasDesc ? (typeof card.itemSpacing === 'number' ? card.itemSpacing : 8) : 0;
+
+      const calculatedH = Math.round(pt + titleH + itemSpacing + descH + pb);
+      return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, calculatedH);
+    } catch (_) {
+      // 실패 시 fallback
+    }
+  }
+
   const prevSizingMode = card.primaryAxisSizingMode;
   const prevHeight = card.height;
   const prevMinHeight = card.minHeight;
@@ -1042,7 +1101,6 @@ async function updateDescTextTruncation(card: FrameNode, descText: TextNode, cur
       try { descText.fontSize = 11; } catch (_) {}
     }
 
-    descText.textTruncation = 'ENDING';
     descText.textAlignHorizontal = 'LEFT';
     if (descText.layoutAlign !== 'STRETCH') {
       descText.layoutAlign = 'STRETCH';
@@ -1060,10 +1118,24 @@ async function updateDescTextTruncation(card: FrameNode, descText: TextNode, cur
       try { descText.resize(availW, descText.height); } catch (_) {}
     }
 
-    const isHug = card.primaryAxisSizingMode === 'AUTO';
-    if (isHug) {
-      descText.maxLines = null;
+    // Fit/Hug 모드 판별: pluginData의 size_mode를 우선 사용 (primaryAxisSizingMode는 min/max 잠금으로 인해 FIXED일 수 있음)
+    const sMode = (safeGetPluginData(card, 'size_mode') || safeGetPluginData(card, 'screen_size_mode') || '').toLowerCase();
+    const isFitOrHug = sMode === 'fit' || sMode === 'hug' || card.primaryAxisSizingMode === 'AUTO';
+
+    if (isFitOrHug) {
+      // Fit/Hug: 전체 텍스트 표시 — lockTextFontSizeAndAutoResize의 DISABLED 정책과 일치시켜 깜박임 방지
+      if (descText.textTruncation !== 'DISABLED') {
+        descText.textTruncation = 'DISABLED';
+      }
+      if (descText.maxLines !== null) {
+        descText.maxLines = null;
+      }
       return;
+    }
+
+    // Fixed 모드: 기존 ENDING + maxLines 동작 유지
+    if (descText.textTruncation !== 'ENDING') {
+      descText.textTruncation = 'ENDING';
     }
 
     const hugH = calculateCardHugHeight(card, textCharacters);
@@ -1814,15 +1886,34 @@ async function lockTextFontSizeAndAutoResize(textNode: TextNode, targetSize: num
     // 1. 폰트 패밀리 Inter 및 스타일 Regular, 폰트 사이즈(11px) 고정
     const len = textNode.characters.length;
     if (len > 0) {
+      let needsFont = true;
+      let needsSize = true;
       try {
-        textNode.setRangeFontName(0, len, descFont);
-      } catch (_) {
-        try { textNode.fontName = descFont; } catch (_) {}
+        const fn = textNode.getRangeFontName(0, 1);
+        if (fn !== figma.mixed && fn.family === descFont.family && fn.style === descFont.style) {
+          needsFont = false;
+        }
+      } catch (_) {}
+      try {
+        const fs = textNode.getRangeFontSize(0, 1);
+        if (fs !== figma.mixed && fs === targetSize) {
+          needsSize = false;
+        }
+      } catch (_) {}
+
+      if (needsFont) {
+        try {
+          textNode.setRangeFontName(0, len, descFont);
+        } catch (_) {
+          try { textNode.fontName = descFont; } catch (_) {}
+        }
       }
-      try {
-        textNode.setRangeFontSize(0, len, targetSize);
-      } catch (_) {
-        try { textNode.fontSize = targetSize; } catch (_) {}
+      if (needsSize) {
+        try {
+          textNode.setRangeFontSize(0, len, targetSize);
+        } catch (_) {
+          try { textNode.fontSize = targetSize; } catch (_) {}
+        }
       }
     } else {
       try { textNode.fontName = descFont; } catch (_) {}
@@ -5817,10 +5908,15 @@ figma.ui.onmessage = async (msg: PluginAction) => {
 };
 
 
+// 플러그인 내부 자동 리사이즈/레이아웃 mutation으로 크기가 변경된 노드 ID 추적
+// (해당 노드의 width/height 변경으로 인한 불필요한 handleSelectionChange 재진입 방지용)
+const internalLayoutNodeIds = new Set<string>();
+
 // 캔버스 변경 감지: 신규 커넥터 직각 포맷팅, 노드 이동 시 커넥터 실시간 추적, 기즈모 조작 차단
 figma.on('documentchange', async (event) => {
   const movedNodeIds = new Set<string>();
   let connectorSelectionChanged = false;
+  let shouldUpdateSelectionOnMove = false;
 
   for (const change of event.documentChanges) {
     if (change.type === 'CREATE') {
@@ -5843,8 +5939,8 @@ figma.on('documentchange', async (event) => {
       ) {
         movedNodeIds.add(change.id);
         const changedNode = figma.getNodeById(change.id);
+        const flowNode = changedNode ? findFlowNode(changedNode) : null;
         if (changedNode) {
-          const flowNode = findFlowNode(changedNode);
           if (flowNode) {
             movedNodeIds.add(flowNode.id);
           }
@@ -5853,6 +5949,19 @@ figma.on('documentchange', async (event) => {
             movedNodeIds.add(p.id);
             p = p.parent;
           }
+        }
+
+        // x, y 좌표 변경(사용자의 캔버스 노드 드래그 이동)인 경우 selection 갱신 필요
+        const hasPositionChange = change.properties.includes('x') || change.properties.includes('y');
+        const targetId = flowNode ? flowNode.id : change.id;
+        const isInternalResize = internalLayoutNodeIds.has(change.id) || internalLayoutNodeIds.has(targetId);
+
+        if (hasPositionChange || !isInternalResize) {
+          shouldUpdateSelectionOnMove = true;
+        }
+        if (isInternalResize) {
+          internalLayoutNodeIds.delete(change.id);
+          if (flowNode) internalLayoutNodeIds.delete(flowNode.id);
         }
       }
 
@@ -5876,6 +5985,7 @@ figma.on('documentchange', async (event) => {
             frame.minHeight = null;
             frame.maxHeight = null;
 
+            internalLayoutNodeIds.add(frame.id);
             frame.resize(savedW, savedH);
             frame.primaryAxisSizingMode = 'FIXED';
             frame.counterAxisSizingMode = 'FIXED';
@@ -5918,10 +6028,8 @@ figma.on('documentchange', async (event) => {
               if (isTitle) {
                 // 타이틀 텍스트: 블릿, 링크, 볼드, 취소선 등 일체 반영 차단 및 Inter Bold 13px 표준 규격 강제 고정
                 await enforceTitleStandardStyle(textNode, flowNode);
-              } else if (isDesc) {
-                // 설명 텍스트: 11px 폰트 사이즈 및 리사이즈 모드 고정, 나머지 서식(굵기, 색상, 이탤릭 등)은 모두 자유롭게 허용
-                await lockTextFontSizeAndAutoResize(textNode, 11);
               }
+              // ※ isDesc인 경우: 타이핑 중 커서 방해 및 입력 필드 깜박임을 방지하기 위해 매 글자마다 TextNode 속성을 쓰지 않음
 
               // Screen 카드에 대한 size_mode별 자동 크기 재계산 (Screen 노드 한정)
               if (isScreen) {
@@ -5943,6 +6051,27 @@ figma.on('documentchange', async (event) => {
                     card.setPluginData('node_desc', textNode.characters);
                   }
                 } else if (sMode === 'fit' || sMode === 'hug') {
+                  // Description 편집인 경우: Enter(줄바꿈)뿐만 아니라 일반 타이핑에 의한 자동 wrapping도 실시간 감지하여 높이 반영
+                  if (isDesc) {
+                    const prevDesc = safeGetPluginData(card, 'node_desc') || '';
+                    const currDesc = textNode.characters;
+                    card.setPluginData('node_desc', currDesc);
+
+                    const prevNewlines = (prevDesc.match(/\n/g) || []).length;
+                    const currNewlines = (currDesc.match(/\n/g) || []).length;
+                    const isNewlineAdded = currNewlines > prevNewlines;
+                    const isNewlineRemoved = currNewlines < prevNewlines;
+
+                    // 텍스트 내용 및 줄바꿈에 변화가 없는 경우 불필요한 레이아웃 측정 중단
+                    if (currDesc === prevDesc && !isNewlineAdded && !isNewlineRemoved) {
+                      continue;
+                    }
+                  }
+
+                  // Figma C++ 텍스트 레이아웃 엔진이 글리프 래핑 및 height를 반영할 수 있도록 1틱(20ms) 대기
+                  await new Promise((resolve) => setTimeout(resolve, 20));
+                  if (card.removed || textNode.removed) continue;
+
                   const currentW = Math.round(card.width);
                   const currentH = Math.round(card.height);
 
@@ -5966,55 +6095,35 @@ figma.on('documentchange', async (event) => {
                     );
                   }
 
-                  // Description 텍스트 박스 가용 폭 갱신 및 말줄임 해제 (Fit/Hug는 전체 내용 수용)
-                  // ※ TextNode를 매 글자마다 강제로 resize하지 않고, STRETCH 및 HEIGHT 모드를 유지하여 피그마 오토레이아웃에 위임
-                  if (descText) {
-                    descText.maxLines = null;
-                    try {
-                      descText.maxHeight = null;
-                    } catch (_) {}
-                    if (descText.textTruncation !== 'DISABLED') {
-                      descText.textTruncation = 'DISABLED';
-                    }
-                    if (descText.layoutAlign !== 'STRETCH') {
-                      descText.layoutAlign = 'STRETCH';
-                    }
-                    if (descText.textAutoResize !== 'HEIGHT') {
-                      descText.textAutoResize = 'HEIGHT';
-                    }
-                  }
-
                   // Fit 모드에서 Title 변경으로 인해 너비가 바뀐 경우에만 임시 반영하여 정확한 오토레이아웃 높이 산출 준비
                   if (targetW !== currentW) {
+                    internalLayoutNodeIds.add(card.id);
                     card.resize(targetW, card.height);
                   }
 
-                  // 실제 TextNode layout 기반 Screen 콘텐츠 높이 산출 (사이드이펙트/딜레이 없는 즉시 계산)
+                  // 실제 TextNode layout 기반 Screen 콘텐츠 높이 산출 (Figma Text Engine 네이티브 height 직접 참조)
                   const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
                   const titleNode = isTitle
                     ? textNode
                     : (headerRow?.children.find(
                         (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
                       ) as TextNode | undefined);
-                  const titleChars = titleNode ? titleNode.characters : '';
-                  const titleLineCount = titleChars.length > 0 ? (titleChars.match(/\n/g) || []).length + 1 : 1;
-                  const titleH = titleNode
-                    ? Math.max(18, Math.round(titleNode.height), titleLineCount * 18)
+                  const titleH = isTitle && titleNode
+                    ? Math.max(18, Math.round(titleNode.height))
                     : (headerRow ? Math.round(headerRow.height) : 18);
 
                   const descNode = isDesc ? textNode : descText;
                   const descChars = descNode ? descNode.characters : '';
                   const hasDesc = descChars.length > 0;
-                  const descLineCount = hasDesc ? (descChars.match(/\n/g) || []).length + 1 : 0;
-                  const descH = hasDesc && descNode
-                    ? Math.max(Math.round(descNode.height), Math.round(descLineCount * 13.5))
-                    : 0;
+                  const descH = hasDesc && descNode ? Math.round(descNode.height) : 0;
 
                   const pt = typeof card.paddingTop === 'number' ? card.paddingTop : 14;
                   const hasStatus = Boolean(safeGetPluginData(card, 'workflow_status'));
                   const hasLink = Boolean(safeGetPluginData(card, 'figma_link'));
                   const hasBottomBadge = hasStatus || hasLink;
-                  const pb = hasBottomBadge ? 36 : (hasDesc ? 16 : 14);
+                  const pb = typeof card.paddingBottom === 'number'
+                    ? card.paddingBottom
+                    : (hasBottomBadge ? 36 : (hasDesc ? 16 : 14));
                   const itemSpacing = hasDesc ? (typeof card.itemSpacing === 'number' ? card.itemSpacing : 8) : 0;
 
                   const calculatedContentH = Math.round(pt + titleH + itemSpacing + descH + pb);
@@ -6033,6 +6142,7 @@ figma.on('documentchange', async (event) => {
                     card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
                     card.maxHeight = null;
 
+                    internalLayoutNodeIds.add(card.id);
                     card.resize(targetW, targetH);
 
                     if (sMode === 'hug') {
@@ -6154,8 +6264,10 @@ figma.on('documentchange', async (event) => {
   // 연결된 커넥터들 실시간 동기화 및 에디터 기즈모 갱신
   if (movedNodeIds.size > 0) {
     await syncConnectorsForMovedNodes(movedNodeIds);
-    // 노드 이동 시 선택된 노드 또는 연결된 커넥터의 최신 마그넷 및 기즈모 위치를 UI에 실시간 연동
-    handleSelectionChange();
+    // 내부 레이아웃 mutation(card.resize 등)으로 인한 geometry 변경인 경우 불필요한 handleSelectionChange 재호출 방지
+    if (shouldUpdateSelectionOnMove) {
+      handleSelectionChange();
+    }
   } else if (connectorSelectionChanged) {
     // 피그잼 캔버스에서 변경된 커넥터 컬러/두께 등 설정값을 UI 창에 실시간 연동
     handleSelectionChange();
