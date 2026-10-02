@@ -226,9 +226,10 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
     }
 
     // 3+ Node 전용 그룹 상태 해석 함수:
-    // - 그룹 전체 연결 0개 -> 모든 방향 default
-    // - 그룹 전체 연결 정확히 1개 -> 해당 방향만 active, 나머지 default
-    // - 그룹 전체 연결 2개 이상 -> 연결이 존재하는 모든 방향을 mixed로 표시
+    // - 연결 방향 종류 기준 (uniqueUsed.length):
+    //   - 0개: 모든 방향 default
+    //   - 방향이 1개로 통일된 경우 (중복 개수 무관): 해당 방향 active
+    //   - 방향이 2개 이상으로 흩어진 경우: 연결된 모든 방향 mixed
     function resolve3PlusGroupStates(
       magnets: MagnetPosition[],
       userPending: MagnetPosition | null | undefined
@@ -243,14 +244,14 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
       const total = magnets.length;
       const uniqueUsed = Array.from(new Set(magnets));
 
-      if (total === 1) {
-        // 전체 연결이 정확히 1개 -> 해당 연결 방향만 active
-        const onlyMag = magnets[0];
+      if (uniqueUsed.length === 1) {
+        // 방향이 1개로 통일된 경우 (커넥터 개수 상관없이 모두 같은 방향) -> 해당 방향 active
+        const onlyMag = uniqueUsed[0];
         if (onlyMag) {
           magnetStates[onlyMag] = 'active';
         }
-      } else if (total >= 2) {
-        // 전체 연결이 2개 이상 -> 연결이 존재하는 모든 방향을 mixed로 표시
+      } else if (uniqueUsed.length >= 2) {
+        // 방향이 2개 이상으로 흩어진 경우 -> 연결이 존재하는 모든 방향 mixed
         uniqueUsed.forEach((mag) => {
           magnetStates[mag] = 'mixed';
         });
@@ -274,17 +275,65 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
     };
   }
 
+  // Connector 선택 전용 그룹 상태 계산 함수:
+  // - Start와 End를 각각 하나의 그룹으로 판단
+  // - 연결 방향 종류 기준 (uniqueUsed.length):
+  //   - 0개: 모든 방향 default
+  //   - 방향이 1개로 통일된 경우 (중복 개수 무관): 해당 방향 active
+  //   - 방향이 2개 이상으로 흩어진 경우: 연결된 모든 방향 mixed
+  function resolveMultiConnectorStates(
+    magnets: MagnetPosition[],
+    userPending: MagnetPosition | null | undefined
+  ): GizmoSideResult {
+    const magnetStates: Record<MagnetPosition, GizmoMagnetVisualState> = {
+      TOP: 'default',
+      RIGHT: 'default',
+      BOTTOM: 'default',
+      LEFT: 'default',
+    };
+
+    const total = magnets.length;
+    const uniqueUsed = Array.from(new Set(magnets));
+
+    if (uniqueUsed.length === 1) {
+      // 방향이 1개로 통일된 경우 (커넥터 개수 상관없이 모두 같은 방향) -> 해당 방향 active
+      const singleMag = uniqueUsed[0];
+      if (singleMag) {
+        magnetStates[singleMag] = 'active';
+      }
+    } else if (uniqueUsed.length >= 2) {
+      // 방향이 2개 이상으로 흩어진 경우 -> 연결이 존재하는 모든 방향 mixed
+      uniqueUsed.forEach((mag) => {
+        magnetStates[mag] = 'mixed';
+      });
+    }
+
+    if (userPending) {
+      magnetStates[userPending] = 'active';
+    }
+
+    return {
+      magnetStates,
+      usedMagnets: userPending ? Array.from(new Set([...uniqueUsed, userPending])) : uniqueUsed,
+      totalConnections: total,
+    };
+  }
+
   let startMags: MagnetPosition[] = [];
   let endMags: MagnetPosition[] = [];
 
   if (isMultiConnector || isSingleConnector) {
-    // Connector 직접 선택 경로 (1개, 2개, 3개 이상)
-    // 선택된 커넥터의 실제 엔드포인트 마그넷 기준
+    // Connector 직접 선택 경로 (1개 또는 2개 이상)
     const conns = (connectorNodes || []).filter((n) => n && n.isConnector);
     conns.forEach((c) => {
       if (c.connectorSourceMagnet) startMags.push(c.connectorSourceMagnet as MagnetPosition);
       if (c.connectorTargetMagnet) endMags.push(c.connectorTargetMagnet as MagnetPosition);
     });
+
+    return {
+      start: resolveMultiConnectorStates(startMags, userPendingSourceMagnet),
+      end: resolveMultiConnectorStates(endMags, userPendingTargetMagnet),
+    };
   } else if (hasExistingConnection && connectedConnectors && connectedConnectors.length > 0) {
     // 2-Node 선택 경로: 선택된 두 노드 사이의 직결 커넥터 목록(connectedConnectors) 기준
     connectedConnectors.forEach((conn) => {

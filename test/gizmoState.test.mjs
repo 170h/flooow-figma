@@ -201,9 +201,9 @@ runTest('Test 8 — Connector 1개 직접 선택: Start RIGHT = active, End LEFT
 });
 
 // ---------------------------------------------------------------------------
-// Test 9 — Connector 2개 직접 선택 (동일 엔드포인트 방향)
+// Test 9 — Connector 2개 직접 선택 (동일 엔드포인트 방향으로 통일)
 // ---------------------------------------------------------------------------
-runTest('Test 9 — Connector 2개 직접 선택 (동일 엔드포인트 방향): Start RIGHT = mixed, End LEFT = mixed', () => {
+runTest('Test 9 — Connector 2개 직접 선택 (동일 엔드포인트 방향으로 통일): Start RIGHT = active, End LEFT = active', () => {
   const result = computeGizmoMagnets({
     isMultiConnector: true,
     connectorNodes: [
@@ -212,9 +212,11 @@ runTest('Test 9 — Connector 2개 직접 선택 (동일 엔드포인트 방향)
     ],
   });
 
-  assert.equal(result.start.magnetStates.RIGHT, 'mixed');
+  // Start: 둘 다 RIGHT로 통일 -> active
+  assert.equal(result.start.magnetStates.RIGHT, 'active');
   assert.equal(result.start.magnetStates.TOP, 'default');
-  assert.equal(result.end.magnetStates.LEFT, 'mixed');
+  // End: 둘 다 LEFT로 통일 -> active
+  assert.equal(result.end.magnetStates.LEFT, 'active');
   assert.equal(result.end.magnetStates.TOP, 'default');
 });
 
@@ -372,7 +374,7 @@ runTest('Test 16 — 3+ Node 선택: Start(A) 미연결, C->D 연결만 존재 -
 // ---------------------------------------------------------------------------
 // Test 17 — 3+ Node 선택: Start 노드 A에 동일 방향 2개 연결 (A->B: RIGHT, A->C: RIGHT)
 // ---------------------------------------------------------------------------
-runTest('Test 17 — 3+ Node 선택: Start 노드 A에 2개 연결 -> Start RIGHT mixed', () => {
+runTest('Test 17 — 3+ Node 선택: Start 노드 A에 2개 연결 (모두 RIGHT로 통일) -> Start RIGHT active', () => {
   const result = computeGizmoMagnets({
     is3PlusNodes: true,
     startNodeId: 'A',
@@ -382,11 +384,11 @@ runTest('Test 17 — 3+ Node 선택: Start 노드 A에 2개 연결 -> Start RIGH
     ],
   });
 
-  // Start (A): 전체 2개 연결 -> RIGHT mixed
-  assert.equal(result.start.magnetStates.RIGHT, 'mixed');
+  // Start (A): 개수는 2개지만 방향이 RIGHT 1곳으로 통일됨 -> active
+  assert.equal(result.start.magnetStates.RIGHT, 'active');
   assert.equal(result.start.magnetStates.TOP, 'default');
 
-  // More (B, C): More 전체 2개 연결 -> LEFT mixed, TOP mixed
+  // More (B, C): More는 LEFT와 TOP으로 2곳 흩어져 있음 -> LEFT mixed, TOP mixed
   assert.equal(result.end.magnetStates.LEFT, 'mixed');
   assert.equal(result.end.magnetStates.TOP, 'mixed');
   assert.equal(result.end.magnetStates.RIGHT, 'default');
@@ -528,7 +530,7 @@ runTest('Case C — 전체 연결 4개, LEFT/RIGHT/TOP/BOTTOM 각각 1개 -> 네
   assert.equal(result.end.magnetStates.LEFT, 'mixed');
 });
 
-runTest('Case D — 전체 연결 2개가 동일 방향 -> 해당 방향 Mixed', () => {
+runTest('Case D — 전체 연결 2개가 동일 방향 (통일됨) -> 해당 방향 Active', () => {
   const result = computeGizmoMagnets({
     is3PlusNodes: true,
     startNodeId: 'A',
@@ -537,17 +539,133 @@ runTest('Case D — 전체 연결 2개가 동일 방향 -> 해당 방향 Mixed',
       { sourceId: 'A', targetId: 'C', sourceMagnet: 'RIGHT', targetMagnet: 'LEFT' },
     ],
   });
-  // Start: 전체 2개 (둘 다 RIGHT) -> RIGHT Mixed, 나머지 default
-  assert.equal(result.start.magnetStates.RIGHT, 'mixed');
+  // Start: 둘 다 RIGHT로 방향 통일 -> RIGHT Active
+  assert.equal(result.start.magnetStates.RIGHT, 'active');
   assert.equal(result.start.magnetStates.TOP, 'default');
   assert.equal(result.start.magnetStates.BOTTOM, 'default');
   assert.equal(result.start.magnetStates.LEFT, 'default');
 
-  // End/More: 전체 2개 (둘 다 LEFT) -> LEFT Mixed, 나머지 default
-  assert.equal(result.end.magnetStates.LEFT, 'mixed');
+  // End/More: 둘 다 LEFT로 방향 통일 -> LEFT Active
+  assert.equal(result.end.magnetStates.LEFT, 'active');
   assert.equal(result.end.magnetStates.RIGHT, 'default');
   assert.equal(result.end.magnetStates.TOP, 'default');
   assert.equal(result.end.magnetStates.BOTTOM, 'default');
+});
+
+// ---------------------------------------------------------------------------
+// Connector-only Multi-Selection 케이스 검증 (A ~ E)
+// ---------------------------------------------------------------------------
+runTest('Connector Multi Test A — Connector 1개: source 1개 active, target 1개 active', () => {
+  const result = computeGizmoMagnets({
+    isSingleConnector: true,
+    isMultiConnector: false,
+    connectorNodes: [
+      { isConnector: true, connectorSourceMagnet: 'RIGHT', connectorTargetMagnet: 'LEFT' },
+    ],
+  });
+
+  assert.equal(result.start.magnetStates.RIGHT, 'active');
+  assert.equal(result.start.magnetStates.TOP, 'default');
+  assert.equal(result.start.magnetStates.BOTTOM, 'default');
+  assert.equal(result.start.magnetStates.LEFT, 'default');
+
+  assert.equal(result.end.magnetStates.LEFT, 'active');
+  assert.equal(result.end.magnetStates.TOP, 'default');
+  assert.equal(result.end.magnetStates.BOTTOM, 'default');
+  assert.equal(result.end.magnetStates.RIGHT, 'default');
+});
+
+runTest('Connector Multi Test B — Connector 2개, source/target 방향 각각 동일 (통일됨): 해당 방향 active', () => {
+  const result = computeGizmoMagnets({
+    isMultiConnector: true,
+    connectorNodes: [
+      { isConnector: true, connectorSourceMagnet: 'RIGHT', connectorTargetMagnet: 'LEFT' },
+      { isConnector: true, connectorSourceMagnet: 'RIGHT', connectorTargetMagnet: 'LEFT' },
+    ],
+  });
+
+  // Start: 2개 모두 RIGHT로 통일 -> active
+  assert.equal(result.start.magnetStates.RIGHT, 'active');
+  assert.equal(result.start.magnetStates.TOP, 'default');
+  assert.equal(result.start.magnetStates.BOTTOM, 'default');
+  assert.equal(result.start.magnetStates.LEFT, 'default');
+
+  // End: 2개 모두 LEFT로 통일 -> active
+  assert.equal(result.end.magnetStates.LEFT, 'active');
+  assert.equal(result.end.magnetStates.TOP, 'default');
+  assert.equal(result.end.magnetStates.BOTTOM, 'default');
+  assert.equal(result.end.magnetStates.RIGHT, 'default');
+});
+
+runTest('Connector Multi Test C — Connector 2개, source 방향 서로 다름, target 방향 동일: source는 둘 다 mixed, target은 1곳 통일 active', () => {
+  const result = computeGizmoMagnets({
+    isMultiConnector: true,
+    connectorNodes: [
+      { isConnector: true, connectorSourceMagnet: 'RIGHT', connectorTargetMagnet: 'RIGHT' },
+      { isConnector: true, connectorSourceMagnet: 'BOTTOM', connectorTargetMagnet: 'RIGHT' },
+    ],
+  });
+
+  // Start: RIGHT와 BOTTOM 2곳으로 흩어짐 -> 둘 다 mixed, active 없음
+  assert.equal(result.start.magnetStates.RIGHT, 'mixed');
+  assert.equal(result.start.magnetStates.BOTTOM, 'mixed');
+  assert.equal(result.start.magnetStates.TOP, 'default');
+  assert.equal(result.start.magnetStates.LEFT, 'default');
+  assert.equal(Object.values(result.start.magnetStates).includes('active'), false);
+
+  // End: 둘 다 RIGHT 1곳으로 통일 -> RIGHT active
+  assert.equal(result.end.magnetStates.RIGHT, 'active');
+  assert.equal(result.end.magnetStates.TOP, 'default');
+  assert.equal(result.end.magnetStates.BOTTOM, 'default');
+  assert.equal(result.end.magnetStates.LEFT, 'default');
+});
+
+runTest('Connector Multi Test D — Connector 2개, source 방향 동일, target 방향 서로 다름: source는 1곳 통일 active, target은 둘 다 mixed', () => {
+  const result = computeGizmoMagnets({
+    isMultiConnector: true,
+    connectorNodes: [
+      { isConnector: true, connectorSourceMagnet: 'RIGHT', connectorTargetMagnet: 'LEFT' },
+      { isConnector: true, connectorSourceMagnet: 'RIGHT', connectorTargetMagnet: 'TOP' },
+    ],
+  });
+
+  // Start: 둘 다 RIGHT 1곳으로 통일 -> RIGHT active
+  assert.equal(result.start.magnetStates.RIGHT, 'active');
+  assert.equal(result.start.magnetStates.TOP, 'default');
+  assert.equal(result.start.magnetStates.BOTTOM, 'default');
+  assert.equal(result.start.magnetStates.LEFT, 'default');
+
+  // End: LEFT와 TOP 2곳으로 흩어짐 -> 둘 다 mixed, active 없음
+  assert.equal(result.end.magnetStates.LEFT, 'mixed');
+  assert.equal(result.end.magnetStates.TOP, 'mixed');
+  assert.equal(result.end.magnetStates.RIGHT, 'default');
+  assert.equal(result.end.magnetStates.BOTTOM, 'default');
+  assert.equal(Object.values(result.end.magnetStates).includes('active'), false);
+});
+
+runTest('Connector Multi Test E — Connector 3개 이상: 각 그룹에서 사용된 방향은 mixed, active 없음', () => {
+  const result = computeGizmoMagnets({
+    isMultiConnector: true,
+    connectorNodes: [
+      { isConnector: true, connectorSourceMagnet: 'RIGHT', connectorTargetMagnet: 'LEFT' },
+      { isConnector: true, connectorSourceMagnet: 'BOTTOM', connectorTargetMagnet: 'TOP' },
+      { isConnector: true, connectorSourceMagnet: 'TOP', connectorTargetMagnet: 'BOTTOM' },
+    ],
+  });
+
+  // Start: RIGHT, BOTTOM, TOP 모두 mixed
+  assert.equal(result.start.magnetStates.RIGHT, 'mixed');
+  assert.equal(result.start.magnetStates.BOTTOM, 'mixed');
+  assert.equal(result.start.magnetStates.TOP, 'mixed');
+  assert.equal(result.start.magnetStates.LEFT, 'default');
+  assert.equal(Object.values(result.start.magnetStates).includes('active'), false);
+
+  // End: LEFT, TOP, BOTTOM 모두 mixed
+  assert.equal(result.end.magnetStates.LEFT, 'mixed');
+  assert.equal(result.end.magnetStates.TOP, 'mixed');
+  assert.equal(result.end.magnetStates.BOTTOM, 'mixed');
+  assert.equal(result.end.magnetStates.RIGHT, 'default');
+  assert.equal(Object.values(result.end.magnetStates).includes('active'), false);
 });
 
 console.log(`\nResult: ${passCount} passed, ${failCount} failed.`);

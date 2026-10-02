@@ -34562,12 +34562,12 @@
         };
         const total = magnets.length;
         const uniqueUsed = Array.from(new Set(magnets));
-        if (total === 1) {
-          const onlyMag = magnets[0];
+        if (uniqueUsed.length === 1) {
+          const onlyMag = uniqueUsed[0];
           if (onlyMag) {
             magnetStates[onlyMag] = "active";
           }
-        } else if (total >= 2) {
+        } else if (uniqueUsed.length >= 2) {
           uniqueUsed.forEach((mag) => {
             magnetStates[mag] = "mixed";
           });
@@ -34616,6 +34616,34 @@
         end: resolve3PlusGroupStates2(endMags2, userPendingTargetMagnet)
       };
     }
+    function resolveMultiConnectorStates(magnets, userPending) {
+      const magnetStates = {
+        TOP: "default",
+        RIGHT: "default",
+        BOTTOM: "default",
+        LEFT: "default"
+      };
+      const total = magnets.length;
+      const uniqueUsed = Array.from(new Set(magnets));
+      if (uniqueUsed.length === 1) {
+        const singleMag = uniqueUsed[0];
+        if (singleMag) {
+          magnetStates[singleMag] = "active";
+        }
+      } else if (uniqueUsed.length >= 2) {
+        uniqueUsed.forEach((mag) => {
+          magnetStates[mag] = "mixed";
+        });
+      }
+      if (userPending) {
+        magnetStates[userPending] = "active";
+      }
+      return {
+        magnetStates,
+        usedMagnets: userPending ? Array.from(/* @__PURE__ */ new Set([...uniqueUsed, userPending])) : uniqueUsed,
+        totalConnections: total
+      };
+    }
     let startMags = [];
     let endMags = [];
     if (isMultiConnector || isSingleConnector) {
@@ -34624,6 +34652,10 @@
         if (c.connectorSourceMagnet) startMags.push(c.connectorSourceMagnet);
         if (c.connectorTargetMagnet) endMags.push(c.connectorTargetMagnet);
       });
+      return {
+        start: resolveMultiConnectorStates(startMags, userPendingSourceMagnet),
+        end: resolveMultiConnectorStates(endMags, userPendingTargetMagnet)
+      };
     } else if (hasExistingConnection && connectedConnectors && connectedConnectors.length > 0) {
       connectedConnectors.forEach((conn) => {
         const isRev = Boolean(conn.isReversed);
