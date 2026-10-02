@@ -8,6 +8,8 @@ import {
   ConnectorRoutingType,
   ConnectorTerminalType,
   ConnectorStrokePattern,
+  ConnectorLabelBoxStyle,
+  ConnectorLabelAlign,
 } from './types';
 
 export interface Point {
@@ -26,6 +28,10 @@ export interface ConnectorOptions {
   strokeWeight?: number;
   strokeColor?: RGB;
   label?: string;
+  labelBoxStyle?: ConnectorLabelBoxStyle;
+  labelAlign?: ConnectorLabelAlign;
+  labelFillColor?: string;
+  labelStrokeColor?: string;
   sourceNodeId?: string;
   targetNodeId?: string;
   routingType?: ConnectorRoutingType;
@@ -34,6 +40,125 @@ export interface ConnectorOptions {
   startOffset?: number;
   endOffset?: number;
   strokePattern?: ConnectorStrokePattern;
+}
+
+// 16진수 색상 코드를 RGB로 변환 (0~1 범위)
+export function parseHexColor(hex?: string): RGB {
+  if (!hex) return { r: 0.9, g: 0.1, b: 0.2 };
+  const clean = hex.replace('#', '').trim();
+  if (clean.length < 6) return { r: 0.9, g: 0.1, b: 0.2 };
+  const r = parseInt(clean.substring(0, 2), 16) / 255;
+  const g = parseInt(clean.substring(2, 4), 16) / 255;
+  const b = parseInt(clean.substring(4, 6), 16) / 255;
+  return {
+    r: isNaN(r) ? 0 : r,
+    g: isNaN(g) ? 0 : g,
+    b: isNaN(b) ? 0 : b,
+  };
+}
+
+// 배경색 밝기에 따른 텍스트 대비 색상 산출
+export function getContrastTextColor(hex?: string): RGB {
+  const rgb = parseHexColor(hex);
+  const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+  return brightness > 0.55 ? { r: 0.1, g: 0.1, b: 0.1 } : { r: 1, g: 1, b: 1 };
+}
+
+// 커넥터 라벨 스타일 적용 헬퍼 (글자크기 9px 고정, 트래킹 없음, 박스/캡슐/라운드박스/라인 스타일 적용)
+export async function applyConnectorLabelStyle(
+  labelFrame: FrameNode,
+  textNode: TextNode,
+  options: {
+    labelText: string;
+    boxStyle?: ConnectorLabelBoxStyle;
+    textAlign?: ConnectorLabelAlign;
+    fillColor?: string;
+    strokeColor?: string;
+    isVertical?: boolean;
+  }
+): Promise<void> {
+  const {
+    labelText,
+    boxStyle = 'BOX',
+    textAlign = 'CENTER',
+    fillColor = '#EA2039',
+    strokeColor = '#EA2039',
+    isVertical = false,
+  } = options;
+
+  // 1. 폰트 로드 (Medium 우선, fallback Regular)
+  try {
+    await figma.loadFontAsync({ family: 'Inter', style: 'Medium' });
+  } catch {
+    await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+  }
+
+  // 2. 텍스트 설정: 9px 고정, 수평 정렬, tracking(letter-spacing) 절대 부여 금지 (규칙 준수)
+  textNode.characters = labelText;
+  textNode.fontSize = 9;
+  textNode.textAlignHorizontal = textAlign;
+  const textFill = getContrastTextColor(fillColor);
+  textNode.fills = [{ type: 'SOLID', color: textFill }];
+
+  // 3. 라벨 프레임 오토레이아웃 및 패딩
+  labelFrame.layoutMode = 'HORIZONTAL';
+  labelFrame.primaryAxisSizingMode = 'AUTO';
+  labelFrame.counterAxisSizingMode = 'AUTO';
+  labelFrame.counterAxisAlignItems = 'CENTER';
+  labelFrame.primaryAxisAlignItems = textAlign === 'LEFT' ? 'MIN' : textAlign === 'RIGHT' ? 'MAX' : 'CENTER';
+
+  labelFrame.paddingTop = 2;
+  labelFrame.paddingBottom = 2;
+  labelFrame.paddingLeft = boxStyle === 'CAPSULE' ? 8 : 6;
+  labelFrame.paddingRight = boxStyle === 'CAPSULE' ? 8 : 6;
+
+  // 4. 배경 채움 (fills)
+  const fillRgb = parseHexColor(fillColor);
+  labelFrame.fills = [{ type: 'SOLID', color: fillRgb }];
+
+  // 5. 보더(strokes) 및 코너 라운드
+  const strokeRgb = parseHexColor(strokeColor);
+  labelFrame.strokes = [{ type: 'SOLID', color: strokeRgb }];
+
+  switch (boxStyle) {
+    case 'BOX':
+      labelFrame.cornerRadius = 0;
+      labelFrame.strokeWeight = 1;
+      break;
+
+    case 'CAPSULE':
+      labelFrame.cornerRadius = 999;
+      labelFrame.strokeWeight = 1;
+      break;
+
+    case 'ROUNDED_BOX':
+      labelFrame.cornerRadius = 4;
+      labelFrame.strokeWeight = 1;
+      break;
+
+    case 'LINE':
+      labelFrame.cornerRadius = 0;
+      if (isVertical) {
+        if ('strokeTopWeight' in labelFrame) {
+          labelFrame.strokeTopWeight = 1;
+          labelFrame.strokeBottomWeight = 1;
+          labelFrame.strokeLeftWeight = 0;
+          labelFrame.strokeRightWeight = 0;
+        } else {
+          (labelFrame as any).strokeWeight = 1;
+        }
+      } else {
+        if ('strokeLeftWeight' in labelFrame) {
+          labelFrame.strokeLeftWeight = 1;
+          labelFrame.strokeRightWeight = 1;
+          labelFrame.strokeTopWeight = 0;
+          labelFrame.strokeBottomWeight = 0;
+        } else {
+          (labelFrame as any).strokeWeight = 1;
+        }
+      }
+      break;
+  }
 }
 
 // 안전한 플러그인 데이터 조회 헬퍼 (피그잼 네이티브 노드 중 getPluginData가 없거나 함수가 아닌 경우 TypeError 방지)
@@ -674,40 +799,40 @@ export async function createOrthogonalVectorConnector(
   let labelFrame: FrameNode | null = null;
   const labelText = options.label ? options.label.trim() : '';
   if (labelText !== '') {
-    vector.setPluginData('connector_label', labelText);
+    const boxStyle = options.labelBoxStyle || 'BOX';
+    const align = options.labelAlign || 'CENTER';
+    const fillCol = options.labelFillColor || '#EA2039';
+    const strokeCol = options.labelStrokeColor || '#EA2039';
 
-    // 폰트 로드
-    try {
-      await figma.loadFontAsync({ family: 'Inter', style: 'Medium' });
-    } catch {
-      await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
-    }
+    vector.setPluginData('connector_label', labelText);
+    vector.setPluginData('connector_label_box_style', boxStyle);
+    vector.setPluginData('connector_label_align', align);
+    vector.setPluginData('connector_label_fill_color', fillCol);
+    vector.setPluginData('connector_label_stroke_color', strokeCol);
 
     // 라우팅 타입별 라벨 중심점 탐색
     const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
 
-    // 라벨 태그 박스 생성 (흰색 배경 + 얇은 테두리 + 패딩)
+    // 라벨 태그 박스 생성
     labelFrame = figma.createFrame();
     labelFrame.name = 'ConnectorLabel';
-    labelFrame.layoutMode = 'HORIZONTAL';
-    labelFrame.primaryAxisSizingMode = 'AUTO';
-    labelFrame.counterAxisSizingMode = 'AUTO';
-    labelFrame.paddingLeft = 6;
-    labelFrame.paddingRight = 6;
-    labelFrame.paddingTop = 2;
-    labelFrame.paddingBottom = 2;
-    labelFrame.cornerRadius = 3;
-    labelFrame.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
-    labelFrame.strokes = [{ type: 'SOLID', color: { r: 0.85, g: 0.85, b: 0.88 } }];
-    labelFrame.strokeWeight = 1;
 
     const textNode = figma.createText();
-    textNode.characters = labelText;
-    textNode.fontSize = 10;
-    textNode.fontName = { family: 'Inter', style: 'Medium' };
-    textNode.fills = [{ type: 'SOLID', color: strokeColor }];
+    textNode.name = 'LabelText';
     textNode.setPluginData('is_custom_connector', 'true');
     labelFrame.appendChild(textNode);
+
+    const isVertical = Math.abs(tgtBox.y + tgtBox.height / 2 - (srcBox.y + srcBox.height / 2)) >=
+                       Math.abs(tgtBox.x + tgtBox.width / 2 - (srcBox.x + srcBox.width / 2));
+
+    await applyConnectorLabelStyle(labelFrame, textNode, {
+      labelText,
+      boxStyle,
+      textAlign: align,
+      fillColor: fillCol,
+      strokeColor: strokeCol,
+      isVertical,
+    });
 
     // 라벨 중심 맞춤
     labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
@@ -1182,9 +1307,35 @@ export async function updateOrthogonalVectorConnector(
     rootNode.parent.appendChild(rootNode);
   }
 
-  // 라벨 위치 갱신
+  // 라벨 위치 및 스타일 갱신
   if (labelFrame) {
     const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
+
+    const textNode = labelFrame.findOne((n) => n.type === 'TEXT') as TextNode | null;
+    const labelText = safeGetPluginData(rootNode, 'connector_label') ||
+                      safeGetPluginData(vector, 'connector_label') || '';
+    if (labelText && textNode) {
+      const boxStyle = (safeGetPluginData(rootNode, 'connector_label_box_style') ||
+                        safeGetPluginData(vector, 'connector_label_box_style') || 'BOX') as ConnectorLabelBoxStyle;
+      const align = (safeGetPluginData(rootNode, 'connector_label_align') ||
+                     safeGetPluginData(vector, 'connector_label_align') || 'CENTER') as ConnectorLabelAlign;
+      const fillCol = safeGetPluginData(rootNode, 'connector_label_fill_color') ||
+                      safeGetPluginData(vector, 'connector_label_fill_color') || '#EA2039';
+      const strokeCol = safeGetPluginData(rootNode, 'connector_label_stroke_color') ||
+                        safeGetPluginData(vector, 'connector_label_stroke_color') || '#EA2039';
+
+      const isVertical = Math.abs(tgtBox.y + tgtBox.height / 2 - (srcBox.y + srcBox.height / 2)) >=
+                         Math.abs(tgtBox.x + tgtBox.width / 2 - (srcBox.x + srcBox.width / 2));
+
+      await applyConnectorLabelStyle(labelFrame, textNode, {
+        labelText,
+        boxStyle,
+        textAlign: align,
+        fillColor: fillCol,
+        strokeColor: strokeCol,
+        isVertical,
+      });
+    }
 
     labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
     labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
@@ -1202,6 +1353,10 @@ function copyConnectorData(source: SceneNode, target: SceneNode) {
     'target_magnet',
     'connector_routing',
     'connector_label',
+    'connector_label_box_style',
+    'connector_label_align',
+    'connector_label_fill_color',
+    'connector_label_stroke_color',
     'start_terminal',
     'end_terminal',
     'connector_pattern',

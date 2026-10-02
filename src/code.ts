@@ -14,6 +14,8 @@ import {
   ConnectorStrokePattern,
   ConnectorRoutingType,
   ConnectorTerminalType,
+  ConnectorLabelBoxStyle,
+  ConnectorLabelAlign,
   DiagramNodeType,
   normalizeNodeType,
   NODE_TYPE_SHAPE_SPECS,
@@ -31,6 +33,7 @@ import {
 import {
   createOrthogonalVectorConnector,
   updateOrthogonalVectorConnector,
+  applyConnectorLabelStyle,
   registerConnectorInRegistry,
   refreshConnectorRegistry,
   syncConnectorsForMovedNodes,
@@ -1495,6 +1498,10 @@ async function handleSelectionChange() {
     let description = '';
     let tag = safeGetPluginData(node, 'node_tag') || '';
     let connectorLabel: string | undefined;
+    let connectorLabelBoxStyle: ConnectorLabelBoxStyle | undefined;
+    let connectorLabelAlign: ConnectorLabelAlign | undefined;
+    let connectorLabelFillColor: string | undefined;
+    let connectorLabelStrokeColor: string | undefined;
     let connectorLineType: 'ELBOWED' | 'STRAIGHT' | 'CURVED' | undefined;
     let connectorColorHex: string | undefined;
     let connectorStrokeWeight: number | undefined;
@@ -1631,6 +1638,10 @@ async function handleSelectionChange() {
       } else {
         // 커스텀 벡터 직각 커넥터 (그룹 또는 벡터 노드)
         connectorLabel = node.getPluginData('connector_label') || '';
+        connectorLabelBoxStyle = (node.getPluginData('connector_label_box_style') as ConnectorLabelBoxStyle) || 'BOX';
+        connectorLabelAlign = (node.getPluginData('connector_label_align') as ConnectorLabelAlign) || 'CENTER';
+        connectorLabelFillColor = node.getPluginData('connector_label_fill_color') || '#EA2039';
+        connectorLabelStrokeColor = node.getPluginData('connector_label_stroke_color') || '#EA2039';
         connectorLineType = 'ELBOWED';
         connectorRoutingType = (node.getPluginData('connector_routing') as ConnectorRoutingType) || 'ORTHOGONAL';
         connectorColorHex = node.getPluginData('connector_color');
@@ -1860,6 +1871,10 @@ async function handleSelectionChange() {
       figmaLink: node.getPluginData('figma_link'),
       cachedFigmaLink: node.getPluginData('cached_figma_link') || node.getPluginData('figma_link') || undefined,
       connectorLabel,
+      connectorLabelBoxStyle,
+      connectorLabelAlign,
+      connectorLabelFillColor,
+      connectorLabelStrokeColor,
       connectorLineType,
       connectorColorHex,
       connectorStrokeWeight,
@@ -4848,7 +4863,11 @@ async function connectPoints(payload: ConnectPointsPayload) {
       payload.endTerminal,
       payload.strokePattern,
       payload.startOffset,
-      payload.endOffset
+      payload.endOffset,
+      payload.labelBoxStyle,
+      payload.labelAlign,
+      payload.labelFillColor,
+      payload.labelStrokeColor
     );
 
     figma.currentPage.selection = [connector];
@@ -4873,7 +4892,11 @@ async function createSingleConnector(
   endTerminal?: ConnectorTerminalType,
   strokePattern?: ConnectorStrokePattern,
   startOffset?: number,
-  endOffset?: number
+  endOffset?: number,
+  labelBoxStyle?: ConnectorLabelBoxStyle,
+  labelAlign?: ConnectorLabelAlign,
+  labelFillColor?: string,
+  labelStrokeColor?: string
 ): Promise<VectorNode | GroupNode> {
   const connWeight = typeof strokeWeight === 'number' ? strokeWeight : 1.5;
   const connColor: RGB = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
@@ -4888,6 +4911,10 @@ async function createSingleConnector(
       strokeWeight: connWeight,
       strokeColor: connColor,
       label,
+      labelBoxStyle,
+      labelAlign,
+      labelFillColor,
+      labelStrokeColor,
       sourceNodeId: sourceNode.id,
       targetNodeId: targetNode.id,
       routingType,
@@ -5100,7 +5127,11 @@ async function connectChain(payload: ConnectChainPayload) {
         endTerminal,
         payload.strokePattern,
         payload.startOffset,
-        payload.endOffset
+        payload.endOffset,
+        isFirstPair ? payload.labelBoxStyle : undefined,
+        isFirstPair ? payload.labelAlign : undefined,
+        isFirstPair ? payload.labelFillColor : undefined,
+        isFirstPair ? payload.labelStrokeColor : undefined
       );
 
       existingPairKeys.add(pKey);
@@ -5177,6 +5208,10 @@ async function updateConnectorProperties(payload: {
   targetMagnet?: MagnetPosition;
   label?: string;
   hasLabel?: boolean;
+  labelBoxStyle?: ConnectorLabelBoxStyle;
+  labelAlign?: ConnectorLabelAlign;
+  labelFillColor?: string;
+  labelStrokeColor?: string;
   isReversed?: boolean;
 }) {
   try {
@@ -5412,6 +5447,24 @@ async function updateConnectorProperties(payload: {
         termVectorNode = null;
       }
 
+      // 라벨 메타데이터 저장
+      if (payload.labelBoxStyle) {
+        connectorRootNode.setPluginData('connector_label_box_style', payload.labelBoxStyle);
+        if (vectorNode) vectorNode.setPluginData('connector_label_box_style', payload.labelBoxStyle);
+      }
+      if (payload.labelAlign) {
+        connectorRootNode.setPluginData('connector_label_align', payload.labelAlign);
+        if (vectorNode) vectorNode.setPluginData('connector_label_align', payload.labelAlign);
+      }
+      if (payload.labelFillColor) {
+        connectorRootNode.setPluginData('connector_label_fill_color', payload.labelFillColor);
+        if (vectorNode) vectorNode.setPluginData('connector_label_fill_color', payload.labelFillColor);
+      }
+      if (payload.labelStrokeColor) {
+        connectorRootNode.setPluginData('connector_label_stroke_color', payload.labelStrokeColor);
+        if (vectorNode) vectorNode.setPluginData('connector_label_stroke_color', payload.labelStrokeColor);
+      }
+
       // 라벨 처리
       let labelFrame: FrameNode | null = null;
       if (connectorRootNode.type === 'GROUP') {
@@ -5421,17 +5474,45 @@ async function updateConnectorProperties(payload: {
       }
 
       if (payload.hasLabel && payload.label) {
-        connectorRootNode.setPluginData('connector_label', payload.label.trim());
+        const labelText = payload.label.trim();
+        connectorRootNode.setPluginData('connector_label', labelText);
+        if (vectorNode) vectorNode.setPluginData('connector_label', labelText);
         if (labelFrame) {
           labelFrame.visible = true;
           const textNode = labelFrame.findOne((n) => n.type === 'TEXT') as TextNode | null;
           if (textNode) {
-            await safeSetCharacters(textNode, payload.label.trim());
-            if (rgb) textNode.fills = [{ type: 'SOLID', color: rgb }];
+            const boxStyle = payload.labelBoxStyle ||
+              (connectorRootNode.getPluginData('connector_label_box_style') as ConnectorLabelBoxStyle) || 'BOX';
+            const align = payload.labelAlign ||
+              (connectorRootNode.getPluginData('connector_label_align') as ConnectorLabelAlign) || 'CENTER';
+            const fillCol = payload.labelFillColor ||
+              connectorRootNode.getPluginData('connector_label_fill_color') || '#EA2039';
+            const strokeCol = payload.labelStrokeColor ||
+              connectorRootNode.getPluginData('connector_label_stroke_color') || '#EA2039';
+
+            const srcId = connectorRootNode.getPluginData('source_node_id');
+            const tgtId = connectorRootNode.getPluginData('target_node_id');
+            const srcNode = srcId ? figma.getNodeById(srcId) as SceneNode | null : null;
+            const tgtNode = tgtId ? figma.getNodeById(tgtId) as SceneNode | null : null;
+            let isVertical = false;
+            if (srcNode && tgtNode) {
+              isVertical = Math.abs(tgtNode.y + tgtNode.height / 2 - (srcNode.y + srcNode.height / 2)) >=
+                           Math.abs(tgtNode.x + tgtNode.width / 2 - (srcNode.x + srcNode.width / 2));
+            }
+
+            await applyConnectorLabelStyle(labelFrame, textNode, {
+              labelText,
+              boxStyle,
+              textAlign: align,
+              fillColor: fillCol,
+              strokeColor: strokeCol,
+              isVertical,
+            });
           }
         }
       } else if (payload.hasLabel === false) {
         connectorRootNode.setPluginData('connector_label', '');
+        if (vectorNode) vectorNode.setPluginData('connector_label', '');
         if (labelFrame) {
           labelFrame.visible = false;
         }

@@ -235,6 +235,11 @@ export function ColorWheelField({
     }
   }
 
+  const colorHsvRef = useRef(colorHsv);
+  useEffect(() => {
+    colorHsvRef.current = colorHsv;
+  }, [colorHsv]);
+
   // Hue 링 드래그 계산 (함수형 업데이트로 채도/명도 보존)
   const updateHueFromPoint = useCallback(
     (clientX: number, clientY: number) => {
@@ -251,16 +256,17 @@ export function ColorWheelField({
       if (deg < 0) deg += 360;
       if (deg >= 360) deg -= 360;
 
-      setColorHsv((prev) => {
-        const nextHsv = { ...prev, h: deg };
-        const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
-        setColorHex(nextHex);
-        onChange(nextHex);
-        if (isNone && onNoneToggle) {
-          onNoneToggle(false);
-        }
-        return nextHsv;
-      });
+      const prev = colorHsvRef.current;
+      const nextHsv = { ...prev, h: deg };
+      const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
+
+      colorHsvRef.current = nextHsv;
+      setColorHsv(nextHsv);
+      setColorHex(nextHex);
+      onChange(nextHex);
+      if (isNone && onNoneToggle) {
+        onNoneToggle(false);
+      }
     },
     [onChange, isNone, onNoneToggle],
   );
@@ -331,17 +337,18 @@ export function ColorWheelField({
       const s = Math.round(Math.max(0, Math.min(100, ((u + 1) / 2) * 100)));
       const vVal = Math.round(Math.max(0, Math.min(100, ((1 - v) / 2) * 100)));
 
-      setColorHsv((prev) => {
-        // 기존의 Hue(prev.h)는 고정하고 채도(s)와 명도(vVal)만 갱신
-        const nextHsv = { ...prev, s, v: vVal };
-        const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
-        setColorHex(nextHex);
-        onChange(nextHex);
-        if (isNone && onNoneToggle) {
-          onNoneToggle(false);
-        }
-        return nextHsv;
-      });
+      const prev = colorHsvRef.current;
+      // 기존의 Hue(prev.h)는 고정하고 채도(s)와 명도(vVal)만 갱신
+      const nextHsv = { ...prev, s, v: vVal };
+      const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
+
+      colorHsvRef.current = nextHsv;
+      setColorHsv(nextHsv);
+      setColorHex(nextHex);
+      onChange(nextHex);
+      if (isNone && onNoneToggle) {
+        onNoneToggle(false);
+      }
     },
     [onChange, isNone, onNoneToggle],
   );

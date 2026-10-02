@@ -13,6 +13,7 @@ const CLOSE_SVG = (
 );
 
 export interface FillColorModalProps {
+  title?: string;
   initialColor: string;
   isMixed?: boolean;
   onApply: (colorHex: string) => void;
@@ -27,6 +28,7 @@ export interface FillColorModalProps {
  * - Cancel(원래 색상 복원) 및 Save(최종 색상 확정)
  */
 export function FillColorModal({
+  title,
   initialColor,
   isMixed = false,
   onApply,
@@ -132,7 +134,7 @@ export function FillColorModal({
         {/* 모달 헤더 (Fill 타이틀 + 닫기 버튼) */}
         <div className="style-modal-header">
           <span className="style-modal-title">
-            Fill
+            {title || "Fill"}
             {isFillMixed && (
               <span
                 style={{

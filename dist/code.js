@@ -233,6 +233,93 @@
   }
 
   // src/customConnector.ts
+  function parseHexColor(hex) {
+    if (!hex) return { r: 0.9, g: 0.1, b: 0.2 };
+    const clean = hex.replace("#", "").trim();
+    if (clean.length < 6) return { r: 0.9, g: 0.1, b: 0.2 };
+    const r = parseInt(clean.substring(0, 2), 16) / 255;
+    const g = parseInt(clean.substring(2, 4), 16) / 255;
+    const b = parseInt(clean.substring(4, 6), 16) / 255;
+    return {
+      r: isNaN(r) ? 0 : r,
+      g: isNaN(g) ? 0 : g,
+      b: isNaN(b) ? 0 : b
+    };
+  }
+  function getContrastTextColor(hex) {
+    const rgb = parseHexColor(hex);
+    const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1e3;
+    return brightness > 0.55 ? { r: 0.1, g: 0.1, b: 0.1 } : { r: 1, g: 1, b: 1 };
+  }
+  async function applyConnectorLabelStyle(labelFrame, textNode, options) {
+    const {
+      labelText,
+      boxStyle = "BOX",
+      textAlign = "CENTER",
+      fillColor = "#EA2039",
+      strokeColor = "#EA2039",
+      isVertical = false
+    } = options;
+    try {
+      await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+    } catch {
+      await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+    }
+    textNode.characters = labelText;
+    textNode.fontSize = 9;
+    textNode.textAlignHorizontal = textAlign;
+    const textFill = getContrastTextColor(fillColor);
+    textNode.fills = [{ type: "SOLID", color: textFill }];
+    labelFrame.layoutMode = "HORIZONTAL";
+    labelFrame.primaryAxisSizingMode = "AUTO";
+    labelFrame.counterAxisSizingMode = "AUTO";
+    labelFrame.counterAxisAlignItems = "CENTER";
+    labelFrame.primaryAxisAlignItems = textAlign === "LEFT" ? "MIN" : textAlign === "RIGHT" ? "MAX" : "CENTER";
+    labelFrame.paddingTop = 2;
+    labelFrame.paddingBottom = 2;
+    labelFrame.paddingLeft = boxStyle === "CAPSULE" ? 8 : 6;
+    labelFrame.paddingRight = boxStyle === "CAPSULE" ? 8 : 6;
+    const fillRgb = parseHexColor(fillColor);
+    labelFrame.fills = [{ type: "SOLID", color: fillRgb }];
+    const strokeRgb = parseHexColor(strokeColor);
+    labelFrame.strokes = [{ type: "SOLID", color: strokeRgb }];
+    switch (boxStyle) {
+      case "BOX":
+        labelFrame.cornerRadius = 0;
+        labelFrame.strokeWeight = 1;
+        break;
+      case "CAPSULE":
+        labelFrame.cornerRadius = 999;
+        labelFrame.strokeWeight = 1;
+        break;
+      case "ROUNDED_BOX":
+        labelFrame.cornerRadius = 4;
+        labelFrame.strokeWeight = 1;
+        break;
+      case "LINE":
+        labelFrame.cornerRadius = 0;
+        if (isVertical) {
+          if ("strokeTopWeight" in labelFrame) {
+            labelFrame.strokeTopWeight = 1;
+            labelFrame.strokeBottomWeight = 1;
+            labelFrame.strokeLeftWeight = 0;
+            labelFrame.strokeRightWeight = 0;
+          } else {
+            labelFrame.strokeWeight = 1;
+          }
+        } else {
+          if ("strokeLeftWeight" in labelFrame) {
+            labelFrame.strokeLeftWeight = 1;
+            labelFrame.strokeRightWeight = 1;
+            labelFrame.strokeTopWeight = 0;
+            labelFrame.strokeBottomWeight = 0;
+          } else {
+            labelFrame.strokeWeight = 1;
+          }
+        }
+        break;
+    }
+  }
   function safeGetPluginData(node, key) {
     if (node && typeof node.getPluginData === "function") {
       try {
@@ -668,33 +755,31 @@
     let labelFrame = null;
     const labelText = options.label ? options.label.trim() : "";
     if (labelText !== "") {
+      const boxStyle = options.labelBoxStyle || "BOX";
+      const align = options.labelAlign || "CENTER";
+      const fillCol = options.labelFillColor || "#EA2039";
+      const strokeCol = options.labelStrokeColor || "#EA2039";
       vector.setPluginData("connector_label", labelText);
-      try {
-        await figma.loadFontAsync({ family: "Inter", style: "Medium" });
-      } catch {
-        await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-      }
+      vector.setPluginData("connector_label_box_style", boxStyle);
+      vector.setPluginData("connector_label_align", align);
+      vector.setPluginData("connector_label_fill_color", fillCol);
+      vector.setPluginData("connector_label_stroke_color", strokeCol);
       const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
       labelFrame = figma.createFrame();
       labelFrame.name = "ConnectorLabel";
-      labelFrame.layoutMode = "HORIZONTAL";
-      labelFrame.primaryAxisSizingMode = "AUTO";
-      labelFrame.counterAxisSizingMode = "AUTO";
-      labelFrame.paddingLeft = 6;
-      labelFrame.paddingRight = 6;
-      labelFrame.paddingTop = 2;
-      labelFrame.paddingBottom = 2;
-      labelFrame.cornerRadius = 3;
-      labelFrame.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-      labelFrame.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.85, b: 0.88 } }];
-      labelFrame.strokeWeight = 1;
       const textNode = figma.createText();
-      textNode.characters = labelText;
-      textNode.fontSize = 10;
-      textNode.fontName = { family: "Inter", style: "Medium" };
-      textNode.fills = [{ type: "SOLID", color: strokeColor }];
+      textNode.name = "LabelText";
       textNode.setPluginData("is_custom_connector", "true");
       labelFrame.appendChild(textNode);
+      const isVertical = Math.abs(tgtBox.y + tgtBox.height / 2 - (srcBox.y + srcBox.height / 2)) >= Math.abs(tgtBox.x + tgtBox.width / 2 - (srcBox.x + srcBox.width / 2));
+      await applyConnectorLabelStyle(labelFrame, textNode, {
+        labelText,
+        boxStyle,
+        textAlign: align,
+        fillColor: fillCol,
+        strokeColor: strokeCol,
+        isVertical
+      });
       labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
       labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
       labelFrame.setPluginData("is_connector_label", "true");
@@ -1005,6 +1090,23 @@
     }
     if (labelFrame) {
       const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
+      const textNode = labelFrame.findOne((n) => n.type === "TEXT");
+      const labelText = safeGetPluginData(rootNode, "connector_label") || safeGetPluginData(vector, "connector_label") || "";
+      if (labelText && textNode) {
+        const boxStyle = safeGetPluginData(rootNode, "connector_label_box_style") || safeGetPluginData(vector, "connector_label_box_style") || "BOX";
+        const align = safeGetPluginData(rootNode, "connector_label_align") || safeGetPluginData(vector, "connector_label_align") || "CENTER";
+        const fillCol = safeGetPluginData(rootNode, "connector_label_fill_color") || safeGetPluginData(vector, "connector_label_fill_color") || "#EA2039";
+        const strokeCol = safeGetPluginData(rootNode, "connector_label_stroke_color") || safeGetPluginData(vector, "connector_label_stroke_color") || "#EA2039";
+        const isVertical = Math.abs(tgtBox.y + tgtBox.height / 2 - (srcBox.y + srcBox.height / 2)) >= Math.abs(tgtBox.x + tgtBox.width / 2 - (srcBox.x + srcBox.width / 2));
+        await applyConnectorLabelStyle(labelFrame, textNode, {
+          labelText,
+          boxStyle,
+          textAlign: align,
+          fillColor: fillCol,
+          strokeColor: strokeCol,
+          isVertical
+        });
+      }
       labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
       labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
     }
@@ -1019,6 +1121,10 @@
       "target_magnet",
       "connector_routing",
       "connector_label",
+      "connector_label_box_style",
+      "connector_label_align",
+      "connector_label_fill_color",
+      "connector_label_stroke_color",
       "start_terminal",
       "end_terminal",
       "connector_pattern",
@@ -2297,6 +2403,10 @@
       let description = "";
       let tag = safeGetPluginData2(node, "node_tag") || "";
       let connectorLabel;
+      let connectorLabelBoxStyle;
+      let connectorLabelAlign;
+      let connectorLabelFillColor;
+      let connectorLabelStrokeColor;
       let connectorLineType;
       let connectorColorHex;
       let connectorStrokeWeight;
@@ -2410,6 +2520,10 @@
           }
         } else {
           connectorLabel = node.getPluginData("connector_label") || "";
+          connectorLabelBoxStyle = node.getPluginData("connector_label_box_style") || "BOX";
+          connectorLabelAlign = node.getPluginData("connector_label_align") || "CENTER";
+          connectorLabelFillColor = node.getPluginData("connector_label_fill_color") || "#EA2039";
+          connectorLabelStrokeColor = node.getPluginData("connector_label_stroke_color") || "#EA2039";
           connectorLineType = "ELBOWED";
           connectorRoutingType = node.getPluginData("connector_routing") || "ORTHOGONAL";
           connectorColorHex = node.getPluginData("connector_color");
@@ -2640,6 +2754,10 @@
         figmaLink: node.getPluginData("figma_link"),
         cachedFigmaLink: node.getPluginData("cached_figma_link") || node.getPluginData("figma_link") || void 0,
         connectorLabel,
+        connectorLabelBoxStyle,
+        connectorLabelAlign,
+        connectorLabelFillColor,
+        connectorLabelStrokeColor,
         connectorLineType,
         connectorColorHex,
         connectorStrokeWeight,
@@ -5322,7 +5440,11 @@
         payload.endTerminal,
         payload.strokePattern,
         payload.startOffset,
-        payload.endOffset
+        payload.endOffset,
+        payload.labelBoxStyle,
+        payload.labelAlign,
+        payload.labelFillColor,
+        payload.labelStrokeColor
       );
       figma.currentPage.selection = [connector];
       handleSelectionChange();
@@ -5331,7 +5453,7 @@
       notify(`\uC5F0\uACB0\uC120 \uC0DD\uC131 \uC2E4\uD328: ${String(err)}`, "error");
     }
   }
-  async function createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label, colorHex, strokeWeight, routingType, startTerminal, endTerminal, strokePattern, startOffset, endOffset) {
+  async function createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label, colorHex, strokeWeight, routingType, startTerminal, endTerminal, strokePattern, startOffset, endOffset, labelBoxStyle, labelAlign, labelFillColor, labelStrokeColor) {
     const connWeight = typeof strokeWeight === "number" ? strokeWeight : 1.5;
     const connColor = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
     return await createOrthogonalVectorConnector(
@@ -5343,6 +5465,10 @@
         strokeWeight: connWeight,
         strokeColor: connColor,
         label,
+        labelBoxStyle,
+        labelAlign,
+        labelFillColor,
+        labelStrokeColor,
         sourceNodeId: sourceNode.id,
         targetNodeId: targetNode.id,
         routingType,
@@ -5508,7 +5634,11 @@
           endTerminal,
           payload.strokePattern,
           payload.startOffset,
-          payload.endOffset
+          payload.endOffset,
+          isFirstPair ? payload.labelBoxStyle : void 0,
+          isFirstPair ? payload.labelAlign : void 0,
+          isFirstPair ? payload.labelFillColor : void 0,
+          isFirstPair ? payload.labelStrokeColor : void 0
         );
         existingPairKeys.add(pKey);
         createdCount++;
@@ -5733,6 +5863,22 @@
           }
           termVectorNode = null;
         }
+        if (payload.labelBoxStyle) {
+          connectorRootNode.setPluginData("connector_label_box_style", payload.labelBoxStyle);
+          if (vectorNode) vectorNode.setPluginData("connector_label_box_style", payload.labelBoxStyle);
+        }
+        if (payload.labelAlign) {
+          connectorRootNode.setPluginData("connector_label_align", payload.labelAlign);
+          if (vectorNode) vectorNode.setPluginData("connector_label_align", payload.labelAlign);
+        }
+        if (payload.labelFillColor) {
+          connectorRootNode.setPluginData("connector_label_fill_color", payload.labelFillColor);
+          if (vectorNode) vectorNode.setPluginData("connector_label_fill_color", payload.labelFillColor);
+        }
+        if (payload.labelStrokeColor) {
+          connectorRootNode.setPluginData("connector_label_stroke_color", payload.labelStrokeColor);
+          if (vectorNode) vectorNode.setPluginData("connector_label_stroke_color", payload.labelStrokeColor);
+        }
         let labelFrame = null;
         if (connectorRootNode.type === "GROUP") {
           labelFrame = connectorRootNode.findOne(
@@ -5740,17 +5886,38 @@
           );
         }
         if (payload.hasLabel && payload.label) {
-          connectorRootNode.setPluginData("connector_label", payload.label.trim());
+          const labelText = payload.label.trim();
+          connectorRootNode.setPluginData("connector_label", labelText);
+          if (vectorNode) vectorNode.setPluginData("connector_label", labelText);
           if (labelFrame) {
             labelFrame.visible = true;
             const textNode = labelFrame.findOne((n) => n.type === "TEXT");
             if (textNode) {
-              await safeSetCharacters(textNode, payload.label.trim());
-              if (rgb) textNode.fills = [{ type: "SOLID", color: rgb }];
+              const boxStyle = payload.labelBoxStyle || connectorRootNode.getPluginData("connector_label_box_style") || "BOX";
+              const align = payload.labelAlign || connectorRootNode.getPluginData("connector_label_align") || "CENTER";
+              const fillCol = payload.labelFillColor || connectorRootNode.getPluginData("connector_label_fill_color") || "#EA2039";
+              const strokeCol = payload.labelStrokeColor || connectorRootNode.getPluginData("connector_label_stroke_color") || "#EA2039";
+              const srcId = connectorRootNode.getPluginData("source_node_id");
+              const tgtId = connectorRootNode.getPluginData("target_node_id");
+              const srcNode = srcId ? figma.getNodeById(srcId) : null;
+              const tgtNode = tgtId ? figma.getNodeById(tgtId) : null;
+              let isVertical = false;
+              if (srcNode && tgtNode) {
+                isVertical = Math.abs(tgtNode.y + tgtNode.height / 2 - (srcNode.y + srcNode.height / 2)) >= Math.abs(tgtNode.x + tgtNode.width / 2 - (srcNode.x + srcNode.width / 2));
+              }
+              await applyConnectorLabelStyle(labelFrame, textNode, {
+                labelText,
+                boxStyle,
+                textAlign: align,
+                fillColor: fillCol,
+                strokeColor: strokeCol,
+                isVertical
+              });
             }
           }
         } else if (payload.hasLabel === false) {
           connectorRootNode.setPluginData("connector_label", "");
+          if (vectorNode) vectorNode.setPluginData("connector_label", "");
           if (labelFrame) {
             labelFrame.visible = false;
           }

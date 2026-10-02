@@ -24,6 +24,8 @@ const STROKE_ICON_SVG = (
 );
 
 export interface StrokeColorModalProps {
+  title?: string;
+  hideWeightControl?: boolean;
   initialColor: string;
   initialWeight: number;
   isColorMixed?: boolean;
@@ -41,6 +43,8 @@ export interface StrokeColorModalProps {
  * - Cancel(원래 상태 복원) 및 Save(최종 상태 확정)
  */
 export function StrokeColorModal({
+  title,
+  hideWeightControl = false,
   initialColor,
   initialWeight,
   isColorMixed = false,
@@ -186,7 +190,7 @@ export function StrokeColorModal({
         {/* 모달 헤더 (Stroke 타이틀 + 닫기 버튼) */}
         <div className="style-modal-header">
           <span className="style-modal-title">
-            Stroke
+            {title || "Stroke"}
             {(isColorMixed || isWeightMixed) && (
               <span
                 style={{
@@ -235,9 +239,10 @@ export function StrokeColorModal({
                   title={strokeWeight === 0 ? "보더 켜기" : "보더 끄기 (None)"}
                 />
               }
-              extraControlPosition="left"
+              extraControlPosition={hideWeightControl ? undefined : "left"}
               extraControl={
-                <div className="stroke-width-box">
+                hideWeightControl ? undefined : (
+                  <div className="stroke-width-box">
                   <span
                     style={{
                       width: 24,
@@ -268,6 +273,7 @@ export function StrokeColorModal({
                     }}
                   />
                 </div>
+                )
               }
             />
           </div>

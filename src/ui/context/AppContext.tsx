@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
-import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload } from '../../types';
+import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload, ConnectorLabelBoxStyle, ConnectorLabelAlign } from '../../types';
 import { NODE_TYPE_SHAPE_SPECS, normalizeNodeType } from '../../types';
 
 // ============================================================
@@ -97,6 +97,10 @@ export interface NodeInfo {
   connectorStartOffset?: number;
   connectorEndOffset?: number;
   connectorLabel?: string;
+  connectorLabelBoxStyle?: ConnectorLabelBoxStyle;
+  connectorLabelAlign?: ConnectorLabelAlign;
+  connectorLabelFillColor?: string;
+  connectorLabelStrokeColor?: string;
   connectorSourceNodeName?: string;
   connectorTargetNodeName?: string;
   connectorSourceMagnet?: string;
@@ -145,6 +149,10 @@ export interface LastNodeConfig {
 export interface LastConnectorConfig {
   labelOn: boolean;
   labelText: string;
+  labelBoxStyle?: ConnectorLabelBoxStyle;
+  labelAlign?: ConnectorLabelAlign;
+  labelFillColor?: string;
+  labelStrokeColor?: string;
   linkOn: boolean;
   linkUrl: string;
 }
@@ -185,7 +193,7 @@ function normalizeTerminal(term?: string, fallback: string = 'NONE'): string {
 }
 
 // 모달 타입
-export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color';
+export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color' | 'label-fill-color' | 'label-stroke-color';
 
 // 어피어런스 탭 상호 배타적 토글 섹션 ('stepBadges' | 'status' | 'elevation' | null)
 export type ExclusiveAppearanceSection = 'stepBadges' | 'status' | 'elevation' | null;
@@ -318,7 +326,11 @@ const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
 
 const DEFAULT_LAST_CONNECTOR_CONFIG: LastConnectorConfig = {
   labelOn: false,
-  labelText: 'Text',
+  labelText: '',
+  labelBoxStyle: 'BOX',
+  labelAlign: 'CENTER',
+  labelFillColor: '#EA2039',
+  labelStrokeColor: '#EA2039',
   linkOn: false,
   linkUrl: '',
 };
@@ -834,6 +846,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setLastConnectorConfig({
         labelOn: hasLabel,
         labelText: orig.connectorLabel || '',
+        labelBoxStyle: orig.connectorLabelBoxStyle || 'BOX',
+        labelAlign: orig.connectorLabelAlign || 'CENTER',
+        labelFillColor: orig.connectorLabelFillColor || '#EA2039',
+        labelStrokeColor: orig.connectorLabelStrokeColor || '#EA2039',
       });
 
       triggerFormChange();
@@ -1373,6 +1389,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       : (endOffStr !== undefined && endOffStr !== null && endOffStr.trim() !== '' ? parseFloat(endOffStr) : undefined);
 
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+    const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || 'BOX';
+    const labelAlign = lastConnectorConfigRef.current.labelAlign || 'CENTER';
+    const labelFillColor = lastConnectorConfigRef.current.labelFillColor || '#EA2039';
+    const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || '#EA2039';
 
     connNodes.forEach(node => {
       parent.postMessage({
@@ -1392,6 +1412,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             targetMagnet: targetMagnet || undefined,
             label,
             hasLabel,
+            labelBoxStyle,
+            labelAlign,
+            labelFillColor,
+            labelStrokeColor,
             isReversed: node?.connectorIsReversed || false,
           }
         }
@@ -1767,7 +1791,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const firstConn = nodes[0];
         setLastConnectorConfig({
           labelOn: Boolean(firstConn.connectorLabel),
-          labelText: firstConn.connectorLabel || 'Text',
+          labelText: firstConn.connectorLabel || '',
+          labelBoxStyle: firstConn.connectorLabelBoxStyle || 'BOX',
+          labelAlign: firstConn.connectorLabelAlign || 'CENTER',
+          labelFillColor: firstConn.connectorLabelFillColor || '#EA2039',
+          labelStrokeColor: firstConn.connectorLabelStrokeColor || '#EA2039',
         });
         setUIState({
           selectedConnectorColor: firstConn.connectorColorHex || '#000000',

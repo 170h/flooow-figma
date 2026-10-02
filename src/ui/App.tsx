@@ -55,6 +55,9 @@ export function App() {
     applyCurrentNodeState,
     lastNodeConfig,
     setLastNodeConfig,
+    lastConnectorConfig,
+    setLastConnectorConfig,
+    applyCurrentConnectorState,
     showToast,
     autoResizeWindow,
     stylePresets,
@@ -621,6 +624,32 @@ export function App() {
           />
         );
       })()}
+      {activeModal === 'label-fill-color' && (
+        <FillColorModal
+          title="Label Fill"
+          initialColor={lastConnectorConfig.labelFillColor || '#EA2039'}
+          onApply={(colorHex) => {
+            const clean = colorHex.toUpperCase();
+            setLastConnectorConfig({ labelFillColor: clean });
+            setTimeout(() => applyCurrentConnectorState(), 0);
+          }}
+          onClose={() => setActiveModal('none')}
+        />
+      )}
+      {activeModal === 'label-stroke-color' && (
+        <StrokeColorModal
+          title="Label Stroke"
+          hideWeightControl={true}
+          initialColor={lastConnectorConfig.labelStrokeColor || '#EA2039'}
+          initialWeight={1}
+          onApply={(strokeColor) => {
+            const clean = strokeColor.toUpperCase();
+            setLastConnectorConfig({ labelStrokeColor: clean });
+            setTimeout(() => applyCurrentConnectorState(), 0);
+          }}
+          onClose={() => setActiveModal('none')}
+        />
+      )}
 
       {/* 툴팁 */}
       <FigmaTooltip />

@@ -4174,6 +4174,202 @@
     .conn-btn-save:hover {
       background: var(--color-primary-hover, #7B3CE3);
     }
+
+    /* ============================================================ */
+    /* Connector Label Section (Figma UI3 1027430:2049)              */
+    /* ============================================================ */
+    .conn-label-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .conn-label-input {
+      width: 100%;
+      height: 28px;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      color: var(--color-text-primary);
+      box-sizing: border-box;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .conn-label-input:hover {
+      border-color: var(--color-border);
+    }
+
+    .conn-label-input:focus {
+      background-color: var(--color-bg);
+      border-color: var(--color-brand);
+      outline: none;
+    }
+
+    .conn-label-ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .conn-label-color-box {
+      display: flex;
+      align-items: center;
+      width: 96px;
+      height: 24px;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 4px 0 5px;
+      gap: 4px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .conn-label-color-box:hover {
+      border-color: var(--color-border);
+    }
+
+    .conn-label-color-box:focus-within {
+      background-color: var(--color-bg);
+      border-color: var(--color-brand);
+    }
+
+    .conn-label-chip-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .conn-label-hex-input {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      color: var(--color-text-primary);
+      text-transform: uppercase;
+      padding: 0;
+      outline: none;
+      letter-spacing: 0 !important;
+    }
+
+    .conn-label-palette-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      color: var(--color-text-secondary);
+      border-radius: 2px;
+      flex-shrink: 0;
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+    .conn-label-palette-btn:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-hover);
+    }
+    .conn-label-palette-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* 텍스트 정렬 세그먼트 컨트롤: 정확히 120px x 24px, 3개 버튼 각 40px */
+    .conn-label-align-group {
+      display: flex;
+      align-items: center;
+      width: 120px;
+      height: 24px;
+      background-color: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 0;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .conn-label-align-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 2px;
+      cursor: pointer;
+      color: var(--color-text-secondary);
+      padding: 0;
+      box-sizing: border-box;
+      transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+
+    .conn-label-align-btn:hover {
+      color: var(--color-text-primary);
+    }
+
+    .conn-label-align-btn.active {
+      background-color: var(--color-bg);
+      color: var(--color-text-primary);
+      box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.1));
+    }
+
+    /* 형태 스타일 4개 세그먼트/칩: 높이 24px, gap 8px */
+    .conn-label-style-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      height: 24px;
+    }
+
+    .conn-label-style-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      height: 24px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 4px;
+      background-color: var(--color-bg-secondary);
+      color: var(--color-text-secondary);
+      font-size: 11px;
+      font-weight: var(--font-weight-medium, 450);
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .conn-label-style-btn:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-hover);
+    }
+
+    .conn-label-style-btn.active {
+      background-color: var(--color-brand, #8c4cf6);
+      color: #ffffff;
+    }
   </style>
 </head>
 <body>
@@ -29040,7 +29236,11 @@
   };
   var DEFAULT_LAST_CONNECTOR_CONFIG = {
     labelOn: false,
-    labelText: "Text",
+    labelText: "",
+    labelBoxStyle: "BOX",
+    labelAlign: "CENTER",
+    labelFillColor: "#EA2039",
+    labelStrokeColor: "#EA2039",
     linkOn: false,
     linkUrl: ""
   };
@@ -29465,7 +29665,11 @@
         });
         setLastConnectorConfig({
           labelOn: hasLabel,
-          labelText: orig.connectorLabel || ""
+          labelText: orig.connectorLabel || "",
+          labelBoxStyle: orig.connectorLabelBoxStyle || "BOX",
+          labelAlign: orig.connectorLabelAlign || "CENTER",
+          labelFillColor: orig.connectorLabelFillColor || "#EA2039",
+          labelStrokeColor: orig.connectorLabelStrokeColor || "#EA2039"
         });
         triggerFormChange();
         return;
@@ -29911,6 +30115,10 @@
       const endOffStr = endOffEl?.value;
       const endOffset = typeof customEndOffset === "number" ? customEndOffset : endOffStr !== void 0 && endOffStr !== null && endOffStr.trim() !== "" ? parseFloat(endOffStr) : void 0;
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+      const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || "BOX";
+      const labelAlign = lastConnectorConfigRef.current.labelAlign || "CENTER";
+      const labelFillColor = lastConnectorConfigRef.current.labelFillColor || "#EA2039";
+      const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || "#EA2039";
       connNodes.forEach((node) => {
         parent.postMessage({
           pluginMessage: {
@@ -29929,6 +30137,10 @@
               targetMagnet: targetMagnet || void 0,
               label,
               hasLabel,
+              labelBoxStyle,
+              labelAlign,
+              labelFillColor,
+              labelStrokeColor,
               isReversed: node?.connectorIsReversed || false
             }
           }
@@ -30247,7 +30459,11 @@
           const firstConn = nodes[0];
           setLastConnectorConfig({
             labelOn: Boolean(firstConn.connectorLabel),
-            labelText: firstConn.connectorLabel || "Text"
+            labelText: firstConn.connectorLabel || "",
+            labelBoxStyle: firstConn.connectorLabelBoxStyle || "BOX",
+            labelAlign: firstConn.connectorLabelAlign || "CENTER",
+            labelFillColor: firstConn.connectorLabelFillColor || "#EA2039",
+            labelStrokeColor: firstConn.connectorLabelStrokeColor || "#EA2039"
           });
           setUIState({
             selectedConnectorColor: firstConn.connectorColorHex || "#000000",
@@ -31051,6 +31267,27 @@
       }
     );
   };
+  var IcTextAlignLeft = ({ size = 24 }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "path",
+    {
+      d: "M5 6.75C4.58579 6.75 4.25 7.08579 4.25 7.5C4.25 7.91421 4.58579 8.25 5 8.25H19C19.4142 8.25 19.75 7.91421 19.75 7.5C19.75 7.08579 19.4142 6.75 19 6.75H5ZM5 11.25C4.58579 11.25 4.25 11.5858 4.25 12C4.25 12.4142 4.58579 12.75 5 12.75H13C13.4142 12.75 13.75 12.4142 13.75 12C13.75 11.5858 13.4142 11.25 13 11.25H5ZM5 15.75C4.58579 15.75 4.25 16.0858 4.25 16.5C4.25 16.9142 4.58579 17.25 5 17.25H19C19.4142 17.25 19.75 16.9142 19.75 16.5C19.75 16.0858 19.4142 15.75 19 15.75H5Z",
+      fill: "currentColor"
+    }
+  ) });
+  var IcTextAlignCenter = ({ size = 24 }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "path",
+    {
+      d: "M5 6.75C4.58579 6.75 4.25 7.08579 4.25 7.5C4.25 7.91421 4.58579 8.25 5 8.25H19C19.4142 8.25 19.75 7.91421 19.75 7.5C19.75 7.08579 19.4142 6.75 19 6.75H5ZM8 11.25C7.58579 11.25 7.25 11.5858 7.25 12C7.25 12.4142 7.58579 12.75 8 12.75H16C16.4142 12.75 16.75 12.4142 16.75 12C16.75 11.5858 16.4142 11.25 16 11.25H8ZM5 15.75C4.58579 15.75 4.25 16.0858 4.25 16.5C4.25 16.9142 4.58579 17.25 5 17.25H19C19.4142 17.25 19.75 16.9142 19.75 16.5C19.75 16.0858 19.4142 15.75 19 15.75H5Z",
+      fill: "currentColor"
+    }
+  ) });
+  var IcTextAlignRight = ({ size = 24 }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "path",
+    {
+      d: "M5 6.75C4.58579 6.75 4.25 7.08579 4.25 7.5C4.25 7.91421 4.58579 8.25 5 8.25H19C19.4142 8.25 19.75 7.91421 19.75 7.5C19.75 7.08579 19.4142 6.75 19 6.75H5ZM11 11.25C10.5858 11.25 10.25 11.5858 10.25 12C10.25 12.4142 10.5858 12.75 11 12.75H19C19.4142 12.75 19.75 12.4142 19.75 12C19.75 11.5858 19.4142 11.25 19 11.25H11ZM5 15.75C4.58579 15.75 4.25 16.0858 4.25 16.5C4.25 16.9142 4.58579 17.25 5 17.25H19C19.4142 17.25 19.75 16.9142 19.75 16.5C19.75 16.0858 19.4142 15.75 19 15.75H5Z",
+      fill: "currentColor"
+    }
+  ) });
 
   // src/ui/components/shared/Switch.tsx
   var import_react6 = __toESM(require_react());
@@ -36091,11 +36328,44 @@
   // src/ui/components/connection/LabelSection.tsx
   var import_react15 = __toESM(require_react());
   var import_jsx_runtime16 = __toESM(require_jsx_runtime());
-  var LABEL_PRESETS = ["Text", "Yes", "No", "Success", "Error", "Next", "Back"];
+  var STYLE_OPTIONS = [
+    { label: "Box", value: "BOX" },
+    { label: "Capsule", value: "CAPSULE" },
+    { label: "Round box", value: "ROUNDED_BOX" },
+    { label: "line", value: "LINE" }
+  ];
+  var PALETTE_ICON_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+    "path",
+    {
+      fillRule: "evenodd",
+      clipRule: "evenodd",
+      d: "M7.04976 7.04976C9.78343 4.31609 14.2165 4.31609 16.9502 7.04976C18.1125 8.2121 18.7807 9.685 18.9541 11.2011C19.1539 12.9507 17.5939 14 16.2246 14H15C14.4477 14 14 14.4477 14 15V16.2246C14 17.594 12.9499 19.1542 11.2002 18.9541C9.68423 18.7806 8.21195 18.1123 7.04976 16.9502C4.31609 14.2165 4.31609 9.78343 7.04976 7.04976ZM16.2421 7.75777C13.899 5.41463 10.1009 5.41463 7.75777 7.75777C5.41463 10.1009 5.41463 13.899 7.75777 16.2421C8.75465 17.239 10.0147 17.8122 11.3144 17.9609C12.2846 18.0718 13 17.2011 13 16.2246V15C13 13.8954 13.8954 13 15 13H16.2246C17.2011 13 18.0718 12.2846 17.9609 11.3144C17.8123 10.0147 17.239 8.75467 16.2421 7.75777ZM13 8.00003C13 8.55232 12.5523 9.00003 12 9.00003C11.4477 9.00003 11 8.55232 11 8.00003C11 7.44775 11.4477 7.00003 12 7.00003C12.5523 7.00003 13 7.44775 13 8.00003ZM9.86617 10.5002C10.1423 10.0219 9.97843 9.41032 9.50014 9.13417C9.02185 8.85803 8.41026 9.02191 8.13411 9.5002C7.85797 9.97849 8.02185 10.5901 8.50014 10.8662C8.97843 11.1424 9.59002 10.9785 9.86617 10.5002ZM15.5001 10.8662C15.0218 11.1424 14.4103 10.9785 14.1341 10.5002C13.858 10.0219 14.0218 9.41032 14.5001 9.13417C14.9784 8.85803 15.59 9.02191 15.8662 9.5002C16.1423 9.97849 15.9784 10.5901 15.5001 10.8662ZM8.13411 14.5002C8.41026 14.9785 9.02185 15.1424 9.50014 14.8662C9.97843 14.5901 10.1423 13.9785 9.86617 13.5002C9.59002 13.0219 8.97843 12.858 8.50014 13.1342C8.02185 13.4103 7.85797 14.0219 8.13411 14.5002Z",
+      fill: "currentColor"
+    }
+  ) });
+  function normalizeHex(hex) {
+    const clean = hex.replace("#", "").trim();
+    if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
+      return `#${clean.toUpperCase()}`;
+    }
+    return hex.startsWith("#") ? hex.toUpperCase() : `#${hex.toUpperCase()}`;
+  }
   function LabelSection() {
-    const { lastConnectorConfig, setLastConnectorConfig, applyCurrentConnectorState, autoResizeWindow } = useApp();
+    const {
+      lastConnectorConfig,
+      setLastConnectorConfig,
+      applyCurrentConnectorState,
+      autoResizeWindow,
+      setActiveModal
+    } = useApp();
     const [isOn, setIsOn] = (0, import_react15.useState)(lastConnectorConfig.labelOn || false);
-    const [labelText, setLabelText] = (0, import_react15.useState)(lastConnectorConfig.labelText || "Text");
+    const [labelText, setLabelText] = (0, import_react15.useState)(lastConnectorConfig.labelText || "");
+    const [fillColor, setFillColor] = (0, import_react15.useState)(lastConnectorConfig.labelFillColor || "#EA2039");
+    const [strokeColor, setStrokeColor] = (0, import_react15.useState)(lastConnectorConfig.labelStrokeColor || "#EA2039");
+    const [fillHexInput, setFillHexInput] = (0, import_react15.useState)((lastConnectorConfig.labelFillColor || "#EA2039").replace("#", ""));
+    const [strokeHexInput, setStrokeHexInput] = (0, import_react15.useState)((lastConnectorConfig.labelStrokeColor || "#EA2039").replace("#", ""));
+    const [align, setAlign] = (0, import_react15.useState)(lastConnectorConfig.labelAlign || "LEFT");
+    const [boxStyle, setBoxStyle] = (0, import_react15.useState)(lastConnectorConfig.labelBoxStyle || "BOX");
     const labelDebounceRef = (0, import_react15.useRef)(null);
     (0, import_react15.useEffect)(() => {
       return () => {
@@ -36109,18 +36379,33 @@
       if (lastConnectorConfig.labelText !== void 0) {
         setLabelText(lastConnectorConfig.labelText);
       }
-    }, [lastConnectorConfig.labelOn, lastConnectorConfig.labelText]);
+      if (lastConnectorConfig.labelFillColor) {
+        setFillColor(lastConnectorConfig.labelFillColor);
+        setFillHexInput(lastConnectorConfig.labelFillColor.replace("#", ""));
+      }
+      if (lastConnectorConfig.labelStrokeColor) {
+        setStrokeColor(lastConnectorConfig.labelStrokeColor);
+        setStrokeHexInput(lastConnectorConfig.labelStrokeColor.replace("#", ""));
+      }
+      if (lastConnectorConfig.labelAlign) {
+        setAlign(lastConnectorConfig.labelAlign);
+      }
+      if (lastConnectorConfig.labelBoxStyle) {
+        setBoxStyle(lastConnectorConfig.labelBoxStyle);
+      }
+    }, [
+      lastConnectorConfig.labelOn,
+      lastConnectorConfig.labelText,
+      lastConnectorConfig.labelFillColor,
+      lastConnectorConfig.labelStrokeColor,
+      lastConnectorConfig.labelAlign,
+      lastConnectorConfig.labelBoxStyle
+    ]);
     function handleToggle(checked) {
       if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
       setIsOn(checked);
       setLastConnectorConfig({ labelOn: checked });
       autoResizeWindow();
-      setTimeout(() => applyCurrentConnectorState(), 0);
-    }
-    function handlePresetClick(val) {
-      if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
-      setLabelText(val);
-      setLastConnectorConfig({ labelText: val });
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
     function handleTextChange(val) {
@@ -36129,7 +36414,47 @@
       if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
       labelDebounceRef.current = setTimeout(() => {
         applyCurrentConnectorState();
-      }, 300);
+      }, 250);
+    }
+    function handleFillColorSelect(color) {
+      const norm = normalizeHex(color);
+      setFillColor(norm);
+      setFillHexInput(norm.replace("#", ""));
+      setLastConnectorConfig({ labelFillColor: norm });
+      setTimeout(() => applyCurrentConnectorState(), 0);
+    }
+    function handleFillHexBlur() {
+      const clean = fillHexInput.replace("#", "").trim();
+      if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
+        handleFillColorSelect(`#${clean}`);
+      } else {
+        setFillHexInput(fillColor.replace("#", ""));
+      }
+    }
+    function handleStrokeColorSelect(color) {
+      const norm = normalizeHex(color);
+      setStrokeColor(norm);
+      setStrokeHexInput(norm.replace("#", ""));
+      setLastConnectorConfig({ labelStrokeColor: norm });
+      setTimeout(() => applyCurrentConnectorState(), 0);
+    }
+    function handleStrokeHexBlur() {
+      const clean = strokeHexInput.replace("#", "").trim();
+      if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
+        handleStrokeColorSelect(`#${clean}`);
+      } else {
+        setStrokeHexInput(strokeColor.replace("#", ""));
+      }
+    }
+    function handleAlignSelect(newAlign) {
+      setAlign(newAlign);
+      setLastConnectorConfig({ labelAlign: newAlign });
+      setTimeout(() => applyCurrentConnectorState(), 0);
+    }
+    function handleBoxStyleSelect(newStyle) {
+      setBoxStyle(newStyle);
+      setLastConnectorConfig({ labelBoxStyle: newStyle });
+      setTimeout(() => applyCurrentConnectorState(), 0);
     }
     return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-block", style: { paddingBottom: isOn ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-header toggle-row", children: [
@@ -36143,33 +36468,152 @@
           }
         )
       ] }),
-      isOn && /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "collapsible-content active", id: "conn-label-group", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "chip-group", id: "conn-label-group-chips", children: LABEL_PRESETS.map((label) => {
-          const isActive = labelText === label;
-          return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
-            "button",
-            {
-              type: "button",
-              className: `chip-btn${isActive ? " active" : ""}`,
-              "data-label": label,
-              onClick: () => handlePresetClick(label),
-              children: label
-            },
-            label
-          );
-        }) }),
+      isOn && /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "conn-label-body", children: [
         /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
           "input",
           {
             type: "text",
             id: "input-conn-label",
-            className: "form-input",
-            placeholder: "Label text",
+            className: "conn-label-input",
+            placeholder: "Add a label",
             value: labelText,
-            style: { marginTop: "6px" },
-            onChange: (e) => handleTextChange(e.target.value)
+            onChange: (e) => handleTextChange(e.target.value),
+            spellCheck: false,
+            autoComplete: "off"
           }
-        )
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-inputs-row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-input-box style-color-input-box", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+              FillColorIcon,
+              {
+                color: fillColor,
+                isNone: false,
+                onClick: () => setActiveModal("label-fill-color"),
+                title: "Fill color"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+              "input",
+              {
+                type: "text",
+                className: "style-text-input",
+                value: fillHexInput,
+                maxLength: 6,
+                placeholder: "FFFFFF",
+                onChange: (e) => setFillHexInput(e.target.value),
+                onBlur: handleFillHexBlur,
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") handleFillHexBlur();
+                },
+                onFocus: (e) => e.currentTarget.select(),
+                spellCheck: false,
+                autoComplete: "off"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "style-palette-action-btn",
+                title: "Fill color picker",
+                onClick: () => setActiveModal("label-fill-color"),
+                children: PALETTE_ICON_SVG2
+              }
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-input-box style-color-input-box", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "style-stroke-btn",
+                title: "Stroke color",
+                onClick: () => setActiveModal("label-stroke-color"),
+                children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+                  StrokeColorIcon,
+                  {
+                    color: strokeColor,
+                    isNone: false
+                  }
+                )
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+              "input",
+              {
+                type: "text",
+                className: "style-text-input",
+                value: strokeHexInput,
+                maxLength: 6,
+                placeholder: "000000",
+                onChange: (e) => setStrokeHexInput(e.target.value),
+                onBlur: handleStrokeHexBlur,
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") handleStrokeHexBlur();
+                },
+                onFocus: (e) => e.currentTarget.select(),
+                spellCheck: false,
+                autoComplete: "off"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "style-palette-action-btn",
+                title: "Stroke color picker",
+                onClick: () => setActiveModal("label-stroke-color"),
+                children: PALETTE_ICON_SVG2
+              }
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "corner-position-group", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+              "button",
+              {
+                type: "button",
+                className: `corner-btn${align === "LEFT" ? " active" : ""}`,
+                title: "Align left",
+                onClick: () => handleAlignSelect("LEFT"),
+                children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(IcTextAlignLeft, { size: 16 })
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+              "button",
+              {
+                type: "button",
+                className: `corner-btn${align === "CENTER" ? " active" : ""}`,
+                title: "Align center",
+                onClick: () => handleAlignSelect("CENTER"),
+                children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(IcTextAlignCenter, { size: 16 })
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+              "button",
+              {
+                type: "button",
+                className: `corner-btn${align === "RIGHT" ? " active" : ""}`,
+                title: "Align right",
+                onClick: () => handleAlignSelect("RIGHT"),
+                children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(IcTextAlignRight, { size: 16 })
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "chip-group", style: { marginTop: "4px", flexWrap: "wrap", gap: "4px" }, children: STYLE_OPTIONS.map((opt) => {
+          const isActive = boxStyle === opt.value;
+          return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+            "button",
+            {
+              type: "button",
+              className: `chip-btn${isActive ? " active" : ""}`,
+              onClick: () => handleBoxStyleSelect(opt.value),
+              children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: "tab-label", children: opt.label })
+            },
+            opt.value
+          );
+        }) })
       ] }) })
     ] });
   }
@@ -37411,6 +37855,10 @@
         onChange(fallback);
       }
     }
+    const colorHsvRef = (0, import_react20.useRef)(colorHsv);
+    (0, import_react20.useEffect)(() => {
+      colorHsvRef.current = colorHsv;
+    }, [colorHsv]);
     const updateHueFromPoint = (0, import_react20.useCallback)(
       (clientX, clientY) => {
         if (!wheelRef.current) return;
@@ -37423,16 +37871,16 @@
         let deg = Math.round(rad * 180 / Math.PI + 90);
         if (deg < 0) deg += 360;
         if (deg >= 360) deg -= 360;
-        setColorHsv((prev) => {
-          const nextHsv = { ...prev, h: deg };
-          const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
-          setColorHex(nextHex);
-          onChange(nextHex);
-          if (isNone && onNoneToggle) {
-            onNoneToggle(false);
-          }
-          return nextHsv;
-        });
+        const prev = colorHsvRef.current;
+        const nextHsv = { ...prev, h: deg };
+        const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
+        colorHsvRef.current = nextHsv;
+        setColorHsv(nextHsv);
+        setColorHex(nextHex);
+        onChange(nextHex);
+        if (isNone && onNoneToggle) {
+          onNoneToggle(false);
+        }
       },
       [onChange, isNone, onNoneToggle]
     );
@@ -37486,16 +37934,16 @@
         const v = Math.max(-1, Math.min(1, ny * factor));
         const s = Math.round(Math.max(0, Math.min(100, (u + 1) / 2 * 100)));
         const vVal = Math.round(Math.max(0, Math.min(100, (1 - v) / 2 * 100)));
-        setColorHsv((prev) => {
-          const nextHsv = { ...prev, s, v: vVal };
-          const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
-          setColorHex(nextHex);
-          onChange(nextHex);
-          if (isNone && onNoneToggle) {
-            onNoneToggle(false);
-          }
-          return nextHsv;
-        });
+        const prev = colorHsvRef.current;
+        const nextHsv = { ...prev, s, v: vVal };
+        const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
+        colorHsvRef.current = nextHsv;
+        setColorHsv(nextHsv);
+        setColorHex(nextHex);
+        onChange(nextHex);
+        if (isNone && onNoneToggle) {
+          onNoneToggle(false);
+        }
       },
       [onChange, isNone, onNoneToggle]
     );
@@ -38222,6 +38670,7 @@
     }
   ) });
   function FillColorModal({
+    title,
     initialColor,
     isMixed = false,
     onApply,
@@ -38294,7 +38743,7 @@
             children: [
               /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { className: "style-modal-header", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("span", { className: "style-modal-title", children: [
-                  "Fill",
+                  title || "Fill",
                   isFillMixed && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
                     "span",
                     {
@@ -38398,6 +38847,8 @@
     }
   ) });
   function StrokeColorModal({
+    title,
+    hideWeightControl = false,
     initialColor,
     initialWeight,
     isColorMixed = false,
@@ -38490,7 +38941,7 @@
             children: [
               /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "style-modal-header", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("span", { className: "style-modal-title", children: [
-                  "Stroke",
+                  title || "Stroke",
                   (isColorMixed || isWeightMixed) && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
                     "span",
                     {
@@ -38542,8 +38993,8 @@
                           title: strokeWeight === 0 ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)"
                         }
                       ),
-                      extraControlPosition: "left",
-                      extraControl: /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "stroke-width-box", children: [
+                      extraControlPosition: hideWeightControl ? void 0 : "left",
+                      extraControl: hideWeightControl ? void 0 : /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "stroke-width-box", children: [
                         /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
                           "span",
                           {
@@ -38639,6 +39090,9 @@
       applyCurrentNodeState,
       lastNodeConfig,
       setLastNodeConfig,
+      lastConnectorConfig,
+      setLastConnectorConfig,
+      applyCurrentConnectorState,
       showToast,
       autoResizeWindow,
       stylePresets,
@@ -39066,6 +39520,34 @@
           }
         );
       })(),
+      activeModal === "label-fill-color" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        FillColorModal,
+        {
+          title: "Label Fill",
+          initialColor: lastConnectorConfig.labelFillColor || "#EA2039",
+          onApply: (colorHex) => {
+            const clean = colorHex.toUpperCase();
+            setLastConnectorConfig({ labelFillColor: clean });
+            setTimeout(() => applyCurrentConnectorState(), 0);
+          },
+          onClose: () => setActiveModal("none")
+        }
+      ),
+      activeModal === "label-stroke-color" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        StrokeColorModal,
+        {
+          title: "Label Stroke",
+          hideWeightControl: true,
+          initialColor: lastConnectorConfig.labelStrokeColor || "#EA2039",
+          initialWeight: 1,
+          onApply: (strokeColor) => {
+            const clean = strokeColor.toUpperCase();
+            setLastConnectorConfig({ labelStrokeColor: clean });
+            setTimeout(() => applyCurrentConnectorState(), 0);
+          },
+          onClose: () => setActiveModal("none")
+        }
+      ),
       /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(FigmaTooltip, {})
     ] });
   }

@@ -475,6 +475,10 @@ export type ConnectorTerminalType =
   | 'REVERSED_TRIANGLE_ARROW'
   | 'MIXED';
 
+// 커넥터 라벨 박스 스타일 및 텍스트 정렬
+export type ConnectorLabelBoxStyle = 'BOX' | 'CAPSULE' | 'ROUNDED_BOX' | 'LINE';
+export type ConnectorLabelAlign = 'LEFT' | 'CENTER' | 'RIGHT';
+
 export interface FlowNodePayload {
   title: string;
   description: string;
@@ -512,6 +516,10 @@ export interface ConnectPointsPayload {
   endTerminal?: ConnectorTerminalType;
   startOffset?: number;
   endOffset?: number;
+  labelBoxStyle?: ConnectorLabelBoxStyle;
+  labelAlign?: ConnectorLabelAlign;
+  labelFillColor?: string;
+  labelStrokeColor?: string;
   figmaLink?: string;
 }
 
@@ -526,6 +534,10 @@ export interface ConnectChainPayload {
   endTerminal?: ConnectorTerminalType;
   startOffset?: number;
   endOffset?: number;
+  labelBoxStyle?: ConnectorLabelBoxStyle;
+  labelAlign?: ConnectorLabelAlign;
+  labelFillColor?: string;
+  labelStrokeColor?: string;
   figmaLink?: string;
 }
 
@@ -646,6 +658,10 @@ export type PluginAction =
         targetMagnet?: MagnetPosition;
         label?: string;
         hasLabel?: boolean;
+        labelBoxStyle?: ConnectorLabelBoxStyle;
+        labelAlign?: ConnectorLabelAlign;
+        labelFillColor?: string;
+        labelStrokeColor?: string;
         isReversed?: boolean;
       };
     }
@@ -693,6 +709,10 @@ export interface SelectedNodeInfo {
   figmaLink?: string;
   cachedFigmaLink?: string;
   connectorLabel?: string;
+  connectorLabelBoxStyle?: ConnectorLabelBoxStyle;
+  connectorLabelAlign?: ConnectorLabelAlign;
+  connectorLabelFillColor?: string;
+  connectorLabelStrokeColor?: string;
   connectorLineType?: 'ELBOWED' | 'STRAIGHT' | 'CURVED';
   connectorColorHex?: string;
   connectorStrokeWeight?: number;

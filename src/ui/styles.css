@@ -4168,3 +4168,199 @@
     .conn-btn-save:hover {
       background: var(--color-primary-hover, #7B3CE3);
     }
+
+    /* ============================================================ */
+    /* Connector Label Section (Figma UI3 1027430:2049)              */
+    /* ============================================================ */
+    .conn-label-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .conn-label-input {
+      width: 100%;
+      height: 28px;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      color: var(--color-text-primary);
+      box-sizing: border-box;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .conn-label-input:hover {
+      border-color: var(--color-border);
+    }
+
+    .conn-label-input:focus {
+      background-color: var(--color-bg);
+      border-color: var(--color-brand);
+      outline: none;
+    }
+
+    .conn-label-ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .conn-label-color-box {
+      display: flex;
+      align-items: center;
+      width: 96px;
+      height: 24px;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0 4px 0 5px;
+      gap: 4px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .conn-label-color-box:hover {
+      border-color: var(--color-border);
+    }
+
+    .conn-label-color-box:focus-within {
+      background-color: var(--color-bg);
+      border-color: var(--color-brand);
+    }
+
+    .conn-label-chip-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .conn-label-hex-input {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      color: var(--color-text-primary);
+      text-transform: uppercase;
+      padding: 0;
+      outline: none;
+      letter-spacing: 0 !important;
+    }
+
+    .conn-label-palette-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      color: var(--color-text-secondary);
+      border-radius: 2px;
+      flex-shrink: 0;
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+    .conn-label-palette-btn:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-hover);
+    }
+    .conn-label-palette-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* 텍스트 정렬 세그먼트 컨트롤: 정확히 120px x 24px, 3개 버튼 각 40px */
+    .conn-label-align-group {
+      display: flex;
+      align-items: center;
+      width: 120px;
+      height: 24px;
+      background-color: var(--color-bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 0;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .conn-label-align-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 2px;
+      cursor: pointer;
+      color: var(--color-text-secondary);
+      padding: 0;
+      box-sizing: border-box;
+      transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+
+    .conn-label-align-btn:hover {
+      color: var(--color-text-primary);
+    }
+
+    .conn-label-align-btn.active {
+      background-color: var(--color-bg);
+      color: var(--color-text-primary);
+      box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.1));
+    }
+
+    /* 형태 스타일 4개 세그먼트/칩: 높이 24px, gap 8px */
+    .conn-label-style-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      height: 24px;
+    }
+
+    .conn-label-style-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      height: 24px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 4px;
+      background-color: var(--color-bg-secondary);
+      color: var(--color-text-secondary);
+      font-size: 11px;
+      font-weight: var(--font-weight-medium, 450);
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .conn-label-style-btn:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-hover);
+    }
+
+    .conn-label-style-btn.active {
+      background-color: var(--color-brand, #8c4cf6);
+      color: #ffffff;
+    }
