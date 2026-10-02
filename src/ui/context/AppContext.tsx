@@ -1808,9 +1808,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const isLabelOn = firstConn.connectorLabelOn !== undefined
           ? firstConn.connectorLabelOn
           : Boolean(firstConn.connectorLabel);
+        const labelInputEl = typeof document !== 'undefined'
+          ? document.getElementById('input-conn-label') as HTMLInputElement | null
+          : null;
+        const labelFocused = Boolean(
+          labelInputEl && typeof document !== 'undefined' && document.activeElement === labelInputEl
+        );
         setLastConnectorConfig({
-          labelOn: isLabelOn,
-          labelText: firstConn.connectorLabel || '',
+          labelOn: labelFocused ? lastConnectorConfigRef.current.labelOn : isLabelOn,
+          labelText: labelFocused
+            ? (labelInputEl ? labelInputEl.value : lastConnectorConfigRef.current.labelText)
+            : (firstConn.connectorLabel || ''),
           labelBoxStyle: firstConn.connectorLabelBoxStyle || 'BOX',
           labelAlign: firstConn.connectorLabelAlign || 'CENTER',
           labelFillColor: firstConn.connectorLabelFillColor || '#EA2039',

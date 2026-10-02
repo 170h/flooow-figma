@@ -43,6 +43,7 @@ import {
   getLabelPlacement,
   calculateRoutingPoints,
   getMagnetPoint,
+  placeNodeAtWorldCenter,
   Box,
 } from './customConnector';
 import { orderNodesForChain, makePairKey } from './chainOrder';
@@ -4933,6 +4934,7 @@ async function createSingleConnector(
       startOffset,
       endOffset,
       strokePattern,
+      labelOn: Boolean(label && label.trim()),
     }
   );
 }
@@ -5584,8 +5586,7 @@ async function updateConnectorProperties(payload: {
 
         // group 생성 전에 labelFrame의 초기 위치를 실제 Connector Label 위치에 맞게 설정 (그룹 좌표계 왜곡 방지)
         if (midPoint) {
-          labelFrame.x = Math.round(midPoint.x - labelFrame.width / 2);
-          labelFrame.y = Math.round(midPoint.y - labelFrame.height / 2);
+          placeNodeAtWorldCenter(labelFrame, midPoint);
         }
 
         // 신규 프레임일 때만 상위 컨테이너에 추가/그룹화
@@ -5603,9 +5604,10 @@ async function updateConnectorProperties(payload: {
             group.setPluginData('connector_label_on', 'true');
             registerConnectorInRegistry(group);
             connectorRootNode = group;
-            figma.currentPage.selection = [group];
+            if (figma.currentPage.selection[0]?.id !== group.id) {
+              figma.currentPage.selection = [group];
+            }
           }
-          handleSelectionChange();
         }
       } else if (payload.hasLabel === false) {
         connectorRootNode.setPluginData('connector_label', '');
@@ -5669,7 +5671,7 @@ async function updateConnectorProperties(payload: {
       );
     }
 
-    notify('커넥터 옵션이 성공적으로 수정되었습니다.', 'success');
+    // 성공 토스트는 라벨 입력 중 플러그인 포커스를 뺏으므로 생략한다.
     handleSelectionChange();
   } catch (err) {
     console.error('[UPDATE_CONNECTOR_PROPERTIES failed]', err);

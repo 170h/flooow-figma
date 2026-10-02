@@ -100,6 +100,7 @@ export async function applyConnectorLabelStyle(
   // 2. 텍스트 설정: 9px 고정, 수평 정렬, tracking(letter-spacing) 절대 부여 금지 (규칙 준수)
   textNode.characters = labelText;
   textNode.fontSize = 9;
+  textNode.textAutoResize = 'WIDTH_AND_HEIGHT';
   textNode.textAlignHorizontal = textAlign;
   const textFill = getContrastTextColor(fillColor);
   textNode.fills = [{ type: 'SOLID', color: textFill }];
@@ -397,28 +398,52 @@ export function getLabelPlacement(
     };
   }
 
-  let longestDist = -1;
-  let midSegmentPoint: Point = {
-    x: (worldPoints[0].x + worldPoints[1].x) / 2,
-    y: (worldPoints[0].y + worldPoints[1].y) / 2,
-  };
-  let isVertical = false;
+  // 경로 전체 길이의 정확한 중간 지점 (Z자 직각 경로에서는 가운데 세로 구간 중앙)
+  let totalLen = 0;
+  for (let i = 0; i < worldPoints.length - 1; i++) {
+    totalLen += Math.hypot(
+      worldPoints[i + 1].x - worldPoints[i].x,
+      worldPoints[i + 1].y - worldPoints[i].y
+    );
+  }
 
+  const half = totalLen / 2;
+  let walked = 0;
   for (let i = 0; i < worldPoints.length - 1; i++) {
     const p1 = worldPoints[i];
     const p2 = worldPoints[i + 1];
-    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    if (dist > longestDist) {
-      longestDist = dist;
-      midSegmentPoint = {
-        x: (p1.x + p2.x) / 2,
-        y: (p1.y + p2.y) / 2,
+    const segLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    if (segLen > 0 && walked + segLen >= half) {
+      const t = (half - walked) / segLen;
+      return {
+        point: {
+          x: p1.x + (p2.x - p1.x) * t,
+          y: p1.y + (p2.y - p1.y) * t,
+        },
+        isVertical: Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x),
       };
-      isVertical = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
     }
+    walked += segLen;
   }
 
-  return { point: midSegmentPoint, isVertical };
+  const last = worldPoints[worldPoints.length - 1];
+  return { point: { x: last.x, y: last.y }, isVertical: false };
+}
+
+/** 부모(그룹) 로컬 좌표와 무관하게 노드의 페이지 절대 좌표를 설정한다. */
+export function setNodeAbsoluteXY(node: SceneNode, absX: number, absY: number): void {
+  const currentAbsX = node.absoluteTransform[0][2];
+  const currentAbsY = node.absoluteTransform[1][2];
+  node.x = node.x + (absX - currentAbsX);
+  node.y = node.y + (absY - currentAbsY);
+}
+
+export function placeNodeAtWorldCenter(node: SceneNode, world: Point): void {
+  setNodeAbsoluteXY(
+    node,
+    Math.round(world.x - node.width / 2),
+    Math.round(world.y - node.height / 2)
+  );
 }
 
 // 라우팅 타입별 라벨 중심점 산출 헬퍼
@@ -821,13 +846,11 @@ export async function createOrthogonalVectorConnector(
   vector.setPluginData('connector_pattern', strokePattern);
   vector.setPluginData('connector_weight', String(strokeWeight));
 
-  // 5. 라벨(텍스트)이 존재하는 경우 중앙 세그먼트에 단정한 태그 뱃지 생성
+  // 5. 라벨 ON이거나 텍스트가 있으면 중앙 세그먼트에 태그 뱃지 생성
   let labelFrame: FrameNode | null = null;
   const labelText = options.label ? options.label.trim() : '';
-  if (options.labelOn === true) {
-    vector.setPluginData('connector_label_on', 'true');
-  }
-  if (labelText !== '') {
+  const shouldBuildLabel = options.labelOn === true || labelText !== '';
+  if (shouldBuildLabel) {
     const boxStyle = options.labelBoxStyle || 'BOX';
     const align = options.labelAlign || 'CENTER';
     const fillCol = options.labelFillColor || '#EA2039';
@@ -861,9 +884,7 @@ export async function createOrthogonalVectorConnector(
       isVertical,
     });
 
-    // 라벨 중심 맞춤
-    labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
-    labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
+    placeNodeAtWorldCenter(labelFrame, midSegmentPoint);
 
     labelFrame.setPluginData('is_connector_label', 'true');
     labelFrame.setPluginData('is_custom_connector', 'true');
@@ -1277,9 +1298,8 @@ export async function updateOrthogonalVectorConnector(
     y: p.y - minY,
   }));
 
-  vector.x = minX;
-  vector.y = minY;
   vector.resize(width, height);
+  setNodeAbsoluteXY(vector, minX, minY);
   vector.setPluginData('connector_role', 'line');
 
   // 과거 생성된 별도 단자 벡터(ConnectorTerminals)가 남아있다면 네이티브 Cap 통합에 따라 제거
@@ -1341,7 +1361,10 @@ export async function updateOrthogonalVectorConnector(
     const textNode = labelFrame.findOne((n) => n.type === 'TEXT') as TextNode | null;
     const labelText = safeGetPluginData(rootNode, 'connector_label') ||
                       safeGetPluginData(vector, 'connector_label') || '';
-    if (labelText && textNode) {
+    const labelOn = safeGetPluginData(rootNode, 'connector_label_on') === 'true' ||
+                    safeGetPluginData(vector, 'connector_label_on') === 'true' ||
+                    Boolean(labelText);
+    if (labelOn && textNode) {
       const boxStyle = (safeGetPluginData(rootNode, 'connector_label_box_style') ||
                         safeGetPluginData(vector, 'connector_label_box_style') || 'BOX') as ConnectorLabelBoxStyle;
       const align = (safeGetPluginData(rootNode, 'connector_label_align') ||
@@ -1361,8 +1384,7 @@ export async function updateOrthogonalVectorConnector(
       });
     }
 
-    labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
-    labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
+    placeNodeAtWorldCenter(labelFrame, midSegmentPoint);
   }
 }
 

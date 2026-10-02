@@ -70,11 +70,6 @@ export function LabelSection() {
   const flowCount = selectedNodes.filter(n => n && !n.isConnector).length;
   const isMultiSelection = connCount >= 2 || (connCount > 0 && flowCount > 0);
 
-  const validNodes = (selectedNodes || []).filter((n): n is NodeInfo => Boolean(n));
-  const currentNodeId = validNodes.length === 1
-    ? validNodes[0]?.id
-    : (validNodes.length > 1 ? 'MULTI' : 'NONE');
-
   const [isOn, setIsOn] = useState(lastConnectorConfig.labelOn || false);
   // 복수 선택에서는 Label 편집이 비활성화되며 항상 접힘(collapsed) 유지
   const effectiveIsOn = !isMultiSelection && isOn;
@@ -111,18 +106,20 @@ export function LabelSection() {
       lastSelectedNodeIdRef.current = currentNodeId;
     }
 
+    const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+    const isInputFocused = isFocusedRef.current || (labelInputRef.current !== null && activeEl === labelInputRef.current);
+
     // isOn은 노드가 실제로 바뀐 경우에만 외부 값으로 덮어씀
     // 같은 노드에서 labelText만 변경되었을 때 effect가 재실행되더라도
     // 사용자가 토글로 설정한 isOn 상태를 보존한다
-    if (isDifferentNode) {
+    // 입력 포커스 중 벡터→그룹 승격으로 id가 바뀌어도 토글/텍스트를 덮어쓰지 않음
+    if (isDifferentNode && !isInputFocused) {
       setIsOn(lastConnectorConfig.labelOn || false);
     }
 
     if (lastConnectorConfig.labelText !== undefined) {
-      const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
-      const isInputFocused = isFocusedRef.current || (labelInputRef.current !== null && activeEl === labelInputRef.current);
-      // 포커스 중인 입력 필드는 외부 SELECTION_CHANGED 역동기화로 덮어쓰지 않음 (GEMINI.md §12 규칙 준수)
-      if (isDifferentNode || !isInputFocused) {
+      // 포커스 중인 입력 필드는 외부 SELECTION_CHANGED 역동기화로 덮어쓰지 않음 (GEMINI.md §12)
+      if (!isInputFocused) {
         setLabelText(lastConnectorConfig.labelText);
         if (labelInputRef.current && labelInputRef.current.value !== lastConnectorConfig.labelText) {
           labelInputRef.current.value = lastConnectorConfig.labelText;
@@ -236,7 +233,6 @@ export function LabelSection() {
           <div className="conn-label-body">
             {/* 2행: 텍스트 입력 인풋 (INV-05 DOM truth 규격) */}
             <input
-              key={currentNodeId}
               ref={labelInputRef}
               type="text"
               id="input-conn-label"
@@ -244,7 +240,10 @@ export function LabelSection() {
               placeholder="Add a label"
               defaultValue={lastConnectorConfig.labelText || ''}
               onFocus={() => { isFocusedRef.current = true; }}
-              onBlur={() => { isFocusedRef.current = false; }}
+              onBlur={() => {
+                isFocusedRef.current = false;
+                applyCurrentConnectorState();
+              }}
               onInput={handleInput}
               spellCheck={false}
               autoComplete="off"

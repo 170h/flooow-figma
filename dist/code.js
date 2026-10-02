@@ -270,6 +270,7 @@
     }
     textNode.characters = labelText;
     textNode.fontSize = 9;
+    textNode.textAutoResize = "WIDTH_AND_HEIGHT";
     textNode.textAlignHorizontal = textAlign;
     const textFill = getContrastTextColor(fillColor);
     textNode.fills = [{ type: "SOLID", color: textFill }];
@@ -463,45 +464,65 @@
     if (worldPoints.length <= 2) {
       const p1 = worldPoints[0] || { x: 0, y: 0 };
       const p2 = worldPoints[worldPoints.length - 1] || p1;
-      const isVertical2 = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
+      const isVertical = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
       return {
         point: {
           x: (p1.x + p2.x) / 2,
           y: (p1.y + p2.y) / 2
         },
-        isVertical: isVertical2
+        isVertical
       };
     }
     if (routingType === "CURVED") {
       const midIdx = Math.floor(worldPoints.length / 2);
       const pPrev = worldPoints[Math.max(0, midIdx - 1)];
       const pNext = worldPoints[Math.min(worldPoints.length - 1, midIdx + 1)];
-      const isVertical2 = Math.abs(pNext.y - pPrev.y) > Math.abs(pNext.x - pPrev.x);
+      const isVertical = Math.abs(pNext.y - pPrev.y) > Math.abs(pNext.x - pPrev.x);
       return {
         point: worldPoints[midIdx],
-        isVertical: isVertical2
+        isVertical
       };
     }
-    let longestDist = -1;
-    let midSegmentPoint = {
-      x: (worldPoints[0].x + worldPoints[1].x) / 2,
-      y: (worldPoints[0].y + worldPoints[1].y) / 2
-    };
-    let isVertical = false;
+    let totalLen = 0;
+    for (let i = 0; i < worldPoints.length - 1; i++) {
+      totalLen += Math.hypot(
+        worldPoints[i + 1].x - worldPoints[i].x,
+        worldPoints[i + 1].y - worldPoints[i].y
+      );
+    }
+    const half = totalLen / 2;
+    let walked = 0;
     for (let i = 0; i < worldPoints.length - 1; i++) {
       const p1 = worldPoints[i];
       const p2 = worldPoints[i + 1];
-      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      if (dist > longestDist) {
-        longestDist = dist;
-        midSegmentPoint = {
-          x: (p1.x + p2.x) / 2,
-          y: (p1.y + p2.y) / 2
+      const segLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      if (segLen > 0 && walked + segLen >= half) {
+        const t = (half - walked) / segLen;
+        return {
+          point: {
+            x: p1.x + (p2.x - p1.x) * t,
+            y: p1.y + (p2.y - p1.y) * t
+          },
+          isVertical: Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x)
         };
-        isVertical = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
       }
+      walked += segLen;
     }
-    return { point: midSegmentPoint, isVertical };
+    const last = worldPoints[worldPoints.length - 1];
+    return { point: { x: last.x, y: last.y }, isVertical: false };
+  }
+  function setNodeAbsoluteXY(node, absX, absY) {
+    const currentAbsX = node.absoluteTransform[0][2];
+    const currentAbsY = node.absoluteTransform[1][2];
+    node.x = node.x + (absX - currentAbsX);
+    node.y = node.y + (absY - currentAbsY);
+  }
+  function placeNodeAtWorldCenter(node, world) {
+    setNodeAbsoluteXY(
+      node,
+      Math.round(world.x - node.width / 2),
+      Math.round(world.y - node.height / 2)
+    );
   }
   function getMagnetPoint(box, magnet) {
     switch (magnet) {
@@ -771,10 +792,8 @@
     vector.setPluginData("connector_weight", String(strokeWeight));
     let labelFrame = null;
     const labelText = options.label ? options.label.trim() : "";
-    if (options.labelOn === true) {
-      vector.setPluginData("connector_label_on", "true");
-    }
-    if (labelText !== "") {
+    const shouldBuildLabel = options.labelOn === true || labelText !== "";
+    if (shouldBuildLabel) {
       const boxStyle = options.labelBoxStyle || "BOX";
       const align = options.labelAlign || "CENTER";
       const fillCol = options.labelFillColor || "#EA2039";
@@ -800,8 +819,7 @@
         strokeColor: strokeCol,
         isVertical
       });
-      labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
-      labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
+      placeNodeAtWorldCenter(labelFrame, midSegmentPoint);
       labelFrame.setPluginData("is_connector_label", "true");
       labelFrame.setPluginData("is_custom_connector", "true");
     }
@@ -1063,9 +1081,8 @@
       x: p.x - minX,
       y: p.y - minY
     }));
-    vector.x = minX;
-    vector.y = minY;
     vector.resize(width, height);
+    setNodeAbsoluteXY(vector, minX, minY);
     vector.setPluginData("connector_role", "line");
     if (termVector) {
       try {
@@ -1112,7 +1129,8 @@
       const { point: midSegmentPoint, isVertical } = getLabelPlacement(worldPoints, routingType);
       const textNode = labelFrame.findOne((n) => n.type === "TEXT");
       const labelText = safeGetPluginData(rootNode, "connector_label") || safeGetPluginData(vector, "connector_label") || "";
-      if (labelText && textNode) {
+      const labelOn = safeGetPluginData(rootNode, "connector_label_on") === "true" || safeGetPluginData(vector, "connector_label_on") === "true" || Boolean(labelText);
+      if (labelOn && textNode) {
         const boxStyle = safeGetPluginData(rootNode, "connector_label_box_style") || safeGetPluginData(vector, "connector_label_box_style") || "BOX";
         const align = safeGetPluginData(rootNode, "connector_label_align") || safeGetPluginData(vector, "connector_label_align") || "CENTER";
         const fillCol = safeGetPluginData(rootNode, "connector_label_fill_color") || safeGetPluginData(vector, "connector_label_fill_color") || "#EA2039";
@@ -1126,8 +1144,7 @@
           isVertical
         });
       }
-      labelFrame.x = Math.round(midSegmentPoint.x - labelFrame.width / 2);
-      labelFrame.y = Math.round(midSegmentPoint.y - labelFrame.height / 2);
+      placeNodeAtWorldCenter(labelFrame, midSegmentPoint);
     }
   }
   function copyConnectorData(source, target) {
@@ -5502,7 +5519,8 @@
         endTerminal,
         startOffset,
         endOffset,
-        strokePattern
+        strokePattern,
+        labelOn: Boolean(label && label.trim())
       }
     );
   }
@@ -5988,8 +6006,7 @@
             });
           }
           if (midPoint) {
-            labelFrame.x = Math.round(midPoint.x - labelFrame.width / 2);
-            labelFrame.y = Math.round(midPoint.y - labelFrame.height / 2);
+            placeNodeAtWorldCenter(labelFrame, midPoint);
           }
           if (isNewFrame) {
             if (connectorRootNode.type === "GROUP") {
@@ -6003,9 +6020,10 @@
               group.setPluginData("connector_label_on", "true");
               registerConnectorInRegistry(group);
               connectorRootNode = group;
-              figma.currentPage.selection = [group];
+              if (figma.currentPage.selection[0]?.id !== group.id) {
+                figma.currentPage.selection = [group];
+              }
             }
-            handleSelectionChange();
           }
         } else if (payload.hasLabel === false) {
           connectorRootNode.setPluginData("connector_label", "");
@@ -6065,7 +6083,6 @@
           effectiveEndOffset
         );
       }
-      notify("\uCEE4\uB125\uD130 \uC635\uC158\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
       handleSelectionChange();
     } catch (err) {
       console.error("[UPDATE_CONNECTOR_PROPERTIES failed]", err);

@@ -1253,11 +1253,9 @@
     input:disabled,
     input.disabled,
     .disabled input,
-    :has(input:disabled) input,
     textarea:disabled,
     textarea.disabled,
     .disabled textarea,
-    :has(textarea:disabled) textarea,
     .node-title-input:disabled,
     .form-input:disabled,
     .form-input.disabled,
@@ -1281,11 +1279,9 @@
     input:disabled::placeholder,
     input.disabled::placeholder,
     .disabled input::placeholder,
-    :has(input:disabled) input::placeholder,
     textarea:disabled::placeholder,
     textarea.disabled::placeholder,
     .disabled textarea::placeholder,
-    :has(textarea:disabled) textarea::placeholder,
     .input-scrubber-box.disabled input::placeholder,
     .input-scrubber-box input:disabled::placeholder,
     .input-scrubber-box:has(input:disabled) input::placeholder,
@@ -30470,9 +30466,13 @@
         if (nodes.length === 1 && nodes[0]) {
           const firstConn = nodes[0];
           const isLabelOn = firstConn.connectorLabelOn !== void 0 ? firstConn.connectorLabelOn : Boolean(firstConn.connectorLabel);
+          const labelInputEl = typeof document !== "undefined" ? document.getElementById("input-conn-label") : null;
+          const labelFocused = Boolean(
+            labelInputEl && typeof document !== "undefined" && document.activeElement === labelInputEl
+          );
           setLastConnectorConfig({
-            labelOn: isLabelOn,
-            labelText: firstConn.connectorLabel || "",
+            labelOn: labelFocused ? lastConnectorConfigRef.current.labelOn : isLabelOn,
+            labelText: labelFocused ? labelInputEl ? labelInputEl.value : lastConnectorConfigRef.current.labelText : firstConn.connectorLabel || "",
             labelBoxStyle: firstConn.connectorLabelBoxStyle || "BOX",
             labelAlign: firstConn.connectorLabelAlign || "CENTER",
             labelFillColor: firstConn.connectorLabelFillColor || "#EA2039",
@@ -36383,8 +36383,6 @@
     const connCount = selectedNodes.filter((n) => n && n.isConnector).length;
     const flowCount = selectedNodes.filter((n) => n && !n.isConnector).length;
     const isMultiSelection = connCount >= 2 || connCount > 0 && flowCount > 0;
-    const validNodes = (selectedNodes || []).filter((n) => Boolean(n));
-    const currentNodeId = validNodes.length === 1 ? validNodes[0]?.id : validNodes.length > 1 ? "MULTI" : "NONE";
     const [isOn, setIsOn] = (0, import_react15.useState)(lastConnectorConfig.labelOn || false);
     const effectiveIsOn = !isMultiSelection && isOn;
     const [labelText, setLabelText] = (0, import_react15.useState)(lastConnectorConfig.labelText || "");
@@ -36406,19 +36404,19 @@
       };
     }, []);
     (0, import_react15.useEffect)(() => {
-      const validNodes2 = (selectedNodes || []).filter((n) => Boolean(n));
-      const currentNodeId2 = validNodes2.length === 1 ? validNodes2[0]?.id : validNodes2.length > 1 ? "MULTI" : "NONE";
-      const isDifferentNode = currentNodeId2 !== lastSelectedNodeIdRef.current;
+      const validNodes = (selectedNodes || []).filter((n) => Boolean(n));
+      const currentNodeId = validNodes.length === 1 ? validNodes[0]?.id : validNodes.length > 1 ? "MULTI" : "NONE";
+      const isDifferentNode = currentNodeId !== lastSelectedNodeIdRef.current;
       if (isDifferentNode) {
-        lastSelectedNodeIdRef.current = currentNodeId2;
+        lastSelectedNodeIdRef.current = currentNodeId;
       }
-      if (isDifferentNode) {
+      const activeEl = typeof document !== "undefined" ? document.activeElement : null;
+      const isInputFocused = isFocusedRef.current || labelInputRef.current !== null && activeEl === labelInputRef.current;
+      if (isDifferentNode && !isInputFocused) {
         setIsOn(lastConnectorConfig.labelOn || false);
       }
       if (lastConnectorConfig.labelText !== void 0) {
-        const activeEl = typeof document !== "undefined" ? document.activeElement : null;
-        const isInputFocused = isFocusedRef.current || labelInputRef.current !== null && activeEl === labelInputRef.current;
-        if (isDifferentNode || !isInputFocused) {
+        if (!isInputFocused) {
           setLabelText(lastConnectorConfig.labelText);
           if (labelInputRef.current && labelInputRef.current.value !== lastConnectorConfig.labelText) {
             labelInputRef.current.value = lastConnectorConfig.labelText;
@@ -36533,12 +36531,12 @@
             },
             onBlur: () => {
               isFocusedRef.current = false;
+              applyCurrentConnectorState();
             },
             onInput: handleInput,
             spellCheck: false,
             autoComplete: "off"
-          },
-          currentNodeId
+          }
         ),
         /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-inputs-row", children: [
           /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-input-box style-color-input-box", children: [
