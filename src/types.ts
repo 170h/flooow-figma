@@ -515,6 +515,20 @@ export interface ConnectPointsPayload {
   figmaLink?: string;
 }
 
+export interface ConnectChainPayload {
+  orderedNodeIds: string[];
+  label?: string;
+  colorHex?: string;
+  strokePattern?: ConnectorStrokePattern;
+  strokeWeight?: number;
+  routingType?: ConnectorRoutingType;
+  startTerminal?: ConnectorTerminalType;
+  endTerminal?: ConnectorTerminalType;
+  startOffset?: number;
+  endOffset?: number;
+  figmaLink?: string;
+}
+
 export interface FigmaFrameMeta {
   id: string;
   name: string;
@@ -602,6 +616,7 @@ export type PluginAction =
       };
     }
   | { type: 'CONNECT_POINTS'; payload: ConnectPointsPayload }
+  | { type: 'CONNECT_CHAIN'; payload: ConnectChainPayload }
   | { type: 'AUTO_CONNECT_SELECTED'; label?: string }
   | { type: 'UPDATE_CONNECTOR_LABEL'; connectorId: string; label: string }
   | { type: 'TOGGLE_NODE_THEME'; nodeId: string }
@@ -650,6 +665,15 @@ export type PluginAction =
 export interface ConnectedConnectorDetail {
   id: string;
   isReversed: boolean;
+  sourceMagnet?: MagnetPosition;
+  targetMagnet?: MagnetPosition;
+}
+
+// 3+ 노드 선택 시 선택 노드 간 커넥터 세부 정보
+export interface MultiNodeConnectorDetail {
+  id: string;
+  sourceId: string;
+  targetId: string;
   sourceMagnet?: MagnetPosition;
   targetMagnet?: MagnetPosition;
 }
@@ -720,6 +744,11 @@ export type CoreToUIMessage =
       hasExistingConnection?: boolean;
       connectedConnectorIds?: string[];
       connectedConnectors?: ConnectedConnectorDetail[];
+      orderedNodeIds?: string[];
+      chainTotalPairs?: number;
+      chainConnectedPairs?: number;
+      chainMissingPairs?: number;
+      multiNodeConnectors?: MultiNodeConnectorDetail[];
     }
   | {
       type: 'STATUS_LIST_UPDATED';

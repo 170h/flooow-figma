@@ -170,9 +170,14 @@ export interface UIState {
   existingSourceMagnets?: MagnetPosition[];
   existingTargetMagnets?: MagnetPosition[];
   connectedConnectors?: ConnectedConnectorDetail[];
+  orderedNodeIds?: string[];
+  chainTotalPairs?: number;
+  chainConnectedPairs?: number;
+  chainMissingPairs?: number;
+  multiNodeConnectors?: MultiNodeConnectorDetail[];
 }
 
-import { DesignFrameItem, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, MagnetPosition, ConnectedConnectorDetail } from '../../types';
+import { DesignFrameItem, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, MagnetPosition, ConnectedConnectorDetail, MultiNodeConnectorDetail } from '../../types';
 
 function normalizeTerminal(term?: string, fallback: string = 'NONE'): string {
   if (!term || term === 'BAR' || term === 'SQUARE') return fallback;
@@ -336,6 +341,7 @@ const DEFAULT_UI_STATE: UIState = {
   connectedConnectors: [],
   existingSourceMagnets: [],
   existingTargetMagnets: [],
+  multiNodeConnectors: [],
 };
 
 // ============================================================
@@ -1459,32 +1465,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     } else {
-      // 3개 이상 다중 노드 선택: 첫 번째 노드가 Start, 나머지 노드들이 End 대상 (Star topology)
-      const src = nodes[0];
-      for (let i = 1; i < nodes.length; i++) {
-        const tgt = nodes[i];
-        parent.postMessage({
-          pluginMessage: {
-            type: 'CONNECT_POINTS',
-            payload: {
-              sourceNodeId: src.id,
-              sourceMagnet: finalSourceMag,
-              targetNodeId: tgt.id,
-              targetMagnet: finalTargetMag,
-              label: i === 1 ? label : '',
-              colorHex: color,
-              strokeWeight: weight,
-              routingType: selectedRoutingType,
-              strokePattern: selectedLinePattern,
-              startTerminal: i === 1 ? startTerm : 'NONE',
-              endTerminal: endTerm,
-              startOffset: startOff,
-              endOffset: endOff,
-              figmaLink: i === 1 ? figmaLink : '',
-            }
+      // 3개 이상 다중 노드 선택: Core의 orderedNodeIds 기준 단일 CONNECT_CHAIN 메시지 전송
+      const orderedIds = uiStateRef.current.orderedNodeIds && uiStateRef.current.orderedNodeIds.length === nodes.length
+        ? uiStateRef.current.orderedNodeIds
+        : nodes.map((n) => n.id);
+
+      parent.postMessage({
+        pluginMessage: {
+          type: 'CONNECT_CHAIN',
+          payload: {
+            orderedNodeIds: orderedIds,
+            label,
+            colorHex: color,
+            strokeWeight: weight,
+            routingType: selectedRoutingType,
+            strokePattern: selectedLinePattern,
+            startTerminal: startTerm,
+            endTerminal: endTerm,
+            startOffset: startOff,
+            endOffset: endOff,
+            figmaLink,
           }
-        }, '*');
-      }
+        }
+      }, '*');
     }
   }, [applyCurrentConnectorState, showToast]);
 

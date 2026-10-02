@@ -8,6 +8,7 @@ import {
   UpdateNodePayload,
   NodePatchPayload,
   ConnectPointsPayload,
+  ConnectChainPayload,
   SelectedNodeInfo,
   MagnetPosition,
   ConnectorStrokePattern,
@@ -25,6 +26,7 @@ import {
   supportsOption,
   getMutationTargets,
   ConnectedConnectorDetail,
+  MultiNodeConnectorDetail,
 } from './types';
 import {
   createOrthogonalVectorConnector,
@@ -36,6 +38,7 @@ import {
   cleanupGhostTerminalMarkers,
   Box,
 } from './customConnector';
+import { orderNodesForChain, makePairKey } from './chainOrder';
 
 // RGB 객체를 6자리 HEX 문자열로 변환하는 헬퍼
 function rgbToHexColor(rgb: RGB): string {
@@ -1245,6 +1248,71 @@ function sortNodesBySpatialPosition(nodes: SceneNode[]): SceneNode[] {
   });
 }
 
+// 선택된 노드들 사이의 기존 커넥터 Pair Key Set 수집 (findAll 1회 수행)
+function buildPairKeySet(nodeIds: string[]): Set<string> {
+  const nodeIdSet = new Set(nodeIds);
+  const pairKeys = new Set<string>();
+  if (nodeIdSet.size < 2) return pairKeys;
+
+  const connectors = figma.currentPage.findAll((n) => {
+    try {
+      if (!n) return false;
+      if (n.type === 'CONNECTOR') {
+        const conn = n as ConnectorNode;
+        const sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
+        const tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
+        return Boolean(sId && tId && nodeIdSet.has(sId) && nodeIdSet.has(tId) && sId !== tId);
+      }
+      if (n.type === 'GROUP' || n.type === 'VECTOR') {
+        const isCustom = safeGetPluginData(n, 'is_custom_connector') === 'true' || safeGetPluginData(n, 'is_flow_connector') === 'true';
+        if (!isCustom) return false;
+        if (safeGetPluginData(n, 'is_connector_label') === 'true' || n.name === 'ConnectorLabel') return false;
+
+        let sId = safeGetPluginData(n, 'source_node_id');
+        let tId = safeGetPluginData(n, 'target_node_id');
+        if ((!sId || !tId) && n.type === 'GROUP') {
+          const vChild = (n as GroupNode).findOne((child) => child.type === 'VECTOR');
+          if (vChild) {
+            sId = sId || safeGetPluginData(vChild, 'source_node_id');
+            tId = tId || safeGetPluginData(vChild, 'target_node_id');
+          }
+        }
+        return Boolean(sId && tId && nodeIdSet.has(sId) && nodeIdSet.has(tId) && sId !== tId);
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  });
+
+  for (const rawConn of connectors) {
+    let sId: string | undefined;
+    let tId: string | undefined;
+
+    if (rawConn.type === 'CONNECTOR') {
+      const conn = rawConn as ConnectorNode;
+      sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
+      tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
+    } else {
+      sId = safeGetPluginData(rawConn, 'source_node_id');
+      tId = safeGetPluginData(rawConn, 'target_node_id');
+      if ((!sId || !tId) && rawConn.type === 'GROUP') {
+        const vChild = (rawConn as GroupNode).findOne((child) => child.type === 'VECTOR');
+        if (vChild) {
+          sId = sId || safeGetPluginData(vChild, 'source_node_id');
+          tId = tId || safeGetPluginData(vChild, 'target_node_id');
+        }
+      }
+    }
+
+    if (sId && tId && nodeIdSet.has(sId) && nodeIdSet.has(tId) && sId !== tId) {
+      pairKeys.add(makePairKey(sId, tId));
+    }
+  }
+
+  return pairKeys;
+}
+
 // 선택 영역 변경 감지 시 UI 갱신 (바탕화면 클릭 ➔ 빈 폼 / 노드 클릭 ➔ 상세 수정 폼)
 async function handleSelectionChange() {
   await loadRequiredFonts();
@@ -1303,9 +1371,11 @@ async function handleSelectionChange() {
     uniqueNodes = otherObjects;
   }
 
-  // 복수 노드 선택 시 캔버스 상의 2D 공간 배치에 따라 상대적으로 위쪽 혹은 왼쪽 노드가 앞(기즈모 왼쪽)에 오도록 정렬
-  if (uniqueNodes.length > 1) {
+  // 복수 노드 선택 시: 2개 노드는 기존 가로/세로 우선 정렬, 3개 이상은 행 묶음 기반 순차 체인 정렬
+  if (uniqueNodes.length === 2) {
     uniqueNodes = sortNodesBySpatialPosition(uniqueNodes);
+  } else if (uniqueNodes.length >= 3) {
+    uniqueNodes = orderNodesForChain(uniqueNodes);
   }
 
   // 커넥터 선택 시 연결된 엔드포인트 노드들을 캔버스 2D 공간 배치(위/왼쪽 우선)로 정렬하여 수집
@@ -1841,8 +1911,8 @@ async function handleSelectionChange() {
     // 커넥터 선택 시: 해당 커넥터의 실제 연결 포인트(마그넷)를 기즈모에 연동
     suggestedSourceMagnet = nodes[0].connectorSourceMagnet;
     suggestedTargetMagnet = nodes[0].connectorTargetMagnet;
-  } else if (uniqueNodes.length >= 2 && connectorCount === 0) {
-    // 2개 이상의 노드 선택 시: 선택된 노드들 사이에 이미 연결되어 있는 커넥터 탐색
+  } else if (uniqueNodes.length === 2 && connectorCount === 0) {
+    // 2개 노드 선택 시: 선택된 두 노드 사이에 이미 연결되어 있는 커넥터 탐색 (기존 2-node 로직 보존)
     const sourceId = uniqueNodes[0].id;
     const targetIds = uniqueNodes.slice(1).map((n) => n.id);
 
@@ -1971,6 +2041,167 @@ async function handleSelectionChange() {
       hasExistingConnection: connectedConnectorCount > 0,
       connectedConnectorIds,
       connectedConnectors,
+    });
+    return;
+  } else if (uniqueNodes.length >= 3) {
+    // 3개 이상 노드 선택 시: 순차 체인 기준 인접 Pair 검사 및 상태 집계
+    const orderedNodeIds = uniqueNodes.map((n) => n.id);
+    const existingPairKeys = buildPairKeySet(orderedNodeIds);
+
+    let chainTotalPairs = 0;
+    let chainConnectedPairs = 0;
+
+    for (let i = 0; i < orderedNodeIds.length - 1; i++) {
+      chainTotalPairs++;
+      const pKey = makePairKey(orderedNodeIds[i], orderedNodeIds[i + 1]);
+      if (existingPairKeys.has(pKey)) {
+        chainConnectedPairs++;
+      }
+    }
+
+    const chainMissingPairs = chainTotalPairs - chainConnectedPairs;
+    const hasExistingConnection = chainMissingPairs === 0;
+
+    // 선택된 노드들 사이에 실제로 연결된 커넥터 탐색 (체인 여부 무관, Gizmo 상태용)
+    const selectedNodeIdSet = new Set(uniqueNodes.map((n) => n.id));
+    const allPageConnectors = figma.currentPage.findAll((n) => n.type === 'CONNECTOR');
+    console.log('[DEBUG 3+ allPageConnectors on page]', {
+      selectedNodeIds: Array.from(selectedNodeIdSet),
+      allPageConnectorsCount: allPageConnectors.length,
+      allPageConnectors: allPageConnectors.map((n) => {
+        const c = n as ConnectorNode;
+        const sId = c.connectorStart && 'endpointNodeId' in c.connectorStart ? c.connectorStart.endpointNodeId : undefined;
+        const tId = c.connectorEnd && 'endpointNodeId' in c.connectorEnd ? c.connectorEnd.endpointNodeId : undefined;
+        return {
+          id: c.id,
+          sId,
+          tId,
+          sInSet: sId ? selectedNodeIdSet.has(sId) : false,
+          tInSet: tId ? selectedNodeIdSet.has(tId) : false,
+        };
+      }),
+    });
+
+    const foundConnectors = figma.currentPage.findAll((n) => {
+      try {
+        if (!n) return false;
+        if (n.type === 'CONNECTOR') {
+          const conn = n as ConnectorNode;
+          const sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
+          const tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
+          return Boolean(sId && tId && selectedNodeIdSet.has(sId) && selectedNodeIdSet.has(tId));
+        }
+        if (n.type === 'GROUP' || n.type === 'VECTOR') {
+          const isCustom = safeGetPluginData(n, 'is_custom_connector') === 'true' || safeGetPluginData(n, 'is_flow_connector') === 'true';
+          if (!isCustom) return false;
+          let sId = safeGetPluginData(n, 'source_node_id');
+          let tId = safeGetPluginData(n, 'target_node_id');
+          if ((!sId || !tId) && n.type === 'GROUP') {
+            const vChild = (n as GroupNode).findOne((child) => child.type === 'VECTOR');
+            if (vChild) {
+              sId = sId || safeGetPluginData(vChild, 'source_node_id');
+              tId = tId || safeGetPluginData(vChild, 'target_node_id');
+            }
+          }
+          return Boolean(sId && tId && selectedNodeIdSet.has(sId) && selectedNodeIdSet.has(tId));
+        }
+        return false;
+      } catch (_) {
+        return false;
+      }
+    });
+
+    const uniqueConnectorsMap = new Map<string, SceneNode>();
+    for (const rawConn of foundConnectors) {
+      const topConn = findConnectorNode(rawConn) || (rawConn as SceneNode);
+      if (topConn) {
+        uniqueConnectorsMap.set(topConn.id, topConn);
+      }
+    }
+
+    const multiNodeConnectors: MultiNodeConnectorDetail[] = [];
+    for (const c of Array.from(uniqueConnectorsMap.values())) {
+      let sId: string | undefined;
+      let tId: string | undefined;
+      let sMag: MagnetPosition | undefined;
+      let tMag: MagnetPosition | undefined;
+
+      if (c.type === 'CONNECTOR') {
+        const conn = c as ConnectorNode;
+        sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
+        tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
+        sMag = (conn.connectorStart && 'magnet' in conn.connectorStart ? conn.connectorStart.magnet : undefined) as MagnetPosition | undefined;
+        tMag = (conn.connectorEnd && 'magnet' in conn.connectorEnd ? conn.connectorEnd.magnet : undefined) as MagnetPosition | undefined;
+      } else {
+        sId = safeGetPluginData(c, 'source_node_id') || undefined;
+        tId = safeGetPluginData(c, 'target_node_id') || undefined;
+        sMag = (safeGetPluginData(c, 'source_magnet') as MagnetPosition) || undefined;
+        tMag = (safeGetPluginData(c, 'target_magnet') as MagnetPosition) || undefined;
+        if ((!sMag || !tMag || !sId || !tId) && c.type === 'GROUP') {
+          const vChild = (c as GroupNode).findOne((child) => child.type === 'VECTOR');
+          if (vChild) {
+            sId = sId || safeGetPluginData(vChild, 'source_node_id') || undefined;
+            tId = tId || safeGetPluginData(vChild, 'target_node_id') || undefined;
+            sMag = sMag || (safeGetPluginData(vChild, 'source_magnet') as MagnetPosition) || undefined;
+            tMag = tMag || (safeGetPluginData(vChild, 'target_magnet') as MagnetPosition) || undefined;
+          }
+        }
+      }
+
+      if (sId && tId) {
+        multiNodeConnectors.push({
+          id: c.id,
+          sourceId: sId,
+          targetId: tId,
+          sourceMagnet: sMag,
+          targetMagnet: tMag,
+        });
+      }
+    }
+
+    console.log('[3+ Connector Collection Trace]', {
+      selectedNodeIds: Array.from(selectedNodeIdSet),
+      uniqueNodesLength: uniqueNodes.length,
+      connectorCount,
+      foundConnectorsLength: foundConnectors.length,
+      foundConnectors: foundConnectors.map((c) => {
+        if (c.type === 'CONNECTOR') {
+          const conn = c as ConnectorNode;
+          return {
+            id: conn.id,
+            connectorStart: conn.connectorStart,
+            connectorEnd: conn.connectorEnd,
+            startEndpointNodeId: conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined,
+            endEndpointNodeId: conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined,
+          };
+        }
+        return { id: c.id, type: c.type };
+      }),
+      multiNodeConnectors,
+    });
+
+    postToUI({
+      type: 'SELECTION_CHANGED',
+      count: flowNodeCount + otherObjectCount + connectorCount,
+      nodes,
+      currentStatus,
+      nextSuggestedTag: getNextFlowTag(),
+      flowNodeCount,
+      otherObjectCount,
+      connectorCount,
+      suggestedSourceMagnet: undefined,
+      suggestedTargetMagnet: undefined,
+      existingSourceMagnets: [],
+      existingTargetMagnets: [],
+      connectedConnectorCount: chainConnectedPairs,
+      hasExistingConnection,
+      connectedConnectorIds: [],
+      connectedConnectors: [],
+      orderedNodeIds,
+      chainTotalPairs,
+      chainConnectedPairs,
+      chainMissingPairs,
+      multiNodeConnectors,
     });
     return;
   }
@@ -4776,6 +5007,123 @@ async function autoConnectSelected(label?: string) {
   }
 }
 
+// 3+ 노드 순차 체인 연결 (인접 Pair 단위 optimal magnet 생성, 기존 Pair skip, 순차 await)
+async function connectChain(payload: ConnectChainPayload) {
+  try {
+    const rawIds = payload.orderedNodeIds || [];
+    // 1. orderedNodeIds 중복 제거
+    const uniqueIds: string[] = [];
+    const seen = new Set<string>();
+    for (const id of rawIds) {
+      if (!seen.has(id)) {
+        seen.add(id);
+        uniqueIds.push(id);
+      }
+    }
+
+    // 2. node 존재 여부 검증 및 플로우 노드 매핑
+    const validNodes: SceneNode[] = [];
+    for (const id of uniqueIds) {
+      const node = figma.getNodeById(id) as SceneNode | null;
+      if (node) {
+        const flowNode = findFlowNode(node) || node;
+        validNodes.push(flowNode);
+      }
+    }
+
+    // 3. 유효 node가 2개 미만이면 종료
+    if (validNodes.length < 2) {
+      notify('연결할 노드를 2개 이상 선택해 주세요.', 'warning');
+      return;
+    }
+
+    await loadRequiredFonts();
+
+    // 4. buildPairKeySet 1회 수행
+    const validNodeIds = validNodes.map((n) => n.id);
+    const existingPairKeys = buildPairKeySet(validNodeIds);
+
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    // 5. 인접 Pair를 순서대로 처리
+    for (let i = 0; i < validNodes.length - 1; i++) {
+      const srcNode = validNodes[i];
+      const tgtNode = validNodes[i + 1];
+
+      // 동일 노드 간 연결 방지
+      if (srcNode.id === tgtNode.id) {
+        continue;
+      }
+
+      const pKey = makePairKey(srcNode.id, tgtNode.id);
+
+      // 기존 Pair는 skip (기존 connector 절대 수정 안함)
+      if (existingPairKeys.has(pKey)) {
+        skippedCount++;
+        continue;
+      }
+
+      // 새 Pair 생성: getOptimalMagnetPair로 최적 마그넷 계산
+      const srcBox: Box = {
+        x: srcNode.x,
+        y: srcNode.y,
+        width: srcNode.width,
+        height: srcNode.height,
+      };
+      const tgtBox: Box = {
+        x: tgtNode.x,
+        y: tgtNode.y,
+        width: tgtNode.width,
+        height: tgtNode.height,
+      };
+      const optimal = getOptimalMagnetPair(srcBox, tgtBox);
+
+      // Terminal / Label 규칙:
+      // 첫 번째 커넥터(i === 0): 전달된 startTerminal, 전달된 endTerminal, 전달된 label
+      // 이후 커넥터(i > 0): startTerminal = 'NONE', 전달된 endTerminal, label = undefined
+      const isFirstPair = i === 0;
+      const startTerminal = isFirstPair ? (payload.startTerminal || 'NONE') : 'NONE';
+      const endTerminal = payload.endTerminal || 'ARROW';
+      const label = isFirstPair ? payload.label : undefined;
+
+      await createSingleConnector(
+        srcNode,
+        optimal.sourceMagnet,
+        tgtNode,
+        optimal.targetMagnet,
+        label,
+        payload.colorHex,
+        payload.strokeWeight,
+        payload.routingType,
+        startTerminal,
+        endTerminal,
+        payload.strokePattern,
+        payload.startOffset,
+        payload.endOffset
+      );
+
+      existingPairKeys.add(pKey);
+      createdCount++;
+    }
+
+    // 결과 집계 및 Core 알림
+    if (createdCount === 0 && skippedCount > 0) {
+      notify('모든 연결이 이미 존재합니다.', 'info');
+    } else if (createdCount > 0 && skippedCount > 0) {
+      notify(`${createdCount}개 연결 완료 (${skippedCount}개는 이미 연결됨)`, 'success');
+    } else if (createdCount > 0) {
+      notify(`${createdCount}개 연결 완료`, 'success');
+    }
+
+    // Selection 처리: createSingleConnector는 selection을 변경하지 않으므로 기존 노드 선택이 유지됨.
+    // 생성 완료 후 handleSelectionChange를 정확히 1회 호출하여 최신 체인 상태 동기화
+    await handleSelectionChange();
+  } catch (err) {
+    notify(`체인 연결 실패: ${String(err)}`, 'error');
+  }
+}
+
 // 커넥터(선) 중앙 텍스트 수정 기능
 async function updateConnectorLabel(connectorId: string, label: string) {
   try {
@@ -6143,6 +6491,9 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       break;
     case 'CONNECT_POINTS':
       await connectPoints(msg.payload);
+      break;
+    case 'CONNECT_CHAIN':
+      await connectChain(msg.payload);
       break;
     case 'AUTO_CONNECT_SELECTED':
       await autoConnectSelected(msg.label);

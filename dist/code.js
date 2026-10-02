@@ -1095,6 +1095,56 @@
     }
   }
 
+  // src/chainOrder.ts
+  var ROW_OVERLAP_THRESHOLD = 0.5;
+  function orderNodesForChain(nodes) {
+    if (nodes.length <= 1) return nodes;
+    const sorted = [...nodes].sort((a, b) => {
+      if (a.y !== b.y) return a.y - b.y;
+      if (a.x !== b.x) return a.x - b.x;
+      return a.id.localeCompare(b.id);
+    });
+    const rows = [];
+    for (const node of sorted) {
+      if (rows.length === 0) {
+        rows.push({
+          anchor: node,
+          nodes: [node]
+        });
+        continue;
+      }
+      const lastRow = rows[rows.length - 1];
+      const anchor = lastRow.anchor;
+      const topA = anchor.y;
+      const bottomA = anchor.y + anchor.height;
+      const topB = node.y;
+      const bottomB = node.y + node.height;
+      const overlap = Math.max(0, Math.min(bottomA, bottomB) - Math.max(topA, topB));
+      const referenceHeight = Math.min(anchor.height, node.height);
+      if (overlap >= referenceHeight * ROW_OVERLAP_THRESHOLD) {
+        lastRow.nodes.push(node);
+      } else {
+        rows.push({
+          anchor: node,
+          nodes: [node]
+        });
+      }
+    }
+    const result = [];
+    for (const row of rows) {
+      row.nodes.sort((a, b) => {
+        if (a.x !== b.x) return a.x - b.x;
+        if (a.y !== b.y) return a.y - b.y;
+        return a.id.localeCompare(b.id);
+      });
+      result.push(...row.nodes);
+    }
+    return result;
+  }
+  function makePairKey(idA, idB) {
+    return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+  }
+
   // src/code.ts
   function rgbToHexColor(rgb) {
     const toHex = (c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, "0");
@@ -2043,6 +2093,63 @@
       }
     });
   }
+  function buildPairKeySet(nodeIds) {
+    const nodeIdSet = new Set(nodeIds);
+    const pairKeys = /* @__PURE__ */ new Set();
+    if (nodeIdSet.size < 2) return pairKeys;
+    const connectors = figma.currentPage.findAll((n) => {
+      try {
+        if (!n) return false;
+        if (n.type === "CONNECTOR") {
+          const conn = n;
+          const sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
+          const tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
+          return Boolean(sId && tId && nodeIdSet.has(sId) && nodeIdSet.has(tId) && sId !== tId);
+        }
+        if (n.type === "GROUP" || n.type === "VECTOR") {
+          const isCustom = safeGetPluginData2(n, "is_custom_connector") === "true" || safeGetPluginData2(n, "is_flow_connector") === "true";
+          if (!isCustom) return false;
+          if (safeGetPluginData2(n, "is_connector_label") === "true" || n.name === "ConnectorLabel") return false;
+          let sId = safeGetPluginData2(n, "source_node_id");
+          let tId = safeGetPluginData2(n, "target_node_id");
+          if ((!sId || !tId) && n.type === "GROUP") {
+            const vChild = n.findOne((child) => child.type === "VECTOR");
+            if (vChild) {
+              sId = sId || safeGetPluginData2(vChild, "source_node_id");
+              tId = tId || safeGetPluginData2(vChild, "target_node_id");
+            }
+          }
+          return Boolean(sId && tId && nodeIdSet.has(sId) && nodeIdSet.has(tId) && sId !== tId);
+        }
+        return false;
+      } catch (_) {
+        return false;
+      }
+    });
+    for (const rawConn of connectors) {
+      let sId;
+      let tId;
+      if (rawConn.type === "CONNECTOR") {
+        const conn = rawConn;
+        sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
+        tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
+      } else {
+        sId = safeGetPluginData2(rawConn, "source_node_id");
+        tId = safeGetPluginData2(rawConn, "target_node_id");
+        if ((!sId || !tId) && rawConn.type === "GROUP") {
+          const vChild = rawConn.findOne((child) => child.type === "VECTOR");
+          if (vChild) {
+            sId = sId || safeGetPluginData2(vChild, "source_node_id");
+            tId = tId || safeGetPluginData2(vChild, "target_node_id");
+          }
+        }
+      }
+      if (sId && tId && nodeIdSet.has(sId) && nodeIdSet.has(tId) && sId !== tId) {
+        pairKeys.add(makePairKey(sId, tId));
+      }
+    }
+    return pairKeys;
+  }
   async function handleSelectionChange() {
     await loadRequiredFonts();
     const rawSelection = figma.currentPage.selection;
@@ -2084,8 +2191,10 @@
     } else {
       uniqueNodes = otherObjects;
     }
-    if (uniqueNodes.length > 1) {
+    if (uniqueNodes.length === 2) {
       uniqueNodes = sortNodesBySpatialPosition(uniqueNodes);
+    } else if (uniqueNodes.length >= 3) {
+      uniqueNodes = orderNodesForChain(uniqueNodes);
     }
     let multiConnectorSortedNodeNames = [];
     if (connectorCount > 0 && flowNodeCount === 0) {
@@ -2577,7 +2686,7 @@
     if (connectorCount === 1 && nodes.length > 0) {
       suggestedSourceMagnet = nodes[0].connectorSourceMagnet;
       suggestedTargetMagnet = nodes[0].connectorTargetMagnet;
-    } else if (uniqueNodes.length >= 2 && connectorCount === 0) {
+    } else if (uniqueNodes.length === 2 && connectorCount === 0) {
       const sourceId = uniqueNodes[0].id;
       const targetIds = uniqueNodes.slice(1).map((n) => n.id);
       const foundConnectors = figma.currentPage.findAll((n) => {
@@ -2692,6 +2801,154 @@
         hasExistingConnection: connectedConnectorCount > 0,
         connectedConnectorIds,
         connectedConnectors
+      });
+      return;
+    } else if (uniqueNodes.length >= 3) {
+      const orderedNodeIds = uniqueNodes.map((n) => n.id);
+      const existingPairKeys = buildPairKeySet(orderedNodeIds);
+      let chainTotalPairs = 0;
+      let chainConnectedPairs = 0;
+      for (let i = 0; i < orderedNodeIds.length - 1; i++) {
+        chainTotalPairs++;
+        const pKey = makePairKey(orderedNodeIds[i], orderedNodeIds[i + 1]);
+        if (existingPairKeys.has(pKey)) {
+          chainConnectedPairs++;
+        }
+      }
+      const chainMissingPairs = chainTotalPairs - chainConnectedPairs;
+      const hasExistingConnection = chainMissingPairs === 0;
+      const selectedNodeIdSet = new Set(uniqueNodes.map((n) => n.id));
+      const allPageConnectors = figma.currentPage.findAll((n) => n.type === "CONNECTOR");
+      console.log("[DEBUG 3+ allPageConnectors on page]", {
+        selectedNodeIds: Array.from(selectedNodeIdSet),
+        allPageConnectorsCount: allPageConnectors.length,
+        allPageConnectors: allPageConnectors.map((n) => {
+          const c = n;
+          const sId = c.connectorStart && "endpointNodeId" in c.connectorStart ? c.connectorStart.endpointNodeId : void 0;
+          const tId = c.connectorEnd && "endpointNodeId" in c.connectorEnd ? c.connectorEnd.endpointNodeId : void 0;
+          return {
+            id: c.id,
+            sId,
+            tId,
+            sInSet: sId ? selectedNodeIdSet.has(sId) : false,
+            tInSet: tId ? selectedNodeIdSet.has(tId) : false
+          };
+        })
+      });
+      const foundConnectors = figma.currentPage.findAll((n) => {
+        try {
+          if (!n) return false;
+          if (n.type === "CONNECTOR") {
+            const conn = n;
+            const sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
+            const tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
+            return Boolean(sId && tId && selectedNodeIdSet.has(sId) && selectedNodeIdSet.has(tId));
+          }
+          if (n.type === "GROUP" || n.type === "VECTOR") {
+            const isCustom = safeGetPluginData2(n, "is_custom_connector") === "true" || safeGetPluginData2(n, "is_flow_connector") === "true";
+            if (!isCustom) return false;
+            let sId = safeGetPluginData2(n, "source_node_id");
+            let tId = safeGetPluginData2(n, "target_node_id");
+            if ((!sId || !tId) && n.type === "GROUP") {
+              const vChild = n.findOne((child) => child.type === "VECTOR");
+              if (vChild) {
+                sId = sId || safeGetPluginData2(vChild, "source_node_id");
+                tId = tId || safeGetPluginData2(vChild, "target_node_id");
+              }
+            }
+            return Boolean(sId && tId && selectedNodeIdSet.has(sId) && selectedNodeIdSet.has(tId));
+          }
+          return false;
+        } catch (_) {
+          return false;
+        }
+      });
+      const uniqueConnectorsMap = /* @__PURE__ */ new Map();
+      for (const rawConn of foundConnectors) {
+        const topConn = findConnectorNode(rawConn) || rawConn;
+        if (topConn) {
+          uniqueConnectorsMap.set(topConn.id, topConn);
+        }
+      }
+      const multiNodeConnectors = [];
+      for (const c of Array.from(uniqueConnectorsMap.values())) {
+        let sId;
+        let tId;
+        let sMag;
+        let tMag;
+        if (c.type === "CONNECTOR") {
+          const conn = c;
+          sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
+          tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
+          sMag = conn.connectorStart && "magnet" in conn.connectorStart ? conn.connectorStart.magnet : void 0;
+          tMag = conn.connectorEnd && "magnet" in conn.connectorEnd ? conn.connectorEnd.magnet : void 0;
+        } else {
+          sId = safeGetPluginData2(c, "source_node_id") || void 0;
+          tId = safeGetPluginData2(c, "target_node_id") || void 0;
+          sMag = safeGetPluginData2(c, "source_magnet") || void 0;
+          tMag = safeGetPluginData2(c, "target_magnet") || void 0;
+          if ((!sMag || !tMag || !sId || !tId) && c.type === "GROUP") {
+            const vChild = c.findOne((child) => child.type === "VECTOR");
+            if (vChild) {
+              sId = sId || safeGetPluginData2(vChild, "source_node_id") || void 0;
+              tId = tId || safeGetPluginData2(vChild, "target_node_id") || void 0;
+              sMag = sMag || safeGetPluginData2(vChild, "source_magnet") || void 0;
+              tMag = tMag || safeGetPluginData2(vChild, "target_magnet") || void 0;
+            }
+          }
+        }
+        if (sId && tId) {
+          multiNodeConnectors.push({
+            id: c.id,
+            sourceId: sId,
+            targetId: tId,
+            sourceMagnet: sMag,
+            targetMagnet: tMag
+          });
+        }
+      }
+      console.log("[3+ Connector Collection Trace]", {
+        selectedNodeIds: Array.from(selectedNodeIdSet),
+        uniqueNodesLength: uniqueNodes.length,
+        connectorCount,
+        foundConnectorsLength: foundConnectors.length,
+        foundConnectors: foundConnectors.map((c) => {
+          if (c.type === "CONNECTOR") {
+            const conn = c;
+            return {
+              id: conn.id,
+              connectorStart: conn.connectorStart,
+              connectorEnd: conn.connectorEnd,
+              startEndpointNodeId: conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0,
+              endEndpointNodeId: conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0
+            };
+          }
+          return { id: c.id, type: c.type };
+        }),
+        multiNodeConnectors
+      });
+      postToUI({
+        type: "SELECTION_CHANGED",
+        count: flowNodeCount + otherObjectCount + connectorCount,
+        nodes,
+        currentStatus,
+        nextSuggestedTag: getNextFlowTag(),
+        flowNodeCount,
+        otherObjectCount,
+        connectorCount,
+        suggestedSourceMagnet: void 0,
+        suggestedTargetMagnet: void 0,
+        existingSourceMagnets: [],
+        existingTargetMagnets: [],
+        connectedConnectorCount: chainConnectedPairs,
+        hasExistingConnection,
+        connectedConnectorIds: [],
+        connectedConnectors: [],
+        orderedNodeIds,
+        chainTotalPairs,
+        chainConnectedPairs,
+        chainMissingPairs,
+        multiNodeConnectors
       });
       return;
     }
@@ -5182,6 +5439,92 @@
       notify(`\uC21C\uCC28 \uC790\uB3D9 \uC5F0\uACB0 \uC2E4\uD328: ${String(err)}`, "error");
     }
   }
+  async function connectChain(payload) {
+    try {
+      const rawIds = payload.orderedNodeIds || [];
+      const uniqueIds = [];
+      const seen = /* @__PURE__ */ new Set();
+      for (const id of rawIds) {
+        if (!seen.has(id)) {
+          seen.add(id);
+          uniqueIds.push(id);
+        }
+      }
+      const validNodes = [];
+      for (const id of uniqueIds) {
+        const node = figma.getNodeById(id);
+        if (node) {
+          const flowNode = findFlowNode(node) || node;
+          validNodes.push(flowNode);
+        }
+      }
+      if (validNodes.length < 2) {
+        notify("\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+        return;
+      }
+      await loadRequiredFonts();
+      const validNodeIds = validNodes.map((n) => n.id);
+      const existingPairKeys = buildPairKeySet(validNodeIds);
+      let createdCount = 0;
+      let skippedCount = 0;
+      for (let i = 0; i < validNodes.length - 1; i++) {
+        const srcNode = validNodes[i];
+        const tgtNode = validNodes[i + 1];
+        if (srcNode.id === tgtNode.id) {
+          continue;
+        }
+        const pKey = makePairKey(srcNode.id, tgtNode.id);
+        if (existingPairKeys.has(pKey)) {
+          skippedCount++;
+          continue;
+        }
+        const srcBox = {
+          x: srcNode.x,
+          y: srcNode.y,
+          width: srcNode.width,
+          height: srcNode.height
+        };
+        const tgtBox = {
+          x: tgtNode.x,
+          y: tgtNode.y,
+          width: tgtNode.width,
+          height: tgtNode.height
+        };
+        const optimal = getOptimalMagnetPair(srcBox, tgtBox);
+        const isFirstPair = i === 0;
+        const startTerminal = isFirstPair ? payload.startTerminal || "NONE" : "NONE";
+        const endTerminal = payload.endTerminal || "ARROW";
+        const label = isFirstPair ? payload.label : void 0;
+        await createSingleConnector(
+          srcNode,
+          optimal.sourceMagnet,
+          tgtNode,
+          optimal.targetMagnet,
+          label,
+          payload.colorHex,
+          payload.strokeWeight,
+          payload.routingType,
+          startTerminal,
+          endTerminal,
+          payload.strokePattern,
+          payload.startOffset,
+          payload.endOffset
+        );
+        existingPairKeys.add(pKey);
+        createdCount++;
+      }
+      if (createdCount === 0 && skippedCount > 0) {
+        notify("\uBAA8\uB4E0 \uC5F0\uACB0\uC774 \uC774\uBBF8 \uC874\uC7AC\uD569\uB2C8\uB2E4.", "info");
+      } else if (createdCount > 0 && skippedCount > 0) {
+        notify(`${createdCount}\uAC1C \uC5F0\uACB0 \uC644\uB8CC (${skippedCount}\uAC1C\uB294 \uC774\uBBF8 \uC5F0\uACB0\uB428)`, "success");
+      } else if (createdCount > 0) {
+        notify(`${createdCount}\uAC1C \uC5F0\uACB0 \uC644\uB8CC`, "success");
+      }
+      await handleSelectionChange();
+    } catch (err) {
+      notify(`\uCCB4\uC778 \uC5F0\uACB0 \uC2E4\uD328: ${String(err)}`, "error");
+    }
+  }
   async function updateConnectorLabel(connectorId, label) {
     try {
       let node = figma.getNodeById(connectorId);
@@ -6247,6 +6590,9 @@
         break;
       case "CONNECT_POINTS":
         await connectPoints(msg.payload);
+        break;
+      case "CONNECT_CHAIN":
+        await connectChain(msg.payload);
         break;
       case "AUTO_CONNECT_SELECTED":
         await autoConnectSelected(msg.label);

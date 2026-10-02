@@ -4,6 +4,7 @@ import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { ConnectorTerminalType, MagnetPosition } from '../../../types';
 import { IcPalette, COLOR_MIXED_ICON } from '../shared/icons';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
+import { computeGizmoMagnets } from '../../utils/gizmoState';
 
 // ============================================================
 // Figma UI3 공식 킷 기반 커넥터 터미널 옵션 및 SVG
@@ -759,29 +760,32 @@ export function ConnectSection() {
     }
   }
 
-  // 커넥터 기즈모 마그넷 Mixed 상태 계산 (여러 커넥터의 End/Start 연결 위치가 서로 다른 경우)
-  // 단, 사용자가 명시적으로 기즈모 위치를 선택한 경우(userPending)에는 Mixed가 해제되고 선택 위치가 단일 active로 표시됨
+  // 커넥터 기즈모 마그넷 상태 계산 (0개: Default, 1개: Active, 2개 이상: Mixed)
+  // Connector Color와 Gizmo Color를 분리하고, isReversed를 올바르게 반영
   const hasExisting = Boolean(uiState.hasExistingConnection);
-  const existingSrcs = uiState.existingSourceMagnets || [];
-  const existingTgts = uiState.existingTargetMagnets || [];
+  const is3PlusNodes = selectedNodes.length >= 3 && !summary.isSingleConnector && !summary.isMultiConnector;
+  const gizmoResult = computeGizmoMagnets({
+    isMultiConnector: summary.isMultiConnector,
+    isSingleConnector: summary.isSingleConnector,
+    connectorNodes: selectedNodes,
+    hasExistingConnection: hasExisting,
+    connectedConnectors: uiState.connectedConnectors,
+    userPendingSourceMagnet,
+    userPendingTargetMagnet,
+    is3PlusNodes,
+    startNodeId: selectedNodes[0]?.id,
+    multiNodeConnectors: uiState.multiNodeConnectors,
+  });
 
-  const isEndMixed = !userPendingTargetMagnet && (
-    (summary.isMultiConnector && summary.connectorTargetMagnet.isMixed) ||
-    (hasExisting && existingTgts.length > 1)
-  );
-  const endMagnets: MagnetPosition[] = summary.isMultiConnector
-    ? (selectedNodes.filter(n => n && n.isConnector).map(n => n.connectorTargetMagnet).filter(Boolean) as MagnetPosition[])
-    : (hasExisting ? existingTgts : []);
-
-  const isStartMixed = !userPendingSourceMagnet && (
-    (summary.isMultiConnector && summary.connectorSourceMagnet.isMixed) ||
-    (hasExisting && existingSrcs.length > 1)
-  );
-  const startMagnets: MagnetPosition[] = summary.isMultiConnector
-    ? (selectedNodes.filter(n => n && n.isConnector).map(n => n.connectorSourceMagnet).filter(Boolean) as MagnetPosition[])
-    : (hasExisting ? existingSrcs : []);
-
-  const gizmoHighlightColor = selectedColor || uiState.selectedConnectorColor || '#000000';
+  if (is3PlusNodes) {
+    console.log('[DEBUG ConnectSection 3+ Gizmo]', {
+      selectedNodeIds: selectedNodes.map((n) => n.id),
+      startNodeId: selectedNodes[0]?.id,
+      multiNodeConnectors: uiState.multiNodeConnectors,
+      gizmoResultStart: gizmoResult.start,
+      gizmoResultEnd: gizmoResult.end,
+    });
+  }
 
   const ROUTING_TYPES = [
     { type: 'ORTHOGONAL', title: '직각 (Orthogonal)', svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
@@ -919,20 +923,19 @@ export function ConnectSection() {
         <div
           className="connect-canvas-box"
           id="conn-anchor-preview-box"
-          style={{ '--gizmo-highlight-color': gizmoHighlightColor } as React.CSSProperties}
         >
           <div className="node-preview-card" id="preview-node-1">
             {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => {
-              const isMixed = isStartMixed && startMagnets.includes(pos);
-              const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
-              const isActive = !isStartMixed && effectiveSource === pos;
+              const state = gizmoResult.start.magnetStates[pos];
+              const isActive = state === 'active';
+              const isMixed = state === 'mixed';
               return (
                 <div
                   key={pos}
                   className={`anchor-handle anchor-${pos.toLowerCase()}${isActive ? ' active' : ''}${isMixed ? ' mixed' : ''}`}
                   data-node="1"
                   data-pos={pos}
-                  title={isMixed ? `Source ${pos} (Mixed)` : `Source ${pos}`}
+                  title={isMixed ? `Source ${pos} (Mixed)` : (isActive ? `Source ${pos} (Active)` : `Source ${pos}`)}
                   onClick={() => selectAnchor(1, pos)}
                 />
               );
@@ -943,16 +946,16 @@ export function ConnectSection() {
           </div>
           <div className="node-preview-card" id="preview-node-2">
             {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => {
-              const isMixed = isEndMixed && endMagnets.includes(pos);
-              const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
-              const isActive = !isEndMixed && effectiveTarget === pos;
+              const state = gizmoResult.end.magnetStates[pos];
+              const isActive = state === 'active';
+              const isMixed = state === 'mixed';
               return (
                 <div
                   key={pos}
                   className={`anchor-handle anchor-${pos.toLowerCase()}${isActive ? ' active' : ''}${isMixed ? ' mixed' : ''}`}
                   data-node="2"
                   data-pos={pos}
-                  title={isMixed ? `Target ${pos} (Mixed)` : `Target ${pos}`}
+                  title={isMixed ? `Target ${pos} (Mixed)` : (isActive ? `Target ${pos} (Active)` : `Target ${pos}`)}
                   onClick={() => selectAnchor(2, pos)}
                 />
               );
@@ -962,6 +965,53 @@ export function ConnectSection() {
             </span>
           </div>
         </div>
+
+        {/* 임시 3+ Gizmo 디버그 패널 */}
+        {selectedNodes.length >= 3 && (
+          <div
+            style={{
+              margin: '8px 0',
+              padding: '8px 10px',
+              background: 'var(--color-bg-secondary, #f0f0f0)',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+              color: 'var(--color-text-primary, #111)',
+              border: '1px dashed var(--color-border, #ccc)',
+              lineHeight: '1.4',
+            }}
+          >
+            <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>[3+ Gizmo DEBUG]</div>
+            <div>startNodeId: {selectedNodes[0]?.id || '(none)'}</div>
+            <div>selectedNodeIds: {selectedNodes.map(n => n.id).join(', ') || '(none)'}</div>
+            <div style={{ marginTop: '6px', fontWeight: 'bold' }}>
+              multiNodeConnectors ({uiState.multiNodeConnectors?.length || 0}):
+            </div>
+            {(!uiState.multiNodeConnectors || uiState.multiNodeConnectors.length === 0) ? (
+              <div style={{ color: 'var(--color-text-tertiary, #888)' }}>  (none)</div>
+            ) : (
+              uiState.multiNodeConnectors.map((c, idx) => (
+                <div key={idx} style={{ marginLeft: '4px', marginTop: '4px' }}>
+                  {idx + 1}. {c.sourceId} → {c.targetId}
+                  <div>   sourceMagnet: {c.sourceMagnet || 'none'}</div>
+                  <div>   targetMagnet: {c.targetMagnet || 'none'}</div>
+                </div>
+              ))
+            )}
+            <div style={{ marginTop: '6px', fontWeight: 'bold' }}>gizmoResultStart:</div>
+            <div>  LEFT: {gizmoResult.start.magnetStates.LEFT}</div>
+            <div>  RIGHT: {gizmoResult.start.magnetStates.RIGHT}</div>
+            <div>  TOP: {gizmoResult.start.magnetStates.TOP}</div>
+            <div>  BOTTOM: {gizmoResult.start.magnetStates.BOTTOM}</div>
+            <div style={{ marginTop: '6px', fontWeight: 'bold' }}>gizmoResultEnd:</div>
+            <div>  LEFT: {gizmoResult.end.magnetStates.LEFT}</div>
+            <div>  RIGHT: {gizmoResult.end.magnetStates.RIGHT}</div>
+            <div>  TOP: {gizmoResult.end.magnetStates.TOP}</div>
+            <div>  BOTTOM: {gizmoResult.end.magnetStates.BOTTOM}</div>
+          </div>
+        )}
 
         {/* 두께 + 선 모양 */}
         <div style={{ display: 'flex', gap: '6px' }}>

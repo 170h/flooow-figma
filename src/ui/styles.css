@@ -2256,24 +2256,18 @@
     }
 
     .anchor-handle.active {
-      background: var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
-      border: 1px solid var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+      background: var(--color-primary, #8C4CF6) !important;
+      border: 1px solid var(--color-primary, #8C4CF6) !important;
     }
 
     .anchor-handle.active:hover {
       transform: scale(1.36);
     }
 
-    /* Mixed 상태 기즈모 핸들 (서로 다른 연결 위치 표시) */
+    /* Mixed 상태 기즈모 핸들 (Hollow/Ring 형태: Fill은 일반 Gizmo 배경, Border는 FigJam UI Active Color) */
     .anchor-handle.mixed {
-      background: repeating-linear-gradient(
-        -45deg,
-        var(--gizmo-highlight-color, var(--color-brand, #8638e5)),
-        var(--gizmo-highlight-color, var(--color-brand, #8638e5)) 2px,
-        var(--color-bg, #ffffff) 2px,
-        var(--color-bg, #ffffff) 5px
-      ) !important;
-      border: 1px solid var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+      background: var(--color-bg, #ffffff) !important;
+      border: 1px solid var(--color-primary, #8C4CF6) !important;
     }
 
     .anchor-handle.mixed:hover {
@@ -2331,14 +2325,8 @@
     body.figma-dark .anchor-handle.mixed,
     .figma-dark .anchor-handle.mixed,
     [data-theme="dark"] .anchor-handle.mixed {
-      background: repeating-linear-gradient(
-        -45deg,
-        var(--gizmo-highlight-color, var(--color-brand, #8638e5)),
-        var(--gizmo-highlight-color, var(--color-brand, #8638e5)) 2px,
-        #2c2c2c 2px,
-        #2c2c2c 5px
-      ) !important;
-      border-color: var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+      background: #2c2c2c !important;
+      border: 1px solid var(--color-primary, #8C4CF6) !important;
     }
 
     /* ============================================================ */

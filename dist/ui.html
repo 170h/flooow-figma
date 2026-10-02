@@ -2262,24 +2262,18 @@
     }
 
     .anchor-handle.active {
-      background: var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
-      border: 1px solid var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+      background: var(--color-primary, #8C4CF6) !important;
+      border: 1px solid var(--color-primary, #8C4CF6) !important;
     }
 
     .anchor-handle.active:hover {
       transform: scale(1.36);
     }
 
-    /* Mixed 상태 기즈모 핸들 (서로 다른 연결 위치 표시) */
+    /* Mixed 상태 기즈모 핸들 (Hollow/Ring 형태: Fill은 일반 Gizmo 배경, Border는 FigJam UI Active Color) */
     .anchor-handle.mixed {
-      background: repeating-linear-gradient(
-        -45deg,
-        var(--gizmo-highlight-color, var(--color-brand, #8638e5)),
-        var(--gizmo-highlight-color, var(--color-brand, #8638e5)) 2px,
-        var(--color-bg, #ffffff) 2px,
-        var(--color-bg, #ffffff) 5px
-      ) !important;
-      border: 1px solid var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+      background: var(--color-bg, #ffffff) !important;
+      border: 1px solid var(--color-primary, #8C4CF6) !important;
     }
 
     .anchor-handle.mixed:hover {
@@ -2337,14 +2331,8 @@
     body.figma-dark .anchor-handle.mixed,
     .figma-dark .anchor-handle.mixed,
     [data-theme="dark"] .anchor-handle.mixed {
-      background: repeating-linear-gradient(
-        -45deg,
-        var(--gizmo-highlight-color, var(--color-brand, #8638e5)),
-        var(--gizmo-highlight-color, var(--color-brand, #8638e5)) 2px,
-        #2c2c2c 2px,
-        #2c2c2c 5px
-      ) !important;
-      border-color: var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+      background: #2c2c2c !important;
+      border: 1px solid var(--color-primary, #8C4CF6) !important;
     }
 
     /* ============================================================ */
@@ -29073,7 +29061,8 @@
     connectedConnectorIds: [],
     connectedConnectors: [],
     existingSourceMagnets: [],
-    existingTargetMagnets: []
+    existingTargetMagnets: [],
+    multiNodeConnectors: []
   };
   var AppContext = (0, import_react2.createContext)(null);
   function useApp() {
@@ -30006,31 +29995,25 @@
           }
         }, "*");
       } else {
-        const src = nodes[0];
-        for (let i = 1; i < nodes.length; i++) {
-          const tgt = nodes[i];
-          parent.postMessage({
-            pluginMessage: {
-              type: "CONNECT_POINTS",
-              payload: {
-                sourceNodeId: src.id,
-                sourceMagnet: finalSourceMag,
-                targetNodeId: tgt.id,
-                targetMagnet: finalTargetMag,
-                label: i === 1 ? label : "",
-                colorHex: color,
-                strokeWeight: weight,
-                routingType: selectedRoutingType,
-                strokePattern: selectedLinePattern,
-                startTerminal: i === 1 ? startTerm : "NONE",
-                endTerminal: endTerm,
-                startOffset: startOff,
-                endOffset: endOff,
-                figmaLink: i === 1 ? figmaLink : ""
-              }
+        const orderedIds = uiStateRef.current.orderedNodeIds && uiStateRef.current.orderedNodeIds.length === nodes.length ? uiStateRef.current.orderedNodeIds : nodes.map((n) => n.id);
+        parent.postMessage({
+          pluginMessage: {
+            type: "CONNECT_CHAIN",
+            payload: {
+              orderedNodeIds: orderedIds,
+              label,
+              colorHex: color,
+              strokeWeight: weight,
+              routingType: selectedRoutingType,
+              strokePattern: selectedLinePattern,
+              startTerminal: startTerm,
+              endTerminal: endTerm,
+              startOffset: startOff,
+              endOffset: endOff,
+              figmaLink
             }
-          }, "*");
-        }
+          }
+        }, "*");
       }
     }, [applyCurrentConnectorState, showToast]);
     const updateConnectedConnectorMagnets = (0, import_react2.useCallback)((sourceMagnet, targetMagnet) => {
@@ -30486,11 +30469,16 @@
               existingTargetMagnets,
               connectedConnectorCount,
               hasExistingConnection,
-              connectedConnectorIds
+              connectedConnectorIds,
+              orderedNodeIds,
+              chainTotalPairs,
+              chainConnectedPairs,
+              chainMissingPairs
             } = msg;
             handleSelectionChange(count || 0, nodes || [], meta || {});
             const isConn = (meta?.connectorCount || 0) > 0 || nodes && nodes.some((n) => n?.isConnector);
-            const hasConnected = Boolean(hasExistingConnection || (connectedConnectorCount || 0) > 0);
+            const is3Plus = Boolean(nodes && nodes.length >= 3 && !isConn);
+            const hasConnected = is3Plus ? Boolean(hasExistingConnection) : Boolean(hasExistingConnection || (connectedConnectorCount || 0) > 0);
             const currentSelectionKey = (nodes || []).map((n) => n?.id).sort().join(",");
             const isDifferentNode = currentSelectionKey !== prevNodeIdRef.current;
             prevNodeIdRef.current = currentSelectionKey;
@@ -30502,7 +30490,12 @@
                 existingSourceMagnets: existingSourceMagnets || [],
                 existingTargetMagnets: existingTargetMagnets || [],
                 sourceMagnet: suggestedSourceMagnet || null,
-                targetMagnet: suggestedTargetMagnet || null
+                targetMagnet: suggestedTargetMagnet || null,
+                orderedNodeIds: orderedNodeIds || void 0,
+                chainTotalPairs: chainTotalPairs !== void 0 ? chainTotalPairs : void 0,
+                chainConnectedPairs: chainConnectedPairs !== void 0 ? chainConnectedPairs : void 0,
+                chainMissingPairs: chainMissingPairs !== void 0 ? chainMissingPairs : void 0,
+                multiNodeConnectors: msg.multiNodeConnectors || []
               });
             } else if (isDifferentNode) {
               setUIState({
@@ -30512,7 +30505,21 @@
                 existingSourceMagnets: [],
                 existingTargetMagnets: [],
                 sourceMagnet: null,
-                targetMagnet: null
+                targetMagnet: null,
+                orderedNodeIds: orderedNodeIds || void 0,
+                chainTotalPairs: chainTotalPairs !== void 0 ? chainTotalPairs : void 0,
+                chainConnectedPairs: chainConnectedPairs !== void 0 ? chainConnectedPairs : void 0,
+                chainMissingPairs: chainMissingPairs !== void 0 ? chainMissingPairs : void 0,
+                multiNodeConnectors: msg.multiNodeConnectors || []
+              });
+            } else {
+              setUIState({
+                hasExistingConnection: false,
+                orderedNodeIds: orderedNodeIds || void 0,
+                chainTotalPairs: chainTotalPairs !== void 0 ? chainTotalPairs : void 0,
+                chainConnectedPairs: chainConnectedPairs !== void 0 ? chainConnectedPairs : void 0,
+                chainMissingPairs: chainMissingPairs !== void 0 ? chainMissingPairs : void 0,
+                multiNodeConnectors: msg.multiNodeConnectors !== void 0 ? msg.multiNodeConnectors : void 0
               });
             }
             if (nodes && nodes.length === 1) {
@@ -34452,6 +34459,187 @@
 
   // src/ui/components/connection/ConnectSection.tsx
   var import_react14 = __toESM(require_react());
+
+  // src/ui/utils/gizmoState.ts
+  var ALL_MAGNETS = ["TOP", "RIGHT", "BOTTOM", "LEFT"];
+  function computeGizmoMagnets(input) {
+    const {
+      isMultiConnector,
+      isSingleConnector,
+      connectorNodes,
+      hasExistingConnection,
+      connectedConnectors,
+      userPendingSourceMagnet,
+      userPendingTargetMagnet,
+      is3PlusNodes,
+      startNodeId,
+      multiNodeConnectors
+    } = input;
+    function resolveSideStates(magnets, userPending) {
+      const magnetStates = {
+        TOP: "default",
+        RIGHT: "default",
+        BOTTOM: "default",
+        LEFT: "default"
+      };
+      const total = magnets.length;
+      const uniqueUsed = Array.from(new Set(magnets));
+      const magnetCounts = {
+        TOP: 0,
+        RIGHT: 0,
+        BOTTOM: 0,
+        LEFT: 0
+      };
+      magnets.forEach((mag) => {
+        magnetCounts[mag] = (magnetCounts[mag] || 0) + 1;
+      });
+      ALL_MAGNETS.forEach((mag) => {
+        const count = magnetCounts[mag];
+        if (count >= 2) {
+          magnetStates[mag] = "mixed";
+        } else if (count === 1) {
+          magnetStates[mag] = "active";
+        } else {
+          magnetStates[mag] = "default";
+        }
+      });
+      if (userPending) {
+        magnetStates[userPending] = "active";
+      }
+      return {
+        magnetStates,
+        usedMagnets: userPending ? Array.from(/* @__PURE__ */ new Set([...uniqueUsed, userPending])) : uniqueUsed,
+        totalConnections: total
+      };
+    }
+    function resolveMoreSideStates(incomingMags, outgoingMags, userPending) {
+      const magnetStates = {
+        TOP: "default",
+        RIGHT: "default",
+        BOTTOM: "default",
+        LEFT: "default"
+      };
+      const outgoingCounts = {
+        TOP: 0,
+        RIGHT: 0,
+        BOTTOM: 0,
+        LEFT: 0
+      };
+      outgoingMags.forEach((mag) => {
+        outgoingCounts[mag] = (outgoingCounts[mag] || 0) + 1;
+      });
+      const incomingSet = new Set(incomingMags);
+      ALL_MAGNETS.forEach((mag) => {
+        const outCount = outgoingCounts[mag];
+        const hasIn = incomingSet.has(mag);
+        if (outCount >= 2 || outCount >= 1 && hasIn) {
+          magnetStates[mag] = "mixed";
+        } else if (outCount === 1) {
+          magnetStates[mag] = "active";
+        } else if (hasIn) {
+          magnetStates[mag] = "mixed";
+        } else {
+          magnetStates[mag] = "default";
+        }
+      });
+      if (userPending) {
+        magnetStates[userPending] = "active";
+      }
+      const allUsed = Array.from(/* @__PURE__ */ new Set([...incomingMags, ...outgoingMags]));
+      return {
+        magnetStates,
+        usedMagnets: userPending ? Array.from(/* @__PURE__ */ new Set([...allUsed, userPending])) : allUsed,
+        totalConnections: incomingMags.length + outgoingMags.length
+      };
+    }
+    if (is3PlusNodes) {
+      let resolve3PlusGroupStates2 = function(magnets, userPending) {
+        const magnetStates = {
+          TOP: "default",
+          RIGHT: "default",
+          BOTTOM: "default",
+          LEFT: "default"
+        };
+        const total = magnets.length;
+        const uniqueUsed = Array.from(new Set(magnets));
+        if (total === 1) {
+          const onlyMag = magnets[0];
+          if (onlyMag) {
+            magnetStates[onlyMag] = "active";
+          }
+        } else if (total >= 2) {
+          uniqueUsed.forEach((mag) => {
+            magnetStates[mag] = "mixed";
+          });
+        }
+        if (userPending) {
+          magnetStates[userPending] = "active";
+        }
+        return {
+          magnetStates,
+          usedMagnets: userPending ? Array.from(/* @__PURE__ */ new Set([...uniqueUsed, userPending])) : uniqueUsed,
+          totalConnections: total
+        };
+      };
+      var resolve3PlusGroupStates = resolve3PlusGroupStates2;
+      const startMags2 = [];
+      const endMags2 = [];
+      const conns = multiNodeConnectors || [];
+      if (startNodeId) {
+        const startSourceConns = conns.filter((c) => c.sourceId === startNodeId && c.sourceMagnet);
+        const startTargetConns = conns.filter((c) => c.targetId === startNodeId && c.targetMagnet);
+        if (startSourceConns.length > 0) {
+          startSourceConns.forEach((c) => {
+            if (c.sourceMagnet) startMags2.push(c.sourceMagnet);
+          });
+        } else if (startTargetConns.length > 0) {
+          startTargetConns.forEach((c) => {
+            if (c.targetMagnet) startMags2.push(c.targetMagnet);
+          });
+        }
+        conns.forEach((conn) => {
+          if (conn.targetId !== startNodeId && conn.targetMagnet) {
+            endMags2.push(conn.targetMagnet);
+          }
+          if (conn.sourceId !== startNodeId && conn.sourceMagnet) {
+            endMags2.push(conn.sourceMagnet);
+          }
+        });
+      } else {
+        conns.forEach((conn) => {
+          if (conn.sourceMagnet) startMags2.push(conn.sourceMagnet);
+          if (conn.targetMagnet) endMags2.push(conn.targetMagnet);
+        });
+      }
+      return {
+        start: resolve3PlusGroupStates2(startMags2, userPendingSourceMagnet),
+        end: resolve3PlusGroupStates2(endMags2, userPendingTargetMagnet)
+      };
+    }
+    let startMags = [];
+    let endMags = [];
+    if (isMultiConnector || isSingleConnector) {
+      const conns = (connectorNodes || []).filter((n) => n && n.isConnector);
+      conns.forEach((c) => {
+        if (c.connectorSourceMagnet) startMags.push(c.connectorSourceMagnet);
+        if (c.connectorTargetMagnet) endMags.push(c.connectorTargetMagnet);
+      });
+    } else if (hasExistingConnection && connectedConnectors && connectedConnectors.length > 0) {
+      connectedConnectors.forEach((conn) => {
+        const isRev = Boolean(conn.isReversed);
+        const uiStart = isRev ? conn.targetMagnet : conn.sourceMagnet;
+        const uiEnd = isRev ? conn.sourceMagnet : conn.targetMagnet;
+        if (uiStart) startMags.push(uiStart);
+        if (uiEnd) endMags.push(uiEnd);
+      });
+    }
+    return {
+      start: resolveSideStates(startMags, userPendingSourceMagnet),
+      end: resolveSideStates(endMags, userPendingTargetMagnet)
+    };
+  }
+
+  // src/ui/components/connection/ConnectSection.tsx
   var import_jsx_runtime15 = __toESM(require_jsx_runtime());
   var TERMINAL_OPTIONS = [
     "NONE",
@@ -35083,13 +35271,28 @@
       }
     }
     const hasExisting = Boolean(uiState.hasExistingConnection);
-    const existingSrcs = uiState.existingSourceMagnets || [];
-    const existingTgts = uiState.existingTargetMagnets || [];
-    const isEndMixed = !userPendingTargetMagnet && (summary.isMultiConnector && summary.connectorTargetMagnet.isMixed || hasExisting && existingTgts.length > 1);
-    const endMagnets = summary.isMultiConnector ? selectedNodes.filter((n) => n && n.isConnector).map((n) => n.connectorTargetMagnet).filter(Boolean) : hasExisting ? existingTgts : [];
-    const isStartMixed = !userPendingSourceMagnet && (summary.isMultiConnector && summary.connectorSourceMagnet.isMixed || hasExisting && existingSrcs.length > 1);
-    const startMagnets = summary.isMultiConnector ? selectedNodes.filter((n) => n && n.isConnector).map((n) => n.connectorSourceMagnet).filter(Boolean) : hasExisting ? existingSrcs : [];
-    const gizmoHighlightColor = selectedColor || uiState.selectedConnectorColor || "#000000";
+    const is3PlusNodes = selectedNodes.length >= 3 && !summary.isSingleConnector && !summary.isMultiConnector;
+    const gizmoResult = computeGizmoMagnets({
+      isMultiConnector: summary.isMultiConnector,
+      isSingleConnector: summary.isSingleConnector,
+      connectorNodes: selectedNodes,
+      hasExistingConnection: hasExisting,
+      connectedConnectors: uiState.connectedConnectors,
+      userPendingSourceMagnet,
+      userPendingTargetMagnet,
+      is3PlusNodes,
+      startNodeId: selectedNodes[0]?.id,
+      multiNodeConnectors: uiState.multiNodeConnectors
+    });
+    if (is3PlusNodes) {
+      console.log("[DEBUG ConnectSection 3+ Gizmo]", {
+        selectedNodeIds: selectedNodes.map((n) => n.id),
+        startNodeId: selectedNodes[0]?.id,
+        multiNodeConnectors: uiState.multiNodeConnectors,
+        gizmoResultStart: gizmoResult.start,
+        gizmoResultEnd: gizmoResult.end
+      });
+    }
     const ROUTING_TYPES = [
       { type: "ORTHOGONAL", title: "\uC9C1\uAC01 (Orthogonal)", svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
       { type: "S_CURVE", title: "S\uC790 \uACE1\uC120 (S-curve)", svg: '<g clip-path="url(#clip_sc)"><path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
@@ -35222,20 +35425,19 @@
           {
             className: "connect-canvas-box",
             id: "conn-anchor-preview-box",
-            style: { "--gizmo-highlight-color": gizmoHighlightColor },
             children: [
               /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "node-preview-card", id: "preview-node-1", children: [
                 ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => {
-                  const isMixed = isStartMixed && startMagnets.includes(pos);
-                  const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
-                  const isActive = !isStartMixed && effectiveSource === pos;
+                  const state = gizmoResult.start.magnetStates[pos];
+                  const isActive = state === "active";
+                  const isMixed = state === "mixed";
                   return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
                     "div",
                     {
                       className: `anchor-handle anchor-${pos.toLowerCase()}${isActive ? " active" : ""}${isMixed ? " mixed" : ""}`,
                       "data-node": "1",
                       "data-pos": pos,
-                      title: isMixed ? `Source ${pos} (Mixed)` : `Source ${pos}`,
+                      title: isMixed ? `Source ${pos} (Mixed)` : isActive ? `Source ${pos} (Active)` : `Source ${pos}`,
                       onClick: () => selectAnchor(1, pos)
                     },
                     pos
@@ -35245,22 +35447,105 @@
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "node-preview-card", id: "preview-node-2", children: [
                 ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => {
-                  const isMixed = isEndMixed && endMagnets.includes(pos);
-                  const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
-                  const isActive = !isEndMixed && effectiveTarget === pos;
+                  const state = gizmoResult.end.magnetStates[pos];
+                  const isActive = state === "active";
+                  const isMixed = state === "mixed";
                   return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
                     "div",
                     {
                       className: `anchor-handle anchor-${pos.toLowerCase()}${isActive ? " active" : ""}${isMixed ? " mixed" : ""}`,
                       "data-node": "2",
                       "data-pos": pos,
-                      title: isMixed ? `Target ${pos} (Mixed)` : `Target ${pos}`,
+                      title: isMixed ? `Target ${pos} (Mixed)` : isActive ? `Target ${pos} (Active)` : `Target ${pos}`,
                       onClick: () => selectAnchor(2, pos)
                     },
                     pos
                   );
                 }),
                 /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { id: "preview-node-2-text", children: node2DisplayName })
+              ] })
+            ]
+          }
+        ),
+        selectedNodes.length >= 3 && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+          "div",
+          {
+            style: {
+              margin: "8px 0",
+              padding: "8px 10px",
+              background: "var(--color-bg-secondary, #f0f0f0)",
+              borderRadius: "6px",
+              fontSize: "11px",
+              fontFamily: "monospace",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
+              color: "var(--color-text-primary, #111)",
+              border: "1px dashed var(--color-border, #ccc)",
+              lineHeight: "1.4"
+            },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { style: { fontWeight: "bold", marginBottom: "6px" }, children: "[3+ Gizmo DEBUG]" }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "startNodeId: ",
+                selectedNodes[0]?.id || "(none)"
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "selectedNodeIds: ",
+                selectedNodes.map((n) => n.id).join(", ") || "(none)"
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { style: { marginTop: "6px", fontWeight: "bold" }, children: [
+                "multiNodeConnectors (",
+                uiState.multiNodeConnectors?.length || 0,
+                "):"
+              ] }),
+              !uiState.multiNodeConnectors || uiState.multiNodeConnectors.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { style: { color: "var(--color-text-tertiary, #888)" }, children: "  (none)" }) : uiState.multiNodeConnectors.map((c, idx) => /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { style: { marginLeft: "4px", marginTop: "4px" }, children: [
+                idx + 1,
+                ". ",
+                c.sourceId,
+                " \u2192 ",
+                c.targetId,
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                  "   sourceMagnet: ",
+                  c.sourceMagnet || "none"
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                  "   targetMagnet: ",
+                  c.targetMagnet || "none"
+                ] })
+              ] }, idx)),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { style: { marginTop: "6px", fontWeight: "bold" }, children: "gizmoResultStart:" }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "  LEFT: ",
+                gizmoResult.start.magnetStates.LEFT
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "  RIGHT: ",
+                gizmoResult.start.magnetStates.RIGHT
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "  TOP: ",
+                gizmoResult.start.magnetStates.TOP
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "  BOTTOM: ",
+                gizmoResult.start.magnetStates.BOTTOM
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { style: { marginTop: "6px", fontWeight: "bold" }, children: "gizmoResultEnd:" }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "  LEFT: ",
+                gizmoResult.end.magnetStates.LEFT
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "  RIGHT: ",
+                gizmoResult.end.magnetStates.RIGHT
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "  TOP: ",
+                gizmoResult.end.magnetStates.TOP
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { children: [
+                "  BOTTOM: ",
+                gizmoResult.end.magnetStates.BOTTOM
               ] })
             ]
           }

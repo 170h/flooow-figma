@@ -36,11 +36,18 @@ export function useFigmaMessage() {
             connectedConnectorCount,
             hasExistingConnection,
             connectedConnectorIds,
+            orderedNodeIds,
+            chainTotalPairs,
+            chainConnectedPairs,
+            chainMissingPairs,
           } = msg;
           handleSelectionChange(count || 0, nodes || [], meta || {});
 
           const isConn = (meta?.connectorCount || 0) > 0 || (nodes && nodes.some((n: any) => n?.isConnector));
-          const hasConnected = Boolean(hasExistingConnection || (connectedConnectorCount || 0) > 0);
+          const is3Plus = Boolean(nodes && nodes.length >= 3 && !isConn);
+          const hasConnected = is3Plus
+            ? Boolean(hasExistingConnection)
+            : Boolean(hasExistingConnection || (connectedConnectorCount || 0) > 0);
 
           const currentSelectionKey = (nodes || []).map((n: any) => n?.id).sort().join(',');
           const isDifferentNode = currentSelectionKey !== prevNodeIdRef.current;
@@ -56,6 +63,11 @@ export function useFigmaMessage() {
               existingTargetMagnets: existingTargetMagnets || [],
               sourceMagnet: suggestedSourceMagnet || null,
               targetMagnet: suggestedTargetMagnet || null,
+              orderedNodeIds: orderedNodeIds || undefined,
+              chainTotalPairs: chainTotalPairs !== undefined ? chainTotalPairs : undefined,
+              chainConnectedPairs: chainConnectedPairs !== undefined ? chainConnectedPairs : undefined,
+              chainMissingPairs: chainMissingPairs !== undefined ? chainMissingPairs : undefined,
+              multiNodeConnectors: msg.multiNodeConnectors || [],
             });
           } else if (isDifferentNode) {
             // 연결 없는 노드 선택 변경 시: 마그넷 미선택(null)으로 초기화
@@ -67,6 +79,21 @@ export function useFigmaMessage() {
               existingTargetMagnets: [],
               sourceMagnet: null,
               targetMagnet: null,
+              orderedNodeIds: orderedNodeIds || undefined,
+              chainTotalPairs: chainTotalPairs !== undefined ? chainTotalPairs : undefined,
+              chainConnectedPairs: chainConnectedPairs !== undefined ? chainConnectedPairs : undefined,
+              chainMissingPairs: chainMissingPairs !== undefined ? chainMissingPairs : undefined,
+              multiNodeConnectors: msg.multiNodeConnectors || [],
+            });
+          } else {
+            // 동일 노드 유지 상태에서 연결/체인 정보만 동기화
+            setUIState({
+              hasExistingConnection: false,
+              orderedNodeIds: orderedNodeIds || undefined,
+              chainTotalPairs: chainTotalPairs !== undefined ? chainTotalPairs : undefined,
+              chainConnectedPairs: chainConnectedPairs !== undefined ? chainConnectedPairs : undefined,
+              chainMissingPairs: chainMissingPairs !== undefined ? chainMissingPairs : undefined,
+              multiNodeConnectors: msg.multiNodeConnectors !== undefined ? msg.multiNodeConnectors : undefined,
             });
           }
 
