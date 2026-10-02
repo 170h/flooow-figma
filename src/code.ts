@@ -39,6 +39,10 @@ import {
   syncConnectorsForMovedNodes,
   getOptimalMagnetPair,
   cleanupGhostTerminalMarkers,
+  copyConnectorData,
+  getLabelPlacement,
+  calculateRoutingPoints,
+  getMagnetPoint,
   Box,
 } from './customConnector';
 import { orderNodesForChain, makePairKey } from './chainOrder';
@@ -1498,6 +1502,7 @@ async function handleSelectionChange() {
     let description = '';
     let tag = safeGetPluginData(node, 'node_tag') || '';
     let connectorLabel: string | undefined;
+    let connectorLabelOn: boolean | undefined;
     let connectorLabelBoxStyle: ConnectorLabelBoxStyle | undefined;
     let connectorLabelAlign: ConnectorLabelAlign | undefined;
     let connectorLabelFillColor: string | undefined;
@@ -1528,6 +1533,8 @@ async function handleSelectionChange() {
       if (isFigmaConnector) {
         const conn = node as ConnectorNode;
         connectorLabel = conn.text ? conn.text.characters : '';
+        const rawNativeLabelOn = node.getPluginData('connector_label_on');
+        connectorLabelOn = rawNativeLabelOn !== '' ? rawNativeLabelOn === 'true' : Boolean(conn.text && conn.text.characters);
         connectorLineType = conn.connectorLineType;
         connectorRoutingType = conn.connectorLineType === 'STRAIGHT' ? 'STRAIGHT' : 'ORTHOGONAL';
         connectorStrokeWeight = typeof conn.strokeWeight === 'number' ? conn.strokeWeight : 1.5;
@@ -1638,6 +1645,8 @@ async function handleSelectionChange() {
       } else {
         // 커스텀 벡터 직각 커넥터 (그룹 또는 벡터 노드)
         connectorLabel = node.getPluginData('connector_label') || '';
+        const rawCustomLabelOn = node.getPluginData('connector_label_on');
+        connectorLabelOn = rawCustomLabelOn !== '' ? rawCustomLabelOn === 'true' : Boolean(connectorLabel);
         connectorLabelBoxStyle = (node.getPluginData('connector_label_box_style') as ConnectorLabelBoxStyle) || 'BOX';
         connectorLabelAlign = (node.getPluginData('connector_label_align') as ConnectorLabelAlign) || 'CENTER';
         connectorLabelFillColor = node.getPluginData('connector_label_fill_color') || '#EA2039';
@@ -1871,6 +1880,7 @@ async function handleSelectionChange() {
       figmaLink: node.getPluginData('figma_link'),
       cachedFigmaLink: node.getPluginData('cached_figma_link') || node.getPluginData('figma_link') || undefined,
       connectorLabel,
+      connectorLabelOn,
       connectorLabelBoxStyle,
       connectorLabelAlign,
       connectorLabelFillColor,
@@ -5375,6 +5385,9 @@ async function updateConnectorProperties(payload: {
       }
 
       // 6. 라벨
+      if (payload.hasLabel !== undefined) {
+        conn.setPluginData('connector_label_on', payload.hasLabel ? 'true' : 'false');
+      }
       if (payload.hasLabel && payload.label !== undefined) {
         if (conn.text) {
           await safeSetCharacters(conn.text, payload.label.trim());
@@ -5448,6 +5461,10 @@ async function updateConnectorProperties(payload: {
       }
 
       // 라벨 메타데이터 저장
+      if (payload.hasLabel !== undefined) {
+        connectorRootNode.setPluginData('connector_label_on', payload.hasLabel ? 'true' : 'false');
+        if (vectorNode) vectorNode.setPluginData('connector_label_on', payload.hasLabel ? 'true' : 'false');
+      }
       if (payload.labelBoxStyle) {
         connectorRootNode.setPluginData('connector_label_box_style', payload.labelBoxStyle);
         if (vectorNode) vectorNode.setPluginData('connector_label_box_style', payload.labelBoxStyle);
@@ -5473,46 +5490,128 @@ async function updateConnectorProperties(payload: {
         ) as FrameNode | null;
       }
 
-      if (payload.hasLabel && payload.label) {
-        const labelText = payload.label.trim();
+      if (payload.hasLabel) {
+        const labelText = typeof payload.label === 'string' ? payload.label.trim() : '';
         connectorRootNode.setPluginData('connector_label', labelText);
         if (vectorNode) vectorNode.setPluginData('connector_label', labelText);
-        if (labelFrame) {
-          labelFrame.visible = true;
-          const textNode = labelFrame.findOne((n) => n.type === 'TEXT') as TextNode | null;
-          if (textNode) {
-            const boxStyle = payload.labelBoxStyle ||
-              (connectorRootNode.getPluginData('connector_label_box_style') as ConnectorLabelBoxStyle) || 'BOX';
-            const align = payload.labelAlign ||
-              (connectorRootNode.getPluginData('connector_label_align') as ConnectorLabelAlign) || 'CENTER';
-            const fillCol = payload.labelFillColor ||
-              connectorRootNode.getPluginData('connector_label_fill_color') || '#EA2039';
-            const strokeCol = payload.labelStrokeColor ||
-              connectorRootNode.getPluginData('connector_label_stroke_color') || '#EA2039';
+        connectorRootNode.setPluginData('connector_label_on', 'true');
+        if (vectorNode) vectorNode.setPluginData('connector_label_on', 'true');
 
-            const srcId = connectorRootNode.getPluginData('source_node_id');
-            const tgtId = connectorRootNode.getPluginData('target_node_id');
-            const srcNode = srcId ? figma.getNodeById(srcId) as SceneNode | null : null;
-            const tgtNode = tgtId ? figma.getNodeById(tgtId) as SceneNode | null : null;
-            let isVertical = false;
-            if (srcNode && tgtNode) {
-              isVertical = Math.abs(tgtNode.y + tgtNode.height / 2 - (srcNode.y + srcNode.height / 2)) >=
-                           Math.abs(tgtNode.x + tgtNode.width / 2 - (srcNode.x + srcNode.width / 2));
-            }
+        const boxStyle = payload.labelBoxStyle ||
+          (safeGetPluginData(connectorRootNode, 'connector_label_box_style') as ConnectorLabelBoxStyle) ||
+          (vectorNode ? safeGetPluginData(vectorNode, 'connector_label_box_style') as ConnectorLabelBoxStyle : 'BOX') || 'BOX';
+        const align = payload.labelAlign ||
+          (safeGetPluginData(connectorRootNode, 'connector_label_align') as ConnectorLabelAlign) ||
+          (vectorNode ? safeGetPluginData(vectorNode, 'connector_label_align') as ConnectorLabelAlign : 'CENTER') || 'CENTER';
+        const fillCol = payload.labelFillColor ||
+          safeGetPluginData(connectorRootNode, 'connector_label_fill_color') ||
+          (vectorNode ? safeGetPluginData(vectorNode, 'connector_label_fill_color') : '#EA2039') || '#EA2039';
+        const strokeCol = payload.labelStrokeColor ||
+          safeGetPluginData(connectorRootNode, 'connector_label_stroke_color') ||
+          (vectorNode ? safeGetPluginData(vectorNode, 'connector_label_stroke_color') : '#EA2039') || '#EA2039';
 
-            await applyConnectorLabelStyle(labelFrame, textNode, {
-              labelText,
-              boxStyle,
-              textAlign: align,
-              fillColor: fillCol,
-              strokeColor: strokeCol,
-              isVertical,
-            });
+        const isNewFrame = !labelFrame;
+        // 라벨 프레임이 없는 경우 새로 생성하여 커넥터 그룹에 추가
+        if (!labelFrame) {
+          labelFrame = figma.createFrame();
+          labelFrame.name = 'ConnectorLabel';
+          labelFrame.setPluginData('is_connector_label', 'true');
+          labelFrame.setPluginData('is_custom_connector', 'true');
+
+          const textNode = figma.createText();
+          textNode.name = 'LabelText';
+          textNode.setPluginData('is_custom_connector', 'true');
+          labelFrame.appendChild(textNode);
+        }
+
+        labelFrame.visible = true;
+        const textNode = labelFrame.findOne((n) => n.type === 'TEXT') as TextNode | null;
+
+        // 실제 Connector Label 위치 산출 (worldPoints -> getLabelPlacement)
+        const srcId = safeGetPluginData(connectorRootNode, 'source_node_id') || (vectorNode ? safeGetPluginData(vectorNode, 'source_node_id') : '');
+        const tgtId = safeGetPluginData(connectorRootNode, 'target_node_id') || (vectorNode ? safeGetPluginData(vectorNode, 'target_node_id') : '');
+        const sourceNode = srcId ? (figma.getNodeById(srcId) as SceneNode | null) : null;
+        const targetNode = tgtId ? (figma.getNodeById(tgtId) as SceneNode | null) : null;
+
+        let isVerticalSegment = false;
+        let midPoint: { x: number; y: number } | null = null;
+
+        if (sourceNode && targetNode) {
+          const srcBox: Box = { x: sourceNode.x, y: sourceNode.y, width: sourceNode.width, height: sourceNode.height };
+          const tgtBox: Box = { x: targetNode.x, y: targetNode.y, width: targetNode.width, height: targetNode.height };
+          const sourceMagnet = effectiveStartMagnet || (safeGetPluginData(connectorRootNode, 'source_magnet') as MagnetPosition) || 'RIGHT';
+          const targetMagnet = effectiveEndMagnet || (safeGetPluginData(connectorRootNode, 'target_magnet') as MagnetPosition) || 'LEFT';
+          const routingType: ConnectorRoutingType =
+            payload.routingType ||
+            (safeGetPluginData(connectorRootNode, 'connector_routing') as ConnectorRoutingType) ||
+            'ORTHOGONAL';
+          const pStart = getMagnetPoint(srcBox, sourceMagnet);
+          const pEnd = getMagnetPoint(tgtBox, targetMagnet);
+          const startOffset = typeof effectiveStartOffset === 'number' ? effectiveStartOffset : (parseFloat(safeGetPluginData(connectorRootNode, 'start_offset') || '0') || 0);
+          const endOffset = typeof effectiveEndOffset === 'number' ? effectiveEndOffset : (parseFloat(safeGetPluginData(connectorRootNode, 'end_offset') || '0') || 0);
+
+          const worldPoints = calculateRoutingPoints(
+            pStart,
+            sourceMagnet,
+            pEnd,
+            targetMagnet,
+            srcBox,
+            tgtBox,
+            routingType,
+            startOffset,
+            endOffset
+          );
+          const placement = getLabelPlacement(worldPoints, routingType);
+          midPoint = placement.point;
+          isVerticalSegment = placement.isVertical;
+        } else if (vectorNode) {
+          midPoint = {
+            x: vectorNode.x + vectorNode.width / 2,
+            y: vectorNode.y + vectorNode.height / 2,
+          };
+        }
+
+        if (textNode) {
+          await applyConnectorLabelStyle(labelFrame, textNode, {
+            labelText,
+            boxStyle,
+            textAlign: align,
+            fillColor: fillCol,
+            strokeColor: strokeCol,
+            isVertical: isVerticalSegment,
+          });
+        }
+
+        // group 생성 전에 labelFrame의 초기 위치를 실제 Connector Label 위치에 맞게 설정 (그룹 좌표계 왜곡 방지)
+        if (midPoint) {
+          labelFrame.x = Math.round(midPoint.x - labelFrame.width / 2);
+          labelFrame.y = Math.round(midPoint.y - labelFrame.height / 2);
+        }
+
+        // 신규 프레임일 때만 상위 컨테이너에 추가/그룹화
+        if (isNewFrame) {
+          if (connectorRootNode.type === 'GROUP') {
+            // GroupNode는 appendChild를 정상 지원하므로 그룹에 직접 추가
+            (connectorRootNode as GroupNode).appendChild(labelFrame);
+          } else if (connectorRootNode.type === 'VECTOR') {
+            const parentContainer = (connectorRootNode.parent as BaseNode & ChildrenMixin) || figma.currentPage;
+            // figma.group에 넘기기 전에 모든 노드가 parentContainer의 직속 자식이어야 함
+            parentContainer.appendChild(labelFrame);
+            const group = figma.group([connectorRootNode, labelFrame], parentContainer);
+            group.name = connectorRootNode.name;
+            copyConnectorData(connectorRootNode, group);
+            group.setPluginData('connector_label_on', 'true');
+            registerConnectorInRegistry(group);
+            connectorRootNode = group;
+            figma.currentPage.selection = [group];
           }
+          handleSelectionChange();
         }
       } else if (payload.hasLabel === false) {
         connectorRootNode.setPluginData('connector_label', '');
         if (vectorNode) vectorNode.setPluginData('connector_label', '');
+        connectorRootNode.setPluginData('connector_label_on', 'false');
+        if (vectorNode) vectorNode.setPluginData('connector_label_on', 'false');
         if (labelFrame) {
           labelFrame.visible = false;
         }
@@ -5573,6 +5672,7 @@ async function updateConnectorProperties(payload: {
     notify('커넥터 옵션이 성공적으로 수정되었습니다.', 'success');
     handleSelectionChange();
   } catch (err) {
+    console.error('[UPDATE_CONNECTOR_PROPERTIES failed]', err);
     notify(`커넥터 수정 실패: ${String(err)}`, 'error');
   }
 }

@@ -40,6 +40,7 @@ export interface ConnectorOptions {
   startOffset?: number;
   endOffset?: number;
   strokePattern?: ConnectorStrokePattern;
+  labelOn?: boolean;
 }
 
 // 16진수 색상 코드를 RGB로 변환 (0~1 범위)
@@ -86,11 +87,14 @@ export async function applyConnectorLabelStyle(
     isVertical = false,
   } = options;
 
-  // 1. 폰트 로드 (Medium 우선, fallback Regular)
+  // 1. 폰트 로드 (기본 Regular 및 Medium 안전 로드 후 fontName 명시적 지정)
   try {
+    await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
     await figma.loadFontAsync({ family: 'Inter', style: 'Medium' });
+    textNode.fontName = { family: 'Inter', style: 'Medium' };
   } catch {
     await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+    textNode.fontName = { family: 'Inter', style: 'Regular' };
   }
 
   // 2. 텍스트 설정: 9px 고정, 수평 정렬, tracking(letter-spacing) 절대 부여 금지 (규칙 준수)
@@ -364,18 +368,33 @@ export function buildVectorVertices(
   return buildVectorNetwork(localPoints, routingType, startTerminal, endTerminal).vertices;
 }
 
-// 라우팅 타입별 라벨 중심점 산출 헬퍼
-export function getLabelCenterPoint(worldPoints: Point[], routingType: ConnectorRoutingType = 'ORTHOGONAL'): Point {
+// 라우팅 타입별 라벨 중심점 및 세그먼트 방향 산출 헬퍼
+export function getLabelPlacement(
+  worldPoints: Point[],
+  routingType: ConnectorRoutingType = 'ORTHOGONAL'
+): { point: Point; isVertical: boolean } {
   if (worldPoints.length <= 2) {
+    const p1 = worldPoints[0] || { x: 0, y: 0 };
+    const p2 = worldPoints[worldPoints.length - 1] || p1;
+    const isVertical = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
     return {
-      x: (worldPoints[0].x + worldPoints[worldPoints.length - 1].x) / 2,
-      y: (worldPoints[0].y + worldPoints[worldPoints.length - 1].y) / 2,
+      point: {
+        x: (p1.x + p2.x) / 2,
+        y: (p1.y + p2.y) / 2,
+      },
+      isVertical,
     };
   }
 
   if (routingType === 'CURVED') {
     const midIdx = Math.floor(worldPoints.length / 2);
-    return worldPoints[midIdx];
+    const pPrev = worldPoints[Math.max(0, midIdx - 1)];
+    const pNext = worldPoints[Math.min(worldPoints.length - 1, midIdx + 1)];
+    const isVertical = Math.abs(pNext.y - pPrev.y) > Math.abs(pNext.x - pPrev.x);
+    return {
+      point: worldPoints[midIdx],
+      isVertical,
+    };
   }
 
   let longestDist = -1;
@@ -383,6 +402,7 @@ export function getLabelCenterPoint(worldPoints: Point[], routingType: Connector
     x: (worldPoints[0].x + worldPoints[1].x) / 2,
     y: (worldPoints[0].y + worldPoints[1].y) / 2,
   };
+  let isVertical = false;
 
   for (let i = 0; i < worldPoints.length - 1; i++) {
     const p1 = worldPoints[i];
@@ -394,10 +414,16 @@ export function getLabelCenterPoint(worldPoints: Point[], routingType: Connector
         x: (p1.x + p2.x) / 2,
         y: (p1.y + p2.y) / 2,
       };
+      isVertical = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
     }
   }
 
-  return midSegmentPoint;
+  return { point: midSegmentPoint, isVertical };
+}
+
+// 라우팅 타입별 라벨 중심점 산출 헬퍼
+export function getLabelCenterPoint(worldPoints: Point[], routingType: ConnectorRoutingType = 'ORTHOGONAL'): Point {
+  return getLabelPlacement(worldPoints, routingType).point;
 }
 
 // 1. 마그넷 위치에 따른 절대 좌표 계산
@@ -798,20 +824,24 @@ export async function createOrthogonalVectorConnector(
   // 5. 라벨(텍스트)이 존재하는 경우 중앙 세그먼트에 단정한 태그 뱃지 생성
   let labelFrame: FrameNode | null = null;
   const labelText = options.label ? options.label.trim() : '';
+  if (options.labelOn === true) {
+    vector.setPluginData('connector_label_on', 'true');
+  }
   if (labelText !== '') {
     const boxStyle = options.labelBoxStyle || 'BOX';
     const align = options.labelAlign || 'CENTER';
     const fillCol = options.labelFillColor || '#EA2039';
     const strokeCol = options.labelStrokeColor || '#EA2039';
 
+    vector.setPluginData('connector_label_on', 'true');
     vector.setPluginData('connector_label', labelText);
     vector.setPluginData('connector_label_box_style', boxStyle);
     vector.setPluginData('connector_label_align', align);
     vector.setPluginData('connector_label_fill_color', fillCol);
     vector.setPluginData('connector_label_stroke_color', strokeCol);
 
-    // 라우팅 타입별 라벨 중심점 탐색
-    const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
+    // 라우팅 타입별 라벨 중심점 및 세그먼트 방향 산출
+    const { point: midSegmentPoint, isVertical } = getLabelPlacement(worldPoints, routingType);
 
     // 라벨 태그 박스 생성
     labelFrame = figma.createFrame();
@@ -821,9 +851,6 @@ export async function createOrthogonalVectorConnector(
     textNode.name = 'LabelText';
     textNode.setPluginData('is_custom_connector', 'true');
     labelFrame.appendChild(textNode);
-
-    const isVertical = Math.abs(tgtBox.y + tgtBox.height / 2 - (srcBox.y + srcBox.height / 2)) >=
-                       Math.abs(tgtBox.x + tgtBox.width / 2 - (srcBox.x + srcBox.width / 2));
 
     await applyConnectorLabelStyle(labelFrame, textNode, {
       labelText,
@@ -1309,7 +1336,7 @@ export async function updateOrthogonalVectorConnector(
 
   // 라벨 위치 및 스타일 갱신
   if (labelFrame) {
-    const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
+    const { point: midSegmentPoint, isVertical } = getLabelPlacement(worldPoints, routingType);
 
     const textNode = labelFrame.findOne((n) => n.type === 'TEXT') as TextNode | null;
     const labelText = safeGetPluginData(rootNode, 'connector_label') ||
@@ -1323,9 +1350,6 @@ export async function updateOrthogonalVectorConnector(
                       safeGetPluginData(vector, 'connector_label_fill_color') || '#EA2039';
       const strokeCol = safeGetPluginData(rootNode, 'connector_label_stroke_color') ||
                         safeGetPluginData(vector, 'connector_label_stroke_color') || '#EA2039';
-
-      const isVertical = Math.abs(tgtBox.y + tgtBox.height / 2 - (srcBox.y + srcBox.height / 2)) >=
-                         Math.abs(tgtBox.x + tgtBox.width / 2 - (srcBox.x + srcBox.width / 2));
 
       await applyConnectorLabelStyle(labelFrame, textNode, {
         labelText,
@@ -1343,7 +1367,7 @@ export async function updateOrthogonalVectorConnector(
 }
 
 // 커넥터 플러그인 메타데이터 일괄 복사 헬퍼
-function copyConnectorData(source: SceneNode, target: SceneNode) {
+export function copyConnectorData(source: SceneNode, target: SceneNode) {
   const keys = [
     'is_flow_connector',
     'is_custom_connector',
@@ -1353,6 +1377,7 @@ function copyConnectorData(source: SceneNode, target: SceneNode) {
     'target_magnet',
     'connector_routing',
     'connector_label',
+    'connector_label_on',
     'connector_label_box_style',
     'connector_label_align',
     'connector_label_fill_color',

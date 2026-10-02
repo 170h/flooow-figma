@@ -97,6 +97,7 @@ export interface NodeInfo {
   connectorStartOffset?: number;
   connectorEndOffset?: number;
   connectorLabel?: string;
+  connectorLabelOn?: boolean;
   connectorLabelBoxStyle?: ConnectorLabelBoxStyle;
   connectorLabelAlign?: ConnectorLabelAlign;
   connectorLabelFillColor?: string;
@@ -628,8 +629,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
       const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
       const currentHasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
-      const currentLabel = currentHasLabel ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || 'Text').trim()) : '';
-      const origHasLabel = Boolean(origNode.connectorLabel);
+      const currentLabel = currentHasLabel ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || '').trim()) : '';
+      const origHasLabel = origNode.connectorLabelOn !== undefined ? origNode.connectorLabelOn : Boolean(origNode.connectorLabel);
       const origLabel = (origNode.connectorLabel || '').trim();
       if (currentHasLabel !== origHasLabel) return true;
       if (currentHasLabel && currentLabel !== origLabel) return true;
@@ -813,7 +814,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isConn) {
       const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
       const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
-      const hasLabel = Boolean(orig.connectorLabel);
+      const hasLabel = orig.connectorLabelOn !== undefined ? orig.connectorLabelOn : Boolean(orig.connectorLabel);
       if (labelToggleEl) labelToggleEl.checked = hasLabel;
       if (labelInputEl) labelInputEl.value = orig.connectorLabel || '';
 
@@ -1347,7 +1348,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         sourceMagnet: (node.connectorSourceMagnet as MagnetPosition) || 'RIGHT',
         targetMagnet: (node.connectorTargetMagnet as MagnetPosition) || 'LEFT',
         label: node.connectorLabel || '',
-        hasLabel: Boolean(node.connectorLabel),
+        hasLabel: node.connectorLabelOn !== undefined ? node.connectorLabelOn : Boolean(node.connectorLabel),
         isReversed: node.connectorIsReversed || false,
       }
     }));
@@ -1367,8 +1368,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
     const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
 
-    const hasLabel = labelToggleEl?.checked || false;
-    const label = hasLabel ? (labelInputEl?.value.trim() || '') : '';
+    const hasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
+    const label = hasLabel ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || '').trim()) : '';
     const colorRaw = colorEl?.value;
     const color = colorRaw && colorRaw.trim() ? colorRaw : undefined;
     const weightStr = weightEl?.value;
@@ -1446,7 +1447,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const linkToggleEl = document.getElementById('toggle-conn-link') as HTMLInputElement | null;
     const linkUrlEl = document.getElementById('input-conn-link-url') as HTMLInputElement | null;
 
-    const label = labelToggleEl?.checked ? (labelInputEl?.value.trim() || '') : '';
+    const label = labelToggleEl?.checked
+      ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || '').trim())
+      : '';
     const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || '#000000';
     const weight = parseFloat(weightEl?.value || '1.5') || 1.5;
     const startTerm = startTermEl?.value || 'NONE';
@@ -1457,6 +1460,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : (lastConnectorConfigRef.current.linkUrl || '');
     const figmaLink = isLinkOn ? rawLinkUrl : '';
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+    // 라벨 스타일 설정값 (lastConnectorConfigRef에서 일관되게 읽음)
+    const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || 'BOX';
+    const labelAlign = lastConnectorConfigRef.current.labelAlign || 'CENTER';
+    const labelFillColor = lastConnectorConfigRef.current.labelFillColor || '#EA2039';
+    const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || '#EA2039';
 
     // 기존 연결이 이미 존재하는 경우 신규 생성 경로 차단
     if (uiStateRef.current.hasExistingConnection) {
@@ -1484,6 +1492,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             endTerminal: endTerm,
             startOffset: startOff,
             endOffset: endOff,
+            labelBoxStyle,
+            labelAlign,
+            labelFillColor,
+            labelStrokeColor,
             figmaLink,
           }
         }
@@ -1508,6 +1520,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             endTerminal: endTerm,
             startOffset: startOff,
             endOffset: endOff,
+            labelBoxStyle,
+            labelAlign,
+            labelFillColor,
+            labelStrokeColor,
             figmaLink,
           }
         }
@@ -1789,8 +1805,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCurrentTab('connection');
       if (nodes.length === 1 && nodes[0]) {
         const firstConn = nodes[0];
+        const isLabelOn = firstConn.connectorLabelOn !== undefined
+          ? firstConn.connectorLabelOn
+          : Boolean(firstConn.connectorLabel);
         setLastConnectorConfig({
-          labelOn: Boolean(firstConn.connectorLabel),
+          labelOn: isLabelOn,
           labelText: firstConn.connectorLabel || '',
           labelBoxStyle: firstConn.connectorLabelBoxStyle || 'BOX',
           labelAlign: firstConn.connectorLabelAlign || 'CENTER',

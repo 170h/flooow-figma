@@ -261,9 +261,12 @@
       isVertical = false
     } = options;
     try {
+      await figma.loadFontAsync({ family: "Inter", style: "Regular" });
       await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+      textNode.fontName = { family: "Inter", style: "Medium" };
     } catch {
       await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+      textNode.fontName = { family: "Inter", style: "Regular" };
     }
     textNode.characters = labelText;
     textNode.fontSize = 9;
@@ -456,22 +459,35 @@
     const regions = [];
     return { vertices, segments, regions };
   }
-  function getLabelCenterPoint(worldPoints, routingType = "ORTHOGONAL") {
+  function getLabelPlacement(worldPoints, routingType = "ORTHOGONAL") {
     if (worldPoints.length <= 2) {
+      const p1 = worldPoints[0] || { x: 0, y: 0 };
+      const p2 = worldPoints[worldPoints.length - 1] || p1;
+      const isVertical2 = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
       return {
-        x: (worldPoints[0].x + worldPoints[worldPoints.length - 1].x) / 2,
-        y: (worldPoints[0].y + worldPoints[worldPoints.length - 1].y) / 2
+        point: {
+          x: (p1.x + p2.x) / 2,
+          y: (p1.y + p2.y) / 2
+        },
+        isVertical: isVertical2
       };
     }
     if (routingType === "CURVED") {
       const midIdx = Math.floor(worldPoints.length / 2);
-      return worldPoints[midIdx];
+      const pPrev = worldPoints[Math.max(0, midIdx - 1)];
+      const pNext = worldPoints[Math.min(worldPoints.length - 1, midIdx + 1)];
+      const isVertical2 = Math.abs(pNext.y - pPrev.y) > Math.abs(pNext.x - pPrev.x);
+      return {
+        point: worldPoints[midIdx],
+        isVertical: isVertical2
+      };
     }
     let longestDist = -1;
     let midSegmentPoint = {
       x: (worldPoints[0].x + worldPoints[1].x) / 2,
       y: (worldPoints[0].y + worldPoints[1].y) / 2
     };
+    let isVertical = false;
     for (let i = 0; i < worldPoints.length - 1; i++) {
       const p1 = worldPoints[i];
       const p2 = worldPoints[i + 1];
@@ -482,9 +498,10 @@
           x: (p1.x + p2.x) / 2,
           y: (p1.y + p2.y) / 2
         };
+        isVertical = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
       }
     }
-    return midSegmentPoint;
+    return { point: midSegmentPoint, isVertical };
   }
   function getMagnetPoint(box, magnet) {
     switch (magnet) {
@@ -754,24 +771,27 @@
     vector.setPluginData("connector_weight", String(strokeWeight));
     let labelFrame = null;
     const labelText = options.label ? options.label.trim() : "";
+    if (options.labelOn === true) {
+      vector.setPluginData("connector_label_on", "true");
+    }
     if (labelText !== "") {
       const boxStyle = options.labelBoxStyle || "BOX";
       const align = options.labelAlign || "CENTER";
       const fillCol = options.labelFillColor || "#EA2039";
       const strokeCol = options.labelStrokeColor || "#EA2039";
+      vector.setPluginData("connector_label_on", "true");
       vector.setPluginData("connector_label", labelText);
       vector.setPluginData("connector_label_box_style", boxStyle);
       vector.setPluginData("connector_label_align", align);
       vector.setPluginData("connector_label_fill_color", fillCol);
       vector.setPluginData("connector_label_stroke_color", strokeCol);
-      const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
+      const { point: midSegmentPoint, isVertical } = getLabelPlacement(worldPoints, routingType);
       labelFrame = figma.createFrame();
       labelFrame.name = "ConnectorLabel";
       const textNode = figma.createText();
       textNode.name = "LabelText";
       textNode.setPluginData("is_custom_connector", "true");
       labelFrame.appendChild(textNode);
-      const isVertical = Math.abs(tgtBox.y + tgtBox.height / 2 - (srcBox.y + srcBox.height / 2)) >= Math.abs(tgtBox.x + tgtBox.width / 2 - (srcBox.x + srcBox.width / 2));
       await applyConnectorLabelStyle(labelFrame, textNode, {
         labelText,
         boxStyle,
@@ -1089,7 +1109,7 @@
       rootNode.parent.appendChild(rootNode);
     }
     if (labelFrame) {
-      const midSegmentPoint = getLabelCenterPoint(worldPoints, routingType);
+      const { point: midSegmentPoint, isVertical } = getLabelPlacement(worldPoints, routingType);
       const textNode = labelFrame.findOne((n) => n.type === "TEXT");
       const labelText = safeGetPluginData(rootNode, "connector_label") || safeGetPluginData(vector, "connector_label") || "";
       if (labelText && textNode) {
@@ -1097,7 +1117,6 @@
         const align = safeGetPluginData(rootNode, "connector_label_align") || safeGetPluginData(vector, "connector_label_align") || "CENTER";
         const fillCol = safeGetPluginData(rootNode, "connector_label_fill_color") || safeGetPluginData(vector, "connector_label_fill_color") || "#EA2039";
         const strokeCol = safeGetPluginData(rootNode, "connector_label_stroke_color") || safeGetPluginData(vector, "connector_label_stroke_color") || "#EA2039";
-        const isVertical = Math.abs(tgtBox.y + tgtBox.height / 2 - (srcBox.y + srcBox.height / 2)) >= Math.abs(tgtBox.x + tgtBox.width / 2 - (srcBox.x + srcBox.width / 2));
         await applyConnectorLabelStyle(labelFrame, textNode, {
           labelText,
           boxStyle,
@@ -1121,6 +1140,7 @@
       "target_magnet",
       "connector_routing",
       "connector_label",
+      "connector_label_on",
       "connector_label_box_style",
       "connector_label_align",
       "connector_label_fill_color",
@@ -2403,6 +2423,7 @@
       let description = "";
       let tag = safeGetPluginData2(node, "node_tag") || "";
       let connectorLabel;
+      let connectorLabelOn;
       let connectorLabelBoxStyle;
       let connectorLabelAlign;
       let connectorLabelFillColor;
@@ -2428,6 +2449,8 @@
         if (isFigmaConnector) {
           const conn = node;
           connectorLabel = conn.text ? conn.text.characters : "";
+          const rawNativeLabelOn = node.getPluginData("connector_label_on");
+          connectorLabelOn = rawNativeLabelOn !== "" ? rawNativeLabelOn === "true" : Boolean(conn.text && conn.text.characters);
           connectorLineType = conn.connectorLineType;
           connectorRoutingType = conn.connectorLineType === "STRAIGHT" ? "STRAIGHT" : "ORTHOGONAL";
           connectorStrokeWeight = typeof conn.strokeWeight === "number" ? conn.strokeWeight : 1.5;
@@ -2520,6 +2543,8 @@
           }
         } else {
           connectorLabel = node.getPluginData("connector_label") || "";
+          const rawCustomLabelOn = node.getPluginData("connector_label_on");
+          connectorLabelOn = rawCustomLabelOn !== "" ? rawCustomLabelOn === "true" : Boolean(connectorLabel);
           connectorLabelBoxStyle = node.getPluginData("connector_label_box_style") || "BOX";
           connectorLabelAlign = node.getPluginData("connector_label_align") || "CENTER";
           connectorLabelFillColor = node.getPluginData("connector_label_fill_color") || "#EA2039";
@@ -2754,6 +2779,7 @@
         figmaLink: node.getPluginData("figma_link"),
         cachedFigmaLink: node.getPluginData("cached_figma_link") || node.getPluginData("figma_link") || void 0,
         connectorLabel,
+        connectorLabelOn,
         connectorLabelBoxStyle,
         connectorLabelAlign,
         connectorLabelFillColor,
@@ -5803,6 +5829,9 @@
           conn.connectorEndStrokeCap = mapCap(effectiveEndTerm);
           conn.setPluginData("end_terminal", effectiveEndTerm);
         }
+        if (payload.hasLabel !== void 0) {
+          conn.setPluginData("connector_label_on", payload.hasLabel ? "true" : "false");
+        }
         if (payload.hasLabel && payload.label !== void 0) {
           if (conn.text) {
             await safeSetCharacters(conn.text, payload.label.trim());
@@ -5863,6 +5892,10 @@
           }
           termVectorNode = null;
         }
+        if (payload.hasLabel !== void 0) {
+          connectorRootNode.setPluginData("connector_label_on", payload.hasLabel ? "true" : "false");
+          if (vectorNode) vectorNode.setPluginData("connector_label_on", payload.hasLabel ? "true" : "false");
+        }
         if (payload.labelBoxStyle) {
           connectorRootNode.setPluginData("connector_label_box_style", payload.labelBoxStyle);
           if (vectorNode) vectorNode.setPluginData("connector_label_box_style", payload.labelBoxStyle);
@@ -5885,39 +5918,100 @@
             (n) => n.name === "ConnectorLabel" || safeGetPluginData2(n, "is_connector_label") === "true"
           );
         }
-        if (payload.hasLabel && payload.label) {
-          const labelText = payload.label.trim();
+        if (payload.hasLabel) {
+          const labelText = typeof payload.label === "string" ? payload.label.trim() : "";
           connectorRootNode.setPluginData("connector_label", labelText);
           if (vectorNode) vectorNode.setPluginData("connector_label", labelText);
-          if (labelFrame) {
-            labelFrame.visible = true;
-            const textNode = labelFrame.findOne((n) => n.type === "TEXT");
-            if (textNode) {
-              const boxStyle = payload.labelBoxStyle || connectorRootNode.getPluginData("connector_label_box_style") || "BOX";
-              const align = payload.labelAlign || connectorRootNode.getPluginData("connector_label_align") || "CENTER";
-              const fillCol = payload.labelFillColor || connectorRootNode.getPluginData("connector_label_fill_color") || "#EA2039";
-              const strokeCol = payload.labelStrokeColor || connectorRootNode.getPluginData("connector_label_stroke_color") || "#EA2039";
-              const srcId = connectorRootNode.getPluginData("source_node_id");
-              const tgtId = connectorRootNode.getPluginData("target_node_id");
-              const srcNode = srcId ? figma.getNodeById(srcId) : null;
-              const tgtNode = tgtId ? figma.getNodeById(tgtId) : null;
-              let isVertical = false;
-              if (srcNode && tgtNode) {
-                isVertical = Math.abs(tgtNode.y + tgtNode.height / 2 - (srcNode.y + srcNode.height / 2)) >= Math.abs(tgtNode.x + tgtNode.width / 2 - (srcNode.x + srcNode.width / 2));
-              }
-              await applyConnectorLabelStyle(labelFrame, textNode, {
-                labelText,
-                boxStyle,
-                textAlign: align,
-                fillColor: fillCol,
-                strokeColor: strokeCol,
-                isVertical
-              });
+          connectorRootNode.setPluginData("connector_label_on", "true");
+          if (vectorNode) vectorNode.setPluginData("connector_label_on", "true");
+          const boxStyle = payload.labelBoxStyle || safeGetPluginData2(connectorRootNode, "connector_label_box_style") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_box_style") : "BOX") || "BOX";
+          const align = payload.labelAlign || safeGetPluginData2(connectorRootNode, "connector_label_align") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_align") : "CENTER") || "CENTER";
+          const fillCol = payload.labelFillColor || safeGetPluginData2(connectorRootNode, "connector_label_fill_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_fill_color") : "#EA2039") || "#EA2039";
+          const strokeCol = payload.labelStrokeColor || safeGetPluginData2(connectorRootNode, "connector_label_stroke_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_stroke_color") : "#EA2039") || "#EA2039";
+          const isNewFrame = !labelFrame;
+          if (!labelFrame) {
+            labelFrame = figma.createFrame();
+            labelFrame.name = "ConnectorLabel";
+            labelFrame.setPluginData("is_connector_label", "true");
+            labelFrame.setPluginData("is_custom_connector", "true");
+            const textNode2 = figma.createText();
+            textNode2.name = "LabelText";
+            textNode2.setPluginData("is_custom_connector", "true");
+            labelFrame.appendChild(textNode2);
+          }
+          labelFrame.visible = true;
+          const textNode = labelFrame.findOne((n) => n.type === "TEXT");
+          const srcId = safeGetPluginData2(connectorRootNode, "source_node_id") || (vectorNode ? safeGetPluginData2(vectorNode, "source_node_id") : "");
+          const tgtId = safeGetPluginData2(connectorRootNode, "target_node_id") || (vectorNode ? safeGetPluginData2(vectorNode, "target_node_id") : "");
+          const sourceNode = srcId ? figma.getNodeById(srcId) : null;
+          const targetNode = tgtId ? figma.getNodeById(tgtId) : null;
+          let isVerticalSegment = false;
+          let midPoint = null;
+          if (sourceNode && targetNode) {
+            const srcBox = { x: sourceNode.x, y: sourceNode.y, width: sourceNode.width, height: sourceNode.height };
+            const tgtBox = { x: targetNode.x, y: targetNode.y, width: targetNode.width, height: targetNode.height };
+            const sourceMagnet = effectiveStartMagnet || safeGetPluginData2(connectorRootNode, "source_magnet") || "RIGHT";
+            const targetMagnet = effectiveEndMagnet || safeGetPluginData2(connectorRootNode, "target_magnet") || "LEFT";
+            const routingType = payload.routingType || safeGetPluginData2(connectorRootNode, "connector_routing") || "ORTHOGONAL";
+            const pStart = getMagnetPoint(srcBox, sourceMagnet);
+            const pEnd = getMagnetPoint(tgtBox, targetMagnet);
+            const startOffset = typeof effectiveStartOffset === "number" ? effectiveStartOffset : parseFloat(safeGetPluginData2(connectorRootNode, "start_offset") || "0") || 0;
+            const endOffset = typeof effectiveEndOffset === "number" ? effectiveEndOffset : parseFloat(safeGetPluginData2(connectorRootNode, "end_offset") || "0") || 0;
+            const worldPoints = calculateRoutingPoints(
+              pStart,
+              sourceMagnet,
+              pEnd,
+              targetMagnet,
+              srcBox,
+              tgtBox,
+              routingType,
+              startOffset,
+              endOffset
+            );
+            const placement = getLabelPlacement(worldPoints, routingType);
+            midPoint = placement.point;
+            isVerticalSegment = placement.isVertical;
+          } else if (vectorNode) {
+            midPoint = {
+              x: vectorNode.x + vectorNode.width / 2,
+              y: vectorNode.y + vectorNode.height / 2
+            };
+          }
+          if (textNode) {
+            await applyConnectorLabelStyle(labelFrame, textNode, {
+              labelText,
+              boxStyle,
+              textAlign: align,
+              fillColor: fillCol,
+              strokeColor: strokeCol,
+              isVertical: isVerticalSegment
+            });
+          }
+          if (midPoint) {
+            labelFrame.x = Math.round(midPoint.x - labelFrame.width / 2);
+            labelFrame.y = Math.round(midPoint.y - labelFrame.height / 2);
+          }
+          if (isNewFrame) {
+            if (connectorRootNode.type === "GROUP") {
+              connectorRootNode.appendChild(labelFrame);
+            } else if (connectorRootNode.type === "VECTOR") {
+              const parentContainer = connectorRootNode.parent || figma.currentPage;
+              parentContainer.appendChild(labelFrame);
+              const group = figma.group([connectorRootNode, labelFrame], parentContainer);
+              group.name = connectorRootNode.name;
+              copyConnectorData(connectorRootNode, group);
+              group.setPluginData("connector_label_on", "true");
+              registerConnectorInRegistry(group);
+              connectorRootNode = group;
+              figma.currentPage.selection = [group];
             }
+            handleSelectionChange();
           }
         } else if (payload.hasLabel === false) {
           connectorRootNode.setPluginData("connector_label", "");
           if (vectorNode) vectorNode.setPluginData("connector_label", "");
+          connectorRootNode.setPluginData("connector_label_on", "false");
+          if (vectorNode) vectorNode.setPluginData("connector_label_on", "false");
           if (labelFrame) {
             labelFrame.visible = false;
           }
@@ -5974,6 +6068,7 @@
       notify("\uCEE4\uB125\uD130 \uC635\uC158\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
       handleSelectionChange();
     } catch (err) {
+      console.error("[UPDATE_CONNECTOR_PROPERTIES failed]", err);
       notify(`\uCEE4\uB125\uD130 \uC218\uC815 \uC2E4\uD328: ${String(err)}`, "error");
     }
   }

@@ -29500,8 +29500,8 @@
         const labelToggleEl = document.getElementById("toggle-conn-label");
         const labelInputEl = document.getElementById("input-conn-label");
         const currentHasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
-        const currentLabel = currentHasLabel ? labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || "Text").trim() : "";
-        const origHasLabel = Boolean(origNode.connectorLabel);
+        const currentLabel = currentHasLabel ? labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || "").trim() : "";
+        const origHasLabel = origNode.connectorLabelOn !== void 0 ? origNode.connectorLabelOn : Boolean(origNode.connectorLabel);
         const origLabel = (origNode.connectorLabel || "").trim();
         if (currentHasLabel !== origHasLabel) return true;
         if (currentHasLabel && currentLabel !== origLabel) return true;
@@ -29641,7 +29641,7 @@
       if (isConn) {
         const labelToggleEl = document.getElementById("toggle-conn-label");
         const labelInputEl = document.getElementById("input-conn-label");
-        const hasLabel = Boolean(orig.connectorLabel);
+        const hasLabel = orig.connectorLabelOn !== void 0 ? orig.connectorLabelOn : Boolean(orig.connectorLabel);
         if (labelToggleEl) labelToggleEl.checked = hasLabel;
         if (labelInputEl) labelInputEl.value = orig.connectorLabel || "";
         const colorEl = document.getElementById("conn-line-color");
@@ -30082,7 +30082,7 @@
           sourceMagnet: node.connectorSourceMagnet || "RIGHT",
           targetMagnet: node.connectorTargetMagnet || "LEFT",
           label: node.connectorLabel || "",
-          hasLabel: Boolean(node.connectorLabel),
+          hasLabel: node.connectorLabelOn !== void 0 ? node.connectorLabelOn : Boolean(node.connectorLabel),
           isReversed: node.connectorIsReversed || false
         }
       }));
@@ -30100,8 +30100,8 @@
       const endTermEl = document.getElementById("select-end-terminal");
       const startOffEl = document.getElementById("input-start-offset");
       const endOffEl = document.getElementById("input-end-offset");
-      const hasLabel = labelToggleEl?.checked || false;
-      const label = hasLabel ? labelInputEl?.value.trim() || "" : "";
+      const hasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
+      const label = hasLabel ? labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || "").trim() : "";
       const colorRaw = colorEl?.value;
       const color = colorRaw && colorRaw.trim() ? colorRaw : void 0;
       const weightStr = weightEl?.value;
@@ -30168,7 +30168,7 @@
       const endOffEl = document.getElementById("input-end-offset");
       const linkToggleEl = document.getElementById("toggle-conn-link");
       const linkUrlEl = document.getElementById("input-conn-link-url");
-      const label = labelToggleEl?.checked ? labelInputEl?.value.trim() || "" : "";
+      const label = labelToggleEl?.checked ? labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || "").trim() : "";
       const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || "#000000";
       const weight = parseFloat(weightEl?.value || "1.5") || 1.5;
       const startTerm = startTermEl?.value || "NONE";
@@ -30179,6 +30179,10 @@
       const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : lastConnectorConfigRef.current.linkUrl || "";
       const figmaLink = isLinkOn ? rawLinkUrl : "";
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+      const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || "BOX";
+      const labelAlign = lastConnectorConfigRef.current.labelAlign || "CENTER";
+      const labelFillColor = lastConnectorConfigRef.current.labelFillColor || "#EA2039";
+      const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || "#EA2039";
       if (uiStateRef.current.hasExistingConnection) {
         return;
       }
@@ -30202,6 +30206,10 @@
               endTerminal: endTerm,
               startOffset: startOff,
               endOffset: endOff,
+              labelBoxStyle,
+              labelAlign,
+              labelFillColor,
+              labelStrokeColor,
               figmaLink
             }
           }
@@ -30222,6 +30230,10 @@
               endTerminal: endTerm,
               startOffset: startOff,
               endOffset: endOff,
+              labelBoxStyle,
+              labelAlign,
+              labelFillColor,
+              labelStrokeColor,
               figmaLink
             }
           }
@@ -30457,8 +30469,9 @@
         setCurrentTab("connection");
         if (nodes.length === 1 && nodes[0]) {
           const firstConn = nodes[0];
+          const isLabelOn = firstConn.connectorLabelOn !== void 0 ? firstConn.connectorLabelOn : Boolean(firstConn.connectorLabel);
           setLastConnectorConfig({
-            labelOn: Boolean(firstConn.connectorLabel),
+            labelOn: isLabelOn,
             labelText: firstConn.connectorLabel || "",
             labelBoxStyle: firstConn.connectorLabelBoxStyle || "BOX",
             labelAlign: firstConn.connectorLabelAlign || "CENTER",
@@ -35001,6 +35014,7 @@
     const [userPendingTargetMagnet, setUserPendingTargetMagnet] = (0, import_react14.useState)(null);
     const userActionTimestampRef = (0, import_react14.useRef)(0);
     const prevSelectionKeyRef = (0, import_react14.useRef)("");
+    const lastSyncedSelectionColorRef = (0, import_react14.useRef)(null);
     const offsetDebounceRef = (0, import_react14.useRef)(null);
     (0, import_react14.useEffect)(() => {
       return () => {
@@ -35077,6 +35091,8 @@
         prevSelectionKeyRef.current = currentSelectionKey;
         setUserPendingSourceMagnet(null);
         setUserPendingTargetMagnet(null);
+        const firstConn = selectedNodes.find((n) => n && n.isConnector);
+        lastSyncedSelectionColorRef.current = firstConn?.connectorColorHex ? firstConn.connectorColorHex.toUpperCase() : null;
       }
       const isUserActionRecent = Date.now() - userActionTimestampRef.current < 800;
       if (summary.isSingleConnector) {
@@ -35298,6 +35314,10 @@
         setHexInput(formatted.replace("#", ""));
         const selectEl = document.getElementById("conn-line-color");
         if (selectEl) selectEl.value = formatted;
+        if (lastSyncedSelectionColorRef.current === formatted) {
+          return;
+        }
+        lastSyncedSelectionColorRef.current = formatted;
         setTimeout(() => applyCurrentConnectorState(), 0);
       }
     }, [selectedConnectorColor]);
@@ -36352,13 +36372,21 @@
   }
   function LabelSection() {
     const {
+      selectedNodes,
+      isConnectorSelected,
       lastConnectorConfig,
       setLastConnectorConfig,
       applyCurrentConnectorState,
       autoResizeWindow,
       setActiveModal
     } = useApp();
+    const connCount = selectedNodes.filter((n) => n && n.isConnector).length;
+    const flowCount = selectedNodes.filter((n) => n && !n.isConnector).length;
+    const isMultiSelection = connCount >= 2 || connCount > 0 && flowCount > 0;
+    const validNodes = (selectedNodes || []).filter((n) => Boolean(n));
+    const currentNodeId = validNodes.length === 1 ? validNodes[0]?.id : validNodes.length > 1 ? "MULTI" : "NONE";
     const [isOn, setIsOn] = (0, import_react15.useState)(lastConnectorConfig.labelOn || false);
+    const effectiveIsOn = !isMultiSelection && isOn;
     const [labelText, setLabelText] = (0, import_react15.useState)(lastConnectorConfig.labelText || "");
     const [fillColor, setFillColor] = (0, import_react15.useState)(lastConnectorConfig.labelFillColor || "#EA2039");
     const [strokeColor, setStrokeColor] = (0, import_react15.useState)(lastConnectorConfig.labelStrokeColor || "#EA2039");
@@ -36367,6 +36395,9 @@
     const [align, setAlign] = (0, import_react15.useState)(lastConnectorConfig.labelAlign || "LEFT");
     const [boxStyle, setBoxStyle] = (0, import_react15.useState)(lastConnectorConfig.labelBoxStyle || "BOX");
     const labelDebounceRef = (0, import_react15.useRef)(null);
+    const labelInputRef = (0, import_react15.useRef)(null);
+    const lastSelectedNodeIdRef = (0, import_react15.useRef)(null);
+    const isFocusedRef = (0, import_react15.useRef)(false);
     (0, import_react15.useEffect)(() => {
       return () => {
         if (labelDebounceRef.current) {
@@ -36375,9 +36406,24 @@
       };
     }, []);
     (0, import_react15.useEffect)(() => {
-      setIsOn(lastConnectorConfig.labelOn || false);
+      const validNodes2 = (selectedNodes || []).filter((n) => Boolean(n));
+      const currentNodeId2 = validNodes2.length === 1 ? validNodes2[0]?.id : validNodes2.length > 1 ? "MULTI" : "NONE";
+      const isDifferentNode = currentNodeId2 !== lastSelectedNodeIdRef.current;
+      if (isDifferentNode) {
+        lastSelectedNodeIdRef.current = currentNodeId2;
+      }
+      if (isDifferentNode) {
+        setIsOn(lastConnectorConfig.labelOn || false);
+      }
       if (lastConnectorConfig.labelText !== void 0) {
-        setLabelText(lastConnectorConfig.labelText);
+        const activeEl = typeof document !== "undefined" ? document.activeElement : null;
+        const isInputFocused = isFocusedRef.current || labelInputRef.current !== null && activeEl === labelInputRef.current;
+        if (isDifferentNode || !isInputFocused) {
+          setLabelText(lastConnectorConfig.labelText);
+          if (labelInputRef.current && labelInputRef.current.value !== lastConnectorConfig.labelText) {
+            labelInputRef.current.value = lastConnectorConfig.labelText;
+          }
+        }
       }
       if (lastConnectorConfig.labelFillColor) {
         setFillColor(lastConnectorConfig.labelFillColor);
@@ -36394,6 +36440,7 @@
         setBoxStyle(lastConnectorConfig.labelBoxStyle);
       }
     }, [
+      selectedNodes,
       lastConnectorConfig.labelOn,
       lastConnectorConfig.labelText,
       lastConnectorConfig.labelFillColor,
@@ -36402,13 +36449,15 @@
       lastConnectorConfig.labelBoxStyle
     ]);
     function handleToggle(checked) {
+      if (isMultiSelection) return;
       if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
       setIsOn(checked);
       setLastConnectorConfig({ labelOn: checked });
       autoResizeWindow();
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
-    function handleTextChange(val) {
+    function handleInput(e) {
+      const val = e.currentTarget.value;
       setLabelText(val);
       setLastConnectorConfig({ labelText: val });
       if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
@@ -36456,31 +36505,40 @@
       setLastConnectorConfig({ labelBoxStyle: newStyle });
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-block", style: { paddingBottom: isOn ? "12px" : "0px" }, children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-block", style: { paddingBottom: effectiveIsOn ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: "section-title", children: "Label" }),
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: `section-title${isMultiSelection ? " disabled" : ""}`, children: "Label" }),
         /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
           Switch,
           {
             id: "toggle-conn-label",
-            checked: isOn,
+            checked: effectiveIsOn,
+            disabled: isMultiSelection,
             onChange: handleToggle
           }
         )
       ] }),
-      isOn && /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "conn-label-body", children: [
+      effectiveIsOn && /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "conn-label-body", children: [
         /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
           "input",
           {
+            ref: labelInputRef,
             type: "text",
             id: "input-conn-label",
             className: "conn-label-input",
             placeholder: "Add a label",
-            value: labelText,
-            onChange: (e) => handleTextChange(e.target.value),
+            defaultValue: lastConnectorConfig.labelText || "",
+            onFocus: () => {
+              isFocusedRef.current = true;
+            },
+            onBlur: () => {
+              isFocusedRef.current = false;
+            },
+            onInput: handleInput,
             spellCheck: false,
             autoComplete: "off"
-          }
+          },
+          currentNodeId
         ),
         /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-inputs-row", children: [
           /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-input-box style-color-input-box", children: [

@@ -709,6 +709,7 @@ export interface SelectedNodeInfo {
   figmaLink?: string;
   cachedFigmaLink?: string;
   connectorLabel?: string;
+  connectorLabelOn?: boolean;
   connectorLabelBoxStyle?: ConnectorLabelBoxStyle;
   connectorLabelAlign?: ConnectorLabelAlign;
   connectorLabelFillColor?: string;

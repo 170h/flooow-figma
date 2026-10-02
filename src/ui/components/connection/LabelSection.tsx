@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useApp, NodeInfo } from '../../context/AppContext';
 import { Switch } from '../shared/Switch';
 import {
   FillColorIcon,
@@ -56,6 +56,8 @@ function normalizeHex(hex: string): string {
  */
 export function LabelSection() {
   const {
+    selectedNodes,
+    isConnectorSelected,
     lastConnectorConfig,
     setLastConnectorConfig,
     applyCurrentConnectorState,
@@ -63,7 +65,20 @@ export function LabelSection() {
     setActiveModal,
   } = useApp();
 
+  // 복수 선택 판정: 커넥터 2개 이상이거나 노드와 커넥터가 혼합 선택된 경우 Label 편집 비활성화
+  const connCount = selectedNodes.filter(n => n && n.isConnector).length;
+  const flowCount = selectedNodes.filter(n => n && !n.isConnector).length;
+  const isMultiSelection = connCount >= 2 || (connCount > 0 && flowCount > 0);
+
+  const validNodes = (selectedNodes || []).filter((n): n is NodeInfo => Boolean(n));
+  const currentNodeId = validNodes.length === 1
+    ? validNodes[0]?.id
+    : (validNodes.length > 1 ? 'MULTI' : 'NONE');
+
   const [isOn, setIsOn] = useState(lastConnectorConfig.labelOn || false);
+  // 복수 선택에서는 Label 편집이 비활성화되며 항상 접힘(collapsed) 유지
+  const effectiveIsOn = !isMultiSelection && isOn;
+
   const [labelText, setLabelText] = useState(lastConnectorConfig.labelText || '');
   const [fillColor, setFillColor] = useState(lastConnectorConfig.labelFillColor || '#EA2039');
   const [strokeColor, setStrokeColor] = useState(lastConnectorConfig.labelStrokeColor || '#EA2039');
@@ -73,6 +88,9 @@ export function LabelSection() {
   const [boxStyle, setBoxStyle] = useState<ConnectorLabelBoxStyle>(lastConnectorConfig.labelBoxStyle || 'BOX');
 
   const labelDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const labelInputRef = useRef<HTMLInputElement | null>(null);
+  const lastSelectedNodeIdRef = useRef<string | null>(null);
+  const isFocusedRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -84,9 +102,32 @@ export function LabelSection() {
 
   // 외부(노드 선택 변경 등) 동기화
   useEffect(() => {
-    setIsOn(lastConnectorConfig.labelOn || false);
+    const validNodes = (selectedNodes || []).filter((n): n is NodeInfo => Boolean(n));
+    const currentNodeId = validNodes.length === 1
+      ? validNodes[0]?.id
+      : (validNodes.length > 1 ? 'MULTI' : 'NONE');
+    const isDifferentNode = currentNodeId !== lastSelectedNodeIdRef.current;
+    if (isDifferentNode) {
+      lastSelectedNodeIdRef.current = currentNodeId;
+    }
+
+    // isOn은 노드가 실제로 바뀐 경우에만 외부 값으로 덮어씀
+    // 같은 노드에서 labelText만 변경되었을 때 effect가 재실행되더라도
+    // 사용자가 토글로 설정한 isOn 상태를 보존한다
+    if (isDifferentNode) {
+      setIsOn(lastConnectorConfig.labelOn || false);
+    }
+
     if (lastConnectorConfig.labelText !== undefined) {
-      setLabelText(lastConnectorConfig.labelText);
+      const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+      const isInputFocused = isFocusedRef.current || (labelInputRef.current !== null && activeEl === labelInputRef.current);
+      // 포커스 중인 입력 필드는 외부 SELECTION_CHANGED 역동기화로 덮어쓰지 않음 (GEMINI.md §12 규칙 준수)
+      if (isDifferentNode || !isInputFocused) {
+        setLabelText(lastConnectorConfig.labelText);
+        if (labelInputRef.current && labelInputRef.current.value !== lastConnectorConfig.labelText) {
+          labelInputRef.current.value = lastConnectorConfig.labelText;
+        }
+      }
     }
     if (lastConnectorConfig.labelFillColor) {
       setFillColor(lastConnectorConfig.labelFillColor);
@@ -103,6 +144,7 @@ export function LabelSection() {
       setBoxStyle(lastConnectorConfig.labelBoxStyle);
     }
   }, [
+    selectedNodes,
     lastConnectorConfig.labelOn,
     lastConnectorConfig.labelText,
     lastConnectorConfig.labelFillColor,
@@ -112,6 +154,7 @@ export function LabelSection() {
   ]);
 
   function handleToggle(checked: boolean) {
+    if (isMultiSelection) return;
     if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
     setIsOn(checked);
     setLastConnectorConfig({ labelOn: checked });
@@ -119,7 +162,8 @@ export function LabelSection() {
     setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
-  function handleTextChange(val: string) {
+  function handleInput(e: React.FormEvent<HTMLInputElement>) {
+    const val = e.currentTarget.value;
     setLabelText(val);
     setLastConnectorConfig({ labelText: val });
     if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
@@ -175,28 +219,33 @@ export function LabelSection() {
   }
 
   return (
-    <div className="section-block" style={{ paddingBottom: isOn ? '12px' : '0px' }}>
+    <div className="section-block" style={{ paddingBottom: effectiveIsOn ? '12px' : '0px' }}>
       {/* 1행: Label 타이틀 및 스위치 */}
       <div className="section-header toggle-row">
-        <span className="section-title">Label</span>
+        <span className={`section-title${isMultiSelection ? ' disabled' : ''}`}>Label</span>
         <Switch
           id="toggle-conn-label"
-          checked={isOn}
+          checked={effectiveIsOn}
+          disabled={isMultiSelection}
           onChange={handleToggle}
         />
       </div>
 
-      {isOn && (
+      {effectiveIsOn && (
         <div className="section-body">
           <div className="conn-label-body">
-            {/* 2행: 텍스트 입력 인풋 */}
+            {/* 2행: 텍스트 입력 인풋 (INV-05 DOM truth 규격) */}
             <input
+              key={currentNodeId}
+              ref={labelInputRef}
               type="text"
               id="input-conn-label"
               className="conn-label-input"
               placeholder="Add a label"
-              value={labelText}
-              onChange={e => handleTextChange(e.target.value)}
+              defaultValue={lastConnectorConfig.labelText || ''}
+              onFocus={() => { isFocusedRef.current = true; }}
+              onBlur={() => { isFocusedRef.current = false; }}
+              onInput={handleInput}
               spellCheck={false}
               autoComplete="off"
             />

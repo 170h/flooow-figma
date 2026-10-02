@@ -138,6 +138,7 @@ export function ConnectSection() {
   const [userPendingTargetMagnet, setUserPendingTargetMagnet] = useState<MagnetPosition | null>(null);
   const userActionTimestampRef = useRef<number>(0);
   const prevSelectionKeyRef = useRef<string>('');
+  const lastSyncedSelectionColorRef = useRef<string | null>(null);
 
   // 오프셋 실시간 입력 디바운스 타이머
   const offsetDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -233,6 +234,9 @@ export function ConnectSection() {
       prevSelectionKeyRef.current = currentSelectionKey;
       setUserPendingSourceMagnet(null);
       setUserPendingTargetMagnet(null);
+      // 선택 변경에 의해 동기화되는 노드의 색상을 기록하여, 선택만 했을 때 applyCurrentConnectorState가 자동 격발되는 것을 방지
+      const firstConn = selectedNodes.find(n => n && n.isConnector);
+      lastSyncedSelectionColorRef.current = firstConn?.connectorColorHex ? firstConn.connectorColorHex.toUpperCase() : null;
     }
 
     const isUserActionRecent = Date.now() - userActionTimestampRef.current < 800;
@@ -491,6 +495,12 @@ export function ConnectSection() {
       setHexInput(formatted.replace('#', ''));
       const selectEl = document.getElementById('conn-line-color') as HTMLInputElement | null;
       if (selectEl) selectEl.value = formatted;
+
+      // 선택 변경으로 인한 UI 상태 동기화인 경우 Core 재적용 스킵 (사용자가 모달 등에서 명시적으로 변경했을 때만 실행)
+      if (lastSyncedSelectionColorRef.current === formatted) {
+        return;
+      }
+      lastSyncedSelectionColorRef.current = formatted;
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
   }, [selectedConnectorColor]);
