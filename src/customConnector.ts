@@ -459,7 +459,31 @@ export function calculateOrthogonalPoints(
       points.push(tgtPoint);
     }
   }
-  // 5. 그 외 동일 방향이거나 특수 조합의 범용 연결
+  // 5. 동일 방향 포트 간 연결 (TOP ➔ TOP, BOTTOM ➔ BOTTOM, LEFT ➔ LEFT, RIGHT ➔ RIGHT)
+  else if (srcMagnet === tgtMagnet) {
+    if (srcMagnet === 'TOP') {
+      const topDetourY = Math.min(srcBox.y, tgtBox.y) - margin;
+      points.push({ x: srcPoint.x, y: topDetourY });
+      points.push({ x: tgtPoint.x, y: topDetourY });
+      points.push(tgtPoint);
+    } else if (srcMagnet === 'BOTTOM') {
+      const bottomDetourY = Math.max(srcBox.y + srcBox.height, tgtBox.y + tgtBox.height) + margin;
+      points.push({ x: srcPoint.x, y: bottomDetourY });
+      points.push({ x: tgtPoint.x, y: bottomDetourY });
+      points.push(tgtPoint);
+    } else if (srcMagnet === 'LEFT') {
+      const leftDetourX = Math.min(srcBox.x, tgtBox.x) - margin;
+      points.push({ x: leftDetourX, y: srcPoint.y });
+      points.push({ x: leftDetourX, y: tgtPoint.y });
+      points.push(tgtPoint);
+    } else if (srcMagnet === 'RIGHT') {
+      const rightDetourX = Math.max(srcBox.x + srcBox.width, tgtBox.x + tgtBox.width) + margin;
+      points.push({ x: rightDetourX, y: srcPoint.y });
+      points.push({ x: rightDetourX, y: tgtPoint.y });
+      points.push(tgtPoint);
+    }
+  }
+  // 6. 그 외 특수 조합의 범용 연결
   else {
     if (tgtMagnet === 'TOP' || tgtMagnet === 'BOTTOM') {
       // 타겟이 수직 포트이면 마지막 세그먼트를 무조건 수직으로 강제 진입
@@ -1004,14 +1028,15 @@ export async function updateOrthogonalVectorConnector(
   };
 
   // 수동 지정 마그넷이 있으면 우선 사용
-  // forceOptimal이거나 마그넷 정보가 없는 경우 노드 상대 위치 기반 최적 마그넷 자동 판별
-  let sourceMagnet = explicitSourceMagnet;
-  let targetMagnet = explicitTargetMagnet;
+  // explicit 인자가 없으면 기존 저장된 플러그인데이터 마그넷을 유지하고,
+  // forceOptimal이거나 마그넷 정보가 아예 없는 경우에만 노드 상대 위치 기반 최적 마그넷 자동 판별
+  let sourceMagnet = explicitSourceMagnet || (safeGetPluginData(rootNode, 'source_magnet') as MagnetPosition) || undefined;
+  let targetMagnet = explicitTargetMagnet || (safeGetPluginData(rootNode, 'target_magnet') as MagnetPosition) || undefined;
 
   if (!sourceMagnet || !targetMagnet || forceOptimal) {
     const optimal = getOptimalMagnetPair(srcBox, tgtBox);
-    if (!sourceMagnet) sourceMagnet = optimal.sourceMagnet;
-    if (!targetMagnet) targetMagnet = optimal.targetMagnet;
+    if (!sourceMagnet || forceOptimal) sourceMagnet = optimal.sourceMagnet;
+    if (!targetMagnet || forceOptimal) targetMagnet = optimal.targetMagnet;
   }
 
   // 최신 마그넷 정보 동기화 저장

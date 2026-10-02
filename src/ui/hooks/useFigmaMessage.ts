@@ -25,22 +25,50 @@ export function useFigmaMessage() {
 
       switch (msg.type) {
         case 'SELECTION_CHANGED': {
-          const { count, nodes, meta, suggestedSourceMagnet, suggestedTargetMagnet } = msg;
+          const {
+            count,
+            nodes,
+            meta,
+            suggestedSourceMagnet,
+            suggestedTargetMagnet,
+            existingSourceMagnets,
+            existingTargetMagnets,
+            connectedConnectorCount,
+            hasExistingConnection,
+            connectedConnectorIds,
+          } = msg;
           handleSelectionChange(count || 0, nodes || [], meta || {});
 
-          // 노드 이동 또는 커넥터 선택에 따른 최적 마그넷(연결 포인트) 기즈모 실시간 업데이트
-          if (suggestedSourceMagnet && suggestedTargetMagnet) {
+          const isConn = (meta?.connectorCount || 0) > 0 || (nodes && nodes.some((n: any) => n?.isConnector));
+          const hasConnected = Boolean(hasExistingConnection || (connectedConnectorCount || 0) > 0);
+
+          const currentSelectionKey = (nodes || []).map((n: any) => n?.id).sort().join(',');
+          const isDifferentNode = currentSelectionKey !== prevNodeIdRef.current;
+          prevNodeIdRef.current = currentSelectionKey;
+
+          // 커넥터 선택 또는 이미 연결된 커넥터가 있는 경우: 기존 마그넷 복원
+          if (isConn || hasConnected) {
             setUIState({
-              sourceMagnet: suggestedSourceMagnet,
-              targetMagnet: suggestedTargetMagnet,
+              hasExistingConnection: hasConnected,
+              connectedConnectorIds: connectedConnectorIds || [],
+              connectedConnectors: msg.connectedConnectors || [],
+              existingSourceMagnets: existingSourceMagnets || [],
+              existingTargetMagnets: existingTargetMagnets || [],
+              sourceMagnet: suggestedSourceMagnet || null,
+              targetMagnet: suggestedTargetMagnet || null,
+            });
+          } else if (isDifferentNode) {
+            // 연결 없는 노드 선택 변경 시: 마그넷 미선택(null)으로 초기화
+            setUIState({
+              hasExistingConnection: false,
+              connectedConnectorIds: [],
+              connectedConnectors: [],
+              existingSourceMagnets: [],
+              existingTargetMagnets: [],
+              sourceMagnet: null,
+              targetMagnet: null,
             });
           }
-
-          const currentNodeId = (nodes && nodes.length === 1 && nodes[0]?.id)
-            ? nodes[0].id
-            : (nodes && nodes.length > 1 ? 'MULTI' : null);
-          const isDifferentNode = currentNodeId !== prevNodeIdRef.current;
-          prevNodeIdRef.current = currentNodeId;
 
           // 노드 속성 복원 (플러그인으로 생성된 플로우 노드에 대해서만 허용)
           if (nodes && nodes.length === 1) {

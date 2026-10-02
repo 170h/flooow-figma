@@ -2262,12 +2262,29 @@
     }
 
     .anchor-handle.active {
-      background: var(--color-brand, #8638e5) !important;
-      border: 1px solid var(--color-brand, #8638e5) !important;
+      background: var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+      border: 1px solid var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
     }
 
     .anchor-handle.active:hover {
       transform: scale(1.36);
+    }
+
+    /* Mixed 상태 기즈모 핸들 (서로 다른 연결 위치 표시) */
+    .anchor-handle.mixed {
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--gizmo-highlight-color, var(--color-brand, #8638e5)),
+        var(--gizmo-highlight-color, var(--color-brand, #8638e5)) 2px,
+        var(--color-bg, #ffffff) 2px,
+        var(--color-bg, #ffffff) 5px
+      ) !important;
+      border: 1px solid var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+    }
+
+    .anchor-handle.mixed:hover {
+      transform: scale(1.36);
+      z-index: 3;
     }
 
     .anchor-top {
@@ -2304,17 +2321,30 @@
       color: rgba(255, 255, 255, 0.6);
     }
 
-    body.figma-dark .anchor-handle:not(.active),
-    .figma-dark .anchor-handle:not(.active),
-    [data-theme="dark"] .anchor-handle:not(.active) {
+    body.figma-dark .anchor-handle:not(.active):not(.mixed),
+    .figma-dark .anchor-handle:not(.active):not(.mixed),
+    [data-theme="dark"] .anchor-handle:not(.active):not(.mixed) {
       background: #2c2c2c;
       border-color: rgba(255, 255, 255, 0.2);
     }
 
-    body.figma-dark .anchor-handle:not(.active):hover,
-    .figma-dark .anchor-handle:not(.active):hover,
-    [data-theme="dark"] .anchor-handle:not(.active):hover {
+    body.figma-dark .anchor-handle:not(.active):not(.mixed):hover,
+    .figma-dark .anchor-handle:not(.active):not(.mixed):hover,
+    [data-theme="dark"] .anchor-handle:not(.active):not(.mixed):hover {
       border-color: rgba(255, 255, 255, 0.45);
+    }
+
+    body.figma-dark .anchor-handle.mixed,
+    .figma-dark .anchor-handle.mixed,
+    [data-theme="dark"] .anchor-handle.mixed {
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--gizmo-highlight-color, var(--color-brand, #8638e5)),
+        var(--gizmo-highlight-color, var(--color-brand, #8638e5)) 2px,
+        #2c2c2c 2px,
+        #2c2c2c 5px
+      ) !important;
+      border-color: var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
     }
 
     /* ============================================================ */
@@ -29035,10 +29065,15 @@
     selectedBadgeColorMode: "Style",
     selectedLinePattern: "SOLID",
     selectedRoutingType: "ORTHOGONAL",
-    sourceMagnet: "RIGHT",
-    targetMagnet: "LEFT",
+    sourceMagnet: null,
+    targetMagnet: null,
     selectedNodeType: "Screen",
-    selectedConnectorColor: "#000000"
+    selectedConnectorColor: "#000000",
+    hasExistingConnection: false,
+    connectedConnectorIds: [],
+    connectedConnectors: [],
+    existingSourceMagnets: [],
+    existingTargetMagnets: []
   };
   var AppContext = (0, import_react2.createContext)(null);
   function useApp() {
@@ -29901,8 +29936,8 @@
               endTerminal: endTerm,
               startOffset,
               endOffset,
-              sourceMagnet,
-              targetMagnet,
+              sourceMagnet: sourceMagnet || void 0,
+              targetMagnet: targetMagnet || void 0,
               label,
               hasLabel,
               isReversed: node?.connectorIsReversed || false
@@ -29943,15 +29978,20 @@
       const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : lastConnectorConfigRef.current.linkUrl || "";
       const figmaLink = isLinkOn ? rawLinkUrl : "";
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+      if (uiStateRef.current.hasExistingConnection) {
+        return;
+      }
+      const finalSourceMag = sourceMagnet || "RIGHT";
+      const finalTargetMag = targetMagnet || "LEFT";
       if (nodes.length === 2) {
         parent.postMessage({
           pluginMessage: {
             type: "CONNECT_POINTS",
             payload: {
               sourceNodeId: nodes[0].id,
-              sourceMagnet,
+              sourceMagnet: finalSourceMag,
               targetNodeId: nodes[1].id,
-              targetMagnet,
+              targetMagnet: finalTargetMag,
               label,
               colorHex: color,
               strokeWeight: weight,
@@ -29966,46 +30006,67 @@
           }
         }, "*");
       } else {
-        for (let i = 0; i < nodes.length - 1; i++) {
-          const src = nodes[i];
-          const tgt = nodes[i + 1];
-          let pairSourceMag = sourceMagnet;
-          let pairTargetMag = targetMagnet;
-          if (typeof src.x === "number" && typeof tgt.x === "number" && typeof src.y === "number" && typeof tgt.y === "number") {
-            const dx = tgt.x - src.x;
-            const dy = tgt.y - src.y;
-            if (Math.abs(dx) >= Math.abs(dy)) {
-              pairSourceMag = dx >= 0 ? "RIGHT" : "LEFT";
-              pairTargetMag = dx >= 0 ? "LEFT" : "RIGHT";
-            } else {
-              pairSourceMag = dy >= 0 ? "BOTTOM" : "TOP";
-              pairTargetMag = dy >= 0 ? "TOP" : "BOTTOM";
-            }
-          }
+        const src = nodes[0];
+        for (let i = 1; i < nodes.length; i++) {
+          const tgt = nodes[i];
           parent.postMessage({
             pluginMessage: {
               type: "CONNECT_POINTS",
               payload: {
                 sourceNodeId: src.id,
-                sourceMagnet: i === 0 ? sourceMagnet : pairSourceMag,
+                sourceMagnet: finalSourceMag,
                 targetNodeId: tgt.id,
-                targetMagnet: i === nodes.length - 2 ? targetMagnet : pairTargetMag,
-                label: i === 0 ? label : "",
+                targetMagnet: finalTargetMag,
+                label: i === 1 ? label : "",
                 colorHex: color,
                 strokeWeight: weight,
                 routingType: selectedRoutingType,
                 strokePattern: selectedLinePattern,
-                startTerminal: i === 0 ? startTerm : "NONE",
+                startTerminal: i === 1 ? startTerm : "NONE",
                 endTerminal: endTerm,
                 startOffset: startOff,
                 endOffset: endOff,
-                figmaLink: i === 0 ? figmaLink : ""
+                figmaLink: i === 1 ? figmaLink : ""
               }
             }
           }, "*");
         }
       }
     }, [applyCurrentConnectorState, showToast]);
+    const updateConnectedConnectorMagnets = (0, import_react2.useCallback)((sourceMagnet, targetMagnet) => {
+      const connectedConnectors = uiStateRef.current.connectedConnectors || [];
+      const connIds = uiStateRef.current.connectedConnectorIds || [];
+      if (connectedConnectors.length > 0) {
+        connectedConnectors.forEach((conn) => {
+          const node1Mag = sourceMagnet || (conn.isReversed ? conn.targetMagnet : conn.sourceMagnet) || uiStateRef.current.sourceMagnet || void 0;
+          const node2Mag = targetMagnet || (conn.isReversed ? conn.sourceMagnet : conn.targetMagnet) || uiStateRef.current.targetMagnet || void 0;
+          parent.postMessage({
+            pluginMessage: {
+              type: "UPDATE_CONNECTOR_PROPERTIES",
+              payload: {
+                connectorId: conn.id,
+                isReversed: conn.isReversed,
+                sourceMagnet: node1Mag,
+                targetMagnet: node2Mag
+              }
+            }
+          }, "*");
+        });
+      } else {
+        connIds.forEach((connId) => {
+          parent.postMessage({
+            pluginMessage: {
+              type: "UPDATE_CONNECTOR_PROPERTIES",
+              payload: {
+                connectorId: connId,
+                sourceMagnet: sourceMagnet || uiStateRef.current.sourceMagnet || void 0,
+                targetMagnet: targetMagnet || uiStateRef.current.targetMagnet || void 0
+              }
+            }
+          }, "*");
+        });
+      }
+    }, []);
     const handleMainAction = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       const isConn = isConnectorSelectedRef.current || nodes.length > 0 && nodes.every((n) => n && n.isConnector);
@@ -30374,6 +30435,7 @@
       removeStepBadgesFromNodes,
       applyCurrentConnectorState,
       connectSelectedNodes,
+      updateConnectedConnectorMagnets,
       handleMainAction,
       handleSelectionChange,
       closeAllPopovers,
@@ -30414,17 +30476,45 @@
         if (!msg) return;
         switch (msg.type) {
           case "SELECTION_CHANGED": {
-            const { count, nodes, meta, suggestedSourceMagnet, suggestedTargetMagnet } = msg;
+            const {
+              count,
+              nodes,
+              meta,
+              suggestedSourceMagnet,
+              suggestedTargetMagnet,
+              existingSourceMagnets,
+              existingTargetMagnets,
+              connectedConnectorCount,
+              hasExistingConnection,
+              connectedConnectorIds
+            } = msg;
             handleSelectionChange(count || 0, nodes || [], meta || {});
-            if (suggestedSourceMagnet && suggestedTargetMagnet) {
+            const isConn = (meta?.connectorCount || 0) > 0 || nodes && nodes.some((n) => n?.isConnector);
+            const hasConnected = Boolean(hasExistingConnection || (connectedConnectorCount || 0) > 0);
+            const currentSelectionKey = (nodes || []).map((n) => n?.id).sort().join(",");
+            const isDifferentNode = currentSelectionKey !== prevNodeIdRef.current;
+            prevNodeIdRef.current = currentSelectionKey;
+            if (isConn || hasConnected) {
               setUIState({
-                sourceMagnet: suggestedSourceMagnet,
-                targetMagnet: suggestedTargetMagnet
+                hasExistingConnection: hasConnected,
+                connectedConnectorIds: connectedConnectorIds || [],
+                connectedConnectors: msg.connectedConnectors || [],
+                existingSourceMagnets: existingSourceMagnets || [],
+                existingTargetMagnets: existingTargetMagnets || [],
+                sourceMagnet: suggestedSourceMagnet || null,
+                targetMagnet: suggestedTargetMagnet || null
+              });
+            } else if (isDifferentNode) {
+              setUIState({
+                hasExistingConnection: false,
+                connectedConnectorIds: [],
+                connectedConnectors: [],
+                existingSourceMagnets: [],
+                existingTargetMagnets: [],
+                sourceMagnet: null,
+                targetMagnet: null
               });
             }
-            const currentNodeId = nodes && nodes.length === 1 && nodes[0]?.id ? nodes[0].id : nodes && nodes.length > 1 ? "MULTI" : null;
-            const isDifferentNode = currentNodeId !== prevNodeIdRef.current;
-            prevNodeIdRef.current = currentNodeId;
             if (nodes && nodes.length === 1) {
               const node = nodes[0];
               if (node.isFlowNode || !node.isConnector && (node.flowNodeType || node.nodeType === "FRAME")) {
@@ -32107,7 +32197,7 @@
     const isColorModeMixed = multiDraft.badgeColorMode !== void 0 ? false : isMultiMode && summary.badgeColorMode.isMixed;
     const displayStepNum = multiDraft.badgeNumber !== void 0 ? String(multiDraft.badgeNumber) : stepNumText;
     const effectiveIsMixed = multiDraft.badgeNumber !== void 0 ? false : isMixed;
-    const isStartNumberDefined = displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10));
+    const isStartNumberDefined = multiDraft.badgeNumber !== void 0 ? multiDraft.badgeNumber > 0 : !effectiveIsMixed && displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10));
     const selectedBadgeCorner = multiDraft.badgeCorner || (isCornerMixed ? void 0 : summary.isMultiFlowNode && summary.badgeCorner.value ? summary.badgeCorner.value : uiState.selectedBadgeCorner || "TOP_LEFT");
     const selectedBadgeShape = multiDraft.badgeShape || (isShapeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeShape.value ? summary.badgeShape.value : uiState.selectedBadgeShape || "Square");
     const selectedBadgeColorMode = multiDraft.badgeColorMode || (isColorModeMixed ? void 0 : summary.isMultiFlowNode && summary.badgeColorMode.value ? summary.badgeColorMode.value : uiState.selectedBadgeColorMode || "Style");
@@ -32222,14 +32312,15 @@
             }
           } else {
             const validNums = supported.map((n) => n.stepNumber).filter((n) => typeof n === "number" && !isNaN(n) && n > 0);
-            if (validNums.length > 0) {
-              const minNum = Math.min(...validNums);
-              const allSame = validNums.every((v) => v === validNums[0]);
-              setIsMixed(!allSame);
-              setStepNumText(String(minNum));
-            } else {
+            if (validNums.length === supported.length && validNums.every((v) => v === validNums[0])) {
+              setIsMixed(false);
+              setStepNumText(String(validNums[0]));
+            } else if (validNums.length === 0) {
               setIsMixed(false);
               setStepNumText("1");
+            } else {
+              setIsMixed(true);
+              setStepNumText("");
             }
             if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
               setUIState({ selectedBadgeCorner: summary.badgeCorner.value });
@@ -32283,7 +32374,8 @@
       };
     }, [colorDropdownOpen]);
     function getNumberValue() {
-      const parsed = parseInt(displayStepNum, 10);
+      const raw = multiDraft.badgeNumber !== void 0 ? String(multiDraft.badgeNumber) : displayStepNum || stepNumText;
+      const parsed = parseInt(raw, 10);
       return isNaN(parsed) || parsed < 1 ? 1 : parsed;
     }
     function handleToggle(checked) {
@@ -32371,13 +32463,34 @@
       }
     }
     function handleNumberBlurOrEnter() {
+      userActionLockRef.current = Date.now();
+      if (selectedNodes.length >= 2) {
+        if (stepNumText === "") {
+          clearMultiDraftKeys(["badgeNumber"]);
+          const supported = rawOptionState.supportedNodes;
+          const validNums = supported.map((n) => n.stepNumber).filter((n) => typeof n === "number" && !isNaN(n) && n > 0);
+          if (validNums.length === supported.length && validNums.every((v) => v === validNums[0])) {
+            setStepNumText(String(validNums[0]));
+            setIsMixed(false);
+          } else if (validNums.length === 0) {
+            setStepNumText("1");
+            setIsMixed(false);
+          } else {
+            setStepNumText("");
+            setIsMixed(true);
+          }
+          return;
+        }
+        const parsed = parseInt(stepNumText, 10);
+        const val2 = isNaN(parsed) || parsed < 1 ? 1 : parsed;
+        setIsMixed(false);
+        setStepNumText(String(val2));
+        updateMultiDraft({ badgeNumber: val2 });
+        return;
+      }
       setIsMixed(false);
       const val = getNumberValue();
       setStepNumText(String(val));
-      if (selectedNodes.length >= 2) {
-        updateMultiDraft({ badgeNumber: val });
-        return;
-      }
       setLastNodeConfig({ stepNumber: val });
       if (isSectionOpen && !isMultiMode) {
         applyStepBadges(
@@ -32572,11 +32685,25 @@
                               {
                                 type: "text",
                                 id: "input-step-number",
-                                value: displayStepNum,
-                                placeholder: "1",
+                                value: effectiveIsMixed ? "" : displayStepNum,
+                                placeholder: effectiveIsMixed ? "Mixed" : "1",
                                 onChange: (e) => {
-                                  setIsMixed(false);
-                                  setStepNumText(e.target.value.replace(/[^0-9]/g, ""));
+                                  userActionLockRef.current = Date.now();
+                                  const clean = e.target.value.replace(/[^0-9]/g, "");
+                                  setStepNumText(clean);
+                                  if (selectedNodes.length >= 2) {
+                                    if (clean !== "") {
+                                      const parsed = parseInt(clean, 10);
+                                      if (!isNaN(parsed) && parsed > 0) {
+                                        setIsMixed(false);
+                                        updateMultiDraft({ badgeNumber: parsed });
+                                      }
+                                    } else {
+                                      clearMultiDraftKeys(["badgeNumber"]);
+                                    }
+                                  } else {
+                                    setIsMixed(false);
+                                  }
                                 },
                                 onBlur: handleNumberBlurOrEnter,
                                 onKeyDown: (e) => {
@@ -32590,8 +32717,8 @@
                                   background: "transparent",
                                   outline: "none",
                                   fontSize: "11px",
-                                  fontWeight: 400,
-                                  color: "#111827",
+                                  fontWeight: "var(--font-weight-default, 450)",
+                                  color: "var(--color-text-primary, #111827)",
                                   padding: 0
                                 }
                               }
@@ -34381,6 +34508,7 @@
       setActiveModal,
       applyCurrentConnectorState,
       connectSelectedNodes,
+      updateConnectedConnectorMagnets,
       handleMainAction,
       selectedNodes,
       stylePresets,
@@ -34412,6 +34540,10 @@
     const [endOffsetInput, setEndOffsetInput] = (0, import_react14.useState)("0");
     const [isStartOffsetMixed, setIsStartOffsetMixed] = (0, import_react14.useState)(false);
     const [isEndOffsetMixed, setIsEndOffsetMixed] = (0, import_react14.useState)(false);
+    const [userPendingSourceMagnet, setUserPendingSourceMagnet] = (0, import_react14.useState)(null);
+    const [userPendingTargetMagnet, setUserPendingTargetMagnet] = (0, import_react14.useState)(null);
+    const userActionTimestampRef = (0, import_react14.useRef)(0);
+    const prevSelectionKeyRef = (0, import_react14.useRef)("");
     const offsetDebounceRef = (0, import_react14.useRef)(null);
     (0, import_react14.useEffect)(() => {
       return () => {
@@ -34482,6 +34614,14 @@
       return () => document.removeEventListener("click", handleDocClick);
     }, []);
     (0, import_react14.useEffect)(() => {
+      const currentSelectionKey = selectedNodes.map((n) => n.id).sort().join(",");
+      const isDifferentSelection = currentSelectionKey !== prevSelectionKeyRef.current;
+      if (isDifferentSelection) {
+        prevSelectionKeyRef.current = currentSelectionKey;
+        setUserPendingSourceMagnet(null);
+        setUserPendingTargetMagnet(null);
+      }
+      const isUserActionRecent = Date.now() - userActionTimestampRef.current < 800;
       if (summary.isSingleConnector) {
         const node = selectedNodes[0];
         setIsColorMixed(false);
@@ -34522,7 +34662,7 @@
         if (node?.connectorStrokePattern) {
           setUIState({ selectedLinePattern: node.connectorStrokePattern });
         }
-        if (node?.connectorSourceMagnet && node?.connectorTargetMagnet) {
+        if (!isUserActionRecent && node?.connectorSourceMagnet && node?.connectorTargetMagnet) {
           setUIState({
             sourceMagnet: node.connectorSourceMagnet,
             targetMagnet: node.connectorTargetMagnet
@@ -34587,11 +34727,13 @@
         if (!summary.connectorStrokePattern.isMixed && summary.connectorStrokePattern.value) {
           setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
         }
-        if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
-          setUIState({ sourceMagnet: summary.connectorSourceMagnet.value });
-        }
-        if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
-          setUIState({ targetMagnet: summary.connectorTargetMagnet.value });
+        if (!isUserActionRecent) {
+          if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
+            setUIState({ sourceMagnet: summary.connectorSourceMagnet.value });
+          }
+          if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
+            setUIState({ targetMagnet: summary.connectorTargetMagnet.value });
+          }
         }
         const isStartOffMixed = Boolean(summary.connectorStartOffset.isMixed);
         const startOffVal = summary.connectorStartOffset.value;
@@ -34720,11 +34862,42 @@
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
     function selectAnchor(nodeIndex, pos) {
-      document.querySelectorAll(`.anchor-handle[data-node="${nodeIndex}"]`).forEach((h) => h.classList.remove("active"));
-      document.querySelector(`.anchor-handle[data-node="${nodeIndex}"][data-pos="${pos}"]`)?.classList.add("active");
-      if (nodeIndex === 1) setUIState({ sourceMagnet: pos });
-      if (nodeIndex === 2) setUIState({ targetMagnet: pos });
-      setTimeout(() => applyCurrentConnectorState(), 0);
+      userActionTimestampRef.current = Date.now();
+      const isConn = summary.isSingleConnector || summary.isMultiConnector;
+      const hasExisting2 = Boolean(uiState.hasExistingConnection && uiState.connectedConnectorIds && uiState.connectedConnectorIds.length > 0);
+      if (nodeIndex === 1) {
+        setUserPendingSourceMagnet(pos);
+        if (isConn) {
+          setUIState({ sourceMagnet: pos });
+          setTimeout(() => applyCurrentConnectorState(), 0);
+        } else if (hasExisting2) {
+          setUIState({ sourceMagnet: pos });
+          const currentTarget = userPendingTargetMagnet ?? uiState.targetMagnet ?? void 0;
+          updateConnectedConnectorMagnets(pos, currentTarget);
+        } else {
+          const autoTarget = !userPendingTargetMagnet && !uiState.targetMagnet ? pos : userPendingTargetMagnet ?? uiState.targetMagnet;
+          if (!userPendingTargetMagnet && !uiState.targetMagnet) {
+            setUserPendingTargetMagnet(pos);
+          }
+          setUIState({ sourceMagnet: pos, targetMagnet: autoTarget ?? null });
+        }
+      } else {
+        setUserPendingTargetMagnet(pos);
+        if (isConn) {
+          setUIState({ targetMagnet: pos });
+          setTimeout(() => applyCurrentConnectorState(), 0);
+        } else if (hasExisting2) {
+          setUIState({ targetMagnet: pos });
+          const currentSource = userPendingSourceMagnet ?? uiState.sourceMagnet ?? void 0;
+          updateConnectedConnectorMagnets(currentSource, pos);
+        } else {
+          const autoSource = !userPendingSourceMagnet && !uiState.sourceMagnet ? pos : userPendingSourceMagnet ?? uiState.sourceMagnet;
+          if (!userPendingSourceMagnet && !uiState.sourceMagnet) {
+            setUserPendingSourceMagnet(pos);
+          }
+          setUIState({ targetMagnet: pos, sourceMagnet: autoSource ?? null });
+        }
+      }
     }
     function selectTerminal(side, value) {
       const selectEl = document.getElementById(`select-${side}-terminal`);
@@ -34909,6 +35082,14 @@
         node2DisplayName = selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2";
       }
     }
+    const hasExisting = Boolean(uiState.hasExistingConnection);
+    const existingSrcs = uiState.existingSourceMagnets || [];
+    const existingTgts = uiState.existingTargetMagnets || [];
+    const isEndMixed = !userPendingTargetMagnet && (summary.isMultiConnector && summary.connectorTargetMagnet.isMixed || hasExisting && existingTgts.length > 1);
+    const endMagnets = summary.isMultiConnector ? selectedNodes.filter((n) => n && n.isConnector).map((n) => n.connectorTargetMagnet).filter(Boolean) : hasExisting ? existingTgts : [];
+    const isStartMixed = !userPendingSourceMagnet && (summary.isMultiConnector && summary.connectorSourceMagnet.isMixed || hasExisting && existingSrcs.length > 1);
+    const startMagnets = summary.isMultiConnector ? selectedNodes.filter((n) => n && n.isConnector).map((n) => n.connectorSourceMagnet).filter(Boolean) : hasExisting ? existingSrcs : [];
+    const gizmoHighlightColor = selectedColor || uiState.selectedConnectorColor || "#000000";
     const ROUTING_TYPES = [
       { type: "ORTHOGONAL", title: "\uC9C1\uAC01 (Orthogonal)", svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
       { type: "S_CURVE", title: "S\uC790 \uACE1\uC120 (S-curve)", svg: '<g clip-path="url(#clip_sc)"><path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
@@ -35036,36 +35217,54 @@
             );
           }) })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "connect-canvas-box", id: "conn-anchor-preview-box", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "node-preview-card", id: "preview-node-1", children: [
-            ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
-              "div",
-              {
-                className: `anchor-handle anchor-${pos.toLowerCase()}${sourceMagnet === pos ? " active" : ""}`,
-                "data-node": "1",
-                "data-pos": pos,
-                title: `Source ${pos}`,
-                onClick: () => selectAnchor(1, pos)
-              },
-              pos
-            )),
-            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { id: "preview-node-1-text", children: node1DisplayName })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "node-preview-card", id: "preview-node-2", children: [
-            ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
-              "div",
-              {
-                className: `anchor-handle anchor-${pos.toLowerCase()}${targetMagnet === pos ? " active" : ""}`,
-                "data-node": "2",
-                "data-pos": pos,
-                title: `Target ${pos}`,
-                onClick: () => selectAnchor(2, pos)
-              },
-              pos
-            )),
-            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { id: "preview-node-2-text", children: node2DisplayName })
-          ] })
-        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+          "div",
+          {
+            className: "connect-canvas-box",
+            id: "conn-anchor-preview-box",
+            style: { "--gizmo-highlight-color": gizmoHighlightColor },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "node-preview-card", id: "preview-node-1", children: [
+                ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => {
+                  const isMixed = isStartMixed && startMagnets.includes(pos);
+                  const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
+                  const isActive = !isStartMixed && effectiveSource === pos;
+                  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+                    "div",
+                    {
+                      className: `anchor-handle anchor-${pos.toLowerCase()}${isActive ? " active" : ""}${isMixed ? " mixed" : ""}`,
+                      "data-node": "1",
+                      "data-pos": pos,
+                      title: isMixed ? `Source ${pos} (Mixed)` : `Source ${pos}`,
+                      onClick: () => selectAnchor(1, pos)
+                    },
+                    pos
+                  );
+                }),
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { id: "preview-node-1-text", children: node1DisplayName })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "node-preview-card", id: "preview-node-2", children: [
+                ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => {
+                  const isMixed = isEndMixed && endMagnets.includes(pos);
+                  const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
+                  const isActive = !isEndMixed && effectiveTarget === pos;
+                  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+                    "div",
+                    {
+                      className: `anchor-handle anchor-${pos.toLowerCase()}${isActive ? " active" : ""}${isMixed ? " mixed" : ""}`,
+                      "data-node": "2",
+                      "data-pos": pos,
+                      title: isMixed ? `Target ${pos} (Mixed)` : `Target ${pos}`,
+                      onClick: () => selectAnchor(2, pos)
+                    },
+                    pos
+                  );
+                }),
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { id: "preview-node-2-text", children: node2DisplayName })
+              ] })
+            ]
+          }
+        ),
         /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { style: { display: "flex", gap: "6px" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "input-scrubber-box", style: { width: "70px" }, children: [
             /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
@@ -35482,7 +35681,39 @@
         ] }),
         (() => {
           const isAllConnectors = selectedNodes.length > 0 && selectedNodes.every((n) => n && n.isConnector);
-          const isConnectDisabled = selectedNodes.length < 2 && !isAllConnectors;
+          const hasExisting2 = Boolean(uiState.hasExistingConnection);
+          const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
+          const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
+          let isConnectDisabled = false;
+          if (isAllConnectors) {
+            isConnectDisabled = false;
+          } else if (hasExisting2) {
+            isConnectDisabled = true;
+          } else if (selectedNodes.length < 2) {
+            isConnectDisabled = true;
+          } else {
+            const hasStart = Boolean(effectiveSource);
+            const hasEnd = Boolean(effectiveTarget);
+            isConnectDisabled = !hasStart || !hasEnd;
+          }
+          let statusText = "Select 2+ nodes to connect";
+          if (isAllConnectors) {
+            statusText = selectedNodes.length === 1 ? "Connector selected" : `${selectedNodes.length} connectors selected`;
+          } else if (hasExisting2) {
+            statusText = selectedNodes.length === 2 ? "Connected (Edit anchors via gizmo)" : `${selectedNodes.length} nodes connected (Edit via gizmo)`;
+          } else if (selectedNodes.length >= 2) {
+            const hasStart = Boolean(effectiveSource);
+            const hasEnd = Boolean(effectiveTarget);
+            if (!hasStart && !hasEnd) {
+              statusText = "Select Start & End anchors";
+            } else if (!hasStart) {
+              statusText = "Select Start anchor";
+            } else if (!hasEnd) {
+              statusText = "Select End anchor";
+            } else {
+              statusText = `${selectedNodes.length} nodes ready to connect`;
+            }
+          }
           return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
             "div",
             {
@@ -35505,8 +35736,8 @@
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap"
                     },
-                    title: isAllConnectors ? selectedNodes.length === 1 ? "Update selected connector" : `Update ${selectedNodes.length} selected connectors` : selectedNodes.length >= 2 ? `${selectedNodes.length} nodes selected to connect` : "Select 2 or more nodes to connect",
-                    children: isAllConnectors ? selectedNodes.length === 1 ? "Connector selected" : `${selectedNodes.length} connectors selected` : selectedNodes.length >= 2 ? `${selectedNodes.length} nodes selected` : "Select 2+ nodes to connect"
+                    title: statusText,
+                    children: statusText
                   }
                 ),
                 /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
@@ -35517,7 +35748,7 @@
                     className: "btn-add-step-badges",
                     disabled: isConnectDisabled,
                     onClick: connectSelectedNodes,
-                    title: isAllConnectors ? selectedNodes.length === 1 ? "Update Connector" : "Update Connectors" : selectedNodes.length >= 2 ? "Connect selected nodes" : "Select 2 or more nodes to connect",
+                    title: isAllConnectors ? selectedNodes.length === 1 ? "Update Connector" : "Update Connectors" : isConnectDisabled ? statusText : "Connect selected nodes",
                     children: [
                       /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
                         "path",

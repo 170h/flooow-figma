@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useApp, StylePreset, NodeInfo } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
-import { ConnectorTerminalType } from '../../../types';
+import { ConnectorTerminalType, MagnetPosition } from '../../../types';
 import { IcPalette, COLOR_MIXED_ICON } from '../shared/icons';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 
@@ -89,6 +89,7 @@ export function ConnectSection() {
     setActiveModal,
     applyCurrentConnectorState,
     connectSelectedNodes,
+    updateConnectedConnectorMagnets,
     handleMainAction,
     selectedNodes,
     stylePresets,
@@ -130,6 +131,12 @@ export function ConnectSection() {
   const [endOffsetInput, setEndOffsetInput] = useState<string>('0');
   const [isStartOffsetMixed, setIsStartOffsetMixed] = useState(false);
   const [isEndOffsetMixed, setIsEndOffsetMixed] = useState(false);
+
+  // 사용자가 기즈모에서 명시적으로 선택한 pending 마그넷 (상태 C)
+  const [userPendingSourceMagnet, setUserPendingSourceMagnet] = useState<MagnetPosition | null>(null);
+  const [userPendingTargetMagnet, setUserPendingTargetMagnet] = useState<MagnetPosition | null>(null);
+  const userActionTimestampRef = useRef<number>(0);
+  const prevSelectionKeyRef = useRef<string>('');
 
   // 오프셋 실시간 입력 디바운스 타이머
   const offsetDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -219,6 +226,16 @@ export function ConnectSection() {
 
   // 선택된 노드 변경 시 터미널, 컬러 및 수치 상태 동기화
   useEffect(() => {
+    const currentSelectionKey = selectedNodes.map((n) => n.id).sort().join(',');
+    const isDifferentSelection = currentSelectionKey !== prevSelectionKeyRef.current;
+    if (isDifferentSelection) {
+      prevSelectionKeyRef.current = currentSelectionKey;
+      setUserPendingSourceMagnet(null);
+      setUserPendingTargetMagnet(null);
+    }
+
+    const isUserActionRecent = Date.now() - userActionTimestampRef.current < 800;
+
     if (summary.isSingleConnector) {
       // 커넥터 단일 선택
       const node = selectedNodes[0];
@@ -262,10 +279,10 @@ export function ConnectSection() {
       if (node?.connectorStrokePattern) {
         setUIState({ selectedLinePattern: node.connectorStrokePattern });
       }
-      if (node?.connectorSourceMagnet && node?.connectorTargetMagnet) {
+      if (!isUserActionRecent && node?.connectorSourceMagnet && node?.connectorTargetMagnet) {
         setUIState({
-          sourceMagnet: node.connectorSourceMagnet,
-          targetMagnet: node.connectorTargetMagnet,
+          sourceMagnet: node.connectorSourceMagnet as MagnetPosition,
+          targetMagnet: node.connectorTargetMagnet as MagnetPosition,
         });
       }
 
@@ -347,11 +364,13 @@ export function ConnectSection() {
       }
 
       // 6. 마그넷 위치
-      if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
-        setUIState({ sourceMagnet: summary.connectorSourceMagnet.value });
-      }
-      if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
-        setUIState({ targetMagnet: summary.connectorTargetMagnet.value });
+      if (!isUserActionRecent) {
+        if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
+          setUIState({ sourceMagnet: summary.connectorSourceMagnet.value as MagnetPosition });
+        }
+        if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
+          setUIState({ targetMagnet: summary.connectorTargetMagnet.value as MagnetPosition });
+        }
       }
 
       // 7. 시작/끝 오프셋 (커넥터 복수 선택 시)
@@ -494,12 +513,46 @@ export function ConnectSection() {
     setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
-  function selectAnchor(nodeIndex: 1 | 2, pos: string) {
-    document.querySelectorAll(`.anchor-handle[data-node="${nodeIndex}"]`).forEach(h => h.classList.remove('active'));
-    document.querySelector(`.anchor-handle[data-node="${nodeIndex}"][data-pos="${pos}"]`)?.classList.add('active');
-    if (nodeIndex === 1) setUIState({ sourceMagnet: pos });
-    if (nodeIndex === 2) setUIState({ targetMagnet: pos });
-    setTimeout(() => applyCurrentConnectorState(), 0);
+  function selectAnchor(nodeIndex: 1 | 2, pos: MagnetPosition) {
+    userActionTimestampRef.current = Date.now();
+    const isConn = summary.isSingleConnector || summary.isMultiConnector;
+    const hasExisting = Boolean(uiState.hasExistingConnection && uiState.connectedConnectorIds && uiState.connectedConnectorIds.length > 0);
+
+    if (nodeIndex === 1) {
+      setUserPendingSourceMagnet(pos);
+      if (isConn) {
+        setUIState({ sourceMagnet: pos });
+        setTimeout(() => applyCurrentConnectorState(), 0);
+      } else if (hasExisting) {
+        setUIState({ sourceMagnet: pos });
+        const currentTarget = userPendingTargetMagnet ?? uiState.targetMagnet ?? undefined;
+        updateConnectedConnectorMagnets(pos, currentTarget);
+      } else {
+        // 신규 연결: Node 2(End)가 미선택 상태이면 동일 방향(pos)으로 자동 대응 (문제 B 해결)
+        const autoTarget = (!userPendingTargetMagnet && !uiState.targetMagnet) ? pos : (userPendingTargetMagnet ?? uiState.targetMagnet);
+        if (!userPendingTargetMagnet && !uiState.targetMagnet) {
+          setUserPendingTargetMagnet(pos);
+        }
+        setUIState({ sourceMagnet: pos, targetMagnet: autoTarget ?? null });
+      }
+    } else {
+      setUserPendingTargetMagnet(pos);
+      if (isConn) {
+        setUIState({ targetMagnet: pos });
+        setTimeout(() => applyCurrentConnectorState(), 0);
+      } else if (hasExisting) {
+        setUIState({ targetMagnet: pos });
+        const currentSource = userPendingSourceMagnet ?? uiState.sourceMagnet ?? undefined;
+        updateConnectedConnectorMagnets(currentSource, pos);
+      } else {
+        // 신규 연결: Node 1(Start)이 미선택 상태이면 동일 방향(pos)으로 자동 대응
+        const autoSource = (!userPendingSourceMagnet && !uiState.sourceMagnet) ? pos : (userPendingSourceMagnet ?? uiState.sourceMagnet);
+        if (!userPendingSourceMagnet && !uiState.sourceMagnet) {
+          setUserPendingSourceMagnet(pos);
+        }
+        setUIState({ targetMagnet: pos, sourceMagnet: autoSource ?? null });
+      }
+    }
   }
 
   function selectTerminal(side: 'start' | 'end', value: ConnectorTerminalType) {
@@ -706,6 +759,30 @@ export function ConnectSection() {
     }
   }
 
+  // 커넥터 기즈모 마그넷 Mixed 상태 계산 (여러 커넥터의 End/Start 연결 위치가 서로 다른 경우)
+  // 단, 사용자가 명시적으로 기즈모 위치를 선택한 경우(userPending)에는 Mixed가 해제되고 선택 위치가 단일 active로 표시됨
+  const hasExisting = Boolean(uiState.hasExistingConnection);
+  const existingSrcs = uiState.existingSourceMagnets || [];
+  const existingTgts = uiState.existingTargetMagnets || [];
+
+  const isEndMixed = !userPendingTargetMagnet && (
+    (summary.isMultiConnector && summary.connectorTargetMagnet.isMixed) ||
+    (hasExisting && existingTgts.length > 1)
+  );
+  const endMagnets: MagnetPosition[] = summary.isMultiConnector
+    ? (selectedNodes.filter(n => n && n.isConnector).map(n => n.connectorTargetMagnet).filter(Boolean) as MagnetPosition[])
+    : (hasExisting ? existingTgts : []);
+
+  const isStartMixed = !userPendingSourceMagnet && (
+    (summary.isMultiConnector && summary.connectorSourceMagnet.isMixed) ||
+    (hasExisting && existingSrcs.length > 1)
+  );
+  const startMagnets: MagnetPosition[] = summary.isMultiConnector
+    ? (selectedNodes.filter(n => n && n.isConnector).map(n => n.connectorSourceMagnet).filter(Boolean) as MagnetPosition[])
+    : (hasExisting ? existingSrcs : []);
+
+  const gizmoHighlightColor = selectedColor || uiState.selectedConnectorColor || '#000000';
+
   const ROUTING_TYPES = [
     { type: 'ORTHOGONAL', title: '직각 (Orthogonal)', svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
     { type: 'S_CURVE', title: 'S자 곡선 (S-curve)', svg: '<g clip-path="url(#clip_sc)"><path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
@@ -839,27 +916,47 @@ export function ConnectSection() {
         </div>
 
         {/* 앵커 연결 캔버스 (Figma 공식 UI3 1027248:5061) */}
-        <div className="connect-canvas-box" id="conn-anchor-preview-box">
+        <div
+          className="connect-canvas-box"
+          id="conn-anchor-preview-box"
+          style={{ '--gizmo-highlight-color': gizmoHighlightColor } as React.CSSProperties}
+        >
           <div className="node-preview-card" id="preview-node-1">
-            {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => (
-              <div key={pos}
-                className={`anchor-handle anchor-${pos.toLowerCase()}${sourceMagnet === pos ? ' active' : ''}`}
-                data-node="1" data-pos={pos}
-                title={`Source ${pos}`}
-                onClick={() => selectAnchor(1, pos)} />
-            ))}
+            {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => {
+              const isMixed = isStartMixed && startMagnets.includes(pos);
+              const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
+              const isActive = !isStartMixed && effectiveSource === pos;
+              return (
+                <div
+                  key={pos}
+                  className={`anchor-handle anchor-${pos.toLowerCase()}${isActive ? ' active' : ''}${isMixed ? ' mixed' : ''}`}
+                  data-node="1"
+                  data-pos={pos}
+                  title={isMixed ? `Source ${pos} (Mixed)` : `Source ${pos}`}
+                  onClick={() => selectAnchor(1, pos)}
+                />
+              );
+            })}
             <span id="preview-node-1-text">
               {node1DisplayName}
             </span>
           </div>
           <div className="node-preview-card" id="preview-node-2">
-            {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => (
-              <div key={pos}
-                className={`anchor-handle anchor-${pos.toLowerCase()}${targetMagnet === pos ? ' active' : ''}`}
-                data-node="2" data-pos={pos}
-                title={`Target ${pos}`}
-                onClick={() => selectAnchor(2, pos)} />
-            ))}
+            {(['TOP', 'RIGHT', 'BOTTOM', 'LEFT'] as const).map(pos => {
+              const isMixed = isEndMixed && endMagnets.includes(pos);
+              const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
+              const isActive = !isEndMixed && effectiveTarget === pos;
+              return (
+                <div
+                  key={pos}
+                  className={`anchor-handle anchor-${pos.toLowerCase()}${isActive ? ' active' : ''}${isMixed ? ' mixed' : ''}`}
+                  data-node="2"
+                  data-pos={pos}
+                  title={isMixed ? `Target ${pos} (Mixed)` : `Target ${pos}`}
+                  onClick={() => selectAnchor(2, pos)}
+                />
+              );
+            })}
             <span id="preview-node-2-text">
               {node2DisplayName}
             </span>
@@ -1300,7 +1397,43 @@ export function ConnectSection() {
         {/* 하단 연결 버튼 행 (설정 행들과 동일한 간격으로 배치) */}
         {(() => {
           const isAllConnectors = selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector);
-          const isConnectDisabled = selectedNodes.length < 2 && !isAllConnectors;
+          const hasExisting = Boolean(uiState.hasExistingConnection);
+          const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
+          const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
+
+          let isConnectDisabled = false;
+          if (isAllConnectors) {
+            isConnectDisabled = false;
+          } else if (hasExisting) {
+            // [상태 B] 기존 연결이 하나라도 존재하면 Connect 버튼은 항상 Disabled
+            isConnectDisabled = true;
+          } else if (selectedNodes.length < 2) {
+            isConnectDisabled = true;
+          } else {
+            // [상태 A] 신규 생성 (2개 및 3개 이상 노드): Start와 End anchor가 모두 선택 완료되어야 활성화
+            const hasStart = Boolean(effectiveSource);
+            const hasEnd = Boolean(effectiveTarget);
+            isConnectDisabled = !hasStart || !hasEnd;
+          }
+
+          let statusText = 'Select 2+ nodes to connect';
+          if (isAllConnectors) {
+            statusText = selectedNodes.length === 1 ? 'Connector selected' : `${selectedNodes.length} connectors selected`;
+          } else if (hasExisting) {
+            statusText = selectedNodes.length === 2 ? 'Connected (Edit anchors via gizmo)' : `${selectedNodes.length} nodes connected (Edit via gizmo)`;
+          } else if (selectedNodes.length >= 2) {
+            const hasStart = Boolean(effectiveSource);
+            const hasEnd = Boolean(effectiveTarget);
+            if (!hasStart && !hasEnd) {
+              statusText = 'Select Start & End anchors';
+            } else if (!hasStart) {
+              statusText = 'Select Start anchor';
+            } else if (!hasEnd) {
+              statusText = 'Select End anchor';
+            } else {
+              statusText = `${selectedNodes.length} nodes ready to connect`;
+            }
+          }
 
           return (
             <div
@@ -1321,23 +1454,9 @@ export function ConnectSection() {
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}
-                title={
-                  isAllConnectors
-                    ? selectedNodes.length === 1
-                      ? 'Update selected connector'
-                      : `Update ${selectedNodes.length} selected connectors`
-                    : selectedNodes.length >= 2
-                    ? `${selectedNodes.length} nodes selected to connect`
-                    : 'Select 2 or more nodes to connect'
-                }
+                title={statusText}
               >
-                {isAllConnectors
-                  ? selectedNodes.length === 1
-                    ? 'Connector selected'
-                    : `${selectedNodes.length} connectors selected`
-                  : selectedNodes.length >= 2
-                  ? `${selectedNodes.length} nodes selected`
-                  : 'Select 2+ nodes to connect'}
+                {statusText}
               </span>
               <button
                 type="button"
@@ -1350,9 +1469,9 @@ export function ConnectSection() {
                     ? selectedNodes.length === 1
                       ? 'Update Connector'
                       : 'Update Connectors'
-                    : selectedNodes.length >= 2
-                    ? 'Connect selected nodes'
-                    : 'Select 2 or more nodes to connect'
+                    : isConnectDisabled
+                    ? statusText
+                    : 'Connect selected nodes'
                 }
               >
                 {/* 커넥터 연결 아이콘 */}

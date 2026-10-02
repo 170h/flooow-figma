@@ -24,6 +24,7 @@ import {
   clampStrokeWeight,
   supportsOption,
   getMutationTargets,
+  ConnectedConnectorDetail,
 } from './types';
 import {
   createOrthogonalVectorConnector,
@@ -1369,16 +1370,21 @@ async function handleSelectionChange() {
         if (frame.paddingBottom !== 36) {
           frame.paddingBottom = 36;
         }
-        statusBadge.paddingLeft = 9;
-        statusBadge.paddingRight = 9;
+        if (statusBadge.paddingLeft !== 9) statusBadge.paddingLeft = 9;
+        if (statusBadge.paddingRight !== 9) statusBadge.paddingRight = 9;
         const nodeCornerRadius = typeof frame.cornerRadius === 'number' ? frame.cornerRadius : 0;
-        statusBadge.cornerRadius = getStatusBadgeCornerRadius(nodeCornerRadius);
-        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-        statusBadge.x = frame.width - statusBadge.width - 10;
-        statusBadge.y = frame.height - statusBadge.height - 10;
-        statusBadge.locked = true;
+        const targetRadius = getStatusBadgeCornerRadius(nodeCornerRadius);
+        if (statusBadge.cornerRadius !== targetRadius) statusBadge.cornerRadius = targetRadius;
+        if (statusBadge.constraints?.horizontal !== 'MAX' || statusBadge.constraints?.vertical !== 'MAX') {
+          statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+        }
+        const targetX = frame.width - statusBadge.width - 10;
+        const targetY = frame.height - statusBadge.height - 10;
+        if (statusBadge.x !== targetX) statusBadge.x = targetX;
+        if (statusBadge.y !== targetY) statusBadge.y = targetY;
+        if (!statusBadge.locked) statusBadge.locked = true;
         const textChild = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
-        if (textChild) textChild.locked = true;
+        if (textChild && !textChild.locked) textChild.locked = true;
       }
 
       // 프레임 레이아웃 모드 및 정렬 방향 보장 (도형 노드는 중앙 정렬, 일반 화면 노드는 좌측/상단 정렬)
@@ -1827,28 +1833,146 @@ async function handleSelectionChange() {
   // 에디터 기즈모 추천 마그넷(연결 포인트) 산출
   let suggestedSourceMagnet: MagnetPosition | undefined;
   let suggestedTargetMagnet: MagnetPosition | undefined;
+  let existingSourceMagnets: MagnetPosition[] = [];
+  let existingTargetMagnets: MagnetPosition[] = [];
+  let connectedConnectorCount = 0;
 
   if (connectorCount === 1 && nodes.length > 0) {
     // 커넥터 선택 시: 해당 커넥터의 실제 연결 포인트(마그넷)를 기즈모에 연동
     suggestedSourceMagnet = nodes[0].connectorSourceMagnet;
     suggestedTargetMagnet = nodes[0].connectorTargetMagnet;
   } else if (uniqueNodes.length >= 2 && connectorCount === 0) {
-    // 2개 이상의 노드 선택 시: 두 노드의 캔버스 상대 위치 기반 최적 마그넷을 기즈모에 실시간 연동
-    const box1: Box = {
-      x: uniqueNodes[0].x,
-      y: uniqueNodes[0].y,
-      width: uniqueNodes[0].width,
-      height: uniqueNodes[0].height,
-    };
-    const box2: Box = {
-      x: uniqueNodes[1].x,
-      y: uniqueNodes[1].y,
-      width: uniqueNodes[1].width,
-      height: uniqueNodes[1].height,
-    };
-    const optimal = getOptimalMagnetPair(box1, box2);
-    suggestedSourceMagnet = optimal.sourceMagnet;
-    suggestedTargetMagnet = optimal.targetMagnet;
+    // 2개 이상의 노드 선택 시: 선택된 노드들 사이에 이미 연결되어 있는 커넥터 탐색
+    const sourceId = uniqueNodes[0].id;
+    const targetIds = uniqueNodes.slice(1).map((n) => n.id);
+
+    const foundConnectors = figma.currentPage.findAll((n) => {
+      try {
+        if (!n) return false;
+        if (n.type === 'CONNECTOR') {
+          const conn = n as ConnectorNode;
+          const sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
+          const tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
+          return (sId === sourceId && targetIds.includes(tId || '')) ||
+                 (tId === sourceId && targetIds.includes(sId || ''));
+        }
+        if (n.type === 'GROUP' || n.type === 'VECTOR') {
+          const isCustom = safeGetPluginData(n, 'is_custom_connector') === 'true' || safeGetPluginData(n, 'is_flow_connector') === 'true';
+          if (!isCustom) return false;
+          let sId = safeGetPluginData(n, 'source_node_id');
+          let tId = safeGetPluginData(n, 'target_node_id');
+          if ((!sId || !tId) && n.type === 'GROUP') {
+            const vChild = (n as GroupNode).findOne((child) => child.type === 'VECTOR');
+            if (vChild) {
+              sId = sId || safeGetPluginData(vChild, 'source_node_id');
+              tId = tId || safeGetPluginData(vChild, 'target_node_id');
+            }
+          }
+          return (sId === sourceId && targetIds.includes(tId || '')) ||
+                 (tId === sourceId && targetIds.includes(sId || ''));
+        }
+        return false;
+      } catch (_) {
+        return false;
+      }
+    });
+
+    // 중복 방지 (커스텀 커넥터의 그룹과 내부 벡터가 동시에 매칭될 수 있으므로 고유 루트 커넥터로 집계)
+    const uniqueConnectorsMap = new Map<string, SceneNode>();
+    for (const rawConn of foundConnectors) {
+      const topConn = findConnectorNode(rawConn) || (rawConn as SceneNode);
+      if (topConn) {
+        uniqueConnectorsMap.set(topConn.id, topConn);
+      }
+    }
+
+    connectedConnectorCount = uniqueConnectorsMap.size;
+    const connectedConnectorIds = Array.from(uniqueConnectorsMap.keys());
+
+    const connectedConnectors: ConnectedConnectorDetail[] = [];
+
+    if (connectedConnectorCount > 0) {
+      const srcMags: MagnetPosition[] = [];
+      const tgtMags: MagnetPosition[] = [];
+
+      for (const c of Array.from(uniqueConnectorsMap.values())) {
+        let isForward = true;
+        let sMag: MagnetPosition | undefined;
+        let tMag: MagnetPosition | undefined;
+
+        if (c.type === 'CONNECTOR') {
+          const conn = c as ConnectorNode;
+          const sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
+          isForward = sId === sourceId;
+          sMag = (conn.connectorStart && 'magnet' in conn.connectorStart ? conn.connectorStart.magnet : undefined) as MagnetPosition | undefined;
+          tMag = (conn.connectorEnd && 'magnet' in conn.connectorEnd ? conn.connectorEnd.magnet : undefined) as MagnetPosition | undefined;
+          if (isForward) {
+            if (sMag) srcMags.push(sMag);
+            if (tMag) tgtMags.push(tMag);
+          } else {
+            if (tMag) srcMags.push(tMag);
+            if (sMag) tgtMags.push(sMag);
+          }
+        } else {
+          let sId = safeGetPluginData(c, 'source_node_id');
+          sMag = (safeGetPluginData(c, 'source_magnet') as MagnetPosition) || undefined;
+          tMag = (safeGetPluginData(c, 'target_magnet') as MagnetPosition) || undefined;
+          if ((!sMag || !tMag) && c.type === 'GROUP') {
+            const vChild = (c as GroupNode).findOne((child) => child.type === 'VECTOR');
+            if (vChild) {
+              sId = sId || safeGetPluginData(vChild, 'source_node_id');
+              sMag = sMag || (safeGetPluginData(vChild, 'source_magnet') as MagnetPosition) || undefined;
+              tMag = tMag || (safeGetPluginData(vChild, 'target_magnet') as MagnetPosition) || undefined;
+            }
+          }
+          isForward = sId === sourceId;
+          if (isForward) {
+            if (sMag) srcMags.push(sMag);
+            if (tMag) tgtMags.push(tMag);
+          } else {
+            if (tMag) srcMags.push(tMag);
+            if (sMag) tgtMags.push(sMag);
+          }
+        }
+
+        connectedConnectors.push({
+          id: c.id,
+          isReversed: !isForward,
+          sourceMagnet: sMag,
+          targetMagnet: tMag,
+        });
+      }
+
+      existingSourceMagnets = Array.from(new Set(srcMags));
+      existingTargetMagnets = Array.from(new Set(tgtMags));
+
+      if (existingSourceMagnets.length === 1) {
+        suggestedSourceMagnet = existingSourceMagnets[0];
+      }
+      if (existingTargetMagnets.length === 1) {
+        suggestedTargetMagnet = existingTargetMagnets[0];
+      }
+    }
+
+    postToUI({
+      type: 'SELECTION_CHANGED',
+      count: flowNodeCount + otherObjectCount + connectorCount,
+      nodes,
+      currentStatus,
+      nextSuggestedTag: getNextFlowTag(),
+      flowNodeCount,
+      otherObjectCount,
+      connectorCount,
+      suggestedSourceMagnet,
+      suggestedTargetMagnet,
+      existingSourceMagnets,
+      existingTargetMagnets,
+      connectedConnectorCount,
+      hasExistingConnection: connectedConnectorCount > 0,
+      connectedConnectorIds,
+      connectedConnectors,
+    });
+    return;
   }
 
   postToUI({
@@ -1862,6 +1986,12 @@ async function handleSelectionChange() {
     connectorCount,
     suggestedSourceMagnet,
     suggestedTargetMagnet,
+    existingSourceMagnets,
+    existingTargetMagnets,
+    connectedConnectorCount,
+    hasExistingConnection: false,
+    connectedConnectorIds: [],
+    connectedConnectors: [],
   });
 }
 
@@ -4876,12 +5006,16 @@ async function updateConnectorProperties(payload: {
           endpointNodeId: nativeSourceId,
           magnet: effectiveStartMagnet,
         };
+        conn.setPluginData('source_magnet', effectiveStartMagnet);
+        conn.setPluginData('is_manual_magnet', 'true');
       }
       if (effectiveEndMagnet && nativeTargetId) {
         conn.connectorEnd = {
           endpointNodeId: nativeTargetId,
           magnet: effectiveEndMagnet,
         };
+        conn.setPluginData('target_magnet', effectiveEndMagnet);
+        conn.setPluginData('is_manual_magnet', 'true');
       }
     } else {
       // 커스텀 직각 벡터 커넥터 (그룹 또는 벡터)
@@ -4987,8 +5121,14 @@ async function updateConnectorProperties(payload: {
         connectorRootNode.setPluginData('end_offset', String(effectiveEndOffset));
         if (vectorNode) vectorNode.setPluginData('end_offset', String(effectiveEndOffset));
       }
-      if (effectiveStartMagnet) connectorRootNode.setPluginData('source_magnet', effectiveStartMagnet);
-      if (effectiveEndMagnet) connectorRootNode.setPluginData('target_magnet', effectiveEndMagnet);
+      if (effectiveStartMagnet) {
+        connectorRootNode.setPluginData('source_magnet', effectiveStartMagnet);
+        connectorRootNode.setPluginData('is_manual_magnet', 'true');
+      }
+      if (effectiveEndMagnet) {
+        connectorRootNode.setPluginData('target_magnet', effectiveEndMagnet);
+        connectorRootNode.setPluginData('is_manual_magnet', 'true');
+      }
 
       // 마그넷, 라우팅, 오프셋 또는 단자 변경 시 커스텀 벡터 직각 경로 즉시 재계산 (새로운 시작/끝 단자 버텍스 적용)
       await updateOrthogonalVectorConnector(
@@ -6117,9 +6257,19 @@ figma.on('documentchange', async (event) => {
         change.properties.includes('width') ||
         change.properties.includes('height')
       ) {
-        movedNodeIds.add(change.id);
         const changedNode = figma.getNodeById(change.id);
+        // 커넥터 자체의 패스/위치/크기 변경은 커넥터 자신의 렌더링이므로 노드 이동 재추적 대상에서 제외
+        if (changedNode && findConnectorNode(changedNode)) {
+          continue;
+        }
+
+        // 플로우 노드 내부 자식 요소(StatusBadge, 텍스트 등)의 내부 좌표/크기 변경은 노드의 캔버스 이동이 아님
         const flowNode = changedNode ? findFlowNode(changedNode) : null;
+        if (flowNode && changedNode && changedNode.id !== flowNode.id) {
+          continue;
+        }
+
+        movedNodeIds.add(change.id);
         if (changedNode) {
           if (flowNode) {
             movedNodeIds.add(flowNode.id);

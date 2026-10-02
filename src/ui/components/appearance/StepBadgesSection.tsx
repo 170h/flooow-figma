@@ -134,7 +134,9 @@ export function StepBadgesSection() {
 
   // start number가 정의되어 있는지 여부 (빈 값이 아니고 유효한 숫자)
   const isStartNumberDefined =
-    displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10));
+    multiDraft.badgeNumber !== undefined
+      ? multiDraft.badgeNumber > 0
+      : (!effectiveIsMixed && displayStepNum.trim() !== "" && !isNaN(parseInt(displayStepNum, 10)));
   const selectedBadgeCorner = multiDraft.badgeCorner || (isCornerMixed
     ? undefined
     : summary.isMultiFlowNode && summary.badgeCorner.value
@@ -288,14 +290,15 @@ export function StepBadgesSection() {
             .map((n) => n.stepNumber)
             .filter((n): n is number => typeof n === "number" && !isNaN(n) && n > 0);
 
-          if (validNums.length > 0) {
-            const minNum = Math.min(...validNums);
-            const allSame = validNums.every((v) => v === validNums[0]);
-            setIsMixed(!allSame);
-            setStepNumText(String(minNum));
-          } else {
+          if (validNums.length === supported.length && validNums.every((v) => v === validNums[0])) {
+            setIsMixed(false);
+            setStepNumText(String(validNums[0]));
+          } else if (validNums.length === 0) {
             setIsMixed(false);
             setStepNumText("1");
+          } else {
+            setIsMixed(true);
+            setStepNumText("");
           }
 
           if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
@@ -363,7 +366,10 @@ export function StepBadgesSection() {
   }, [colorDropdownOpen]);
 
   function getNumberValue(): number {
-    const parsed = parseInt(displayStepNum, 10);
+    const raw = multiDraft.badgeNumber !== undefined
+      ? String(multiDraft.badgeNumber)
+      : (displayStepNum || stepNumText);
+    const parsed = parseInt(raw, 10);
     return isNaN(parsed) || parsed < 1 ? 1 : parsed;
   }
 
@@ -459,13 +465,36 @@ export function StepBadgesSection() {
   }
 
   function handleNumberBlurOrEnter() {
-    setIsMixed(false);
-    const val = getNumberValue();
-    setStepNumText(String(val));
+    userActionLockRef.current = Date.now();
     if (selectedNodes.length >= 2) {
+      if (stepNumText === "") {
+        clearMultiDraftKeys(["badgeNumber"]);
+        const supported = rawOptionState.supportedNodes;
+        const validNums = supported
+          .map((n) => n.stepNumber)
+          .filter((n): n is number => typeof n === "number" && !isNaN(n) && n > 0);
+        if (validNums.length === supported.length && validNums.every((v) => v === validNums[0])) {
+          setStepNumText(String(validNums[0]));
+          setIsMixed(false);
+        } else if (validNums.length === 0) {
+          setStepNumText("1");
+          setIsMixed(false);
+        } else {
+          setStepNumText("");
+          setIsMixed(true);
+        }
+        return;
+      }
+      const parsed = parseInt(stepNumText, 10);
+      const val = isNaN(parsed) || parsed < 1 ? 1 : parsed;
+      setIsMixed(false);
+      setStepNumText(String(val));
       updateMultiDraft({ badgeNumber: val });
       return;
     }
+    setIsMixed(false);
+    const val = getNumberValue();
+    setStepNumText(String(val));
     setLastNodeConfig({ stepNumber: val });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
@@ -668,11 +697,25 @@ export function StepBadgesSection() {
               <input
                 type="text"
                 id="input-step-number"
-                value={displayStepNum}
-                placeholder="1"
+                value={effectiveIsMixed ? "" : displayStepNum}
+                placeholder={effectiveIsMixed ? "Mixed" : "1"}
                 onChange={(e) => {
-                  setIsMixed(false);
-                  setStepNumText(e.target.value.replace(/[^0-9]/g, ""));
+                  userActionLockRef.current = Date.now();
+                  const clean = e.target.value.replace(/[^0-9]/g, "");
+                  setStepNumText(clean);
+                  if (selectedNodes.length >= 2) {
+                    if (clean !== "") {
+                      const parsed = parseInt(clean, 10);
+                      if (!isNaN(parsed) && parsed > 0) {
+                        setIsMixed(false);
+                        updateMultiDraft({ badgeNumber: parsed });
+                      }
+                    } else {
+                      clearMultiDraftKeys(["badgeNumber"]);
+                    }
+                  } else {
+                    setIsMixed(false);
+                  }
                 }}
                 onBlur={handleNumberBlurOrEnter}
                 onKeyDown={(e) => {
@@ -686,8 +729,8 @@ export function StepBadgesSection() {
                   background: "transparent",
                   outline: "none",
                   fontSize: "11px",
-                  fontWeight: 400,
-                  color: "#111827",
+                  fontWeight: "var(--font-weight-default, 450)",
+                  color: "var(--color-text-primary, #111827)",
                   padding: 0,
                 }}
               />

@@ -646,6 +646,14 @@ export type PluginAction =
   | { type: 'RESIZE_WINDOW'; width?: number; height: number }
   | { type: 'INIT' };
 
+// 연결된 커넥터 세부 정보 (방향 역전 여부 및 각 엔드포인트 마그넷)
+export interface ConnectedConnectorDetail {
+  id: string;
+  isReversed: boolean;
+  sourceMagnet?: MagnetPosition;
+  targetMagnet?: MagnetPosition;
+}
+
 export interface SelectedNodeInfo {
   id: string;
   name: string;
@@ -706,6 +714,12 @@ export type CoreToUIMessage =
       connectorCount?: number;
       suggestedSourceMagnet?: MagnetPosition;
       suggestedTargetMagnet?: MagnetPosition;
+      existingSourceMagnets?: MagnetPosition[];
+      existingTargetMagnets?: MagnetPosition[];
+      connectedConnectorCount?: number;
+      hasExistingConnection?: boolean;
+      connectedConnectorIds?: string[];
+      connectedConnectors?: ConnectedConnectorDetail[];
     }
   | {
       type: 'STATUS_LIST_UPDATED';

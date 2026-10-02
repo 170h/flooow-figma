@@ -161,13 +161,18 @@ export interface UIState {
   selectedBadgeColorMode: 'White' | 'Black' | 'Style';
   selectedLinePattern: string;
   selectedRoutingType: string;
-  sourceMagnet: string;
-  targetMagnet: string;
+  sourceMagnet: MagnetPosition | null;
+  targetMagnet: MagnetPosition | null;
   selectedNodeType: string;
   selectedConnectorColor?: string;
+  hasExistingConnection?: boolean;
+  connectedConnectorIds?: string[];
+  existingSourceMagnets?: MagnetPosition[];
+  existingTargetMagnets?: MagnetPosition[];
+  connectedConnectors?: ConnectedConnectorDetail[];
 }
 
-import { DesignFrameItem, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, MagnetPosition } from '../../types';
+import { DesignFrameItem, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, MagnetPosition, ConnectedConnectorDetail } from '../../types';
 
 function normalizeTerminal(term?: string, fallback: string = 'NONE'): string {
   if (!term || term === 'BAR' || term === 'SQUARE') return fallback;
@@ -259,6 +264,7 @@ export interface AppContextValue {
   removeStepBadgesFromNodes: () => void;
   applyCurrentConnectorState: (customStartOffset?: number, customEndOffset?: number) => void;
   connectSelectedNodes: () => void;
+  updateConnectedConnectorMagnets: (sourceMagnet?: MagnetPosition, targetMagnet?: MagnetPosition) => void;
   handleMainAction: () => void;
   handleSelectionChange: (count: number, nodes: NodeInfo[], meta: {
     flowNodeCount?: number;
@@ -321,10 +327,15 @@ const DEFAULT_UI_STATE: UIState = {
   selectedBadgeColorMode: 'Style',
   selectedLinePattern: 'SOLID',
   selectedRoutingType: 'ORTHOGONAL',
-  sourceMagnet: 'RIGHT',
-  targetMagnet: 'LEFT',
+  sourceMagnet: null,
+  targetMagnet: null,
   selectedNodeType: 'Screen',
   selectedConnectorColor: '#000000',
+  hasExistingConnection: false,
+  connectedConnectorIds: [],
+  connectedConnectors: [],
+  existingSourceMagnets: [],
+  existingTargetMagnets: [],
 };
 
 // ============================================================
@@ -810,8 +821,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         selectedConnectorColor: orig.connectorColorHex || '#000000',
         selectedRoutingType: orig.connectorRoutingType || 'ORTHOGONAL',
         selectedLinePattern: orig.connectorStrokePattern || 'SOLID',
-        sourceMagnet: orig.connectorSourceMagnet || 'RIGHT',
-        targetMagnet: orig.connectorTargetMagnet || 'LEFT',
+        sourceMagnet: (orig.connectorSourceMagnet as MagnetPosition) || 'RIGHT',
+        targetMagnet: (orig.connectorTargetMagnet as MagnetPosition) || 'LEFT',
       });
 
       setLastConnectorConfig({
@@ -1371,8 +1382,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             endTerminal: endTerm,
             startOffset,
             endOffset,
-            sourceMagnet,
-            targetMagnet,
+            sourceMagnet: sourceMagnet || undefined,
+            targetMagnet: targetMagnet || undefined,
             label,
             hasLabel,
             isReversed: node?.connectorIsReversed || false,
@@ -1417,65 +1428,103 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const figmaLink = isLinkOn ? rawLinkUrl : '';
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
 
+    // 기존 연결이 이미 존재하는 경우 신규 생성 경로 차단
+    if (uiStateRef.current.hasExistingConnection) {
+      return;
+    }
+
+    const finalSourceMag: MagnetPosition = sourceMagnet || 'RIGHT';
+    const finalTargetMag: MagnetPosition = targetMagnet || 'LEFT';
+
     if (nodes.length === 2) {
       parent.postMessage({
         pluginMessage: {
           type: 'CONNECT_POINTS',
           payload: {
-            sourceNodeId: nodes[0].id, sourceMagnet,
-            targetNodeId: nodes[1].id, targetMagnet,
-            label, colorHex: color, strokeWeight: weight,
-            routingType: selectedRoutingType, strokePattern: selectedLinePattern,
-            startTerminal: startTerm, endTerminal: endTerm,
-            startOffset: startOff, endOffset: endOff, figmaLink,
+            sourceNodeId: nodes[0].id,
+            sourceMagnet: finalSourceMag,
+            targetNodeId: nodes[1].id,
+            targetMagnet: finalTargetMag,
+            label,
+            colorHex: color,
+            strokeWeight: weight,
+            routingType: selectedRoutingType,
+            strokePattern: selectedLinePattern,
+            startTerminal: startTerm,
+            endTerminal: endTerm,
+            startOffset: startOff,
+            endOffset: endOff,
+            figmaLink,
           }
         }
       }, '*');
     } else {
-      // 3개 이상 다중 노드 선택: 순차 체인 연결 (1 -> 2 -> ... -> N)
-      for (let i = 0; i < nodes.length - 1; i++) {
-        const src = nodes[i];
-        const tgt = nodes[i + 1];
-
-        let pairSourceMag = sourceMagnet;
-        let pairTargetMag = targetMagnet;
-
-        if (typeof src.x === 'number' && typeof tgt.x === 'number' && typeof src.y === 'number' && typeof tgt.y === 'number') {
-          const dx = tgt.x - src.x;
-          const dy = tgt.y - src.y;
-          if (Math.abs(dx) >= Math.abs(dy)) {
-            pairSourceMag = dx >= 0 ? 'RIGHT' : 'LEFT';
-            pairTargetMag = dx >= 0 ? 'LEFT' : 'RIGHT';
-          } else {
-            pairSourceMag = dy >= 0 ? 'BOTTOM' : 'TOP';
-            pairTargetMag = dy >= 0 ? 'TOP' : 'BOTTOM';
-          }
-        }
-
+      // 3개 이상 다중 노드 선택: 첫 번째 노드가 Start, 나머지 노드들이 End 대상 (Star topology)
+      const src = nodes[0];
+      for (let i = 1; i < nodes.length; i++) {
+        const tgt = nodes[i];
         parent.postMessage({
           pluginMessage: {
             type: 'CONNECT_POINTS',
             payload: {
               sourceNodeId: src.id,
-              sourceMagnet: i === 0 ? sourceMagnet : pairSourceMag,
+              sourceMagnet: finalSourceMag,
               targetNodeId: tgt.id,
-              targetMagnet: i === nodes.length - 2 ? targetMagnet : pairTargetMag,
-              label: i === 0 ? label : '',
+              targetMagnet: finalTargetMag,
+              label: i === 1 ? label : '',
               colorHex: color,
               strokeWeight: weight,
               routingType: selectedRoutingType,
               strokePattern: selectedLinePattern,
-              startTerminal: i === 0 ? startTerm : 'NONE',
+              startTerminal: i === 1 ? startTerm : 'NONE',
               endTerminal: endTerm,
               startOffset: startOff,
               endOffset: endOff,
-              figmaLink: i === 0 ? figmaLink : '',
+              figmaLink: i === 1 ? figmaLink : '',
             }
           }
         }, '*');
       }
     }
   }, [applyCurrentConnectorState, showToast]);
+
+  const updateConnectedConnectorMagnets = useCallback((sourceMagnet?: MagnetPosition, targetMagnet?: MagnetPosition) => {
+    const connectedConnectors = uiStateRef.current.connectedConnectors || [];
+    const connIds = uiStateRef.current.connectedConnectorIds || [];
+
+    if (connectedConnectors.length > 0) {
+      connectedConnectors.forEach((conn) => {
+        // UI의 Node 1 마그넷과 Node 2 마그넷을 각각 결정 (누락 시 기존 커넥터 마그넷 보존)
+        const node1Mag = sourceMagnet || (conn.isReversed ? conn.targetMagnet : conn.sourceMagnet) || uiStateRef.current.sourceMagnet || undefined;
+        const node2Mag = targetMagnet || (conn.isReversed ? conn.sourceMagnet : conn.targetMagnet) || uiStateRef.current.targetMagnet || undefined;
+
+        parent.postMessage({
+          pluginMessage: {
+            type: 'UPDATE_CONNECTOR_PROPERTIES',
+            payload: {
+              connectorId: conn.id,
+              isReversed: conn.isReversed,
+              sourceMagnet: node1Mag,
+              targetMagnet: node2Mag,
+            }
+          }
+        }, '*');
+      });
+    } else {
+      connIds.forEach((connId) => {
+        parent.postMessage({
+          pluginMessage: {
+            type: 'UPDATE_CONNECTOR_PROPERTIES',
+            payload: {
+              connectorId: connId,
+              sourceMagnet: sourceMagnet || uiStateRef.current.sourceMagnet || undefined,
+              targetMagnet: targetMagnet || uiStateRef.current.targetMagnet || undefined,
+            }
+          }
+        }, '*');
+      });
+    }
+  }, []);
 
   const handleMainAction = useCallback(() => {
     const nodes = selectedNodesRef.current;
@@ -1721,8 +1770,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           selectedConnectorColor: firstConn.connectorColorHex || '#000000',
           selectedRoutingType: firstConn.connectorRoutingType || 'ORTHOGONAL',
           selectedLinePattern: firstConn.connectorStrokePattern || 'SOLID',
-          sourceMagnet: firstConn.connectorSourceMagnet || 'RIGHT',
-          targetMagnet: firstConn.connectorTargetMagnet || 'LEFT',
+          sourceMagnet: (firstConn.connectorSourceMagnet as MagnetPosition) || 'RIGHT',
+          targetMagnet: (firstConn.connectorTargetMagnet as MagnetPosition) || 'LEFT',
         });
       }
     } else if (count === 0) {
@@ -1906,6 +1955,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     removeStepBadgesFromNodes,
     applyCurrentConnectorState,
     connectSelectedNodes,
+    updateConnectedConnectorMagnets,
     handleMainAction,
     handleSelectionChange,
     closeAllPopovers,

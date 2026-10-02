@@ -507,6 +507,28 @@
         points.push({ x: enterX, y: tgtPoint.y });
         points.push(tgtPoint);
       }
+    } else if (srcMagnet === tgtMagnet) {
+      if (srcMagnet === "TOP") {
+        const topDetourY = Math.min(srcBox.y, tgtBox.y) - margin;
+        points.push({ x: srcPoint.x, y: topDetourY });
+        points.push({ x: tgtPoint.x, y: topDetourY });
+        points.push(tgtPoint);
+      } else if (srcMagnet === "BOTTOM") {
+        const bottomDetourY = Math.max(srcBox.y + srcBox.height, tgtBox.y + tgtBox.height) + margin;
+        points.push({ x: srcPoint.x, y: bottomDetourY });
+        points.push({ x: tgtPoint.x, y: bottomDetourY });
+        points.push(tgtPoint);
+      } else if (srcMagnet === "LEFT") {
+        const leftDetourX = Math.min(srcBox.x, tgtBox.x) - margin;
+        points.push({ x: leftDetourX, y: srcPoint.y });
+        points.push({ x: leftDetourX, y: tgtPoint.y });
+        points.push(tgtPoint);
+      } else if (srcMagnet === "RIGHT") {
+        const rightDetourX = Math.max(srcBox.x + srcBox.width, tgtBox.x + tgtBox.width) + margin;
+        points.push({ x: rightDetourX, y: srcPoint.y });
+        points.push({ x: rightDetourX, y: tgtPoint.y });
+        points.push(tgtPoint);
+      }
     } else {
       if (tgtMagnet === "TOP" || tgtMagnet === "BOTTOM") {
         const enterY = tgtMagnet === "TOP" ? tgtPoint.y - margin : tgtPoint.y + margin;
@@ -878,12 +900,12 @@
       width: targetNode.width,
       height: targetNode.height
     };
-    let sourceMagnet = explicitSourceMagnet;
-    let targetMagnet = explicitTargetMagnet;
+    let sourceMagnet = explicitSourceMagnet || safeGetPluginData(rootNode, "source_magnet") || void 0;
+    let targetMagnet = explicitTargetMagnet || safeGetPluginData(rootNode, "target_magnet") || void 0;
     if (!sourceMagnet || !targetMagnet || forceOptimal) {
       const optimal = getOptimalMagnetPair(srcBox, tgtBox);
-      if (!sourceMagnet) sourceMagnet = optimal.sourceMagnet;
-      if (!targetMagnet) targetMagnet = optimal.targetMagnet;
+      if (!sourceMagnet || forceOptimal) sourceMagnet = optimal.sourceMagnet;
+      if (!targetMagnet || forceOptimal) targetMagnet = optimal.targetMagnet;
     }
     rootNode.setPluginData("source_magnet", sourceMagnet);
     rootNode.setPluginData("target_magnet", targetMagnet);
@@ -2119,16 +2141,21 @@
           if (frame.paddingBottom !== 36) {
             frame.paddingBottom = 36;
           }
-          statusBadge.paddingLeft = 9;
-          statusBadge.paddingRight = 9;
+          if (statusBadge.paddingLeft !== 9) statusBadge.paddingLeft = 9;
+          if (statusBadge.paddingRight !== 9) statusBadge.paddingRight = 9;
           const nodeCornerRadius = typeof frame.cornerRadius === "number" ? frame.cornerRadius : 0;
-          statusBadge.cornerRadius = getStatusBadgeCornerRadius(nodeCornerRadius);
-          statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-          statusBadge.x = frame.width - statusBadge.width - 10;
-          statusBadge.y = frame.height - statusBadge.height - 10;
-          statusBadge.locked = true;
+          const targetRadius = getStatusBadgeCornerRadius(nodeCornerRadius);
+          if (statusBadge.cornerRadius !== targetRadius) statusBadge.cornerRadius = targetRadius;
+          if (statusBadge.constraints?.horizontal !== "MAX" || statusBadge.constraints?.vertical !== "MAX") {
+            statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
+          }
+          const targetX = frame.width - statusBadge.width - 10;
+          const targetY = frame.height - statusBadge.height - 10;
+          if (statusBadge.x !== targetX) statusBadge.x = targetX;
+          if (statusBadge.y !== targetY) statusBadge.y = targetY;
+          if (!statusBadge.locked) statusBadge.locked = true;
           const textChild = statusBadge.children.find((c) => c.type === "TEXT");
-          if (textChild) textChild.locked = true;
+          if (textChild && !textChild.locked) textChild.locked = true;
         }
         if (frame.layoutMode !== "VERTICAL") {
           frame.layoutMode = "VERTICAL";
@@ -2544,25 +2571,129 @@
     }
     let suggestedSourceMagnet;
     let suggestedTargetMagnet;
+    let existingSourceMagnets = [];
+    let existingTargetMagnets = [];
+    let connectedConnectorCount = 0;
     if (connectorCount === 1 && nodes.length > 0) {
       suggestedSourceMagnet = nodes[0].connectorSourceMagnet;
       suggestedTargetMagnet = nodes[0].connectorTargetMagnet;
     } else if (uniqueNodes.length >= 2 && connectorCount === 0) {
-      const box1 = {
-        x: uniqueNodes[0].x,
-        y: uniqueNodes[0].y,
-        width: uniqueNodes[0].width,
-        height: uniqueNodes[0].height
-      };
-      const box2 = {
-        x: uniqueNodes[1].x,
-        y: uniqueNodes[1].y,
-        width: uniqueNodes[1].width,
-        height: uniqueNodes[1].height
-      };
-      const optimal = getOptimalMagnetPair(box1, box2);
-      suggestedSourceMagnet = optimal.sourceMagnet;
-      suggestedTargetMagnet = optimal.targetMagnet;
+      const sourceId = uniqueNodes[0].id;
+      const targetIds = uniqueNodes.slice(1).map((n) => n.id);
+      const foundConnectors = figma.currentPage.findAll((n) => {
+        try {
+          if (!n) return false;
+          if (n.type === "CONNECTOR") {
+            const conn = n;
+            const sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
+            const tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
+            return sId === sourceId && targetIds.includes(tId || "") || tId === sourceId && targetIds.includes(sId || "");
+          }
+          if (n.type === "GROUP" || n.type === "VECTOR") {
+            const isCustom = safeGetPluginData2(n, "is_custom_connector") === "true" || safeGetPluginData2(n, "is_flow_connector") === "true";
+            if (!isCustom) return false;
+            let sId = safeGetPluginData2(n, "source_node_id");
+            let tId = safeGetPluginData2(n, "target_node_id");
+            if ((!sId || !tId) && n.type === "GROUP") {
+              const vChild = n.findOne((child) => child.type === "VECTOR");
+              if (vChild) {
+                sId = sId || safeGetPluginData2(vChild, "source_node_id");
+                tId = tId || safeGetPluginData2(vChild, "target_node_id");
+              }
+            }
+            return sId === sourceId && targetIds.includes(tId || "") || tId === sourceId && targetIds.includes(sId || "");
+          }
+          return false;
+        } catch (_) {
+          return false;
+        }
+      });
+      const uniqueConnectorsMap = /* @__PURE__ */ new Map();
+      for (const rawConn of foundConnectors) {
+        const topConn = findConnectorNode(rawConn) || rawConn;
+        if (topConn) {
+          uniqueConnectorsMap.set(topConn.id, topConn);
+        }
+      }
+      connectedConnectorCount = uniqueConnectorsMap.size;
+      const connectedConnectorIds = Array.from(uniqueConnectorsMap.keys());
+      const connectedConnectors = [];
+      if (connectedConnectorCount > 0) {
+        const srcMags = [];
+        const tgtMags = [];
+        for (const c of Array.from(uniqueConnectorsMap.values())) {
+          let isForward = true;
+          let sMag;
+          let tMag;
+          if (c.type === "CONNECTOR") {
+            const conn = c;
+            const sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
+            isForward = sId === sourceId;
+            sMag = conn.connectorStart && "magnet" in conn.connectorStart ? conn.connectorStart.magnet : void 0;
+            tMag = conn.connectorEnd && "magnet" in conn.connectorEnd ? conn.connectorEnd.magnet : void 0;
+            if (isForward) {
+              if (sMag) srcMags.push(sMag);
+              if (tMag) tgtMags.push(tMag);
+            } else {
+              if (tMag) srcMags.push(tMag);
+              if (sMag) tgtMags.push(sMag);
+            }
+          } else {
+            let sId = safeGetPluginData2(c, "source_node_id");
+            sMag = safeGetPluginData2(c, "source_magnet") || void 0;
+            tMag = safeGetPluginData2(c, "target_magnet") || void 0;
+            if ((!sMag || !tMag) && c.type === "GROUP") {
+              const vChild = c.findOne((child) => child.type === "VECTOR");
+              if (vChild) {
+                sId = sId || safeGetPluginData2(vChild, "source_node_id");
+                sMag = sMag || safeGetPluginData2(vChild, "source_magnet") || void 0;
+                tMag = tMag || safeGetPluginData2(vChild, "target_magnet") || void 0;
+              }
+            }
+            isForward = sId === sourceId;
+            if (isForward) {
+              if (sMag) srcMags.push(sMag);
+              if (tMag) tgtMags.push(tMag);
+            } else {
+              if (tMag) srcMags.push(tMag);
+              if (sMag) tgtMags.push(sMag);
+            }
+          }
+          connectedConnectors.push({
+            id: c.id,
+            isReversed: !isForward,
+            sourceMagnet: sMag,
+            targetMagnet: tMag
+          });
+        }
+        existingSourceMagnets = Array.from(new Set(srcMags));
+        existingTargetMagnets = Array.from(new Set(tgtMags));
+        if (existingSourceMagnets.length === 1) {
+          suggestedSourceMagnet = existingSourceMagnets[0];
+        }
+        if (existingTargetMagnets.length === 1) {
+          suggestedTargetMagnet = existingTargetMagnets[0];
+        }
+      }
+      postToUI({
+        type: "SELECTION_CHANGED",
+        count: flowNodeCount + otherObjectCount + connectorCount,
+        nodes,
+        currentStatus,
+        nextSuggestedTag: getNextFlowTag(),
+        flowNodeCount,
+        otherObjectCount,
+        connectorCount,
+        suggestedSourceMagnet,
+        suggestedTargetMagnet,
+        existingSourceMagnets,
+        existingTargetMagnets,
+        connectedConnectorCount,
+        hasExistingConnection: connectedConnectorCount > 0,
+        connectedConnectorIds,
+        connectedConnectors
+      });
+      return;
     }
     postToUI({
       type: "SELECTION_CHANGED",
@@ -2574,7 +2705,13 @@
       otherObjectCount,
       connectorCount,
       suggestedSourceMagnet,
-      suggestedTargetMagnet
+      suggestedTargetMagnet,
+      existingSourceMagnets,
+      existingTargetMagnets,
+      connectedConnectorCount,
+      hasExistingConnection: false,
+      connectedConnectorIds: [],
+      connectedConnectors: []
     });
   }
   figma.on("selectionchange", handleSelectionChange);
@@ -5205,12 +5342,16 @@
             endpointNodeId: nativeSourceId,
             magnet: effectiveStartMagnet
           };
+          conn.setPluginData("source_magnet", effectiveStartMagnet);
+          conn.setPluginData("is_manual_magnet", "true");
         }
         if (effectiveEndMagnet && nativeTargetId) {
           conn.connectorEnd = {
             endpointNodeId: nativeTargetId,
             magnet: effectiveEndMagnet
           };
+          conn.setPluginData("target_magnet", effectiveEndMagnet);
+          conn.setPluginData("is_manual_magnet", "true");
         }
       } else {
         let vectorNode = null;
@@ -5303,8 +5444,14 @@
           connectorRootNode.setPluginData("end_offset", String(effectiveEndOffset));
           if (vectorNode) vectorNode.setPluginData("end_offset", String(effectiveEndOffset));
         }
-        if (effectiveStartMagnet) connectorRootNode.setPluginData("source_magnet", effectiveStartMagnet);
-        if (effectiveEndMagnet) connectorRootNode.setPluginData("target_magnet", effectiveEndMagnet);
+        if (effectiveStartMagnet) {
+          connectorRootNode.setPluginData("source_magnet", effectiveStartMagnet);
+          connectorRootNode.setPluginData("is_manual_magnet", "true");
+        }
+        if (effectiveEndMagnet) {
+          connectorRootNode.setPluginData("target_magnet", effectiveEndMagnet);
+          connectorRootNode.setPluginData("is_manual_magnet", "true");
+        }
         await updateOrthogonalVectorConnector(
           connectorRootNode,
           effectiveStartMagnet,
@@ -6197,9 +6344,15 @@
       }
       if (change.type === "PROPERTY_CHANGE") {
         if (change.properties.includes("x") || change.properties.includes("y") || change.properties.includes("width") || change.properties.includes("height")) {
-          movedNodeIds.add(change.id);
           const changedNode = figma.getNodeById(change.id);
+          if (changedNode && findConnectorNode(changedNode)) {
+            continue;
+          }
           const flowNode = changedNode ? findFlowNode(changedNode) : null;
+          if (flowNode && changedNode && changedNode.id !== flowNode.id) {
+            continue;
+          }
+          movedNodeIds.add(change.id);
           if (changedNode) {
             if (flowNode) {
               movedNodeIds.add(flowNode.id);

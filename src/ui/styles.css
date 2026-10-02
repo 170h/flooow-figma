@@ -2256,12 +2256,29 @@
     }
 
     .anchor-handle.active {
-      background: var(--color-brand, #8638e5) !important;
-      border: 1px solid var(--color-brand, #8638e5) !important;
+      background: var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+      border: 1px solid var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
     }
 
     .anchor-handle.active:hover {
       transform: scale(1.36);
+    }
+
+    /* Mixed 상태 기즈모 핸들 (서로 다른 연결 위치 표시) */
+    .anchor-handle.mixed {
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--gizmo-highlight-color, var(--color-brand, #8638e5)),
+        var(--gizmo-highlight-color, var(--color-brand, #8638e5)) 2px,
+        var(--color-bg, #ffffff) 2px,
+        var(--color-bg, #ffffff) 5px
+      ) !important;
+      border: 1px solid var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
+    }
+
+    .anchor-handle.mixed:hover {
+      transform: scale(1.36);
+      z-index: 3;
     }
 
     .anchor-top {
@@ -2298,17 +2315,30 @@
       color: rgba(255, 255, 255, 0.6);
     }
 
-    body.figma-dark .anchor-handle:not(.active),
-    .figma-dark .anchor-handle:not(.active),
-    [data-theme="dark"] .anchor-handle:not(.active) {
+    body.figma-dark .anchor-handle:not(.active):not(.mixed),
+    .figma-dark .anchor-handle:not(.active):not(.mixed),
+    [data-theme="dark"] .anchor-handle:not(.active):not(.mixed) {
       background: #2c2c2c;
       border-color: rgba(255, 255, 255, 0.2);
     }
 
-    body.figma-dark .anchor-handle:not(.active):hover,
-    .figma-dark .anchor-handle:not(.active):hover,
-    [data-theme="dark"] .anchor-handle:not(.active):hover {
+    body.figma-dark .anchor-handle:not(.active):not(.mixed):hover,
+    .figma-dark .anchor-handle:not(.active):not(.mixed):hover,
+    [data-theme="dark"] .anchor-handle:not(.active):not(.mixed):hover {
       border-color: rgba(255, 255, 255, 0.45);
+    }
+
+    body.figma-dark .anchor-handle.mixed,
+    .figma-dark .anchor-handle.mixed,
+    [data-theme="dark"] .anchor-handle.mixed {
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--gizmo-highlight-color, var(--color-brand, #8638e5)),
+        var(--gizmo-highlight-color, var(--color-brand, #8638e5)) 2px,
+        #2c2c2c 2px,
+        #2c2c2c 5px
+      ) !important;
+      border-color: var(--gizmo-highlight-color, var(--color-brand, #8638e5)) !important;
     }
 
     /* ============================================================ */
