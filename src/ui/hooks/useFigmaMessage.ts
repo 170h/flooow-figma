@@ -102,17 +102,9 @@ export function useFigmaMessage() {
             const node = nodes[0] as NodeInfo;
 
             if (node.isFlowNode) {
-              // Node 탭 관련
-              const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
-              const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
-
-              // 노드 선택 대상이 실제로 변경되었을 때만 텍스트 및 토글 상태를 덮어씀
+              // 노드 선택 대상이 실제로 변경되었을 때만 상태 복원
               if (isDifferentNode) {
                 const hasDesc = Boolean(node.description && node.description.trim());
-                const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
-                if (descToggleEl) descToggleEl.checked = hasDesc;
-                if (titleEl) titleEl.value = (node.title || node.name || 'Untitled').slice(0, 32);
-                if (descEl) descEl.value = node.description || '';
                 setLastNodeConfig({ descriptionOn: hasDesc });
 
                 // 상태(status) 복원
@@ -130,51 +122,18 @@ export function useFigmaMessage() {
                 const figmaLink = (isScreen && node.figmaLink) || '';
                 if (figmaLink) {
                   setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
-                  const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
-                  if (linkToggleEl) linkToggleEl.checked = true;
-                  const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
-                  if (linkUrlEl) linkUrlEl.value = figmaLink;
                 } else {
                   setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: '' });
-                  const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
-                  if (linkToggleEl) linkToggleEl.checked = false;
-                  const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
-                  if (linkUrlEl) linkUrlEl.value = '';
                 }
               }
               const nodeTypeVal = node.flowNodeType || (node.nodeType === 'FRAME' ? 'Screen' : node.nodeType);
               if (nodeTypeVal) {
                 setUIState({ selectedNodeType: normalizeNodeType(nodeTypeVal) });
               }
-
-              const fixedValEl = document.getElementById('size-mode-val-fixed');
-              const hugValEl = document.getElementById('size-mode-val-hug');
-              if (fixedValEl && node.height) fixedValEl.textContent = String(node.height);
-              if (hugValEl && node.hugHeight) hugValEl.textContent = String(node.hugHeight);
-            } else if (!node.isFlowNode && !node.isConnector) {
-              const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
-              if (titleEl) titleEl.value = 'Figjam object';
             }
           } else if (!nodes || nodes.length === 0) {
             // 선택 해제 시 (새로운 노드 생성 대기 모드): 실제로 선택이 해제된 순간에 디폴트 값으로 완전 리셋
             if (isDifferentNode) {
-              const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
-              const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
-              const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
-              const fixedValEl = document.getElementById('size-mode-val-fixed');
-              const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
-              const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
-
-              if (titleEl) titleEl.value = 'Screen';
-              if (descEl) descEl.value = '';
-              if (descToggleEl) descToggleEl.checked = true;
-              if (fixedValEl) fixedValEl.textContent = '90';
-              if (linkToggleEl) linkToggleEl.checked = false;
-              if (linkUrlEl) linkUrlEl.value = '';
-
-              const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
-              if (sizeModeEl) sizeModeEl.value = 'hug';
-
               setLastNodeConfig({
                 nodeType: 'Screen',
                 width: 250,
