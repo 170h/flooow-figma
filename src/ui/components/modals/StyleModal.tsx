@@ -45,9 +45,9 @@ export function StyleModal({
   isMixed = false,
 }: StyleModalProps) {
   const {
-    uiState,
+    nodeOptionState,
+    setNodeOptionState,
     setUIState,
-    setLastNodeConfig,
     applyCurrentNodeState,
     stylePresets,
     addStylePreset,
@@ -62,10 +62,10 @@ export function StyleModal({
       ? stylePresets.find((p) => p.id === editingPresetId)
       : null;
 
-  // Fill 상태: 수정 모드일 때는 targetPreset을 우선, 아니면 initialColor/uiState를 반영
+  // Fill 상태: 수정 모드일 때는 targetPreset을 우선, 아니면 initialColor/nodeOptionState를 반영
   const rawInitFill = targetPreset
     ? targetPreset.fillColor
-    : initialColor || uiState.selectedColor || "#EA2039";
+    : initialColor || nodeOptionState.fillColor || "#EA2039";
 
   const isInitialFillNone =
     !isMixed &&
@@ -83,13 +83,13 @@ export function StyleModal({
     ? targetPreset.strokeWeight
     : firstSelectedNode
       ? (firstSelectedNode.strokeWeight ?? 0)
-      : (uiState.selectedStrokeWeight ?? 0);
+      : (nodeOptionState.strokeWeight ?? 0);
 
   const initialStrokeHex = (
     targetPreset
       ? targetPreset.strokeColor
       : firstSelectedNode?.strokeColorHex ||
-        uiState.selectedStrokeColor ||
+        nodeOptionState.strokeColor ||
         "#000000"
   )
     .replace("#", "")
@@ -167,17 +167,14 @@ export function StyleModal({
       showToast("새 스타일이 추가되었습니다.", "success");
     }
 
-    // UI 상태 갱신
-    setUIState({
-      selectedColor: finalFillColor,
-      selectedStrokeWeight: finalStrokeWeight,
-      selectedStrokeColor: finalStrokeColor,
-      ...(mode === "edit" && editingPresetId
-        ? { selectedStylePresetId: editingPresetId }
-        : {}),
-    });
-    setLastNodeConfig({
-      color: finalFillColor,
+    // UI 및 노드 옵션 상태 갱신
+    if (mode === "edit" && editingPresetId) {
+      setUIState({
+        selectedStylePresetId: editingPresetId,
+      });
+    }
+    setNodeOptionState({
+      fillColor: finalFillColor,
       strokeWeight: finalStrokeWeight,
       strokeColor: finalStrokeColor,
     });

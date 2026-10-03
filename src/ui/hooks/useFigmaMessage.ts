@@ -11,7 +11,7 @@ export function useFigmaMessage() {
     handleSelectionChange,
     setCurrentTab,
     setUIState,
-    setLastNodeConfig,
+    setNodeOptionState,
     setDesignFrames,
   } = useApp();
 
@@ -105,15 +105,14 @@ export function useFigmaMessage() {
               // 노드 선택 대상이 실제로 변경되었을 때만 상태 복원
               if (isDifferentNode) {
                 const hasDesc = Boolean(node.description && node.description.trim());
-                setLastNodeConfig({ descriptionOn: hasDesc });
+                setNodeOptionState({ descriptionOn: hasDesc });
 
                 // 상태(status) 복원
                 const currentStatus = node.status || msg.currentStatus;
                 if (currentStatus) {
-                  setUIState({ selectedStatus: currentStatus });
-                  setLastNodeConfig({ status: currentStatus, statusOn: true });
+                  setNodeOptionState({ statusOn: true, status: currentStatus });
                 } else {
-                  setLastNodeConfig({ statusOn: false });
+                  setNodeOptionState({ statusOn: false });
                 }
 
                 // Figma Screen Link 복원 (스크린 노드만 허용)
@@ -121,41 +120,15 @@ export function useFigmaMessage() {
                 const isScreen = normalizeNodeType(nodeTypeVal) === 'Screen';
                 const figmaLink = (isScreen && node.figmaLink) || '';
                 if (figmaLink) {
-                  setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: figmaLink });
+                  setNodeOptionState({ singleLinkOn: true, singleLinkUrl: figmaLink });
                 } else {
-                  setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: '' });
+                  setNodeOptionState({ singleLinkOn: false, singleLinkUrl: '' });
                 }
               }
               const nodeTypeVal = node.flowNodeType || (node.nodeType === 'FRAME' ? 'Screen' : node.nodeType);
               if (nodeTypeVal) {
-                setUIState({ selectedNodeType: normalizeNodeType(nodeTypeVal) });
+                setNodeOptionState({ nodeType: normalizeNodeType(nodeTypeVal) });
               }
-            }
-          } else if (!nodes || nodes.length === 0) {
-            // 선택 해제 시 (새로운 노드 생성 대기 모드): 실제로 선택이 해제된 순간에 디폴트 값으로 완전 리셋
-            if (isDifferentNode) {
-              setLastNodeConfig({
-                nodeType: 'Screen',
-                width: 250,
-                height: 90,
-                cornerRadius: 0,
-                sizeMode: 'hug',
-                color: '#ffffff',
-                strokeWeight: 1.5,
-                strokeColor: '#000000',
-                elevationOn: false,
-                elevation: 0,
-                descriptionOn: true,
-                singleLinkOn: false,
-                singleLinkUrl: '',
-              });
-              setUIState({
-                selectedNodeType: 'Screen',
-                selectedColor: '#ffffff',
-                selectedStrokeWeight: 1.5,
-                selectedStrokeColor: '#000000',
-                selectedElevation: 0,
-              });
             }
           }
           break;
@@ -196,5 +169,5 @@ export function useFigmaMessage() {
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, [handleSelectionChange, setCurrentTab, setUIState, setLastNodeConfig]);
+  }, [handleSelectionChange, setCurrentTab, setUIState, setNodeOptionState]);
 }

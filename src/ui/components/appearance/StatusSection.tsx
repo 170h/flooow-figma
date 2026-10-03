@@ -28,10 +28,8 @@ const STATUSES = [
  */
 export function StatusSection() {
   const {
-    uiState,
-    setUIState,
-    lastNodeConfig,
-    setLastNodeConfig,
+    nodeOptionState,
+    setNodeOptionState,
     applyStatusToNode,
     selectedNodes,
     autoResizeWindow,
@@ -45,12 +43,12 @@ export function StatusSection() {
   const userActionLockRef = React.useRef<number>(0);
   const prevSelectedNodeIdRef = React.useRef<string | null>(null);
 
-  const { selectedStatus } = uiState;
+  const selectedStatus = nodeOptionState.status;
 
   // Option Capability Matrix 기반 스위치 상태 산출
   const rawOptionState = React.useMemo(() => {
     if (selectedNodes.length === 0) {
-      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
+      const creationType = nodeOptionState.nodeType || 'Screen';
       const isAllowed = getOptionCapability([{ flowNodeType: creationType, isFlowNode: true }], 'status') !== 'UNSUPPORTED';
       if (!isAllowed) {
         return {
@@ -65,7 +63,7 @@ export function StatusSection() {
           isOpen: false,
         };
       }
-      const on = Boolean(lastNodeConfig.statusOn);
+      const on = Boolean(nodeOptionState.statusOn);
       return {
         state: (on ? 'ON' : 'OFF') as OptionSwitchState,
         supportedCount: 1,
@@ -79,7 +77,7 @@ export function StatusSection() {
       };
     }
     return computeOptionSwitchState(selectedNodes, 'status', (n) => Boolean(n.status));
-  }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.statusOn]);
+  }, [selectedNodes, nodeOptionState.nodeType, nodeOptionState.statusOn]);
 
   // 선택된 노드의 상태와 UI 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   React.useEffect(() => {
@@ -98,18 +96,18 @@ export function StatusSection() {
         if (supported.length === 1) {
           const node = supported[0];
           if (node && node.status) {
-            setUIState({ selectedStatus: node.status });
+            setNodeOptionState({ status: node.status });
           }
         } else {
           const firstStatus = supported.find((n) => n.status)?.status;
           const allSame = supported.every((n) => n.status === firstStatus);
           if (allSame && firstStatus) {
-            setUIState({ selectedStatus: firstStatus });
+            setNodeOptionState({ status: firstStatus });
           }
         }
       }
     }
-  }, [rawOptionState, selectedNodes, setUIState]);
+  }, [rawOptionState, selectedNodes, setNodeOptionState]);
 
   // Multi Draft 상태 반영
   const isTypeDrafted = multiDraft.nodeType !== undefined;
@@ -210,7 +208,7 @@ export function StatusSection() {
       return;
     }
 
-    setLastNodeConfig({ statusOn: checked });
+    setNodeOptionState({ statusOn: checked });
     if (checked) {
       const targetStatus = activeStatus || selectedStatus || 'draft';
       applyStatusToNode(targetStatus);
@@ -239,8 +237,7 @@ export function StatusSection() {
       return;
     }
 
-    setUIState({ selectedStatus: status });
-    setLastNodeConfig({ status, statusOn: true });
+    setNodeOptionState({ statusOn: true, status });
     applyStatusToNode(status);
     requestAnimationFrame(() => {
       autoResizeWindow();

@@ -57,7 +57,8 @@ export function StyleSection() {
   const {
     uiState,
     setUIState,
-    setLastNodeConfig,
+    nodeOptionState,
+    setNodeOptionState,
     applyCurrentNodeState,
     stylePresets,
     selectedStylePresetId,
@@ -96,8 +97,8 @@ export function StyleSection() {
           ? summary.color.value
           : summary.isSingleFlowNode
             ? summary.color.value
-            : uiState.selectedColor) ||
-        uiState.selectedColor ||
+            : nodeOptionState.fillColor) ||
+        nodeOptionState.fillColor ||
         "#FFFFFF");
 
   const effectiveStrokeColor =
@@ -107,22 +108,22 @@ export function StyleSection() {
           ? summary.strokeColor.value
           : summary.isSingleFlowNode
             ? summary.strokeColor.value
-            : uiState.selectedStrokeColor) ||
-        uiState.selectedStrokeColor ||
+            : nodeOptionState.strokeColor) ||
+        nodeOptionState.strokeColor ||
         "#000000");
 
   const rawWeight = summary.isMultiFlowNode
     ? summary.strokeWeight.value
     : summary.isSingleFlowNode
       ? summary.strokeWeight.value
-      : uiState.selectedStrokeWeight;
+      : nodeOptionState.strokeWeight;
   const effectiveStrokeWeight =
     multiDraft.strokeWeight !== undefined
       ? multiDraft.strokeWeight
       : (typeof rawWeight === "number"
           ? rawWeight
-          : typeof uiState.selectedStrokeWeight === "number"
-            ? uiState.selectedStrokeWeight
+          : typeof nodeOptionState.strokeWeight === "number"
+            ? nodeOptionState.strokeWeight
             : 1.5);
 
   // 보더 미적용(None) 상태 판별 (두께가 0이거나 색상이 비어있는 경우)
@@ -253,11 +254,10 @@ export function StyleSection() {
         updateMultiDraft({ colorHex: formatted });
         return;
       }
-      setUIState({ selectedColor: formatted });
-      setLastNodeConfig({ color: formatted });
+      setNodeOptionState({ fillColor: formatted });
       applyCurrentNodeState(undefined, { colorHex: formatted });
     },
-    [selectedNodes, updateMultiDraft, setUIState, setLastNodeConfig, applyCurrentNodeState],
+    [selectedNodes, updateMultiDraft, setNodeOptionState, applyCurrentNodeState],
   );
 
   const applyFillNone = useCallback(() => {
@@ -265,10 +265,9 @@ export function StyleSection() {
       updateMultiDraft({ colorHex: "None" });
       return;
     }
-    setUIState({ selectedColor: "None" });
-    setLastNodeConfig({ color: "None" });
+    setNodeOptionState({ fillColor: "None" });
     applyCurrentNodeState(undefined, { colorHex: "None" });
-  }, [selectedNodes, updateMultiDraft, setUIState, setLastNodeConfig, applyCurrentNodeState]);
+  }, [selectedNodes, updateMultiDraft, setNodeOptionState, applyCurrentNodeState]);
 
   // Fill 칩 클릭 핸들러 (클릭 시 배경 끄기/None 토글)
   const handleFillChipClick = () => {
@@ -291,10 +290,9 @@ export function StyleSection() {
       updateMultiDraft({ strokeWeight: 0 });
       return;
     }
-    setUIState({ selectedStrokeWeight: 0 });
-    setLastNodeConfig({ strokeWeight: 0 });
+    setNodeOptionState({ strokeWeight: 0 });
     applyCurrentNodeState(undefined, { strokeWeight: 0 });
-  }, [selectedNodes, updateMultiDraft, setUIState, setLastNodeConfig, applyCurrentNodeState]);
+  }, [selectedNodes, updateMultiDraft, setNodeOptionState, applyCurrentNodeState]);
 
   const applyStrokeColor = useCallback(
     (newStrokeHex: string, explicitWeight?: number) => {
@@ -311,11 +309,10 @@ export function StyleSection() {
         updateMultiDraft({ strokeColor: formatted, strokeWeight: targetWeight });
         return;
       }
-      setUIState({
-        selectedStrokeColor: formatted,
-        selectedStrokeWeight: targetWeight,
+      setNodeOptionState({
+        strokeColor: formatted,
+        strokeWeight: targetWeight,
       });
-      setLastNodeConfig({ strokeColor: formatted, strokeWeight: targetWeight });
       applyCurrentNodeState(undefined, {
         strokeColor: formatted,
         strokeWeight: targetWeight,
@@ -325,8 +322,7 @@ export function StyleSection() {
       selectedNodes,
       updateMultiDraft,
       effectiveStrokeWeight,
-      setUIState,
-      setLastNodeConfig,
+      setNodeOptionState,
       applyCurrentNodeState,
     ],
   );
@@ -338,11 +334,10 @@ export function StyleSection() {
         updateMultiDraft({ strokeWeight: validWeight });
         return;
       }
-      setUIState({ selectedStrokeWeight: validWeight });
-      setLastNodeConfig({ strokeWeight: validWeight });
+      setNodeOptionState({ strokeWeight: validWeight });
       applyCurrentNodeState(undefined, { strokeWeight: validWeight });
     },
-    [selectedNodes, updateMultiDraft, setUIState, setLastNodeConfig, applyCurrentNodeState],
+    [selectedNodes, updateMultiDraft, setNodeOptionState, applyCurrentNodeState],
   );
 
   // 보더 아이콘 클릭 핸들러 (클릭 시 보더 끄기/None 토글)
@@ -506,14 +501,11 @@ export function StyleSection() {
         ? preset.strokeColor
         : preset.fillColor;
     setUIState({
-      selectedColor: preset.fillColor,
-      selectedStrokeWeight: preset.strokeWeight,
-      selectedStrokeColor: preset.strokeColor,
       selectedStylePresetId: preset.id,
       selectedConnectorColor: connectorColor,
     });
-    setLastNodeConfig({
-      color: preset.fillColor,
+    setNodeOptionState({
+      fillColor: preset.fillColor,
       strokeWeight: preset.strokeWeight,
       strokeColor: preset.strokeColor,
     });

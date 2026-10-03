@@ -91,10 +91,8 @@ const COLOR_OPTIONS: { id: BadgeColorMode; label: string }[] = [
  */
 export function StepBadgesSection() {
   const {
-    uiState,
-    setUIState,
-    lastNodeConfig,
-    setLastNodeConfig,
+    nodeOptionState,
+    setNodeOptionState,
     applyStepBadges,
     removeStepBadgesFromNodes,
     selectedNodes,
@@ -141,28 +139,28 @@ export function StepBadgesSection() {
     ? undefined
     : summary.isMultiFlowNode && summary.badgeCorner.value
       ? summary.badgeCorner.value
-      : uiState.selectedBadgeCorner || "TOP_LEFT");
+      : nodeOptionState.badgeCorner || "TOP_LEFT");
   const selectedBadgeShape = multiDraft.badgeShape || (isShapeMixed
     ? undefined
     : summary.isMultiFlowNode && summary.badgeShape.value
       ? summary.badgeShape.value
-      : uiState.selectedBadgeShape || "Square");
+      : nodeOptionState.badgeShape || "Square");
   const selectedBadgeColorMode: BadgeColorMode | undefined = multiDraft.badgeColorMode || (isColorModeMixed
     ? undefined
     : summary.isMultiFlowNode && summary.badgeColorMode.value
       ? (summary.badgeColorMode.value as BadgeColorMode)
-      : uiState.selectedBadgeColorMode || "Style");
+      : nodeOptionState.badgeColorMode || "Style");
 
   // 현재 노드의 배경색 및 보더색 추출 (Style / White 모드 스와치 표시용)
   const firstNode = selectedNodes[0];
-  const nodeBgColorHex = firstNode?.fillColorHex || uiState.selectedColor || "#FFFFFF";
+  const nodeBgColorHex = firstNode?.fillColorHex || nodeOptionState.fillColor || "#FFFFFF";
   const hasNodeStroke =
     (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
 
   // Option Capability Matrix 기반 스위치 상태 산출
   const rawOptionState = React.useMemo(() => {
     if (selectedNodes.length === 0) {
-      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
+      const creationType = nodeOptionState.nodeType || 'Screen';
       const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, 'stepBadge');
       if (!isAllowed) {
         return {
@@ -177,7 +175,7 @@ export function StepBadgesSection() {
           isOpen: false,
         };
       }
-      const on = Boolean(lastNodeConfig.stepBadgesOn);
+      const on = Boolean(nodeOptionState.stepBadgesOn);
       return {
         state: (on ? 'ON' : 'OFF') as OptionSwitchState,
         supportedCount: 1,
@@ -195,7 +193,7 @@ export function StepBadgesSection() {
       'stepBadge',
       (n) => n.stepNumber !== undefined && n.stepNumber !== null
     );
-  }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.stepBadgesOn]);
+  }, [selectedNodes, nodeOptionState.nodeType, nodeOptionState.stepBadgesOn]);
 
   // Multi Draft 상태 반영
   const isTypeDrafted = multiDraft.nodeType !== undefined;
@@ -285,13 +283,13 @@ export function StepBadgesSection() {
             setStepNumText("1");
           }
           if (node.badgeCorner) {
-            setUIState({ selectedBadgeCorner: node.badgeCorner });
+            setNodeOptionState({ badgeCorner: node.badgeCorner });
           }
           if (node.badgeShape) {
-            setUIState({ selectedBadgeShape: node.badgeShape });
+            setNodeOptionState({ badgeShape: node.badgeShape });
           }
           if (node.badgeColorMode) {
-            setUIState({ selectedBadgeColorMode: node.badgeColorMode });
+            setNodeOptionState({ badgeColorMode: node.badgeColorMode });
           }
         } else {
           // 복수 선택 (지원 노드들만 기준)
@@ -311,14 +309,14 @@ export function StepBadgesSection() {
           }
 
           if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
-            setUIState({ selectedBadgeCorner: summary.badgeCorner.value });
+            setNodeOptionState({ badgeCorner: summary.badgeCorner.value });
           }
           if (!summary.badgeShape.isMixed && summary.badgeShape.value) {
-            setUIState({ selectedBadgeShape: summary.badgeShape.value });
+            setNodeOptionState({ badgeShape: summary.badgeShape.value });
           }
           if (!summary.badgeColorMode.isMixed && summary.badgeColorMode.value) {
-            setUIState({
-              selectedBadgeColorMode: summary.badgeColorMode
+            setNodeOptionState({
+              badgeColorMode: summary.badgeColorMode
                 .value as BadgeColorMode,
             });
           }
@@ -328,9 +326,9 @@ export function StepBadgesSection() {
           // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원
           setIsMixed(false);
           const nextStepNum =
-            typeof lastNodeConfig.stepNumber === "number" &&
-            lastNodeConfig.stepNumber > 0
-              ? lastNodeConfig.stepNumber + 1
+            typeof nodeOptionState.stepNumber === "number" &&
+            nodeOptionState.stepNumber > 0
+              ? nodeOptionState.stepNumber + 1
               : 1;
           setStepNumText(String(nextStepNum));
         } else {
@@ -348,12 +346,12 @@ export function StepBadgesSection() {
     summary.badgeShape.value,
     summary.badgeColorMode.isMixed,
     summary.badgeColorMode.value,
-    lastNodeConfig.stepBadgesOn,
-    lastNodeConfig.stepNumber,
-    lastNodeConfig.badgeCorner,
-    lastNodeConfig.badgeShape,
-    lastNodeConfig.badgeColorMode,
-    setUIState,
+    nodeOptionState.stepBadgesOn,
+    nodeOptionState.stepNumber,
+    nodeOptionState.badgeCorner,
+    nodeOptionState.badgeShape,
+    nodeOptionState.badgeColorMode,
+    setNodeOptionState,
   ]);
 
   // 드롭다운 외부 클릭 닫기
@@ -405,7 +403,7 @@ export function StepBadgesSection() {
       return;
     }
 
-    setLastNodeConfig({ stepBadgesOn: checked });
+    setNodeOptionState({ stepBadgesOn: checked });
     if (checked) {
       applyStepBadges(
         getNumberValue(),
@@ -422,12 +420,11 @@ export function StepBadgesSection() {
   }
 
   function handleCornerSelect(pos: string) {
-    setUIState({ selectedBadgeCorner: pos });
+    setNodeOptionState({ badgeCorner: pos });
     if (selectedNodes.length >= 2) {
       updateMultiDraft({ badgeCorner: pos as BadgePosition });
       return;
     }
-    setLastNodeConfig({ badgeCorner: pos });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
         getNumberValue(),
@@ -439,12 +436,11 @@ export function StepBadgesSection() {
   }
 
   function handleShapeSelect(shape: string) {
-    setUIState({ selectedBadgeShape: shape });
+    setNodeOptionState({ badgeShape: shape });
     if (selectedNodes.length >= 2) {
       updateMultiDraft({ badgeShape: shape as BadgeShape });
       return;
     }
-    setLastNodeConfig({ badgeShape: shape });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
         getNumberValue(),
@@ -456,13 +452,12 @@ export function StepBadgesSection() {
   }
 
   function handleColorSelect(mode: BadgeColorMode) {
-    setUIState({ selectedBadgeColorMode: mode });
+    setNodeOptionState({ badgeColorMode: mode });
     setColorDropdownOpen(false);
     if (selectedNodes.length >= 2) {
       updateMultiDraft({ badgeColorMode: mode });
       return;
     }
-    setLastNodeConfig({ badgeColorMode: mode });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
         getNumberValue(),
@@ -504,7 +499,7 @@ export function StepBadgesSection() {
     setIsMixed(false);
     const val = getNumberValue();
     setStepNumText(String(val));
-    setLastNodeConfig({ stepNumber: val });
+    setNodeOptionState({ stepNumber: val });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
         val,
@@ -530,7 +525,7 @@ export function StepBadgesSection() {
       }
       return;
     }
-    setLastNodeConfig({ stepNumber: 1 });
+    setNodeOptionState({ stepNumber: 1 });
     if (isSectionOpen && !isMultiMode) {
       applyStepBadges(
         1,
@@ -561,7 +556,7 @@ export function StepBadgesSection() {
 
     // 2. Step Badge 섹션 로컬 상태 동기화
     setIsOpen(true);
-    setLastNodeConfig({
+    setNodeOptionState({
       stepBadgesOn: true,
       stepNumber: start,
       badgeCorner: corner,

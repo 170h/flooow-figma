@@ -29,8 +29,8 @@ function normalizeUrl(url: string): string {
 export function FigmaLinkSection() {
   const {
     autoResizeWindow,
-    setLastNodeConfig,
-    lastNodeConfig,
+    nodeOptionState,
+    setNodeOptionState,
     selectedNodes,
     applyCurrentNodeState,
     uiState,
@@ -48,7 +48,7 @@ export function FigmaLinkSection() {
   // Option Capability Matrix 기반 스위치 상태 산출
   const rawOptionState = useMemo(() => {
     if (selectedNodes.length === 0) {
-      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
+      const creationType = nodeOptionState.nodeType || "Screen";
       const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, "figmaLink");
       if (!isAllowed) {
         return {
@@ -63,7 +63,7 @@ export function FigmaLinkSection() {
           isOpen: false,
         };
       }
-      const on = Boolean(lastNodeConfig.singleLinkOn);
+      const on = Boolean(nodeOptionState.singleLinkOn);
       return {
         state: (on ? "ON" : "OFF") as OptionSwitchState,
         supportedCount: 1,
@@ -81,7 +81,7 @@ export function FigmaLinkSection() {
       "figmaLink",
       (n) => Boolean(n.figmaLink && n.figmaLink.trim())
     );
-  }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.singleLinkOn]);
+  }, [selectedNodes, nodeOptionState.nodeType, nodeOptionState.singleLinkOn]);
 
   // Multi Draft 상태 반영
   const isTypeDrafted = multiDraft.nodeType !== undefined;
@@ -177,7 +177,7 @@ export function FigmaLinkSection() {
           const displayLink = activeLink || cachedLink;
           setUrl(displayLink);
           cachedUrlRef.current = displayLink;
-          setLastNodeConfig({
+          setNodeOptionState({
             singleLinkOn: Boolean(activeLink),
             singleLinkUrl: displayLink,
           });
@@ -192,7 +192,7 @@ export function FigmaLinkSection() {
           }
         } else {
           // 노드 미선택(생성 모드): 기존에 입력된 singleLinkUrl 유지
-          const creationUrl = lastNodeConfig.singleLinkUrl || "";
+          const creationUrl = nodeOptionState.singleLinkUrl || "";
           setUrl(creationUrl);
           cachedUrlRef.current = creationUrl;
         }
@@ -200,7 +200,7 @@ export function FigmaLinkSection() {
         setUrl("");
       }
     }
-  }, [rawOptionState, selectedNodes, setLastNodeConfig, lastNodeConfig.singleLinkUrl]);
+  }, [rawOptionState, selectedNodes, setNodeOptionState, nodeOptionState.singleLinkUrl]);
 
   // Mixed URL 여부: 지원 노드가 2개 이상이고 입력된 링크 URL이 서로 다른 경우
   const isLinkValueMixed = useMemo(() => {
@@ -223,7 +223,7 @@ export function FigmaLinkSection() {
         updateMultiDraft({ figmaLink: "", clearLinkCache: false });
         return;
       }
-      setLastNodeConfig({ singleLinkUrl: "" });
+      setNodeOptionState({ singleLinkUrl: "" });
       setTimeout(() => {
         applyCurrentNodeState(undefined, undefined, {
           figmaLink: "",
@@ -239,7 +239,7 @@ export function FigmaLinkSection() {
       updateMultiDraft({ figmaLink: normalized, clearLinkCache: false });
       return;
     }
-    setLastNodeConfig({ singleLinkUrl: normalized });
+    setNodeOptionState({ singleLinkUrl: normalized });
     setTimeout(() => {
       applyCurrentNodeState(undefined, undefined, {
         figmaLink: normalized,
@@ -277,7 +277,7 @@ export function FigmaLinkSection() {
     if (!checked) {
       // 1. 토글을 껐을 때: URL은 캐시에 남겨두고 노드 캔버스의 링크 배지만 숨김
       cachedUrlRef.current = url;
-      setLastNodeConfig({ singleLinkOn: false, singleLinkUrl: url });
+      setNodeOptionState({ singleLinkOn: false, singleLinkUrl: url });
       setTimeout(() => {
         applyCurrentNodeState(undefined, undefined, {
           figmaLink: "",
@@ -287,7 +287,7 @@ export function FigmaLinkSection() {
     } else {
       // 2. 토글을 켰을 때: 캐시된 URL이 있으면 즉시 노드에 복원, 없으면 입력창 포커스
       const restoreUrl = url || cachedUrlRef.current;
-      setLastNodeConfig({ singleLinkOn: true, singleLinkUrl: restoreUrl });
+      setNodeOptionState({ singleLinkOn: true, singleLinkUrl: restoreUrl });
       if (restoreUrl.trim()) {
         commitUrl(restoreUrl);
       } else {
@@ -305,7 +305,7 @@ export function FigmaLinkSection() {
     if (selectedNodes.length >= 2) {
       updateMultiDraft({ figmaLink: value, clearLinkCache: false });
     } else {
-      setLastNodeConfig({ singleLinkUrl: value });
+      setNodeOptionState({ singleLinkUrl: value });
     }
   }
 
@@ -332,7 +332,7 @@ export function FigmaLinkSection() {
       inputRef.current?.focus();
       return;
     }
-    setLastNodeConfig({ singleLinkUrl: "" });
+    setNodeOptionState({ singleLinkUrl: "" });
     applyCurrentNodeState(undefined, undefined, {
       figmaLink: "",
       clearLinkCache: false,

@@ -14,7 +14,7 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
   const {
     designFrames,
     loadDesignFrames,
-    setLastNodeConfig,
+    setNodeOptionState,
     addSizePreset,
     sizePresets,
     applyCurrentNodeState,
@@ -64,7 +64,7 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
     if (fixedValEl) fixedValEl.textContent = String(selectedFrame.height);
 
     // 2. 상태 업데이트
-    const updatePayload: Record<string, any> = {
+    const updatePayload: Partial<import('../../context/AppContext').NodeOptionState> = {
       width: selectedFrame.width,
       height: selectedFrame.height,
       cornerRadius: selectedFrame.cornerRadius ?? 0,
@@ -72,14 +72,15 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
     };
 
     if (linkToFrame) {
-      updatePayload.figmaFrameId = selectedFrame.id;
+      updatePayload.singleLinkUrl = `figma://node/${selectedFrame.id}`;
+      updatePayload.singleLinkOn = true;
       const urlInput = document.getElementById('single-screen-url') as HTMLInputElement | null;
       if (urlInput) {
         urlInput.value = `figma://node/${selectedFrame.id}`;
       }
     }
 
-    setLastNodeConfig(updatePayload);
+    setNodeOptionState(updatePayload);
 
     // 3. 사이즈 프리셋에 저장 옵션 선택 시 프리셋 등록
     if (saveAsPreset) {

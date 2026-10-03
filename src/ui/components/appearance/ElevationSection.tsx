@@ -24,9 +24,8 @@ const ELEVATION_LEVELS = [
 
 export function ElevationSection() {
   const {
-    uiState,
-    lastNodeConfig,
-    setLastNodeConfig,
+    nodeOptionState,
+    setNodeOptionState,
     applyElevationToNodes,
     activeAppearanceSection,
     setActiveAppearanceSection,
@@ -53,7 +52,7 @@ export function ElevationSection() {
   // Option Capability Matrix 기반 스위치 상태 산출
   const rawOptionState = React.useMemo(() => {
     if (selectedNodes.length === 0) {
-      const creationType = uiState.selectedNodeType || 'Screen';
+      const creationType = nodeOptionState.nodeType || 'Screen';
       const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, 'elevation');
       if (!isAllowed) {
         return {
@@ -68,7 +67,7 @@ export function ElevationSection() {
           isOpen: false,
         };
       }
-      const on = Boolean(lastNodeConfig.elevationOn);
+      const on = Boolean(nodeOptionState.elevationOn);
       return {
         state: (on ? 'ON' : 'OFF') as OptionSwitchState,
         supportedCount: 1,
@@ -86,7 +85,7 @@ export function ElevationSection() {
       'elevation',
       (n) => Boolean(n.elevation !== undefined && n.elevation !== null ? n.elevation >= 0 : n.elevationOn)
     );
-  }, [selectedNodes, uiState.selectedNodeType, uiState.selectedElevation, lastNodeConfig.elevationOn]);
+  }, [selectedNodes, nodeOptionState.nodeType, nodeOptionState.elevation, nodeOptionState.elevationOn]);
 
   const isTypeDrafted = multiDraft.nodeType !== undefined;
   const isDraftAllowed = isTypeDrafted
@@ -153,10 +152,10 @@ export function ElevationSection() {
     : (isElevationMixed
         ? undefined
         : (rawOptionState.supportedNodes.length === 1
-            ? (typeof rawOptionState.supportedNodes[0]?.elevation === 'number' ? rawOptionState.supportedNodes[0].elevation : (uiState.selectedElevation ?? 0))
+            ? (typeof rawOptionState.supportedNodes[0]?.elevation === 'number' ? rawOptionState.supportedNodes[0].elevation : (nodeOptionState.elevation ?? 0))
             : (summary.isMultiFlowNode
                 ? summary.elevation.value
-                : (typeof uiState.selectedElevation === 'number' ? uiState.selectedElevation : 0))));
+                : (typeof nodeOptionState.elevation === 'number' ? nodeOptionState.elevation : 0))));
 
   function handleToggle(checked: boolean) {
     if (effectiveState.disabled) return;
@@ -182,12 +181,12 @@ export function ElevationSection() {
 
     if (checked) {
       setActiveAppearanceSection('elevation');
-      setLastNodeConfig({ elevationOn: true });
+      setNodeOptionState({ elevationOn: true });
       const targetLevel = typeof currentLevel === 'number' ? currentLevel : 0;
       applyElevationToNodes(targetLevel);
     } else {
       setActiveAppearanceSection(null);
-      setLastNodeConfig({ elevationOn: false });
+      setNodeOptionState({ elevationOn: false });
       applyElevationToNodes(null);
     }
     requestAnimationFrame(() => {
@@ -212,7 +211,7 @@ export function ElevationSection() {
       return;
     }
 
-    setLastNodeConfig({ elevationOn: true, elevation: level });
+    setNodeOptionState({ elevationOn: true, elevation: level });
     applyElevationToNodes(level);
     requestAnimationFrame(() => {
       autoResizeWindow();

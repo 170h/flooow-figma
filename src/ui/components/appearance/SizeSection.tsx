@@ -59,8 +59,8 @@ const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
  */
 export function SizeSection() {
   const {
-    lastNodeConfig,
-    setLastNodeConfig,
+    nodeOptionState,
+    setNodeOptionState,
     selectedNodes,
     uiState,
     sizePresets,
@@ -98,13 +98,13 @@ export function SizeSection() {
     if (selectedNodes.length > 0) {
       return getOptionCapability(selectedNodes, 'size') === 'SUPPORTED';
     }
-    const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
+    const creationType = nodeOptionState.nodeType || 'Screen';
     return getOptionCapability([{ flowNodeType: creationType, isFlowNode: true }], 'size') === 'SUPPORTED';
   })();
 
   // 1. 파생 상태 선언 (핸들러 및 Effect보다 먼저 선언)
   const activePreset = sizePresets.find(
-    (p) => p.w === lastNodeConfig.width && p.h === lastNodeConfig.height
+    (p) => p.w === nodeOptionState.width && p.h === nodeOptionState.height
   );
 
   const isMoreDisabled =
@@ -161,12 +161,12 @@ export function SizeSection() {
     if (multiDraft.sizeMode) return multiDraft.sizeMode;
     if (summary.isMultiFlowNode) {
       if (summary.sizeMode.isMixed) return 'mixed';
-      return summary.sizeMode.value || lastNodeConfig.sizeMode || 'hug';
+      return summary.sizeMode.value || nodeOptionState.sizeMode || 'hug';
     }
     if (summary.isSingleFlowNode) {
-      return summary.sizeMode.value || lastNodeConfig.sizeMode || 'hug';
+      return summary.sizeMode.value || nodeOptionState.sizeMode || 'hug';
     }
-    return lastNodeConfig.sizeMode || 'hug';
+    return nodeOptionState.sizeMode || 'hug';
   })();
 
   React.useEffect(() => {
@@ -234,9 +234,9 @@ export function SizeSection() {
         }
       } else {
         const first = validNodes[0];
-        let nodeW = typeof first?.width === 'number' ? first.width : (lastNodeConfig.width || 250);
-        let nodeH = typeof first?.height === 'number' ? first.height : (lastNodeConfig.height || 90);
-        let nodeR = typeof first?.cornerRadius === 'number' ? first.cornerRadius : (lastNodeConfig.cornerRadius ?? 0);
+        let nodeW = typeof first?.width === 'number' ? first.width : (nodeOptionState.width || 250);
+        let nodeH = typeof first?.height === 'number' ? first.height : (nodeOptionState.height || 90);
+        let nodeR = typeof first?.cornerRadius === 'number' ? first.cornerRadius : (nodeOptionState.cornerRadius ?? 0);
 
         // 동일 노드 수정 중 pending 요청이 남아있는 경우:
         // Core가 보낸 치수가 최신 요청값과 일치하는지 검증하여 stale 응답 롤백 차단
@@ -273,10 +273,10 @@ export function SizeSection() {
         }
       }
     } else {
-      // 선택된 노드가 없을 때 (생성 대기 모드): lastNodeConfig 디폴트값 동기화
-      const defW = lastNodeConfig.width || 250;
-      const defH = lastNodeConfig.height || 90;
-      const defR = lastNodeConfig.cornerRadius ?? 0;
+      // 선택된 노드가 없을 때 (생성 대기 모드): nodeOptionState 디폴트값 동기화
+      const defW = nodeOptionState.width || 250;
+      const defH = nodeOptionState.height || 90;
+      const defR = nodeOptionState.cornerRadius ?? 0;
 
       if (!isFocusedRef.current.w) setWidthInput(String(defW));
       if (!isFocusedRef.current.h) setHeightInput(String(defH));
@@ -296,9 +296,9 @@ export function SizeSection() {
     summary.width.value,
     summary.height.value,
     summary.cornerRadius.value,
-    lastNodeConfig.width,
-    lastNodeConfig.height,
-    lastNodeConfig.cornerRadius,
+    nodeOptionState.width,
+    nodeOptionState.height,
+    nodeOptionState.cornerRadius,
     sizePresets,
     setSelectedSizePresetId,
   ]);
@@ -313,7 +313,7 @@ export function SizeSection() {
     if (!isSizeAllowed) return;
     const raw = explicitVal !== undefined ? explicitVal : widthInput;
     const parsed = parseInt(raw, 10);
-    let validW = isNaN(parsed) ? (lastNodeConfig.width || 250) : parsed;
+    let validW = isNaN(parsed) ? (nodeOptionState.width || 250) : parsed;
     if (validW < SCREEN_NODE_CONSTRAINTS.MIN_WIDTH) {
       validW = SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
       showToast(`최소 너비는 ${SCREEN_NODE_CONSTRAINTS.MIN_WIDTH}px입니다.`, 'warning');
@@ -330,8 +330,8 @@ export function SizeSection() {
       return;
     }
 
-    const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
-    const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
+    const curH = parseInt(heightInput, 10) || nodeOptionState.height || 90;
+    const curR = parseInt(radiusInput, 10) || (nodeOptionState.cornerRadius ?? 0);
     const targetNodeId = selectedNodes[0]?.id || 'NONE';
 
     pendingSizeRef.current = {
@@ -345,7 +345,7 @@ export function SizeSection() {
     if (sizeModeEl) {
       sizeModeEl.value = 'fixed';
     }
-    setLastNodeConfig({ width: validW, sizeMode: 'fixed' });
+    setNodeOptionState({ width: validW, sizeMode: 'fixed' });
     applyCurrentNodeState('fixed', undefined, undefined, 'Screen', {
       width: validW,
       height: curH,
@@ -359,13 +359,13 @@ export function SizeSection() {
       (e.target as HTMLInputElement).blur();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
+      const current = parseInt(widthInput, 10) || (nodeOptionState.width || 250);
       const step = e.shiftKey ? 10 : 1;
       const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_WIDTH, current + step);
       commitW(String(next));
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const current = parseInt(widthInput, 10) || (lastNodeConfig.width || 250);
+      const current = parseInt(widthInput, 10) || (nodeOptionState.width || 250);
       const step = e.shiftKey ? 10 : 1;
       const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, current - step);
       commitW(String(next));
@@ -381,7 +381,7 @@ export function SizeSection() {
     if (!isSizeAllowed) return;
     const raw = explicitVal !== undefined ? explicitVal : heightInput;
     const parsed = parseInt(raw, 10);
-    let validH = isNaN(parsed) ? (lastNodeConfig.height || 90) : parsed;
+    let validH = isNaN(parsed) ? (nodeOptionState.height || 90) : parsed;
     if (validH < SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT) {
       validH = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
       showToast(`최소 높이는 ${SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT}px입니다.`, 'warning');
@@ -398,8 +398,8 @@ export function SizeSection() {
       return;
     }
 
-    const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
-    const curR = parseInt(radiusInput, 10) || (lastNodeConfig.cornerRadius ?? 0);
+    const curW = parseInt(widthInput, 10) || nodeOptionState.width || 250;
+    const curR = parseInt(radiusInput, 10) || (nodeOptionState.cornerRadius ?? 0);
     const targetNodeId = selectedNodes[0]?.id || 'NONE';
 
     pendingSizeRef.current = {
@@ -413,7 +413,7 @@ export function SizeSection() {
     if (sizeModeEl) {
       sizeModeEl.value = 'fixed';
     }
-    setLastNodeConfig({ height: validH, sizeMode: 'fixed' });
+    setNodeOptionState({ height: validH, sizeMode: 'fixed' });
     applyCurrentNodeState('fixed', undefined, undefined, 'Screen', {
       width: curW,
       height: validH,
@@ -427,13 +427,13 @@ export function SizeSection() {
       (e.target as HTMLInputElement).blur();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
+      const current = parseInt(heightInput, 10) || (nodeOptionState.height || 90);
       const step = e.shiftKey ? 10 : 1;
       const next = Math.min(SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT, current + step);
       commitH(String(next));
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const current = parseInt(heightInput, 10) || (lastNodeConfig.height || 90);
+      const current = parseInt(heightInput, 10) || (nodeOptionState.height || 90);
       const step = e.shiftKey ? 10 : 1;
       const next = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, current - step);
       commitH(String(next));
@@ -449,7 +449,7 @@ export function SizeSection() {
     if (!isSizeAllowed) return;
     const raw = explicitVal !== undefined ? explicitVal : radiusInput;
     const parsed = parseInt(raw, 10);
-    let validR = isNaN(parsed) ? (lastNodeConfig.cornerRadius ?? 0) : parsed;
+    let validR = isNaN(parsed) ? (nodeOptionState.cornerRadius ?? 0) : parsed;
     if (validR < SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS) {
       validR = SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS;
     } else if (validR > SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS) {
@@ -465,8 +465,8 @@ export function SizeSection() {
       return;
     }
 
-    const curW = parseInt(widthInput, 10) || lastNodeConfig.width || 250;
-    const curH = parseInt(heightInput, 10) || lastNodeConfig.height || 90;
+    const curW = parseInt(widthInput, 10) || nodeOptionState.width || 250;
+    const curH = parseInt(heightInput, 10) || nodeOptionState.height || 90;
     const targetNodeId = selectedNodes[0]?.id || 'NONE';
 
     pendingSizeRef.current = {
@@ -476,7 +476,7 @@ export function SizeSection() {
       cornerRadius: validR,
     };
 
-    setLastNodeConfig({ cornerRadius: validR });
+    setNodeOptionState({ cornerRadius: validR });
     applyCurrentNodeState(currentSizeMode === 'mixed' ? undefined : currentSizeMode, undefined, undefined, 'Screen', {
       width: curW,
       height: curH,
@@ -530,7 +530,7 @@ export function SizeSection() {
     };
 
     const targetSizeMode = p.sizeMode || 'fixed';
-    setLastNodeConfig({
+    setNodeOptionState({
       width: p.w,
       height: p.h,
       cornerRadius: p.radius ?? 0,
@@ -586,7 +586,7 @@ export function SizeSection() {
       return;
     }
     if (mode !== 'mixed') {
-      setLastNodeConfig({ sizeMode: mode });
+      setNodeOptionState({ sizeMode: mode });
     }
     const hiddenInput = document.getElementById('select-size-mode') as HTMLInputElement | null;
     if (hiddenInput) {

@@ -22,7 +22,7 @@ export function ContextMenu({ onEdit, onDelete }: ContextMenuProps) {
     selectedStylePresetId,
     deleteStylePreset,
     showToast,
-    uiState,
+    nodeOptionState,
   } = useApp();
 
   if (!contextMenuOpen) return null;
@@ -36,7 +36,7 @@ export function ContextMenu({ onEdit, onDelete }: ContextMenuProps) {
     if (contextMenuTarget === 'size') {
       setActiveModal('edit-size');
     } else if (contextMenuTarget === 'style') {
-      const color = uiState.selectedColor;
+      const color = nodeOptionState.fillColor;
       if (
         (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS.has(selectedStylePresetId)) ||
         (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))
@@ -62,7 +62,7 @@ export function ContextMenu({ onEdit, onDelete }: ContextMenuProps) {
       deleteSizePreset(selectedSizePresetId);
       showToast('사이즈 프리셋이 삭제되었습니다.');
     } else if (contextMenuTarget === 'style') {
-      const color = uiState.selectedColor;
+      const color = nodeOptionState.fillColor;
       if (
         (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS.has(selectedStylePresetId)) ||
         (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))

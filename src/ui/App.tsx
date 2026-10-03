@@ -51,10 +51,9 @@ export function App() {
     closeAllPopovers,
     activeModal, setActiveModal,
     uiState, setUIState,
+    nodeOptionState, setNodeOptionState,
     contextMenuOpen, setContextMenuOpen,
     applyCurrentNodeState,
-    lastNodeConfig,
-    setLastNodeConfig,
     lastConnectorConfig,
     setLastConnectorConfig,
     markConnectorDirty,
@@ -479,10 +478,10 @@ export function App() {
       {activeModal === 'add-size' && (
         <SizeModal
           mode="add"
-          initialW={lastNodeConfig.width || 375}
-          initialH={lastNodeConfig.height || 812}
-          initialRadius={lastNodeConfig.cornerRadius || 0}
-          initialSizeMode={(lastNodeConfig.sizeMode as 'fixed' | 'hug' | 'fit') || 'fixed'}
+          initialW={nodeOptionState.width || 375}
+          initialH={nodeOptionState.height || 812}
+          initialRadius={nodeOptionState.cornerRadius || 0}
+          initialSizeMode={(nodeOptionState.sizeMode as 'fixed' | 'hug' | 'fit') || 'fixed'}
           onSave={handleAddSizeSave}
           onClose={() => setActiveModal('none')}
         />
@@ -507,7 +506,7 @@ export function App() {
       {activeModal === 'add-style' && (
         <StyleModal
           mode="add"
-          initialColor={uiState.selectedColor}
+          initialColor={nodeOptionState.fillColor}
           isMixed={summary.isMultiFlowNode ? summary.color.isMixed : false}
           onClose={() => setActiveModal('none')}
         />
@@ -516,7 +515,7 @@ export function App() {
         <StyleModal
           mode="edit"
           editingPresetId={selectedStylePresetId}
-          initialColor={uiState.selectedColor}
+          initialColor={nodeOptionState.fillColor}
           isMixed={summary.isMultiFlowNode ? summary.color.isMixed : false}
           onClose={() => setActiveModal('none')}
         />
@@ -575,8 +574,8 @@ export function App() {
           ? multiDraft.colorHex
           : ((summary.isMultiFlowNode
               ? summary.color.value
-              : (summary.isSingleFlowNode ? summary.color.value : uiState.selectedColor)
-            ) || uiState.selectedColor || '#FFFFFF');
+              : (summary.isSingleFlowNode ? summary.color.value : nodeOptionState.fillColor)
+            ) || nodeOptionState.fillColor || '#FFFFFF');
 
         return (
           <FillColorModal
@@ -586,8 +585,7 @@ export function App() {
               if (selectedNodes.length >= 2) {
                 updateMultiDraft({ colorHex });
               } else {
-                setUIState({ selectedColor: colorHex });
-                setLastNodeConfig({ color: colorHex });
+                setNodeOptionState({ fillColor: colorHex });
                 applyCurrentNodeState(undefined, { colorHex });
               }
             }}
@@ -607,17 +605,17 @@ export function App() {
           ? multiDraft.strokeColor
           : ((summary.isMultiFlowNode
               ? summary.strokeColor.value
-              : (summary.isSingleFlowNode ? summary.strokeColor.value : uiState.selectedStrokeColor)
-            ) || uiState.selectedStrokeColor || '#000000');
+              : (summary.isSingleFlowNode ? summary.strokeColor.value : nodeOptionState.strokeColor)
+            ) || nodeOptionState.strokeColor || '#000000');
 
         const rawWeight = summary.isMultiFlowNode
           ? summary.strokeWeight.value
-          : (summary.isSingleFlowNode ? summary.strokeWeight.value : uiState.selectedStrokeWeight);
+          : (summary.isSingleFlowNode ? summary.strokeWeight.value : nodeOptionState.strokeWeight);
         const currentStrokeWeight = multiDraft.strokeWeight !== undefined
           ? multiDraft.strokeWeight
           : (typeof rawWeight === 'number'
               ? rawWeight
-              : (typeof uiState.selectedStrokeWeight === 'number' ? uiState.selectedStrokeWeight : 1.5));
+              : (typeof nodeOptionState.strokeWeight === 'number' ? nodeOptionState.strokeWeight : 1.5));
 
         return (
           <StrokeColorModal
@@ -629,8 +627,7 @@ export function App() {
               if (selectedNodes.length >= 2) {
                 updateMultiDraft({ strokeColor, strokeWeight });
               } else {
-                setUIState({ selectedStrokeColor: strokeColor, selectedStrokeWeight: strokeWeight });
-                setLastNodeConfig({ strokeColor, strokeWeight });
+                setNodeOptionState({ strokeColor, strokeWeight });
                 applyCurrentNodeState(undefined, { strokeColor, strokeWeight });
               }
             }}

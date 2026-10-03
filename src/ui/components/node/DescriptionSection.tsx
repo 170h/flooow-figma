@@ -19,8 +19,8 @@ export function DescriptionSection() {
     applyCurrentNodeState,
     showToast,
     selectedNodes,
-    lastNodeConfig,
-    setLastNodeConfig,
+    nodeOptionState,
+    setNodeOptionState,
     autoResizeWindow,
     uiState,
     multiDraft,
@@ -47,7 +47,7 @@ export function DescriptionSection() {
   // Option Capability Matrix 기반 스위치 상태 산출
   const rawOptionState = useMemo(() => {
     if (selectedNodes.length === 0) {
-      const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
+      const creationType = nodeOptionState.nodeType || 'Screen';
       const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, 'description');
       if (!isAllowed) {
         return {
@@ -62,7 +62,7 @@ export function DescriptionSection() {
           isOpen: false,
         };
       }
-      const on = Boolean(lastNodeConfig.descriptionOn);
+      const on = Boolean(nodeOptionState.descriptionOn);
       return {
         state: (on ? 'ON' : 'OFF') as OptionSwitchState,
         supportedCount: 1,
@@ -80,7 +80,7 @@ export function DescriptionSection() {
       'description',
       (n) => Boolean(n.descriptionOn ?? (n.description && n.description.trim()))
     );
-  }, [selectedNodes, uiState.selectedNodeType, lastNodeConfig.nodeType, lastNodeConfig.descriptionOn]);
+  }, [selectedNodes, nodeOptionState.nodeType, nodeOptionState.descriptionOn]);
 
   // Multi Draft 상태 반영
   const isTypeDrafted = multiDraft.nodeType !== undefined;
@@ -163,7 +163,7 @@ export function DescriptionSection() {
           const isDescActive = Boolean(node && (node.descriptionOn ?? (node.description && node.description.trim())));
           const hasDescText = Boolean(node && node.description && node.description.trim());
           setHasText(hasDescText);
-          setLastNodeConfig({ descriptionOn: isDescActive });
+          setNodeOptionState({ descriptionOn: isDescActive });
         } else {
           const onCount = supported.filter((n) => Boolean(n.descriptionOn ?? (n.description && n.description.trim()))).length;
           const hasTextCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
@@ -173,7 +173,7 @@ export function DescriptionSection() {
         setHasText(false);
       }
     }
-  }, [rawOptionState, selectedNodes, setLastNodeConfig]);
+  }, [rawOptionState, selectedNodes, setNodeOptionState]);
 
   // Mixed 텍스트 여부: 지원 노드가 2개 이상이고 입력된 설명 텍스트가 서로 다른 경우
   const isDescValueMixed = useMemo(() => {
@@ -213,7 +213,7 @@ export function DescriptionSection() {
       return;
     }
 
-    setLastNodeConfig({ descriptionOn: checked });
+    setNodeOptionState({ descriptionOn: checked });
 
     if (!checked) {
       // 토글 OFF: textarea 내용은 그대로 보존하고 노드 캔버스에서만 설명 텍스트 숨김 (BUG-DESCRIPTION-02 해결)

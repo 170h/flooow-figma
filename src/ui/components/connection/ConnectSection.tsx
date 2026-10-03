@@ -96,18 +96,19 @@ export function ConnectSection() {
     stylePresets,
     selectedStylePresetId,
     setSelectedStylePresetId,
+    nodeOptionState,
   } = useApp();
   const summary = useSelectionSummary();
   const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
 
   // 현재 활성화된 스타일 프리셋 탐색 (배경색 및 보더 동기화용)
   const activeStylePreset = stylePresets.find((p) => {
-    const matchFill = p.fillColor.toLowerCase() === (uiState.selectedColor || '').toLowerCase();
+    const matchFill = p.fillColor.toLowerCase() === (nodeOptionState.fillColor || '').toLowerCase();
     if (!matchFill) return false;
-    const currentWeight = uiState.selectedStrokeWeight !== undefined ? uiState.selectedStrokeWeight : 1.5;
+    const currentWeight = nodeOptionState.strokeWeight !== undefined ? nodeOptionState.strokeWeight : 1.5;
     if (p.strokeWeight !== currentWeight) return false;
-    if (p.strokeWeight > 0 && uiState.selectedStrokeColor) {
-      if (p.strokeColor.toLowerCase() !== uiState.selectedStrokeColor.toLowerCase()) {
+    if (p.strokeWeight > 0 && nodeOptionState.strokeColor) {
+      if (p.strokeColor.toLowerCase() !== nodeOptionState.strokeColor.toLowerCase()) {
         return false;
       }
     }
@@ -195,7 +196,7 @@ export function ConnectSection() {
       const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
       if (colSel) colSel.value = connectorColor;
     }
-  }, [uiState.selectedColor, uiState.selectedStrokeWeight, uiState.selectedStrokeColor, selectedStylePresetId]);
+  }, [nodeOptionState.fillColor, nodeOptionState.strokeWeight, nodeOptionState.strokeColor, selectedStylePresetId]);
 
   // selectedConnectorColor 변경 시 로컬 입력필드 및 컬러칩 동기화 (모달 실시간 어플라이 연동)
   useEffect(() => {

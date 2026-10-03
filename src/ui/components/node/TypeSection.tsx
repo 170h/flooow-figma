@@ -103,28 +103,26 @@ const NODE_TYPE_OPTIONS: NodeTypeOption[] = [
  */
 export function TypeSection() {
   const {
-    uiState,
-    setUIState,
+    nodeOptionState,
+    setNodeOptionState,
     applyCurrentNodeState,
-    setLastNodeConfig,
-    lastNodeConfig,
     selectedNodes,
     multiDraft,
     updateMultiDraft,
   } = useApp();
   const summary = useSelectionSummary();
-  const { selectedNodeType } = uiState;
+  const currentNodeType = nodeOptionState.nodeType;
 
   // 복수 노드 선택 시 혼합(Mixed) 여부 판별 (Draft가 있으면 Draft 우선이므로 Mixed 해제)
   const isTypeMixed = multiDraft.nodeType !== undefined
     ? false
     : (summary.isMultiFlowNode && summary.nodeType.isMixed);
-  // 클릭 직후 selectedNodeType이 먼저 바뀌므로, 선택된 노드의 늦은 동기화보다 클릭 값을 우선한다
+  // 클릭 직후 currentNodeType이 먼저 바뀌므로, 선택된 노드의 늦은 동기화보다 클릭 값을 우선한다
   const currentRawType = multiDraft.nodeType !== undefined
     ? multiDraft.nodeType
     : (isTypeMixed
         ? undefined
-        : (selectedNodeType || summary.nodeType.value));
+        : (currentNodeType || summary.nodeType.value));
   const activeType = currentRawType ? normalizeNodeType(currentRawType) : undefined;
 
   const DEFAULT_TYPE_TITLES = new Set([
@@ -136,11 +134,11 @@ export function TypeSection() {
   const activeBranchVariant = normalizeBranchVariant(
     multiDraft.branchVariant
       ?? (selectedNodes.length === 1 ? selectedNodes[0]?.branchVariant : undefined)
-      ?? lastNodeConfig.branchVariant
+      ?? nodeOptionState.branchVariant
   );
   const showBranchVariants =
     activeType === 'Branch' ||
-    normalizeNodeType(selectedNodeType) === 'Branch' ||
+    normalizeNodeType(currentNodeType) === 'Branch' ||
     normalizeNodeType(multiDraft.nodeType) === 'Branch';
 
   function selectNodeType(type: DiagramNodeType) {
@@ -152,7 +150,7 @@ export function TypeSection() {
     }
 
     const nextVariant = type === 'Branch'
-      ? normalizeBranchVariant(lastNodeConfig.branchVariant)
+      ? normalizeBranchVariant(nodeOptionState.branchVariant)
       : undefined;
     const spec = type === 'Branch' && nextVariant
       ? getBranchVariantSpec(nextVariant)
@@ -212,20 +210,20 @@ export function TypeSection() {
     const nextFill = type === 'Branch' && nextVariant
       ? getBranchVariantDefaultFill(nextVariant)
       : undefined;
-    if (nextFill) {
-      setUIState({ selectedNodeType: type, selectedColor: nextFill });
-    } else {
-      setUIState({ selectedNodeType: type });
-    }
-    setLastNodeConfig({
+    const nextStrokeWeight = nextVariant && !branchVariantUsesStroke(nextVariant) ? 0 : (nextVariant ? 1.5 : undefined);
+    const nextStrokeColor = nextVariant && branchVariantUsesStroke(nextVariant) ? '#1E1E1E' : undefined;
+
+    setNodeOptionState({
       nodeType: type,
-      width: spec?.width,
-      height: spec?.height,
-      cornerRadius: spec?.cornerRadius ?? 0,
       branchVariant: nextVariant,
-      color: nextFill,
-      strokeWeight: nextVariant && !branchVariantUsesStroke(nextVariant) ? 0 : (nextVariant ? 1.5 : undefined),
-      strokeColor: nextVariant && branchVariantUsesStroke(nextVariant) ? '#1E1E1E' : undefined,
+      ...(nextFill ? { fillColor: nextFill } : {}),
+      ...(nextStrokeWeight !== undefined ? { strokeWeight: nextStrokeWeight } : {}),
+      ...(nextStrokeColor !== undefined ? { strokeColor: nextStrokeColor } : {}),
+      ...(spec ? {
+        width: spec.width,
+        height: spec.height,
+        cornerRadius: spec.cornerRadius ?? 0,
+      } : {}),
     });
 
     // 디폴트 규격(크기, 모서리 곡률, 타이틀)을 명시적으로 전달하여 레이스 컨디션 없이 즉시 적용
@@ -257,7 +255,7 @@ export function TypeSection() {
         strokeWeight: branchVariantUsesStroke(variant) ? 1.5 : 0,
         strokeColor: branchVariantUsesStroke(variant) ? '#1E1E1E' : undefined,
       });
-      setLastNodeConfig({ branchVariant: variant });
+      setNodeOptionState({ branchVariant: variant });
       return;
     }
 
@@ -282,16 +280,18 @@ export function TypeSection() {
     if (rEl) rEl.value = String(spec.cornerRadius ?? 0);
 
     const fill = getBranchVariantDefaultFill(variant);
-    setUIState({ selectedNodeType: 'Branch', selectedColor: fill });
-    setLastNodeConfig({
+    const strokeW = branchVariantUsesStroke(variant) ? 1.5 : 0;
+    const strokeC = branchVariantUsesStroke(variant) ? '#1E1E1E' : undefined;
+
+    setNodeOptionState({
       nodeType: 'Branch',
+      fillColor: fill,
+      strokeWeight: strokeW,
+      ...(strokeC ? { strokeColor: strokeC } : {}),
       branchVariant: variant,
       width: spec.width,
       height: spec.height,
       cornerRadius: spec.cornerRadius ?? 0,
-      color: fill,
-      strokeWeight: branchVariantUsesStroke(variant) ? 1.5 : 0,
-      strokeColor: branchVariantUsesStroke(variant) ? '#1E1E1E' : undefined,
     });
     applyCurrentNodeState(
       undefined,
