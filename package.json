@@ -1,7 +1,7 @@
 {
-  "name": "ui-flow-diagram",
+  "name": "flooow-figjam",
   "version": "1.0.0",
-  "description": "UI Flow Diagram - Screen Flow Connectors, Navigation Maps, and Status Tracking",
+  "description": "Flooow FigJam plugin - Screen Flow Connectors, Navigation Maps, and Status Tracking",
   "main": "dist/code.js",
   "scripts": {
     "build": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es2020",

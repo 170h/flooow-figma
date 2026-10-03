@@ -78,7 +78,7 @@ figma.showUI(__html__, {
   width: 360,
   height: 486,
   themeColors: true,
-  title: 'UI Flow Diagram',
+  title: 'Flooow',
 });
 
 // ============================================================

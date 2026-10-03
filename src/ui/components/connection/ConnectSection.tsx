@@ -1397,10 +1397,10 @@ export function ConnectSection() {
           const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
           const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
 
-          // 커넥터 1개·이미 연결된 노드 2개는 설정이 즉시 반영되므로 버튼을 두지 않는다
-          const isSingleConnector = isAllConnectors && selectedNodes.length === 1;
+          // 커넥터만 선택한 경우와 이미 연결된 노드 2개는 섹션 버튼을 두지 않는다.
+          // 커넥터 1개는 즉시 반영되고, 커넥터 복수는 푸터 Undo / Apply to All을 쓴다.
           const twoNodesConnected = selectedNodes.length === 2 && hasExisting && !isAllConnectors;
-          if (isSingleConnector || twoNodesConnected) return null;
+          if (isAllConnectors || twoNodesConnected) return null;
 
           const showUpdate = isAllConnectors || hasExisting;
 

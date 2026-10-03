@@ -1,4 +1,4 @@
-# AGENTS.md — UI Flow Diagram 플러그인 Agent 진입점
+# AGENTS.md — Flooow (FigJam) 플러그인 Agent 진입점
 
 > **이 파일은 모든 Agent(Claude/Codex/Gemini/Zoo)가 첫째로 읽는 단일 진입점이다.**
 > 프로젝트 정체성, 하드 규칙(INV), 작업별 라우팅, 금지 사항, 완료 게이트를 정의하고,
@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 정체성
 
-- **Figma 플러그인** (UI Flow Diagram) — 2샌드박스 아키텍처:
+- **FigJam 플러그인** (플러그인 이름 Flooow, 개발 폴더 `Flooow-FigJam`) — 2샌드박스 아키텍처:
   - **Core 샌드박스:** `src/code.ts` (4,993줄 모놀리스) + `src/customConnector.ts` (지오메트리 엔진)
   - **UI 샌드박스:** `src/ui/` (React 18, `src/ui.html`이 Figma UI 산출물)
 - **통신:** `postMessage` / `figma.ui.postMessage` **전용**. Figma API는 Core 전용.

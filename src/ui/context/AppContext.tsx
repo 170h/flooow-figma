@@ -155,6 +155,15 @@ export interface LastNodeConfig {
   branchVariant?: string;
 }
 
+export interface ConnectorLabelDraft {
+  labelOn?: boolean;
+  labelText?: string;
+  labelFillColor?: string;
+  labelStrokeColor?: string;
+  labelAlign?: ConnectorLabelAlign;
+  labelBoxStyle?: ConnectorLabelBoxStyle;
+}
+
 export interface LastConnectorConfig {
   labelOn: boolean;
   labelText: string;
@@ -309,6 +318,9 @@ export interface AppContextValue {
   triggerFormChange: () => void;
   canUndo: boolean;
   handleUndo: () => void;
+  connectorLabelDraft: ConnectorLabelDraft;
+  hasConnectorLabelDraft: boolean;
+  updateConnectorLabelDraft: (partial: Partial<ConnectorLabelDraft>) => void;
 }
 
 // ============================================================
@@ -481,6 +493,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const hasMultiDraft = Object.keys(multiDraft).length > 0;
 
+  const [connectorLabelDraft, setConnectorLabelDraftRaw] = useState<ConnectorLabelDraft>({});
+  const connectorLabelDraftRef = useRef<ConnectorLabelDraft>({});
+  const updateConnectorLabelDraft = useCallback((partial: Partial<ConnectorLabelDraft>) => {
+    setConnectorLabelDraftRaw((prev) => {
+      const next = { ...prev, ...partial };
+      connectorLabelDraftRef.current = next;
+      return next;
+    });
+  }, []);
+  const clearConnectorLabelDraft = useCallback(() => {
+    connectorLabelDraftRef.current = {};
+    setConnectorLabelDraftRaw({});
+  }, []);
+  const hasConnectorLabelDraft = Object.keys(connectorLabelDraft).length > 0;
+
   // 다중 노드 일괄 부분 적용(Apply to All) 진행 상태
   const [isApplyingMultiDraft, setIsApplyingMultiDraft] = useState(false);
   const isApplyingMultiDraftRef = useRef(false);
@@ -516,7 +543,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // 1회성 Undo 스냅샷 상태 관리 (가장 최근의 Apply 또는 Apply to All 1회만 되돌림)
   const [lastAppliedSnapshot, setLastAppliedSnapshot] = useState<UndoSnapshot | null>(null);
   const lastAppliedSnapshotRef = useRef<UndoSnapshot | null>(null);
-  const canUndo = Boolean(lastAppliedSnapshot) || (selectedNodes.length >= 2 && hasMultiDraft);
+  const canUndo = Boolean(lastAppliedSnapshot)
+    || (selectedNodes.length >= 2 && (hasMultiDraft || hasConnectorLabelDraft));
 
 
   const applyMultiDraft = useCallback(() => {
@@ -1038,6 +1066,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       showToast('변경사항이 취소되었습니다.', 'info');
       return;
     }
+    if (Object.keys(connectorLabelDraftRef.current).length > 0) {
+      clearConnectorLabelDraft();
+      showToast('변경사항이 취소되었습니다.', 'info');
+      return;
+    }
     const snapshot = lastAppliedSnapshotRef.current;
     if (snapshot) {
       if (snapshot.type === 'single' && snapshot.singlePayload) {
@@ -1085,7 +1118,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       revertSingleNodeForm(originalSelectedNodeRef.current);
       showToast('변경사항이 취소되었습니다.', 'info');
     }
-  }, [showToast, revertSingleNodeForm]);
+  }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft]);
 
   const lastResizeHeightRef = useRef(0);
   const resizeTimerRef = useRef<number | null>(null);
@@ -1452,6 +1485,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         targetMagnet: (node.connectorTargetMagnet as MagnetPosition) || 'LEFT',
         label: node.connectorLabel || '',
         hasLabel: node.connectorLabelOn !== undefined ? node.connectorLabelOn : Boolean(node.connectorLabel),
+        labelBoxStyle: node.connectorLabelBoxStyle,
+        labelAlign: node.connectorLabelAlign,
+        labelFillColor: node.connectorLabelFillColor,
+        labelStrokeColor: node.connectorLabelStrokeColor,
         isReversed: node.connectorIsReversed || false,
       }
     }));
@@ -1493,12 +1530,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       : (endOffStr !== undefined && endOffStr !== null && endOffStr.trim() !== '' ? parseFloat(endOffStr) : undefined);
 
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+    const labelDraft = connectorLabelDraftRef.current;
+    const isMultiConnector = connNodes.length > 1;
     const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || 'BOX';
     const labelAlign = lastConnectorConfigRef.current.labelAlign || 'CENTER';
     const labelFillColor = lastConnectorConfigRef.current.labelFillColor || DEFAULT_LABEL_FILL;
     const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
 
     connNodes.forEach(node => {
+      const labelPatch = isMultiConnector
+        ? {
+            ...(labelDraft.labelOn !== undefined ? { hasLabel: labelDraft.labelOn } : {}),
+            ...(labelDraft.labelText !== undefined ? { label: labelDraft.labelText, hasLabel: labelDraft.labelOn !== false } : {}),
+            ...(labelDraft.labelOn === false ? { hasLabel: false, label: '' } : {}),
+            ...(labelDraft.labelBoxStyle ? { labelBoxStyle: labelDraft.labelBoxStyle } : {}),
+            ...(labelDraft.labelAlign ? { labelAlign: labelDraft.labelAlign } : {}),
+            ...(labelDraft.labelFillColor ? { labelFillColor: labelDraft.labelFillColor } : {}),
+            ...(labelDraft.labelStrokeColor ? { labelStrokeColor: labelDraft.labelStrokeColor } : {}),
+          }
+        : {
+            label,
+            hasLabel,
+            labelBoxStyle,
+            labelAlign,
+            labelFillColor,
+            labelStrokeColor,
+          };
       parent.postMessage({
         pluginMessage: {
           type: 'UPDATE_CONNECTOR_PROPERTIES',
@@ -1514,19 +1571,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             endOffset,
             sourceMagnet: sourceMagnet || undefined,
             targetMagnet: targetMagnet || undefined,
-            label,
-            hasLabel,
-            labelBoxStyle,
-            labelAlign,
-            labelFillColor,
-            labelStrokeColor,
+            ...labelPatch,
             isReversed: node?.connectorIsReversed || false,
           }
         }
       }, '*');
     });
+    if (isMultiConnector) clearConnectorLabelDraft();
     setConnectorDirty(false);
-  }, []);
+  }, [clearConnectorLabelDraft]);
 
   const applyExistingConnectionState = useCallback((customStartOffset?: number, customEndOffset?: number) => {
     const conns = uiStateRef.current.connectedConnectors || [];
@@ -1958,6 +2011,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (isDraftSelectionChanged) {
       clearMultiDraft();
+      clearConnectorLabelDraft();
       multiDraftSelectionRef.current = sortedNewIds;
     }
 
@@ -2172,7 +2226,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState, clearMultiDraft]);
+  }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState, clearMultiDraft, clearConnectorLabelDraft]);
 
   const value: AppContextValue = {
     selectedNodes,
@@ -2238,6 +2292,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     triggerFormChange,
     canUndo,
     handleUndo,
+    connectorLabelDraft,
+    hasConnectorLabelDraft,
+    updateConnectorLabelDraft,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

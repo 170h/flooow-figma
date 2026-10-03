@@ -29424,6 +29424,20 @@
       });
     }, []);
     const hasMultiDraft = Object.keys(multiDraft).length > 0;
+    const [connectorLabelDraft, setConnectorLabelDraftRaw] = (0, import_react2.useState)({});
+    const connectorLabelDraftRef = (0, import_react2.useRef)({});
+    const updateConnectorLabelDraft = (0, import_react2.useCallback)((partial) => {
+      setConnectorLabelDraftRaw((prev) => {
+        const next = { ...prev, ...partial };
+        connectorLabelDraftRef.current = next;
+        return next;
+      });
+    }, []);
+    const clearConnectorLabelDraft = (0, import_react2.useCallback)(() => {
+      connectorLabelDraftRef.current = {};
+      setConnectorLabelDraftRaw({});
+    }, []);
+    const hasConnectorLabelDraft = Object.keys(connectorLabelDraft).length > 0;
     const [isApplyingMultiDraft, setIsApplyingMultiDraft] = (0, import_react2.useState)(false);
     const isApplyingMultiDraftRef = (0, import_react2.useRef)(false);
     const applyTimeoutRef = (0, import_react2.useRef)(null);
@@ -29451,7 +29465,7 @@
     }, []);
     const [lastAppliedSnapshot, setLastAppliedSnapshot] = (0, import_react2.useState)(null);
     const lastAppliedSnapshotRef = (0, import_react2.useRef)(null);
-    const canUndo = Boolean(lastAppliedSnapshot) || selectedNodes.length >= 2 && hasMultiDraft;
+    const canUndo = Boolean(lastAppliedSnapshot) || selectedNodes.length >= 2 && (hasMultiDraft || hasConnectorLabelDraft);
     const applyMultiDraft = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       if (isApplyingMultiDraftRef.current) return;
@@ -29890,6 +29904,11 @@
         showToast("\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
         return;
       }
+      if (Object.keys(connectorLabelDraftRef.current).length > 0) {
+        clearConnectorLabelDraft();
+        showToast("\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
+        return;
+      }
       const snapshot = lastAppliedSnapshotRef.current;
       if (snapshot) {
         if (snapshot.type === "single" && snapshot.singlePayload) {
@@ -29937,7 +29956,7 @@
         revertSingleNodeForm(originalSelectedNodeRef.current);
         showToast("\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
       }
-    }, [showToast, revertSingleNodeForm]);
+    }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft]);
     const lastResizeHeightRef = (0, import_react2.useRef)(0);
     const resizeTimerRef = (0, import_react2.useRef)(null);
     const autoResizeWindow = (0, import_react2.useCallback)(() => {
@@ -30229,6 +30248,10 @@
           targetMagnet: node.connectorTargetMagnet || "LEFT",
           label: node.connectorLabel || "",
           hasLabel: node.connectorLabelOn !== void 0 ? node.connectorLabelOn : Boolean(node.connectorLabel),
+          labelBoxStyle: node.connectorLabelBoxStyle,
+          labelAlign: node.connectorLabelAlign,
+          labelFillColor: node.connectorLabelFillColor,
+          labelStrokeColor: node.connectorLabelStrokeColor,
           isReversed: node.connectorIsReversed || false
         }
       }));
@@ -30261,11 +30284,29 @@
       const endOffStr = endOffEl?.value;
       const endOffset = typeof customEndOffset === "number" ? customEndOffset : endOffStr !== void 0 && endOffStr !== null && endOffStr.trim() !== "" ? parseFloat(endOffStr) : void 0;
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+      const labelDraft = connectorLabelDraftRef.current;
+      const isMultiConnector = connNodes.length > 1;
       const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || "BOX";
       const labelAlign = lastConnectorConfigRef.current.labelAlign || "CENTER";
       const labelFillColor = lastConnectorConfigRef.current.labelFillColor || DEFAULT_LABEL_FILL;
       const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
       connNodes.forEach((node) => {
+        const labelPatch = isMultiConnector ? {
+          ...labelDraft.labelOn !== void 0 ? { hasLabel: labelDraft.labelOn } : {},
+          ...labelDraft.labelText !== void 0 ? { label: labelDraft.labelText, hasLabel: labelDraft.labelOn !== false } : {},
+          ...labelDraft.labelOn === false ? { hasLabel: false, label: "" } : {},
+          ...labelDraft.labelBoxStyle ? { labelBoxStyle: labelDraft.labelBoxStyle } : {},
+          ...labelDraft.labelAlign ? { labelAlign: labelDraft.labelAlign } : {},
+          ...labelDraft.labelFillColor ? { labelFillColor: labelDraft.labelFillColor } : {},
+          ...labelDraft.labelStrokeColor ? { labelStrokeColor: labelDraft.labelStrokeColor } : {}
+        } : {
+          label,
+          hasLabel,
+          labelBoxStyle,
+          labelAlign,
+          labelFillColor,
+          labelStrokeColor
+        };
         parent.postMessage({
           pluginMessage: {
             type: "UPDATE_CONNECTOR_PROPERTIES",
@@ -30281,19 +30322,15 @@
               endOffset,
               sourceMagnet: sourceMagnet || void 0,
               targetMagnet: targetMagnet || void 0,
-              label,
-              hasLabel,
-              labelBoxStyle,
-              labelAlign,
-              labelFillColor,
-              labelStrokeColor,
+              ...labelPatch,
               isReversed: node?.connectorIsReversed || false
             }
           }
         }, "*");
       });
+      if (isMultiConnector) clearConnectorLabelDraft();
       setConnectorDirty(false);
-    }, []);
+    }, [clearConnectorLabelDraft]);
     const applyExistingConnectionState = (0, import_react2.useCallback)((customStartOffset, customEndOffset) => {
       const conns = uiStateRef.current.connectedConnectors || [];
       if (conns.length === 0) return;
@@ -30657,6 +30694,7 @@
       const isDraftSelectionChanged = sortedNewIds.length !== sortedPrevDraftIds.length || sortedNewIds.some((id, idx) => id !== sortedPrevDraftIds[idx]);
       if (isDraftSelectionChanged) {
         clearMultiDraft();
+        clearConnectorLabelDraft();
         multiDraftSelectionRef.current = sortedNewIds;
       }
       const prevSelectionKey = selectedNodesRef.current.map((n) => n.id).sort().join(",");
@@ -30827,7 +30865,7 @@
           }
         }
       }
-    }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState, clearMultiDraft]);
+    }, [closeAllPopovers, setCurrentTab, setLastNodeConfig, setUIState, clearMultiDraft, clearConnectorLabelDraft]);
     const value = {
       selectedNodes,
       setSelectedNodes,
@@ -30891,7 +30929,10 @@
       hasSingleChanges,
       triggerFormChange,
       canUndo,
-      handleUndo
+      handleUndo,
+      connectorLabelDraft,
+      hasConnectorLabelDraft,
+      updateConnectorLabelDraft
     };
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppContext.Provider, { value, children });
   }
@@ -31186,7 +31227,21 @@
       connectorEndOffset: getCommonProperty(
         connectorNodes,
         (n) => typeof n.connectorEndOffset === "number" ? n.connectorEndOffset : void 0
-      )
+      ),
+      connectorLabel: getCommonProperty(connectorNodes, (n) => n.connectorLabel ?? ""),
+      connectorLabelOn: getCommonProperty(connectorNodes, (n) => n.connectorLabelOn !== void 0 ? n.connectorLabelOn : Boolean(n.connectorLabel)),
+      connectorLabelFillColor: getCommonProperty(
+        connectorNodes,
+        (n) => n.connectorLabelFillColor || "#FFFFFF",
+        caseInsensitiveEqual
+      ),
+      connectorLabelStrokeColor: getCommonProperty(
+        connectorNodes,
+        (n) => n.connectorLabelStrokeColor || n.connectorColorHex || "#000000",
+        caseInsensitiveEqual
+      ),
+      connectorLabelAlign: getCommonProperty(connectorNodes, (n) => n.connectorLabelAlign || "CENTER"),
+      connectorLabelBoxStyle: getCommonProperty(connectorNodes, (n) => n.connectorLabelBoxStyle || "BOX")
     };
   }
 
@@ -36576,9 +36631,8 @@
           const hasExisting2 = Boolean(uiState.hasExistingConnection);
           const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
           const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
-          const isSingleConnector = isAllConnectors && selectedNodes.length === 1;
           const twoNodesConnected = selectedNodes.length === 2 && hasExisting2 && !isAllConnectors;
-          if (isSingleConnector || twoNodesConnected) return null;
+          if (isAllConnectors || twoNodesConnected) return null;
           const showUpdate = isAllConnectors || hasExisting2;
           let isConnectDisabled = false;
           if (showUpdate) {
@@ -36708,22 +36762,27 @@
       setLastConnectorConfig,
       markConnectorDirty,
       autoResizeWindow,
-      setActiveModal
+      setActiveModal,
+      connectorLabelDraft,
+      updateConnectorLabelDraft
     } = useApp();
+    const summary = useSelectionSummary();
     const connCount = selectedNodes.filter((n) => n && n.isConnector).length;
     const flowCount = selectedNodes.filter((n) => n && !n.isConnector).length;
-    const isMultiSelection = connCount >= 2 || connCount > 0 && flowCount > 0;
+    const isMixedWithNodes = connCount > 0 && flowCount > 0;
+    const isMultiConnector = summary.isMultiConnector;
     const [isOn, setIsOn] = (0, import_react15.useState)(lastConnectorConfig.labelOn || false);
-    const effectiveIsOn = !isMultiSelection && isOn;
+    const draftOn = connectorLabelDraft.labelOn;
+    const isLabelOnMixed = isMultiConnector && draftOn === void 0 && summary.connectorLabelOn.isMixed;
+    const effectiveIsOn = isMixedWithNodes ? false : isMultiConnector ? draftOn !== void 0 ? draftOn : Boolean(summary.connectorLabelOn.value) || isLabelOnMixed : isOn;
     const [labelText, setLabelText] = (0, import_react15.useState)(lastConnectorConfig.labelText || "");
     const [fillColor, setFillColor] = (0, import_react15.useState)(lastConnectorConfig.labelFillColor || "#FFFFFF");
     const [strokeColor, setStrokeColor] = (0, import_react15.useState)(lastConnectorConfig.labelStrokeColor || "#000000");
     const [fillHexInput, setFillHexInput] = (0, import_react15.useState)((lastConnectorConfig.labelFillColor || "#FFFFFF").replace("#", ""));
     const [strokeHexInput, setStrokeHexInput] = (0, import_react15.useState)((lastConnectorConfig.labelStrokeColor || "#000000").replace("#", ""));
     const [align, setAlign] = (0, import_react15.useState)(lastConnectorConfig.labelAlign || "LEFT");
+    const [colorEditing, setColorEditing] = (0, import_react15.useState)(null);
     const [boxStyle, setBoxStyle] = (0, import_react15.useState)(lastConnectorConfig.labelBoxStyle || "BOX");
-    const isFillNone = isNoneColor(fillColor);
-    const isStrokeNone = isNoneColor(strokeColor);
     const lastValidFillRef = (0, import_react15.useRef)(isNoneColor(fillColor) ? "#FFFFFF" : fillColor);
     const lastValidStrokeRef = (0, import_react15.useRef)(isNoneColor(strokeColor) ? "#000000" : strokeColor);
     (0, import_react15.useEffect)(() => {
@@ -36750,6 +36809,7 @@
       if (isDifferentNode) {
         lastSelectedNodeIdRef.current = currentNodeId;
       }
+      if (isMultiConnector || isMixedWithNodes) return;
       const activeEl = typeof document !== "undefined" ? document.activeElement : null;
       const isInputFocused = isFocusedRef.current || labelInputRef.current !== null && activeEl === labelInputRef.current;
       if (isDifferentNode && !isInputFocused) {
@@ -36784,10 +36844,30 @@
       lastConnectorConfig.labelFillColor,
       lastConnectorConfig.labelStrokeColor,
       lastConnectorConfig.labelAlign,
-      lastConnectorConfig.labelBoxStyle
+      lastConnectorConfig.labelBoxStyle,
+      isMultiConnector,
+      isMixedWithNodes
     ]);
+    const displayText = isMultiConnector ? connectorLabelDraft.labelText !== void 0 ? connectorLabelDraft.labelText : summary.connectorLabel.isMixed ? "" : summary.connectorLabel.value || "" : labelText;
+    const isTextMixed = isMultiConnector && connectorLabelDraft.labelText === void 0 && summary.connectorLabel.isMixed;
+    const displayFill = isMultiConnector ? connectorLabelDraft.labelFillColor ?? (summary.connectorLabelFillColor.isMixed ? "" : summary.connectorLabelFillColor.value || "#FFFFFF") : fillColor;
+    const isFillMixed = isMultiConnector && connectorLabelDraft.labelFillColor === void 0 && summary.connectorLabelFillColor.isMixed;
+    const displayStroke = isMultiConnector ? connectorLabelDraft.labelStrokeColor ?? (summary.connectorLabelStrokeColor.isMixed ? "" : summary.connectorLabelStrokeColor.value || "#000000") : strokeColor;
+    const isStrokeMixed = isMultiConnector && connectorLabelDraft.labelStrokeColor === void 0 && summary.connectorLabelStrokeColor.isMixed;
+    const displayAlign = isMultiConnector ? connectorLabelDraft.labelAlign ?? (summary.connectorLabelAlign.isMixed ? void 0 : summary.connectorLabelAlign.value) : align;
+    const isAlignMixed = isMultiConnector && connectorLabelDraft.labelAlign === void 0 && summary.connectorLabelAlign.isMixed;
+    const displayBoxStyle = isMultiConnector ? connectorLabelDraft.labelBoxStyle ?? (summary.connectorLabelBoxStyle.isMixed ? void 0 : summary.connectorLabelBoxStyle.value) : boxStyle;
+    const isStyleMixed = isMultiConnector && connectorLabelDraft.labelBoxStyle === void 0 && summary.connectorLabelBoxStyle.isMixed;
+    const showMixedTag = isLabelOnMixed || isTextMixed || isFillMixed || isStrokeMixed || isAlignMixed || isStyleMixed;
+    const isFillNone = !isFillMixed && isNoneColor(displayFill || fillColor);
+    const isStrokeNone = !isStrokeMixed && isNoneColor(displayStroke || strokeColor);
     function handleToggle(checked) {
-      if (isMultiSelection) return;
+      if (isMixedWithNodes) return;
+      if (isMultiConnector) {
+        updateConnectorLabelDraft({ labelOn: checked });
+        autoResizeWindow();
+        return;
+      }
       if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
       setIsOn(checked);
       setLastConnectorConfig({ labelOn: checked });
@@ -36805,6 +36885,10 @@
         clampToInputWidth(e.currentTarget);
       }
       const val = e.currentTarget.value;
+      if (isMultiConnector) {
+        updateConnectorLabelDraft({ labelText: val });
+        return;
+      }
       setLabelText(val);
       setLastConnectorConfig({ labelText: val });
       if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
@@ -36814,12 +36898,20 @@
     }
     function handleFillColorSelect(color) {
       const norm = normalizeHex(color);
+      if (isMultiConnector) {
+        updateConnectorLabelDraft({ labelFillColor: norm });
+        return;
+      }
       setFillColor(norm);
       setFillHexInput(norm.replace("#", ""));
       setLastConnectorConfig({ labelFillColor: norm });
       setTimeout(() => markConnectorDirty(), 0);
     }
     function handleFillNone() {
+      if (isMultiConnector) {
+        updateConnectorLabelDraft({ labelFillColor: "None" });
+        return;
+      }
       setFillColor("None");
       setFillHexInput("None");
       setLastConnectorConfig({ labelFillColor: "None" });
@@ -36846,17 +36938,25 @@
       } else if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
         handleFillColorSelect(`#${clean}`);
       } else {
-        setFillHexInput(isFillNone ? "None" : fillColor.replace("#", ""));
+        setFillHexInput(isFillNone ? "None" : (displayFill || fillColor).replace("#", ""));
       }
     }
     function handleStrokeColorSelect(color) {
       const norm = normalizeHex(color);
+      if (isMultiConnector) {
+        updateConnectorLabelDraft({ labelStrokeColor: norm });
+        return;
+      }
       setStrokeColor(norm);
       setStrokeHexInput(norm.replace("#", ""));
       setLastConnectorConfig({ labelStrokeColor: norm });
       setTimeout(() => markConnectorDirty(), 0);
     }
     function handleStrokeNone() {
+      if (isMultiConnector) {
+        updateConnectorLabelDraft({ labelStrokeColor: "None" });
+        return;
+      }
       setStrokeColor("None");
       setStrokeHexInput("None");
       setLastConnectorConfig({ labelStrokeColor: "None" });
@@ -36883,28 +36983,40 @@
       } else if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
         handleStrokeColorSelect(`#${clean}`);
       } else {
-        setStrokeHexInput(isStrokeNone ? "None" : strokeColor.replace("#", ""));
+        setStrokeHexInput(isStrokeNone ? "None" : (displayStroke || strokeColor).replace("#", ""));
       }
     }
     function handleAlignSelect(newAlign) {
+      if (isMultiConnector) {
+        updateConnectorLabelDraft({ labelAlign: newAlign });
+        return;
+      }
       setAlign(newAlign);
       setLastConnectorConfig({ labelAlign: newAlign });
       setTimeout(() => markConnectorDirty(), 0);
     }
     function handleBoxStyleSelect(newStyle) {
+      if (isMultiConnector) {
+        updateConnectorLabelDraft({ labelBoxStyle: newStyle });
+        return;
+      }
       setBoxStyle(newStyle);
       setLastConnectorConfig({ labelBoxStyle: newStyle });
       setTimeout(() => markConnectorDirty(), 0);
     }
     return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-block", style: { paddingBottom: effectiveIsOn ? "12px" : "0px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-header toggle-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: `section-title${isMultiSelection ? " disabled" : ""}`, children: "Label" }),
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("span", { className: `section-title${isMixedWithNodes ? " disabled" : ""}`, children: [
+          "Label",
+          showMixedTag && /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
           Switch,
           {
             id: "toggle-conn-label",
-            checked: effectiveIsOn,
-            disabled: isMultiSelection,
+            checked: isMultiConnector ? draftOn !== void 0 ? draftOn : Boolean(summary.connectorLabelOn.value) : effectiveIsOn,
+            isMixed: isLabelOnMixed,
+            disabled: isMixedWithNodes,
             onChange: handleToggle
           }
         )
@@ -36917,8 +37029,8 @@
             type: "text",
             id: "input-conn-label",
             className: "conn-label-input",
-            placeholder: "Add a label",
-            defaultValue: lastConnectorConfig.labelText || "",
+            placeholder: isTextMixed ? "Mixed" : "Add a label",
+            ...isMultiConnector ? { value: displayText } : { defaultValue: lastConnectorConfig.labelText || "" },
             onFocus: () => {
               isFocusedRef.current = true;
             },
@@ -36940,10 +37052,11 @@
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
               FillColorIcon,
               {
-                color: isFillNone ? lastValidFillRef.current : fillColor,
+                color: isFillNone ? lastValidFillRef.current : displayFill || fillColor,
                 isNone: isFillNone,
+                isMixed: isFillMixed,
                 onClick: handleFillChipClick,
-                title: isFillNone ? "\uBC30\uACBD \uCF1C\uAE30" : "\uBC30\uACBD \uB044\uAE30 (None)"
+                title: isFillMixed ? "Mixed" : isFillNone ? "\uBC30\uACBD \uCF1C\uAE30" : "\uBC30\uACBD \uB044\uAE30 (None)"
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
@@ -36951,15 +37064,22 @@
               {
                 type: "text",
                 className: `style-text-input${isFillNone ? " is-none" : ""}`,
-                value: fillHexInput,
+                value: isMultiConnector && colorEditing !== "fill" ? isFillMixed ? "" : isFillNone ? "None" : (displayFill || "").replace("#", "") : fillHexInput,
                 maxLength: 6,
-                placeholder: isFillNone ? "None" : "FFFFFF",
+                placeholder: isFillMixed ? "Mixed" : isFillNone ? "None" : "FFFFFF",
                 onChange: (e) => handleFillHexChange(e.target.value),
-                onBlur: handleFillHexBlur,
+                onBlur: () => {
+                  setColorEditing(null);
+                  handleFillHexBlur();
+                },
                 onKeyDown: (e) => {
                   if (e.key === "Enter") handleFillHexBlur();
                 },
-                onFocus: (e) => e.currentTarget.select(),
+                onFocus: (e) => {
+                  setColorEditing("fill");
+                  setFillHexInput(isFillMixed || isFillNone ? "" : (displayFill || fillColor).replace("#", ""));
+                  e.currentTarget.select();
+                },
                 spellCheck: false,
                 autoComplete: "off"
               }
@@ -36981,13 +37101,14 @@
               {
                 type: "button",
                 className: "style-stroke-btn",
-                title: isStrokeNone ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)",
+                title: isStrokeMixed ? "Mixed" : isStrokeNone ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)",
                 onClick: handleStrokeChipClick,
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
                   StrokeColorIcon,
                   {
-                    color: isStrokeNone ? lastValidStrokeRef.current : strokeColor,
-                    isNone: isStrokeNone
+                    color: isStrokeNone ? lastValidStrokeRef.current : displayStroke || strokeColor,
+                    isNone: isStrokeNone,
+                    isMixed: isStrokeMixed
                   }
                 )
               }
@@ -36997,15 +37118,22 @@
               {
                 type: "text",
                 className: `style-text-input${isStrokeNone ? " is-none" : ""}`,
-                value: strokeHexInput,
+                value: isMultiConnector && colorEditing !== "stroke" ? isStrokeMixed ? "" : isStrokeNone ? "None" : (displayStroke || "").replace("#", "") : strokeHexInput,
                 maxLength: 6,
-                placeholder: isStrokeNone ? "None" : "000000",
+                placeholder: isStrokeMixed ? "Mixed" : isStrokeNone ? "None" : "000000",
                 onChange: (e) => handleStrokeHexChange(e.target.value),
-                onBlur: handleStrokeHexBlur,
+                onBlur: () => {
+                  setColorEditing(null);
+                  handleStrokeHexBlur();
+                },
                 onKeyDown: (e) => {
                   if (e.key === "Enter") handleStrokeHexBlur();
                 },
-                onFocus: (e) => e.currentTarget.select(),
+                onFocus: (e) => {
+                  setColorEditing("stroke");
+                  setStrokeHexInput(isStrokeMixed || isStrokeNone ? "" : (displayStroke || strokeColor).replace("#", ""));
+                  e.currentTarget.select();
+                },
                 spellCheck: false,
                 autoComplete: "off"
               }
@@ -37026,7 +37154,7 @@
               "button",
               {
                 type: "button",
-                className: `corner-btn${align === "LEFT" ? " active" : ""}`,
+                className: `corner-btn${displayAlign === "LEFT" ? " active" : ""}`,
                 title: "Align left",
                 onClick: () => handleAlignSelect("LEFT"),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(IcTextAlignLeft, { size: 16 })
@@ -37036,7 +37164,7 @@
               "button",
               {
                 type: "button",
-                className: `corner-btn${align === "CENTER" ? " active" : ""}`,
+                className: `corner-btn${displayAlign === "CENTER" ? " active" : ""}`,
                 title: "Align center",
                 onClick: () => handleAlignSelect("CENTER"),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(IcTextAlignCenter, { size: 16 })
@@ -37046,7 +37174,7 @@
               "button",
               {
                 type: "button",
-                className: `corner-btn${align === "RIGHT" ? " active" : ""}`,
+                className: `corner-btn${displayAlign === "RIGHT" ? " active" : ""}`,
                 title: "Align right",
                 onClick: () => handleAlignSelect("RIGHT"),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(IcTextAlignRight, { size: 16 })
@@ -37055,7 +37183,7 @@
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "chip-group", style: { marginTop: "4px", flexWrap: "wrap", gap: "4px" }, children: STYLE_OPTIONS.map((opt) => {
-          const isActive = boxStyle === opt.value;
+          const isActive = displayBoxStyle === opt.value;
           return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
             "button",
             {
@@ -39642,7 +39770,11 @@
       hasSingleChanges,
       triggerFormChange,
       canUndo,
-      handleUndo
+      handleUndo,
+      hasConnectorLabelDraft,
+      connectorDirty,
+      connectorLabelDraft,
+      updateConnectorLabelDraft
     } = useApp();
     const handleAddSizeSave = (0, import_react26.useCallback)((preset) => {
       addSizePreset(preset);
@@ -39869,8 +40001,8 @@
                 children: "Upgrade"
               }
             )
-          ) : isMultiFlow ? (
-            /* 복수 선택: Undo + Apply (Draft가 없으면 Apply disabled) */
+          ) : isMultiFlow || isMultiConn ? (
+            /* 노드 복수 선택·커넥터만 복수 선택: Undo(초안 취소) + Apply to All */
             /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(import_jsx_runtime28.Fragment, { children: [
               /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
                 "button",
@@ -39878,7 +40010,7 @@
                   id: "btn-undo",
                   className: "btn-cta-secondary",
                   type: "button",
-                  disabled: !hasMultiDraft && !canUndo,
+                  disabled: isMultiConn ? !hasConnectorLabelDraft && !canUndo : !hasMultiDraft && !canUndo,
                   onClick: handleUndo,
                   children: "Undo"
                 }
@@ -39887,9 +40019,9 @@
                 "button",
                 {
                   id: "btn-main-cta",
-                  className: `btn-cta-primary${!hasMultiDraft || isApplyingMultiDraft ? " disabled" : ""}`,
+                  className: `btn-cta-primary${(isMultiConn ? !hasConnectorLabelDraft && !connectorDirty : !hasMultiDraft) || isApplyingMultiDraft ? " disabled" : ""}`,
                   type: "button",
-                  disabled: !hasMultiDraft || isApplyingMultiDraft,
+                  disabled: (isMultiConn ? !hasConnectorLabelDraft && !connectorDirty : !hasMultiDraft) || isApplyingMultiDraft,
                   onClick: handleMainAction,
                   children: "Apply to All"
                 }
@@ -40068,11 +40200,16 @@
         {
           title: "Label Fill",
           showStylePresets: true,
-          initialColor: lastConnectorConfig.labelFillColor || "#FFFFFF",
+          isMixed: isMultiConn && connectorLabelDraft.labelFillColor === void 0 && summary.connectorLabelFillColor.isMixed,
+          initialColor: connectorLabelDraft.labelFillColor || (isMultiConn && !summary.connectorLabelFillColor.isMixed ? summary.connectorLabelFillColor.value : void 0) || lastConnectorConfig.labelFillColor || "#FFFFFF",
           onApply: (colorHex) => {
             const clean = colorHex.toLowerCase() === "none" ? "None" : colorHex.toUpperCase();
-            setLastConnectorConfig({ labelFillColor: clean });
-            markConnectorDirty();
+            if (isMultiConn) {
+              updateConnectorLabelDraft({ labelFillColor: clean });
+            } else {
+              setLastConnectorConfig({ labelFillColor: clean });
+              markConnectorDirty();
+            }
           },
           onClose: () => setActiveModal("none")
         }
@@ -40083,13 +40220,18 @@
           title: "Label Stroke",
           showStylePresets: true,
           hideWeightControl: true,
-          initialColor: lastConnectorConfig.labelStrokeColor || uiState.selectedConnectorColor || "#000000",
+          isColorMixed: isMultiConn && connectorLabelDraft.labelStrokeColor === void 0 && summary.connectorLabelStrokeColor.isMixed,
+          initialColor: connectorLabelDraft.labelStrokeColor || (isMultiConn && !summary.connectorLabelStrokeColor.isMixed ? summary.connectorLabelStrokeColor.value : void 0) || lastConnectorConfig.labelStrokeColor || uiState.selectedConnectorColor || "#000000",
           initialWeight: (lastConnectorConfig.labelStrokeColor || "").toLowerCase() === "none" ? 0 : 1,
           onApply: (strokeColor, strokeWeight) => {
             const isStrokeNone = strokeWeight === 0 || strokeColor.toLowerCase() === "none";
             const clean = isStrokeNone ? "None" : strokeColor.toUpperCase();
-            setLastConnectorConfig({ labelStrokeColor: clean });
-            markConnectorDirty();
+            if (isMultiConn) {
+              updateConnectorLabelDraft({ labelStrokeColor: clean });
+            } else {
+              setLastConnectorConfig({ labelStrokeColor: clean });
+              markConnectorDirty();
+            }
           },
           onClose: () => setActiveModal("none")
         }

@@ -75,6 +75,10 @@ export function App() {
     triggerFormChange,
     canUndo,
     handleUndo,
+    hasConnectorLabelDraft,
+    connectorDirty,
+    connectorLabelDraft,
+    updateConnectorLabelDraft,
   } = useApp();
 
   // SizeModal onSave 핸들러 (매 렌더마다 새 함수 생성 방지)
@@ -417,23 +421,23 @@ export function App() {
                 >
                   Upgrade
                 </button>
-              ) : isMultiFlow ? (
-                /* 복수 선택: Undo + Apply (Draft가 없으면 Apply disabled) */
+              ) : isMultiFlow || isMultiConn ? (
+                /* 노드 복수 선택·커넥터만 복수 선택: Undo(초안 취소) + Apply to All */
                 <>
                   <button
                     id="btn-undo"
                     className="btn-cta-secondary"
                     type="button"
-                    disabled={!hasMultiDraft && !canUndo}
+                    disabled={isMultiConn ? (!hasConnectorLabelDraft && !canUndo) : (!hasMultiDraft && !canUndo)}
                     onClick={handleUndo}
                   >
                     Undo
                   </button>
                   <button
                     id="btn-main-cta"
-                    className={`btn-cta-primary${(!hasMultiDraft || isApplyingMultiDraft) ? ' disabled' : ''}`}
+                    className={`btn-cta-primary${(isMultiConn ? (!hasConnectorLabelDraft && !connectorDirty) : !hasMultiDraft) || isApplyingMultiDraft ? ' disabled' : ''}`}
                     type="button"
-                    disabled={!hasMultiDraft || isApplyingMultiDraft}
+                    disabled={(isMultiConn ? (!hasConnectorLabelDraft && !connectorDirty) : !hasMultiDraft) || isApplyingMultiDraft}
                     onClick={handleMainAction}
                   >
                     Apply to All
@@ -638,12 +642,22 @@ export function App() {
         <FillColorModal
           title="Label Fill"
           showStylePresets
-          initialColor={lastConnectorConfig.labelFillColor || '#FFFFFF'}
+          isMixed={isMultiConn && connectorLabelDraft.labelFillColor === undefined && summary.connectorLabelFillColor.isMixed}
+          initialColor={
+            connectorLabelDraft.labelFillColor
+            || (isMultiConn && !summary.connectorLabelFillColor.isMixed ? summary.connectorLabelFillColor.value : undefined)
+            || lastConnectorConfig.labelFillColor
+            || '#FFFFFF'
+          }
           onApply={(colorHex) => {
             // None(투명)은 'None'으로 정규화 (어피어런스 Style과 동일 규격)
             const clean = colorHex.toLowerCase() === 'none' ? 'None' : colorHex.toUpperCase();
-            setLastConnectorConfig({ labelFillColor: clean });
-            markConnectorDirty();
+            if (isMultiConn) {
+              updateConnectorLabelDraft({ labelFillColor: clean });
+            } else {
+              setLastConnectorConfig({ labelFillColor: clean });
+              markConnectorDirty();
+            }
           }}
           onClose={() => setActiveModal('none')}
         />
@@ -653,14 +667,25 @@ export function App() {
           title="Label Stroke"
           showStylePresets
           hideWeightControl={true}
-          initialColor={lastConnectorConfig.labelStrokeColor || uiState.selectedConnectorColor || '#000000'}
+          isColorMixed={isMultiConn && connectorLabelDraft.labelStrokeColor === undefined && summary.connectorLabelStrokeColor.isMixed}
+          initialColor={
+            connectorLabelDraft.labelStrokeColor
+            || (isMultiConn && !summary.connectorLabelStrokeColor.isMixed ? summary.connectorLabelStrokeColor.value : undefined)
+            || lastConnectorConfig.labelStrokeColor
+            || uiState.selectedConnectorColor
+            || '#000000'
+          }
           initialWeight={(lastConnectorConfig.labelStrokeColor || '').toLowerCase() === 'none' ? 0 : 1}
           onApply={(strokeColor, strokeWeight) => {
             // 두께 0 또는 None이면 보더 삭제('None'), 그 외에는 HEX 저장
             const isStrokeNone = strokeWeight === 0 || strokeColor.toLowerCase() === 'none';
             const clean = isStrokeNone ? 'None' : strokeColor.toUpperCase();
-            setLastConnectorConfig({ labelStrokeColor: clean });
-            markConnectorDirty();
+            if (isMultiConn) {
+              updateConnectorLabelDraft({ labelStrokeColor: clean });
+            } else {
+              setLastConnectorConfig({ labelStrokeColor: clean });
+              markConnectorDirty();
+            }
           }}
           onClose={() => setActiveModal('none')}
         />

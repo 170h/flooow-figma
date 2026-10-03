@@ -9,6 +9,7 @@ import {
   IcTextAlignRight,
 } from '../shared/icons';
 import { ConnectorLabelBoxStyle, ConnectorLabelAlign } from '../../../types';
+import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 
 interface StyleOption {
   label: string;
@@ -71,16 +72,25 @@ export function LabelSection() {
     markConnectorDirty,
     autoResizeWindow,
     setActiveModal,
+    connectorLabelDraft,
+    updateConnectorLabelDraft,
   } = useApp();
 
-  // 복수 선택 판정: 커넥터 2개 이상이거나 노드와 커넥터가 혼합 선택된 경우 Label 편집 비활성화
+  const summary = useSelectionSummary();
   const connCount = selectedNodes.filter(n => n && n.isConnector).length;
   const flowCount = selectedNodes.filter(n => n && !n.isConnector).length;
-  const isMultiSelection = connCount >= 2 || (connCount > 0 && flowCount > 0);
+  // 노드와 커넥터가 함께 선택된 경우에만 Label 편집을 막는다
+  const isMixedWithNodes = connCount > 0 && flowCount > 0;
+  const isMultiConnector = summary.isMultiConnector;
 
   const [isOn, setIsOn] = useState(lastConnectorConfig.labelOn || false);
-  // 복수 선택에서는 Label 편집이 비활성화되며 항상 접힘(collapsed) 유지
-  const effectiveIsOn = !isMultiSelection && isOn;
+  const draftOn = connectorLabelDraft.labelOn;
+  const isLabelOnMixed = isMultiConnector && draftOn === undefined && summary.connectorLabelOn.isMixed;
+  const effectiveIsOn = isMixedWithNodes
+    ? false
+    : isMultiConnector
+      ? (draftOn !== undefined ? draftOn : Boolean(summary.connectorLabelOn.value) || isLabelOnMixed)
+      : isOn;
 
   const [labelText, setLabelText] = useState(lastConnectorConfig.labelText || '');
   const [fillColor, setFillColor] = useState(lastConnectorConfig.labelFillColor || '#FFFFFF');
@@ -88,11 +98,8 @@ export function LabelSection() {
   const [fillHexInput, setFillHexInput] = useState((lastConnectorConfig.labelFillColor || '#FFFFFF').replace('#', ''));
   const [strokeHexInput, setStrokeHexInput] = useState((lastConnectorConfig.labelStrokeColor || '#000000').replace('#', ''));
   const [align, setAlign] = useState<ConnectorLabelAlign>(lastConnectorConfig.labelAlign || 'LEFT');
+  const [colorEditing, setColorEditing] = useState<'fill' | 'stroke' | null>(null);
   const [boxStyle, setBoxStyle] = useState<ConnectorLabelBoxStyle>(lastConnectorConfig.labelBoxStyle || 'BOX');
-
-  // None(배경 투명 / 보더 삭제) 상태 판별 — 어피어런스 Style과 동일 규격
-  const isFillNone = isNoneColor(fillColor);
-  const isStrokeNone = isNoneColor(strokeColor);
 
   // 직전 유효 컬러 기억 (None 해제 시 복원용)
   const lastValidFillRef = useRef<string>(isNoneColor(fillColor) ? '#FFFFFF' : fillColor);
@@ -127,6 +134,8 @@ export function LabelSection() {
     if (isDifferentNode) {
       lastSelectedNodeIdRef.current = currentNodeId;
     }
+
+    if (isMultiConnector || isMixedWithNodes) return;
 
     const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
     const isInputFocused = isFocusedRef.current || (labelInputRef.current !== null && activeEl === labelInputRef.current);
@@ -170,10 +179,43 @@ export function LabelSection() {
     lastConnectorConfig.labelStrokeColor,
     lastConnectorConfig.labelAlign,
     lastConnectorConfig.labelBoxStyle,
+    isMultiConnector,
+    isMixedWithNodes,
   ]);
 
+  const displayText = isMultiConnector
+    ? (connectorLabelDraft.labelText !== undefined
+        ? connectorLabelDraft.labelText
+        : (summary.connectorLabel.isMixed ? '' : (summary.connectorLabel.value || '')))
+    : labelText;
+  const isTextMixed = isMultiConnector && connectorLabelDraft.labelText === undefined && summary.connectorLabel.isMixed;
+  const displayFill = isMultiConnector
+    ? (connectorLabelDraft.labelFillColor ?? (summary.connectorLabelFillColor.isMixed ? '' : (summary.connectorLabelFillColor.value || '#FFFFFF')))
+    : fillColor;
+  const isFillMixed = isMultiConnector && connectorLabelDraft.labelFillColor === undefined && summary.connectorLabelFillColor.isMixed;
+  const displayStroke = isMultiConnector
+    ? (connectorLabelDraft.labelStrokeColor ?? (summary.connectorLabelStrokeColor.isMixed ? '' : (summary.connectorLabelStrokeColor.value || '#000000')))
+    : strokeColor;
+  const isStrokeMixed = isMultiConnector && connectorLabelDraft.labelStrokeColor === undefined && summary.connectorLabelStrokeColor.isMixed;
+  const displayAlign = isMultiConnector
+    ? (connectorLabelDraft.labelAlign ?? (summary.connectorLabelAlign.isMixed ? undefined : summary.connectorLabelAlign.value))
+    : align;
+  const isAlignMixed = isMultiConnector && connectorLabelDraft.labelAlign === undefined && summary.connectorLabelAlign.isMixed;
+  const displayBoxStyle = isMultiConnector
+    ? (connectorLabelDraft.labelBoxStyle ?? (summary.connectorLabelBoxStyle.isMixed ? undefined : summary.connectorLabelBoxStyle.value))
+    : boxStyle;
+  const isStyleMixed = isMultiConnector && connectorLabelDraft.labelBoxStyle === undefined && summary.connectorLabelBoxStyle.isMixed;
+  const showMixedTag = isLabelOnMixed || isTextMixed || isFillMixed || isStrokeMixed || isAlignMixed || isStyleMixed;
+  const isFillNone = !isFillMixed && isNoneColor(displayFill || fillColor);
+  const isStrokeNone = !isStrokeMixed && isNoneColor(displayStroke || strokeColor);
+
   function handleToggle(checked: boolean) {
-    if (isMultiSelection) return;
+    if (isMixedWithNodes) return;
+    if (isMultiConnector) {
+      updateConnectorLabelDraft({ labelOn: checked });
+      autoResizeWindow();
+      return;
+    }
     if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
     setIsOn(checked);
     setLastConnectorConfig({ labelOn: checked });
@@ -199,6 +241,10 @@ export function LabelSection() {
       clampToInputWidth(e.currentTarget);
     }
     const val = e.currentTarget.value;
+    if (isMultiConnector) {
+      updateConnectorLabelDraft({ labelText: val });
+      return;
+    }
     setLabelText(val);
     setLastConnectorConfig({ labelText: val });
     if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
@@ -209,6 +255,10 @@ export function LabelSection() {
 
   function handleFillColorSelect(color: string) {
     const norm = normalizeHex(color);
+    if (isMultiConnector) {
+      updateConnectorLabelDraft({ labelFillColor: norm });
+      return;
+    }
     setFillColor(norm);
     setFillHexInput(norm.replace('#', ''));
     setLastConnectorConfig({ labelFillColor: norm });
@@ -217,6 +267,10 @@ export function LabelSection() {
 
   // 배경 투명(None) 적용
   function handleFillNone() {
+    if (isMultiConnector) {
+      updateConnectorLabelDraft({ labelFillColor: 'None' });
+      return;
+    }
     setFillColor('None');
     setFillHexInput('None');
     setLastConnectorConfig({ labelFillColor: 'None' });
@@ -247,12 +301,16 @@ export function LabelSection() {
     } else if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
       handleFillColorSelect(`#${clean}`);
     } else {
-      setFillHexInput(isFillNone ? 'None' : fillColor.replace('#', ''));
+      setFillHexInput(isFillNone ? 'None' : (displayFill || fillColor).replace('#', ''));
     }
   }
 
   function handleStrokeColorSelect(color: string) {
     const norm = normalizeHex(color);
+    if (isMultiConnector) {
+      updateConnectorLabelDraft({ labelStrokeColor: norm });
+      return;
+    }
     setStrokeColor(norm);
     setStrokeHexInput(norm.replace('#', ''));
     setLastConnectorConfig({ labelStrokeColor: norm });
@@ -261,6 +319,10 @@ export function LabelSection() {
 
   // 보더 삭제(None) 적용
   function handleStrokeNone() {
+    if (isMultiConnector) {
+      updateConnectorLabelDraft({ labelStrokeColor: 'None' });
+      return;
+    }
     setStrokeColor('None');
     setStrokeHexInput('None');
     setLastConnectorConfig({ labelStrokeColor: 'None' });
@@ -291,17 +353,25 @@ export function LabelSection() {
     } else if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
       handleStrokeColorSelect(`#${clean}`);
     } else {
-      setStrokeHexInput(isStrokeNone ? 'None' : strokeColor.replace('#', ''));
+      setStrokeHexInput(isStrokeNone ? 'None' : (displayStroke || strokeColor).replace('#', ''));
     }
   }
 
   function handleAlignSelect(newAlign: ConnectorLabelAlign) {
+    if (isMultiConnector) {
+      updateConnectorLabelDraft({ labelAlign: newAlign });
+      return;
+    }
     setAlign(newAlign);
     setLastConnectorConfig({ labelAlign: newAlign });
     setTimeout(() => markConnectorDirty(), 0);
   }
 
   function handleBoxStyleSelect(newStyle: ConnectorLabelBoxStyle) {
+    if (isMultiConnector) {
+      updateConnectorLabelDraft({ labelBoxStyle: newStyle });
+      return;
+    }
     setBoxStyle(newStyle);
     setLastConnectorConfig({ labelBoxStyle: newStyle });
     setTimeout(() => markConnectorDirty(), 0);
@@ -311,11 +381,15 @@ export function LabelSection() {
     <div className="section-block" style={{ paddingBottom: effectiveIsOn ? '12px' : '0px' }}>
       {/* 1행: Label 타이틀 및 스위치 */}
       <div className="section-header toggle-row">
-        <span className={`section-title${isMultiSelection ? ' disabled' : ''}`}>Label</span>
+        <span className={`section-title${isMixedWithNodes ? ' disabled' : ''}`}>
+          Label
+          {showMixedTag && <span className="section-mixed-label">(Mixed)</span>}
+        </span>
         <Switch
           id="toggle-conn-label"
-          checked={effectiveIsOn}
-          disabled={isMultiSelection}
+          checked={isMultiConnector ? (draftOn !== undefined ? draftOn : Boolean(summary.connectorLabelOn.value)) : effectiveIsOn}
+          isMixed={isLabelOnMixed}
+          disabled={isMixedWithNodes}
           onChange={handleToggle}
         />
       </div>
@@ -329,8 +403,10 @@ export function LabelSection() {
               type="text"
               id="input-conn-label"
               className="conn-label-input"
-              placeholder="Add a label"
-              defaultValue={lastConnectorConfig.labelText || ''}
+              placeholder={isTextMixed ? 'Mixed' : 'Add a label'}
+              {...(isMultiConnector
+                ? { value: displayText }
+                : { defaultValue: lastConnectorConfig.labelText || '' })}
               onFocus={() => { isFocusedRef.current = true; }}
               onBlur={() => {
                 isFocusedRef.current = false;
@@ -352,23 +428,30 @@ export function LabelSection() {
               <div className="style-input-box style-color-input-box">
                 {/* 컬러 칩 (클릭 시 배경 투명 None 토글) */}
                 <FillColorIcon
-                  color={isFillNone ? lastValidFillRef.current : fillColor}
+                  color={isFillNone ? lastValidFillRef.current : (displayFill || fillColor)}
                   isNone={isFillNone}
+                  isMixed={isFillMixed}
                   onClick={handleFillChipClick}
-                  title={isFillNone ? '배경 켜기' : '배경 끄기 (None)'}
+                  title={isFillMixed ? 'Mixed' : (isFillNone ? '배경 켜기' : '배경 끄기 (None)')}
                 />
                 <input
                   type="text"
                   className={`style-text-input${isFillNone ? ' is-none' : ''}`}
-                  value={fillHexInput}
+                  value={isMultiConnector && colorEditing !== 'fill'
+                    ? (isFillMixed ? '' : (isFillNone ? 'None' : (displayFill || '').replace('#', '')))
+                    : fillHexInput}
                   maxLength={6}
-                  placeholder={isFillNone ? 'None' : 'FFFFFF'}
+                  placeholder={isFillMixed ? 'Mixed' : (isFillNone ? 'None' : 'FFFFFF')}
                   onChange={e => handleFillHexChange(e.target.value)}
-                  onBlur={handleFillHexBlur}
+                  onBlur={() => { setColorEditing(null); handleFillHexBlur(); }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleFillHexBlur();
                   }}
-                  onFocus={e => e.currentTarget.select()}
+                  onFocus={e => {
+                    setColorEditing('fill');
+                    setFillHexInput(isFillMixed || isFillNone ? '' : (displayFill || fillColor).replace('#', ''));
+                    e.currentTarget.select();
+                  }}
                   spellCheck={false}
                   autoComplete="off"
                 />
@@ -387,26 +470,33 @@ export function LabelSection() {
                 <button
                   type="button"
                   className="style-stroke-btn"
-                  title={isStrokeNone ? '보더 켜기' : '보더 끄기 (None)'}
+                  title={isStrokeMixed ? 'Mixed' : (isStrokeNone ? '보더 켜기' : '보더 끄기 (None)')}
                   onClick={handleStrokeChipClick}
                 >
                   <StrokeColorIcon
-                    color={isStrokeNone ? lastValidStrokeRef.current : strokeColor}
+                    color={isStrokeNone ? lastValidStrokeRef.current : (displayStroke || strokeColor)}
                     isNone={isStrokeNone}
+                    isMixed={isStrokeMixed}
                   />
                 </button>
                 <input
                   type="text"
                   className={`style-text-input${isStrokeNone ? ' is-none' : ''}`}
-                  value={strokeHexInput}
+                  value={isMultiConnector && colorEditing !== 'stroke'
+                    ? (isStrokeMixed ? '' : (isStrokeNone ? 'None' : (displayStroke || '').replace('#', '')))
+                    : strokeHexInput}
                   maxLength={6}
-                  placeholder={isStrokeNone ? 'None' : '000000'}
+                  placeholder={isStrokeMixed ? 'Mixed' : (isStrokeNone ? 'None' : '000000')}
                   onChange={e => handleStrokeHexChange(e.target.value)}
-                  onBlur={handleStrokeHexBlur}
+                  onBlur={() => { setColorEditing(null); handleStrokeHexBlur(); }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleStrokeHexBlur();
                   }}
-                  onFocus={e => e.currentTarget.select()}
+                  onFocus={e => {
+                    setColorEditing('stroke');
+                    setStrokeHexInput(isStrokeMixed || isStrokeNone ? '' : (displayStroke || strokeColor).replace('#', ''));
+                    e.currentTarget.select();
+                  }}
                   spellCheck={false}
                   autoComplete="off"
                 />
@@ -424,7 +514,7 @@ export function LabelSection() {
               <div className="corner-position-group">
                 <button
                   type="button"
-                  className={`corner-btn${align === 'LEFT' ? ' active' : ''}`}
+                  className={`corner-btn${displayAlign === 'LEFT' ? ' active' : ''}`}
                   title="Align left"
                   onClick={() => handleAlignSelect('LEFT')}
                 >
@@ -432,7 +522,7 @@ export function LabelSection() {
                 </button>
                 <button
                   type="button"
-                  className={`corner-btn${align === 'CENTER' ? ' active' : ''}`}
+                  className={`corner-btn${displayAlign === 'CENTER' ? ' active' : ''}`}
                   title="Align center"
                   onClick={() => handleAlignSelect('CENTER')}
                 >
@@ -440,7 +530,7 @@ export function LabelSection() {
                 </button>
                 <button
                   type="button"
-                  className={`corner-btn${align === 'RIGHT' ? ' active' : ''}`}
+                  className={`corner-btn${displayAlign === 'RIGHT' ? ' active' : ''}`}
                   title="Align right"
                   onClick={() => handleAlignSelect('RIGHT')}
                 >
@@ -452,7 +542,7 @@ export function LabelSection() {
             {/* 4행: 스타일 형태 프리셋 칩 (Size chip-group 규격) */}
             <div className="chip-group" style={{ marginTop: '4px', flexWrap: 'wrap', gap: '4px' }}>
               {STYLE_OPTIONS.map(opt => {
-                const isActive = boxStyle === opt.value;
+                const isActive = displayBoxStyle === opt.value;
                 return (
                   <button
                     key={opt.value}

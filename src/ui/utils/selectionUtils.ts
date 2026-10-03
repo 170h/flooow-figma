@@ -1,5 +1,5 @@
 import { NodeInfo } from '../context/AppContext';
-import { DiagramNodeType, normalizeNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition } from '../../types';
+import { DiagramNodeType, normalizeNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition, ConnectorLabelAlign, ConnectorLabelBoxStyle } from '../../types';
 
 export interface PropertySummary<T> {
   value: T | undefined;
@@ -89,6 +89,12 @@ export interface SelectionSummary {
   connectorTargetMagnet: PropertySummary<MagnetPosition>;
   connectorStartOffset: PropertySummary<number>;
   connectorEndOffset: PropertySummary<number>;
+  connectorLabel: PropertySummary<string>;
+  connectorLabelOn: PropertySummary<boolean>;
+  connectorLabelFillColor: PropertySummary<string>;
+  connectorLabelStrokeColor: PropertySummary<string>;
+  connectorLabelAlign: PropertySummary<ConnectorLabelAlign>;
+  connectorLabelBoxStyle: PropertySummary<ConnectorLabelBoxStyle>;
 
   // 피그잼 일반 객체 요약
   isFigJamObject: boolean;
@@ -164,5 +170,21 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     connectorEndOffset: getCommonProperty(connectorNodes, (n) =>
       typeof n.connectorEndOffset === 'number' ? n.connectorEndOffset : undefined
     ),
+    connectorLabel: getCommonProperty(connectorNodes, (n) => n.connectorLabel ?? ''),
+    connectorLabelOn: getCommonProperty(connectorNodes, (n) => (
+      n.connectorLabelOn !== undefined ? n.connectorLabelOn : Boolean(n.connectorLabel)
+    )),
+    connectorLabelFillColor: getCommonProperty(
+      connectorNodes,
+      (n) => n.connectorLabelFillColor || '#FFFFFF',
+      caseInsensitiveEqual
+    ),
+    connectorLabelStrokeColor: getCommonProperty(
+      connectorNodes,
+      (n) => n.connectorLabelStrokeColor || n.connectorColorHex || '#000000',
+      caseInsensitiveEqual
+    ),
+    connectorLabelAlign: getCommonProperty(connectorNodes, (n) => n.connectorLabelAlign || 'CENTER'),
+    connectorLabelBoxStyle: getCommonProperty(connectorNodes, (n) => n.connectorLabelBoxStyle || 'BOX'),
   };
 }

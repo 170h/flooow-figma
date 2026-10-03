@@ -1,4 +1,4 @@
-# UI Flow Diagram - 피그잼(FigJam) 전용 플러그인 개발 가이드
+# Flooow — FigJam 개발 폴더
 
 피그잼(FigJam)에서 외부 피그마 디자인 파일의 화면(프레임)들을 연동하여 노드로 생성하고, **상·하·좌·우 포인트를 마우스로 직접 끌어당겨(드래그) 직각 커넥터로 연결**할 수 있는 피그잼 전용 UI 플로우 다이어그램 플러그인입니다.
 
@@ -28,7 +28,7 @@
 ## 2. 프로젝트 폴더 구조
 
 ```text
-ui-flow-diagram/
+Flooow-FigJam/
 ├── manifest.json         # 피그마 플러그인 매니페스트 (이름, 권한, 진입점 정의)
 ├── package.json          # 프로젝트 의존성 및 빌드 스크립트 정의
 ├── tsconfig.json         # TypeScript 컴파일 설정
@@ -80,7 +80,7 @@ npm install
 1. 피그마 데스크톱 앱 실행 후 임의의 디자인 파일을 엽니다.
 2. 상단 메뉴에서 `Plugins` → `Development` → `Import plugin from manifest...`를 클릭합니다.
 3. 프로젝트 루트의 [`manifest.json`](manifest.json) 파일을 선택합니다.
-4. `Plugins` → `Development` 목록에 **`UI Flow Diagram`**이 등록됩니다.
+4. `Plugins` → `Development` 목록에 **`Flooow`**가 등록됩니다.
 
 ### 2) 개발 중 실시간 새로고침 및 디버깅
 - **코드 수정 반영:**

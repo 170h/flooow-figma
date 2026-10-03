@@ -1433,7 +1433,7 @@
     width: 360,
     height: 486,
     themeColors: true,
-    title: "UI Flow Diagram"
+    title: "Flooow"
   });
   var ELEVATION_EFFECTS_LIGHT = {
     // E100 (Shapes): 0 0 0.5px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15)
