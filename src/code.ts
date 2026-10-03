@@ -10,6 +10,8 @@ import {
   ConnectPointsPayload,
   ConnectChainPayload,
   SelectedNodeInfo,
+  BadgePosition,
+  BadgeShape,
   MagnetPosition,
   ConnectorStrokePattern,
   ConnectorRoutingType,
@@ -844,6 +846,8 @@ function isHeaderFrame(c: SceneNode): boolean {
 // 브릿지 필은 타이틀 폭이 수십 px로 고정된다. textAutoResize HEIGHT는 그 폭을 유지하므로,
 // 다른 노드로 바꿀 때 헤더가 그 폭을 끌어안고 타이틀이 한 줄로 남는다.
 // 카드 안쪽 폭으로 다시 맞춘 뒤 가로는 부모를 채우고 세로는 줄바꿈에 맡긴다.
+// Decision 타이틀은 TRUNCATE 고정 높이라, 페이지에 있는 동안 resize하면
+// 오토레이아웃 밖으로 빠져 마름모와 좌표가 갈라진다. 카드 자식으로 둔 뒤 중앙에 고정한다.
 function syncTitleWidthToCard(card: FrameNode, cardWidth: number, nodeType: DiagramNodeType) {
   const titleText = card.findOne(
     (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
@@ -884,6 +888,47 @@ function syncTitleWidthToCard(card: FrameNode, cardWidth: number, nodeType: Diag
   try { titleText.layoutSizingHorizontal = 'FILL'; } catch (_) {
     try { titleText.layoutAlign = 'STRETCH'; } catch (_) {}
   }
+}
+
+// 선택 변경(handleSelectionChange) 등 순수 투영(Projection) 경로 전용:
+// 캔버스 노드(primaryAxisSizingMode, resize, min/maxHeight, descText.maxLines/characters 등)를
+// 절대 단 하나도 변조(Mutation)하지 않고 순수 읽기만으로 Hug 높이를 산출하는 완전한 Read-Only 헬퍼
+function calculateCardReadOnlyHugHeight(card: FrameNode): number {
+  if (card.primaryAxisSizingMode === 'AUTO') {
+    return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
+  }
+
+  if (card.layoutMode === 'VERTICAL') {
+    try {
+      const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+      const titleText = headerRow
+        ? (headerRow.children.find((c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')) as TextNode | undefined)
+        : (card.children.find((c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')) as TextNode | undefined);
+      const titleH = headerRow ? Math.round(headerRow.height) : (titleText ? Math.max(18, Math.round(titleText.height)) : 18);
+
+      const descText = card.children.find(
+        (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
+      ) as TextNode | undefined;
+
+      const descH = descText ? Math.round(descText.height) : 0;
+      const pt = typeof card.paddingTop === 'number' ? card.paddingTop : 14;
+      const hasStatus = Boolean(safeGetPluginData(card, 'workflow_status'));
+      const hasLink = Boolean(safeGetPluginData(card, 'figma_link'));
+      const hasBottomBadge = hasStatus || hasLink;
+      const hasDesc = descH > 0;
+      const pb = typeof card.paddingBottom === 'number'
+        ? card.paddingBottom
+        : (hasBottomBadge ? 36 : (hasDesc ? 16 : 14));
+      const itemSpacing = hasDesc ? (typeof card.itemSpacing === 'number' ? card.itemSpacing : 8) : 0;
+
+      const calculatedH = Math.round(pt + titleH + itemSpacing + descH + pb);
+      return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, calculatedH);
+    } catch (_) {
+      // 실패 시 기본 크기 반환
+    }
+  }
+
+  return Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
 }
 
 // 카드의 전체 내용(헤더 + 패딩 + 설명 텍스트 전체 + 상태 뱃지 여백)을 모두 수용하기 위한 최소 Hug 높이 정밀 산출
@@ -1483,76 +1528,7 @@ async function handleSelectionChange() {
         (node as FrameNode).children?.some((c) => c.name === 'Header' || c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
       ));
 
-    // 캔버스 기즈모로 사이즈 조절이 되지 않도록 min/max 치수를 현재 크기로 완전 잠금
-    if (isFlowNode && node.type === 'FRAME') {
-      const frame = node as FrameNode;
-      const w = Math.round(frame.width);
-      const h = Math.round(frame.height);
-      if (frame.minWidth !== w || frame.maxWidth !== w || frame.minHeight !== h || frame.maxHeight !== h) {
-        frame.minWidth = w;
-        frame.maxWidth = w;
-        frame.minHeight = h;
-        frame.maxHeight = h;
-      }
 
-      // 기존 우상단에 있던 상태 뱃지를 하단 오른쪽 박스 안쪽으로 자동 이동 및 텍스트 수정 차단(locked=true)
-      const statusBadge = frame.children.find(
-        (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
-      ) as FrameNode | undefined;
-      if (statusBadge) {
-        if (frame.paddingBottom !== 36) {
-          frame.paddingBottom = 36;
-        }
-        if (statusBadge.paddingLeft !== 9) statusBadge.paddingLeft = 9;
-        if (statusBadge.paddingRight !== 9) statusBadge.paddingRight = 9;
-        const nodeCornerRadius = typeof frame.cornerRadius === 'number' ? frame.cornerRadius : 0;
-        const targetRadius = getStatusBadgeCornerRadius(nodeCornerRadius);
-        if (statusBadge.cornerRadius !== targetRadius) statusBadge.cornerRadius = targetRadius;
-        if (statusBadge.constraints?.horizontal !== 'MAX' || statusBadge.constraints?.vertical !== 'MAX') {
-          statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-        }
-        const targetX = frame.width - statusBadge.width - 10;
-        const targetY = frame.height - statusBadge.height - 10;
-        if (statusBadge.x !== targetX) statusBadge.x = targetX;
-        if (statusBadge.y !== targetY) statusBadge.y = targetY;
-        if (!statusBadge.locked) statusBadge.locked = true;
-        const textChild = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
-        if (textChild && !textChild.locked) textChild.locked = true;
-      }
-
-      // 프레임 레이아웃 모드 및 정렬 방향 보장 (도형 노드는 중앙 정렬, 일반 화면 노드는 좌측/상단 정렬)
-      if (frame.layoutMode !== 'VERTICAL') {
-        frame.layoutMode = 'VERTICAL';
-      }
-      const rawNodeType = safeGetPluginData(frame, 'node_type');
-      const nType = normalizeNodeType(rawNodeType);
-      const nSpec = NODE_TYPE_SHAPE_SPECS[nType] || NODE_TYPE_SHAPE_SPECS.Screen;
-      const isShape = !nSpec.allowDescription;
-
-      const targetAlign = isShape ? 'CENTER' : 'MIN';
-      if (frame.counterAxisAlignItems !== targetAlign) {
-        frame.counterAxisAlignItems = targetAlign;
-      }
-      if (frame.primaryAxisAlignItems !== targetAlign) {
-        frame.primaryAxisAlignItems = targetAlign;
-      }
-
-      // 타이틀 텍스트 서식(블릿, 링크, 볼드, 취소선 등) 차단 및 표준 규격 검사
-      const headerFrame = frame.children.find(isHeaderFrame) as FrameNode | undefined;
-      const titleText = headerFrame
-        ? (headerFrame.children.find((c) => c.type === 'TEXT') as TextNode | undefined)
-        : (frame.children.find((c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')) as TextNode | undefined);
-      if (titleText) {
-        enforceTitleStandardStyle(titleText, frame);
-      }
-      const descText = frame.children.find(
-        (c) => c.type === 'TEXT' && (c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc')
-      ) as TextNode | undefined;
-      if (descText) {
-        await lockTextFontSizeAndAutoResize(descText, 11);
-        await updateDescTextTruncation(frame, descText, frame.height);
-      }
-    }
 
     let title = '';
     let description = '';
@@ -1818,8 +1794,8 @@ async function handleSelectionChange() {
         sizeMode = 'fixed';
       }
 
-      // Hug contents 높이: status 유무(패딩 36px vs 16px)를 항상 정확하게 반영하여 실시간 산출
-      hugHeight = calculateCardHugHeight(frame);
+      // Hug contents 높이: status 유무(패딩 36px vs 16px)를 항상 정확하게 반영하여 순수 Read-Only로 실시간 산출
+      hugHeight = calculateCardReadOnlyHugHeight(frame);
     }
 
     let nodeFillColor: string | undefined;
@@ -1877,38 +1853,7 @@ async function handleSelectionChange() {
       }
     }
 
-    if (isFlowNode && flowNodeType === 'Screen' && node.type === 'FRAME') {
-      const frameNode = node as FrameNode;
-      if (frameNode.strokeAlign !== 'INSIDE') {
-        try { frameNode.strokeAlign = 'INSIDE'; } catch (_) {}
-      }
-      if ('strokesIncludedInLayout' in frameNode && frameNode.layoutMode !== 'NONE' && !frameNode.strokesIncludedInLayout) {
-        try { frameNode.strokesIncludedInLayout = true; } catch (_) {}
-      }
-      const header = frameNode.children.find(isHeaderFrame) as FrameNode | undefined;
-      if (header) {
-        if (header.layoutMode !== 'VERTICAL') {
-          try { header.layoutMode = 'VERTICAL'; } catch (_) {}
-        }
-        if (header.layoutAlign !== 'STRETCH') {
-          try { header.layoutAlign = 'STRETCH'; } catch (_) {}
-        }
-        if (header.primaryAxisSizingMode !== 'AUTO') {
-          try { header.primaryAxisSizingMode = 'AUTO'; } catch (_) {}
-        }
-        try { header.layoutSizingHorizontal = 'FILL'; } catch (_) {}
-        try { header.layoutSizingVertical = 'HUG'; } catch (_) {}
-        const tText = header.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
-        if (tText) {
-          if (tText.layoutAlign !== 'STRETCH') {
-            try { tText.layoutAlign = 'STRETCH'; } catch (_) {}
-          }
-          if (tText.textAutoResize !== 'HEIGHT') {
-            try { tText.textAutoResize = 'HEIGHT'; } catch (_) {}
-          }
-        }
-      }
-    }
+
 
     const pos = getNodeTopLeft(node);
 
@@ -3051,7 +2996,12 @@ function attachShapeVectorNode(
   } else {
     card.appendChild(shape);
   }
-  if (originalParent && originalParent !== card) {
+  if (
+    originalParent &&
+    originalParent !== card &&
+    originalParent.type !== 'PAGE' &&
+    originalParent.type !== 'DOCUMENT'
+  ) {
     originalParent.remove();
   }
 
@@ -3192,7 +3142,6 @@ async function createFlowNode(payload: FlowNodePayload) {
       titleText.textAlignVertical = 'CENTER';
       titleText.layoutAlign = 'STRETCH';
       titleText.visible = !branchVariant || showBranchTitle;
-
       if (nodeType === 'Decision') {
         // 마름모는 3줄 높이(54px)로 고정하여 3번째 줄 끝에서 ..(말줄임) 보장
         const availW = Math.max(10, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
@@ -3447,6 +3396,815 @@ async function createFlowNode(payload: FlowNodePayload) {
 }
 
 // ----------------------------------------------------
+// 3-1. 공통 노드 패치 코어 (Single Mutation Engine)
+// - 단일 및 다중 선택의 모든 노드 속성 변경을 단일 경로로 처리
+// - 캔버스 selection을 절대 변경하지 않음
+// - Dormant Data(설명, 상태, 링크, 뱃지, 엘리베이션, Screen 치수)를 손실 없이 보존
+// ----------------------------------------------------
+export interface FlowNodePatch {
+  nodeType?: DiagramNodeType;
+  title?: string;
+  description?: string;
+  descriptionOn?: boolean;
+  theme?: 'light' | 'dark';
+  colorHex?: string;
+  strokeColor?: string;
+  strokeWeight?: number;
+  strokeStyle?: 'SOLID' | 'DASHED';
+  width?: number;
+  height?: number;
+  cornerRadius?: number;
+  sizeMode?: 'fixed' | 'hug' | 'fit';
+  status?: WorkflowStatus | '';
+  figmaLink?: string;
+  clearLinkCache?: boolean;
+  elevation?: number | null;
+  badgeNumber?: number;
+  badgeCorner?: BadgePosition;
+  badgePosition?: BadgePosition;
+  badgeShape?: BadgeShape;
+  badgeColorMode?: 'White' | 'Black' | 'Style';
+  badgeOn?: boolean;
+  branchVariant?: BranchVariant;
+}
+
+async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<void> {
+  // 1. 기즈모 및 제약조건 해제
+  card.minWidth = null;
+  card.maxWidth = null;
+  card.minHeight = null;
+  card.maxHeight = null;
+
+  // 2. 노드 타입 및 Branch Variant 결정 (모든 Capability 판단은 TARGET 타입 기준)
+  const prevRawType = safeGetPluginData(card, 'node_type') || 'Screen';
+  const prevNodeType = normalizeNodeType(prevRawType);
+  const rawType = patch.nodeType || prevRawType;
+  const nodeType = normalizeNodeType(rawType);
+  // 타깃 노드 타입을 선행 동기화하여 이후 모든 capability 판단이 목표 노드 타입을 기준으로 이루어지도록 보장
+  card.setPluginData('node_type', nodeType);
+  const supportsTargetOption = (opt: any) => supportsOption({ flowNodeType: nodeType, isFlowNode: true }, opt);
+
+  const batchBranchVariant = nodeType === 'Branch'
+    ? normalizeBranchVariant(patch.branchVariant || safeGetPluginData(card, 'branch_variant'))
+    : undefined;
+  const spec = (batchBranchVariant
+    ? getBranchVariantSpec(batchBranchVariant)
+    : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
+  const isShapeNode = !spec.allowDescription;
+  const isChangingToScreen = prevNodeType !== 'Screen' && nodeType === 'Screen';
+  const prevBranchVariant = prevNodeType === 'Branch'
+    ? normalizeBranchVariant(safeGetPluginData(card, 'branch_variant'))
+    : undefined;
+
+  // 기존 자식 ShapeVector 탐색
+  const existingShapeVector = card.children.find(
+    (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && (c.type === 'VECTOR' || c.type === 'FRAME')
+  ) as (VectorNode | FrameNode) | undefined;
+
+  // 3. 테마 및 색상 계산
+  const prevTheme = (safeGetPluginData(card, 'node_theme') as 'light' | 'dark') || 'light';
+  const isDark = (patch.theme !== undefined ? patch.theme : prevTheme) === 'dark';
+
+  let isFillNone = false;
+  let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
+
+  if (patch.colorHex !== undefined) {
+    isFillNone = patch.colorHex.toLowerCase() === 'none' || patch.colorHex.toLowerCase() === 'transparent';
+    if (!isFillNone) {
+      bgColor = hexToRgbColor(patch.colorHex);
+    }
+  } else {
+    if (isShapeNode && existingShapeVector && 'fills' in existingShapeVector && Array.isArray(existingShapeVector.fills) && existingShapeVector.fills.length > 0 && existingShapeVector.fills[0].type === 'SOLID') {
+      bgColor = existingShapeVector.fills[0].color;
+      isFillNone = false;
+    } else {
+      const currentFill = card.fills;
+      if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === 'SOLID') {
+        bgColor = currentFill[0].color;
+      } else if (!Array.isArray(currentFill) || currentFill.length === 0) {
+        isFillNone = true;
+      }
+    }
+  }
+
+  const { titleFill, descFill, isBgDark } = isFillNone
+    ? {
+        titleFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } } as SolidPaint,
+        descFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 } as SolidPaint,
+        isBgDark: isDark,
+      }
+    : getTextFillsByBackground(bgColor, isDark);
+
+  const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
+
+  // 4. Fills 및 Strokes 적용
+  const vectorPathData = getShapeVectorData(nodeType, card.width, card.height, batchBranchVariant);
+  if (patch.colorHex !== undefined) {
+    if (vectorPathData || isFillNone) {
+      card.fills = [];
+    } else {
+      card.fills = [{ type: 'SOLID', color: bgColor }];
+    }
+  }
+
+  if (card.layoutMode !== 'VERTICAL') {
+    card.layoutMode = 'VERTICAL';
+  }
+  card.counterAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
+  card.primaryAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
+  if (isShapeNode) {
+    card.itemSpacing = 0;
+  }
+
+  let existingStrokeWeight = 1.5;
+  let existingStrokeColor: RGB | null = null;
+  if (isShapeNode && existingShapeVector) {
+    if ('strokeWeight' in existingShapeVector && typeof existingShapeVector.strokeWeight === 'number') {
+      existingStrokeWeight = existingShapeVector.strokeWeight;
+    }
+    if ('strokes' in existingShapeVector && Array.isArray(existingShapeVector.strokes) && existingShapeVector.strokes.length > 0 && existingShapeVector.strokes[0]?.type === 'SOLID') {
+      existingStrokeColor = existingShapeVector.strokes[0].color;
+    }
+  } else {
+    if (typeof card.strokeWeight === 'number') {
+      existingStrokeWeight = card.strokeWeight;
+    }
+    if (Array.isArray(card.strokes) && card.strokes.length > 0 && card.strokes[0]?.type === 'SOLID') {
+      existingStrokeColor = card.strokes[0].color;
+    }
+  }
+
+  const cardStrokeWeight = batchBranchVariant && !branchVariantUsesStroke(batchBranchVariant)
+    ? 0
+    : (patch.strokeWeight !== undefined ? clampStrokeWeight(patch.strokeWeight) : existingStrokeWeight);
+
+  if (patch.strokeWeight !== undefined || patch.strokeColor !== undefined) {
+    if (!vectorPathData) {
+      if (cardStrokeWeight === 0) {
+        card.strokes = [];
+      } else {
+        const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : (existingStrokeColor || borderColor);
+        card.strokes = [{ type: 'SOLID', color: strokeCol }];
+        card.strokeWeight = cardStrokeWeight;
+        card.strokeAlign = 'INSIDE';
+        if ('strokesIncludedInLayout' in card) {
+          card.strokesIncludedInLayout = true;
+        }
+      }
+    }
+  }
+
+  // 5. 타이틀 결정
+  const DEFAULT_SHAPE_NAMES = new Set([
+    'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
+    'Action', 'System', 'Database', 'Square', 'Junction', 'Diamond', 'Pill', 'Capsule',
+    'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Circle',
+  ]);
+  const currentTitle = patch.title !== undefined ? patch.title.trim() : (card.name || safeGetPluginData(card, 'node_title') || '');
+  const incomingIsPlaceholder = !currentTitle
+    || currentTitle === 'Untitled'
+    || DEFAULT_SHAPE_NAMES.has(currentTitle)
+    || (prevBranchVariant ? currentTitle === BRANCH_VARIANT_LABELS[prevBranchVariant] : false);
+  const leavingUntitledBranch = prevNodeType === 'Branch'
+    && nodeType !== 'Branch'
+    && Boolean(prevBranchVariant && !branchVariantHasTitle(prevBranchVariant));
+
+  let effectiveTitle = currentTitle;
+  if ((leavingUntitledBranch && incomingIsPlaceholder) || (isChangingToScreen && incomingIsPlaceholder)) {
+    effectiveTitle = nodeType === 'Screen' ? 'Screen' : nodeType;
+  } else if (patch.nodeType !== undefined && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
+    effectiveTitle = nodeType;
+  }
+  card.name = effectiveTitle;
+  card.clipsContent = false;
+
+  // 6. 치수(Size) 계산 및 Dormant Screen 치수 보존/복원
+  const savedScreenW = safeGetPluginData(card, 'screen_width');
+  const savedScreenH = safeGetPluginData(card, 'screen_height');
+  const savedScreenR = safeGetPluginData(card, 'screen_corner_radius');
+  const restoredScreenW = savedScreenW ? parseInt(savedScreenW, 10) : spec.width;
+  const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
+  const restoredScreenR = savedScreenR !== '' && savedScreenR !== undefined ? parseInt(savedScreenR, 10) : (spec.cornerRadius ?? 0);
+
+  const prevSizeMode = (safeGetPluginData(card, 'size_mode') as 'fixed' | 'hug' | 'fit') || 'fixed';
+  const effectiveSizeMode = (!isShapeNode && patch.sizeMode !== undefined) ? patch.sizeMode : prevSizeMode;
+  const isChangingFromFitToFixed = prevSizeMode === 'fit' && effectiveSizeMode === 'fixed';
+
+  let targetW: number;
+  let targetH: number;
+  let targetR: number;
+
+  if (isShapeNode) {
+    targetW = spec.width;
+    targetH = spec.height;
+    targetR = spec.cornerRadius ?? 0;
+  } else if (isChangingToScreen) {
+    targetW = patch.width !== undefined ? clampScreenWidth(patch.width) : (restoredScreenW ? clampScreenWidth(restoredScreenW) : spec.width);
+    targetH = patch.height !== undefined ? clampScreenHeight(patch.height) : (restoredScreenH ? clampScreenHeight(restoredScreenH) : spec.height);
+    targetR = patch.cornerRadius !== undefined ? clampScreenCornerRadius(patch.cornerRadius) : clampScreenCornerRadius(restoredScreenR);
+  } else if (isChangingFromFitToFixed) {
+    targetW = patch.width !== undefined ? clampScreenWidth(patch.width) : (restoredScreenW ? clampScreenWidth(restoredScreenW) : clampScreenWidth(card.width));
+    targetH = patch.height !== undefined ? clampScreenHeight(patch.height) : (restoredScreenH ? clampScreenHeight(restoredScreenH) : clampScreenHeight(card.height));
+    targetR = patch.cornerRadius !== undefined ? clampScreenCornerRadius(patch.cornerRadius) : (typeof card.cornerRadius === 'number' ? card.cornerRadius : 0);
+  } else {
+    targetW = patch.width !== undefined ? clampScreenWidth(patch.width) : clampScreenWidth(card.width);
+    targetH = patch.height !== undefined ? clampScreenHeight(patch.height) : clampScreenHeight(card.height);
+    targetR = patch.cornerRadius !== undefined ? clampScreenCornerRadius(patch.cornerRadius) : (typeof card.cornerRadius === 'number' ? card.cornerRadius : (spec.cornerRadius ?? 0));
+  }
+
+  if (nodeType === 'Screen' || nodeType === 'Process' || nodeType === 'Branch') {
+    card.cornerRadius = targetR;
+  } else {
+    card.cornerRadius = spec.cornerRadius ?? 0;
+  }
+
+  // 7. 설명, 상태, 링크 유효값 계산
+  const prevDesc = safeGetPluginData(card, 'node_desc') || '';
+  const existingDescChild = card.children.find(
+    (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
+  ) as TextNode | undefined;
+
+  const isDescOn = !isShapeNode && (
+    patch.descriptionOn !== undefined
+      ? patch.descriptionOn
+      : (patch.description !== undefined ? Boolean(patch.description.trim()) : Boolean(existingDescChild || prevDesc.trim()))
+  );
+
+  let effectiveDesc = '';
+  if (!isShapeNode) {
+    if (patch.description !== undefined && patch.description.trim() !== '') {
+      effectiveDesc = patch.description.trim();
+    } else if (isChangingToScreen || isDescOn) {
+      effectiveDesc = prevDesc.trim();
+    } else {
+      effectiveDesc = (patch.description !== undefined ? patch.description : prevDesc).trim();
+    }
+  }
+
+  const prevStatus = (safeGetPluginData(card, 'workflow_status') || '') as WorkflowStatus;
+  const effectiveStatus = (!isShapeNode
+    ? (patch.status !== undefined
+        ? patch.status
+        : (isChangingToScreen ? prevStatus : prevStatus))
+    : '') as WorkflowStatus;
+
+  const prevFigmaLink = safeGetPluginData(card, 'figma_link') || safeGetPluginData(card, 'cached_figma_link') || '';
+  const isExplicitLinkClear = Boolean(
+    patch.clearLinkCache ||
+    (!isChangingToScreen && patch.figmaLink !== undefined && patch.figmaLink.trim() === '')
+  );
+  const shouldClearLinkCache = isExplicitLinkClear;
+
+  let effectiveLink = '';
+  if (!isShapeNode) {
+    if (isExplicitLinkClear) {
+      effectiveLink = '';
+    } else if (isChangingToScreen) {
+      effectiveLink = (patch.figmaLink !== undefined && patch.figmaLink.trim() !== '')
+        ? patch.figmaLink.trim()
+        : prevFigmaLink;
+    } else if (patch.figmaLink !== undefined) {
+      effectiveLink = patch.figmaLink.trim();
+    } else {
+      effectiveLink = safeGetPluginData(card, 'figma_link') || '';
+    }
+  }
+
+  let fitW: number | undefined;
+  if (!isShapeNode && effectiveSizeMode === 'fit') {
+    fitW = await calculateScreenFitWidth(
+      card,
+      effectiveTitle,
+      effectiveStatus,
+      effectiveLink
+    );
+  }
+
+  // 8. Vector Path Shape 부착 또는 제거
+  if (vectorPathData) {
+    card.fills = [];
+    card.strokes = [];
+    card.strokeWeight = 0;
+    card.cornerRadius = 0;
+
+    if (existingShapeVector) {
+      existingShapeVector.remove();
+    }
+    const defaultStrokeCol = existingStrokeColor || (batchBranchVariant ? hexToRgbColor('#1E1E1E') : borderColor);
+    const strokeCol = patch.strokeColor
+      ? hexToRgbColor(patch.strokeColor)
+      : defaultStrokeCol;
+    attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant);
+  } else {
+    if (existingShapeVector) {
+      existingShapeVector.remove();
+    }
+    removeBranchMark(card);
+  }
+
+  // 9. Shape 전환 시 캔버스 뱃지 정리 (Dormant Data는 보존)
+  if (isShapeNode) {
+    const existingStatusBadge = card.children.find(
+      (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
+    );
+    if (existingStatusBadge) existingStatusBadge.remove();
+
+    const existingLinkBadge = card.children.find(
+      (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+    );
+    if (existingLinkBadge) existingLinkBadge.remove();
+  }
+
+  // 10. Header 및 TitleText 갱신
+  let titleText = card.findOne(
+    (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
+  ) as TextNode | null;
+
+  if (isShapeNode) {
+    const existingHeader = card.children.find(isHeaderFrame) as FrameNode | undefined;
+    if (existingHeader) {
+      if (!titleText) {
+        titleText = existingHeader.children.find((c) => c.type === 'TEXT') as TextNode | null;
+      }
+      if (titleText && titleText.parent === existingHeader) {
+        card.appendChild(titleText);
+      }
+      existingHeader.remove();
+    }
+
+    if (!titleText) {
+      titleText = figma.createText();
+      titleText.name = 'TitleText';
+      titleText.fontName = { family: 'Inter', style: 'Bold' };
+      titleText.fontSize = 13;
+      titleText.setPluginData('node_role', 'title');
+      card.appendChild(titleText);
+    }
+
+    const showBranchTitle = Boolean(batchBranchVariant && branchVariantHasTitle(batchBranchVariant));
+    titleText.layoutAlign = 'STRETCH';
+    titleText.textAlignHorizontal = 'CENTER';
+    titleText.textAlignVertical = 'CENTER';
+    titleText.lineHeight = { value: showBranchTitle ? 22 : 18, unit: 'PIXELS' };
+    titleText.visible = !batchBranchVariant || showBranchTitle;
+
+    if (nodeType === 'Decision') {
+      const availW = Math.max(10, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
+      try { titleText.resize(availW, 54); } catch (_) {}
+      try { titleText.maxHeight = 54; } catch (_) {}
+      try { titleText.textAutoResize = 'TRUNCATE'; } catch (_) {}
+      try { titleText.textTruncation = 'ENDING'; } catch (_) {}
+      try { titleText.maxLines = 3; } catch (_) {}
+    } else {
+      try { titleText.maxHeight = null; } catch (_) {}
+      try { titleText.textAutoResize = 'HEIGHT'; } catch (_) {}
+      try { titleText.textTruncation = 'ENDING'; } catch (_) {}
+      try { titleText.maxLines = 3; } catch (_) {}
+    }
+    await safeSetCharacters(titleText, (batchBranchVariant && !showBranchTitle) ? '' : effectiveTitle);
+    const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
+    if (!hasExistingTitleFill || patch.colorHex) {
+      titleText.fills = [titleFill];
+    }
+  } else {
+    let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+    if (!headerRow) {
+      headerRow = figma.createFrame();
+      headerRow.name = 'Header';
+      headerRow.fills = [];
+      card.insertChild(0, headerRow);
+    }
+    headerRow.layoutMode = 'VERTICAL';
+    headerRow.layoutAlign = 'STRETCH';
+    headerRow.primaryAxisSizingMode = 'AUTO';
+    headerRow.counterAxisSizingMode = 'AUTO';
+    headerRow.primaryAxisAlignItems = 'MIN';
+    headerRow.counterAxisAlignItems = 'MIN';
+    headerRow.itemSpacing = 0;
+    headerRow.paddingLeft = 0;
+    headerRow.paddingRight = 0;
+    headerRow.paddingTop = 0;
+    headerRow.paddingBottom = 0;
+
+    if (!titleText) {
+      titleText = figma.createText();
+      titleText.name = 'TitleText';
+      titleText.fontName = { family: 'Inter', style: 'Bold' };
+      titleText.fontSize = 13;
+      titleText.setPluginData('node_role', 'title');
+      headerRow.appendChild(titleText);
+    } else if (titleText.parent !== headerRow) {
+      headerRow.appendChild(titleText);
+    }
+
+    titleText.visible = true;
+    titleText.lineHeight = { value: 18, unit: 'PIXELS' };
+    titleText.textAlignHorizontal = 'LEFT';
+    titleText.textAlignVertical = 'TOP';
+    titleText.layoutAlign = 'STRETCH';
+    titleText.textAutoResize = 'HEIGHT';
+    titleText.fontName = { family: 'Inter', style: 'Bold' };
+    await safeSetCharacters(titleText, effectiveTitle);
+    titleText.textTruncation = 'DISABLED';
+    titleText.maxLines = null;
+    try { titleText.maxHeight = null; } catch (_) {}
+    const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
+    if (!hasExistingTitleFill || patch.colorHex) {
+      titleText.fills = [titleFill];
+    }
+  }
+
+  // 11. DescriptionText 갱신
+  let descText = card.children.find(
+    (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
+  ) as TextNode | undefined;
+
+  if (isShapeNode || !isDescOn || !effectiveDesc) {
+    if (descText) {
+      descText.remove();
+      descText = undefined;
+    }
+  } else {
+    const isNewDesc = !descText;
+    if (!descText) {
+      descText = figma.createText();
+      descText.name = 'DescText';
+      descText.setPluginData('node_role', 'desc');
+    }
+
+    descText.textAlignHorizontal = 'LEFT';
+    descText.layoutAlign = 'STRETCH';
+    const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+    const descAvailW = Math.max(10, (fitW !== undefined ? fitW : targetW) - 32 - descStrokeOffset);
+    descText.fontName = { family: 'Inter', style: 'Regular' };
+    descText.fontSize = 11;
+    descText.characters = effectiveDesc;
+    descText.textAutoResize = 'HEIGHT';
+    descText.resize(descAvailW, descText.height || 16);
+
+    if (!isShapeNode && (effectiveSizeMode === 'fit' || effectiveSizeMode === 'hug')) {
+      descText.maxLines = null;
+      try { descText.maxHeight = null; } catch (_) {}
+      descText.textTruncation = 'DISABLED';
+    } else if (isChangingToScreen || effectiveSizeMode === 'fixed') {
+      descText.textTruncation = 'ENDING';
+      const pb = (effectiveStatus || effectiveLink) ? 36 : 16;
+      const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
+      const headerH = headerRow ? headerRow.height : 18;
+      const availableH = Math.max(14, targetH - 14 - pb - 8 - Math.round(headerH));
+      descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
+    } else {
+      await updateDescTextTruncation(card, descText, targetH, effectiveDesc, targetW);
+    }
+
+    const hasExistingDescFill = descText.fills === figma.mixed || (Array.isArray(descText.fills) && descText.fills.length > 0);
+    if (!hasExistingDescFill || patch.colorHex) {
+      descText.fills = [descFill];
+    }
+
+    if (isNewDesc || descText.parent !== card) {
+      card.appendChild(descText);
+    }
+  }
+
+  // 12. 패딩 설정
+  const hasBottomBar = !isShapeNode && Boolean(effectiveStatus || effectiveLink);
+  if (isShapeNode) {
+    const showBranchTitle = Boolean(batchBranchVariant && branchVariantHasTitle(batchBranchVariant));
+    const hPad = batchBranchVariant
+      ? (showBranchTitle ? 16 : 0)
+      : (nodeType === 'Decision' ? 24 : 12);
+    card.paddingLeft = hPad;
+    card.paddingRight = hPad;
+    card.paddingTop = batchBranchVariant ? (showBranchTitle ? 5 : 0) : 12;
+    card.paddingBottom = batchBranchVariant ? (showBranchTitle ? 5 : 0) : 12;
+    card.primaryAxisAlignItems = 'CENTER';
+    card.counterAxisAlignItems = 'CENTER';
+    card.itemSpacing = 0;
+  } else {
+    card.itemSpacing = 8;
+    card.paddingLeft = 16;
+    card.paddingRight = 16;
+    card.paddingTop = 14;
+    card.paddingBottom = hasBottomBar ? 36 : (isDescOn ? 16 : 14);
+    card.primaryAxisAlignItems = (!isDescOn && !hasBottomBar) ? 'CENTER' : 'MIN';
+    card.counterAxisAlignItems = 'MIN';
+  }
+
+  // 13. 상태 뱃지 갱신
+  let statusBadge = !isShapeNode ? (card.children.find(
+    (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
+  ) as FrameNode | undefined) : undefined;
+
+  if (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]) {
+    if (!statusBadge) {
+      statusBadge = figma.createFrame();
+      statusBadge.name = 'StatusBadge';
+      statusBadge.layoutMode = 'HORIZONTAL';
+      statusBadge.primaryAxisSizingMode = 'AUTO';
+      statusBadge.counterAxisSizingMode = 'AUTO';
+      statusBadge.primaryAxisAlignItems = 'CENTER';
+      statusBadge.counterAxisAlignItems = 'CENTER';
+      statusBadge.paddingLeft = 9;
+      statusBadge.paddingRight = 9;
+      statusBadge.paddingTop = 3;
+      statusBadge.paddingBottom = 3;
+      statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+        typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
+      );
+      statusBadge.setPluginData('is_status_badge', 'true');
+
+      const badgeText = figma.createText();
+      badgeText.name = 'StatusText';
+      badgeText.fontName = { family: 'Inter', style: 'Bold' };
+      badgeText.fontSize = 9;
+      const cfg = STATUS_CONFIG[effectiveStatus];
+      if (cfg) {
+        badgeText.characters = cfg.label.toUpperCase();
+      }
+      badgeText.textAutoResize = 'WIDTH_AND_HEIGHT';
+      badgeText.locked = true;
+      statusBadge.appendChild(badgeText);
+
+      const badgeW = Math.round(badgeText.width + 18);
+      const badgeH = Math.round(badgeText.height + 6);
+      statusBadge.resize(badgeW, badgeH);
+
+      card.appendChild(statusBadge);
+      if ((card.layoutMode as any) !== 'NONE') {
+        statusBadge.layoutPositioning = 'ABSOLUTE';
+      }
+      statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+      statusBadge.locked = true;
+    }
+
+    statusBadge.paddingLeft = 9;
+    statusBadge.paddingRight = 9;
+    statusBadge.cornerRadius = getStatusBadgeCornerRadius(
+      typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
+    );
+    statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+
+    const { badgeBg, badgeTextColor } = getStatusBadgeColors(effectiveStatus, bgColor, isDark);
+    statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
+    const bText = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+    if (bText) {
+      bText.locked = false;
+      const statusLabel = STATUS_CONFIG[effectiveStatus]?.label || effectiveStatus;
+      await safeSetCharacters(bText, statusLabel.toUpperCase());
+      bText.fills = [{ type: 'SOLID', color: badgeTextColor }];
+      bText.locked = true;
+    }
+  } else if (statusBadge && (!effectiveStatus || isShapeNode)) {
+    statusBadge.remove();
+    statusBadge = undefined;
+  }
+
+  // 14. 링크 뱃지 갱신
+  if (!isShapeNode) {
+    await updateFigmaLinkBadge(card, effectiveLink, isBgDark, shouldClearLinkCache);
+  }
+
+  // 15. 스텝 배지 갱신 & 보존
+  const existingStepBadge = card.children.find(
+    (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
+  ) as FrameNode | undefined;
+
+  if (!supportsTargetOption('stepBadge')) {
+    // Step Badge 미지원 노드: 캔버스 뱃지만 정리하고 플러그인데이터는 보존
+    if (existingStepBadge) existingStepBadge.remove();
+  } else if (patch.badgeOn === false) {
+    // 명시적 뱃지 해제 시에만 플러그인데이터 제거
+    card.setPluginData('step_number', '');
+    card.setPluginData('badge_corner', '');
+    card.setPluginData('badge_shape', '');
+    card.setPluginData('badge_color_mode', '');
+    if (existingStepBadge) existingStepBadge.remove();
+  } else if (
+    patch.badgeOn === true ||
+    patch.badgeNumber !== undefined ||
+    patch.badgeCorner !== undefined ||
+    patch.badgePosition !== undefined ||
+    patch.badgeShape !== undefined ||
+    patch.badgeColorMode !== undefined
+  ) {
+    const curNum = safeGetPluginData(card, 'step_number') ? parseInt(safeGetPluginData(card, 'step_number'), 10) : 1;
+    const curCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
+    const curShape = safeGetPluginData(card, 'badge_shape') || 'Square';
+    const curMode = (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
+
+    const finalNum = patch.badgeNumber !== undefined ? patch.badgeNumber : curNum;
+    const finalCorner = patch.badgeCorner !== undefined ? patch.badgeCorner : (patch.badgePosition !== undefined ? patch.badgePosition : curCorner);
+    const finalShape = patch.badgeShape !== undefined ? patch.badgeShape : curShape;
+    const finalMode = patch.badgeColorMode !== undefined ? patch.badgeColorMode : curMode;
+
+    await applyStepBadgeToSingleCard(card, finalNum, finalCorner as BadgePosition, finalShape as BadgeShape, finalMode as 'White' | 'Black' | 'Style');
+  } else if (!existingStepBadge && safeGetPluginData(card, 'step_number') && isChangingToScreen) {
+    // Step Badge 지원 노드로 복귀 시 보존된 dormant 뱃지 복원
+    const savedNumStr = safeGetPluginData(card, 'step_number');
+    const curNum = savedNumStr ? parseInt(savedNumStr, 10) : 1;
+    const curCorner = (safeGetPluginData(card, 'badge_corner') as BadgePosition) || 'TOP_LEFT';
+    const curShape = (safeGetPluginData(card, 'badge_shape') as BadgeShape) || 'Square';
+    const curMode = (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
+    await applyStepBadgeToSingleCard(card, curNum, curCorner, curShape, curMode);
+  } else if (existingStepBadge && patch.colorHex !== undefined) {
+    const stepText = existingStepBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
+    if (stepText) {
+      const currentMode = (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
+      applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
+    }
+  }
+
+  // 16. 최종 리사이즈 및 레이아웃
+  const isHug = !isShapeNode && effectiveSizeMode === 'hug';
+  const isFit = !isShapeNode && effectiveSizeMode === 'fit';
+  const finalW = isFit && fitW !== undefined ? fitW : (nodeType === 'Screen' ? clampScreenWidth(targetW) : (batchBranchVariant ? targetW : Math.max(50, targetW)));
+  const finalH = nodeType === 'Screen' ? clampScreenHeight(targetH) : (batchBranchVariant ? targetH : Math.max(40, targetH));
+
+  card.minWidth = null;
+  card.maxWidth = null;
+  card.minHeight = null;
+  card.maxHeight = null;
+
+  if (isHug || isFit) {
+    if (descText) {
+      descText.maxLines = null;
+      try { descText.maxHeight = null; } catch (_) {}
+      descText.textTruncation = 'DISABLED';
+      const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
+      const descAvailW = Math.max(10, finalW - card.paddingLeft - card.paddingRight - descStrokeOffset);
+      try { descText.resize(descAvailW, descText.height); } catch (_) {}
+    }
+    const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
+    card.counterAxisSizingMode = 'FIXED';
+    card.minWidth = finalW;
+    card.maxWidth = finalW;
+    card.minHeight = minH;
+    card.maxHeight = null;
+    card.primaryAxisSizingMode = 'AUTO';
+    card.resize(finalW, Math.max(minH, card.height));
+    syncTitleWidthToCard(card, finalW, nodeType);
+
+    const autoH = Math.max(minH, Math.round(card.height));
+    card.resize(finalW, autoH);
+    card.primaryAxisSizingMode = 'AUTO';
+    card.counterAxisSizingMode = 'FIXED';
+    card.setPluginData('size_mode', isFit ? 'fit' : 'hug');
+  } else {
+    card.primaryAxisSizingMode = 'FIXED';
+    card.counterAxisSizingMode = 'FIXED';
+    card.resize(finalW, finalH);
+    card.minWidth = finalW;
+    card.maxWidth = finalW;
+    card.minHeight = finalH;
+    card.maxHeight = finalH;
+    card.setPluginData('size_mode', effectiveSizeMode);
+    syncTitleWidthToCard(card, finalW, nodeType);
+  }
+
+  const curH = card.height;
+  if (statusBadge) {
+    statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
+    statusBadge.x = finalW - statusBadge.width - 10;
+    statusBadge.y = curH - statusBadge.height - 10;
+  }
+  const linkBadge = card.children.find(
+    (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
+  ) as FrameNode | undefined;
+  if (linkBadge) {
+    linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
+    linkBadge.x = 16;
+    linkBadge.y = curH - linkBadge.height - 10;
+  }
+
+  const curStepBadge = card.children.find(
+    (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
+  ) as FrameNode | undefined;
+  if (curStepBadge) {
+    const stepCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
+    const bw = Math.max(24, Math.round(curStepBadge.width));
+    const bh = 24;
+    const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, curH, bw, bh, stepCorner, batchBranchVariant);
+    curStepBadge.x = badgeCoords.x;
+    curStepBadge.y = badgeCoords.y;
+    curStepBadge.constraints = badgeCoords.constraints;
+  }
+
+  const shapeVec = card.children.find(
+    (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape')
+  ) as (VectorNode | FrameNode) | undefined;
+  if (shapeVec) {
+    shapeVec.remove();
+    if (isShapeNode) {
+      const defaultStrokeCol = existingStrokeColor || (batchBranchVariant ? hexToRgbColor('#1E1E1E') : borderColor);
+      const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : defaultStrokeCol;
+      attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant);
+    }
+  }
+
+  // 17. PluginData 동기화 및 Dormant Data 보존
+  card.setPluginData('is_flow_node', 'true');
+  card.setPluginData('schema_version', '2');
+  card.setPluginData('node_title', '');
+  card.setPluginData('node_tag', '');
+  card.setPluginData('node_width', '');
+  card.setPluginData('node_height', '');
+
+  if (nodeType === 'Screen') {
+    if (!isFit) {
+      card.setPluginData('screen_width', String(finalW));
+      card.setPluginData('screen_height', String(isHug ? Math.round(card.height) : finalH));
+    }
+    card.setPluginData('screen_corner_radius', String(card.cornerRadius || 0));
+    card.setPluginData('screen_size_mode', effectiveSizeMode);
+  }
+
+  if (supportsTargetOption('description')) {
+    if (isChangingToScreen) {
+      const descToSave = (patch.description !== undefined && patch.description.trim() !== '')
+        ? patch.description.trim()
+        : prevDesc;
+      if (descToSave) {
+        card.setPluginData('node_desc', descToSave);
+      }
+      if (patch.descriptionOn !== undefined) {
+        card.setPluginData('description_on', patch.descriptionOn ? 'true' : '');
+      } else if (descToSave) {
+        card.setPluginData('description_on', 'true');
+      }
+    } else if (patch.description !== undefined) {
+      if (patch.description === '') {
+        card.setPluginData('node_desc', '');
+      } else {
+        card.setPluginData('node_desc', patch.description.trim());
+      }
+      if (patch.descriptionOn !== undefined) {
+        card.setPluginData('description_on', patch.descriptionOn ? 'true' : '');
+      }
+    } else if (patch.descriptionOn !== undefined) {
+      card.setPluginData('description_on', patch.descriptionOn ? 'true' : '');
+    }
+  }
+
+  if (supportsTargetOption('status')) {
+    if (isChangingToScreen) {
+      const statusToSave = (patch.status !== undefined && patch.status !== '')
+        ? patch.status
+        : prevStatus;
+      if (statusToSave) {
+        card.setPluginData('workflow_status', statusToSave);
+      }
+    } else if (patch.status !== undefined) {
+      card.setPluginData('workflow_status', patch.status);
+    }
+  }
+
+  if (supportsTargetOption('figmaLink')) {
+    if (shouldClearLinkCache) {
+      card.setPluginData('figma_link', '');
+      card.setPluginData('cached_figma_link', '');
+    } else if (effectiveLink) {
+      card.setPluginData('figma_link', effectiveLink);
+      card.setPluginData('cached_figma_link', effectiveLink);
+    }
+  }
+
+  if (supportsTargetOption('elevation')) {
+    if (patch.elevation === null) {
+      card.setPluginData('node_elevation', '');
+      card.effects = [];
+    } else if (typeof patch.elevation === 'number') {
+      card.setPluginData('node_elevation', `${patch.elevation}`);
+      card.effects = getElevationEffects(patch.elevation, isBgDark);
+      card.clipsContent = false;
+    } else if (patch.elevation === undefined) {
+      // Screen/Shape 지원 타입 복귀 시 또는 colorHex 변경 시: 저장된 node_elevation으로 effects 복원 및 재적용
+      const curElev = safeGetPluginData(card, 'node_elevation');
+      if (curElev) {
+        const lvl = parseInt(curElev, 10);
+        if (!isNaN(lvl)) {
+          card.effects = getElevationEffects(lvl, isBgDark);
+          card.clipsContent = false;
+        }
+      }
+    }
+  } else {
+    // Elevation 미지원 노드: visual effect만 끄고 node_elevation pluginData는 완벽 보존
+    card.effects = [];
+  }
+
+  if (patch.theme) card.setPluginData('node_theme', patch.theme);
+  if (patch.nodeType !== undefined) {
+    card.setPluginData('node_type', nodeType);
+  }
+  if (batchBranchVariant) {
+    card.setPluginData('branch_variant', batchBranchVariant);
+  } else if (nodeType !== 'Branch') {
+    card.setPluginData('branch_variant', '');
+  }
+}
+
+// ----------------------------------------------------
 // 4. 노드 상세정보 실시간 수정 기능
 // ----------------------------------------------------
 async function updateFlowNode(payload: UpdateNodePayload) {
@@ -3467,686 +4225,14 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     if (flowNode.type === 'SHAPE_WITH_TEXT') {
       flowNode = await convertShapeToFrameNode(flowNode as ShapeWithTextNode);
     }
+    if (flowNode.type !== 'FRAME') return;
 
     await loadRequiredFonts();
+    await applyNodePatch(flowNode as FrameNode, payload);
 
-    const rawTitle = payload.title !== undefined ? payload.title.trim() : (safeGetPluginData(flowNode, 'node_title') || '');
-    const title = rawTitle; // 긴 타이틀도 잘리지 않고 온전한 1줄 폭으로 계산되도록 보존
-    const description = payload.description !== undefined ? payload.description.trim() : '';
-    const isDark = payload.theme === 'dark';
-    const isFillNone = payload.colorHex?.toLowerCase() === 'none' || payload.colorHex?.toLowerCase() === 'transparent';
-    let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-    if (!isFillNone) {
-      if (payload.colorHex) {
-        bgColor = hexToRgbColor(payload.colorHex);
-      } else {
-        const currentFill = (flowNode as FrameNode).fills;
-        if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === 'SOLID') {
-          bgColor = currentFill[0].color;
-        }
-      }
-    }
-    const { titleFill, descFill, isBgDark } = isFillNone
-      ? {
-          titleFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } } as SolidPaint,
-          descFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 } as SolidPaint,
-          isBgDark: isDark,
-        }
-      : getTextFillsByBackground(bgColor, isDark);
-
-    const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
-
-    const card = flowNode as FrameNode;
-    // 캔버스 기즈모 잠금(min/max)을 함수 진입 즉시 해제하여 리사이즈 및 레이아웃 제약조건 오류 원천 방지
-    card.minWidth = null;
-    card.maxWidth = null;
-    card.minHeight = null;
-    card.maxHeight = null;
-    const prevRawType = safeGetPluginData(card, 'node_type') || 'Screen';
-    const prevNodeType = normalizeNodeType(prevRawType);
-    const rawType = payload.nodeType || prevRawType;
-    const nodeType = normalizeNodeType(rawType);
-    const branchVariant = nodeType === 'Branch'
-      ? normalizeBranchVariant(payload.branchVariant || safeGetPluginData(card, 'branch_variant'))
-      : undefined;
-    const spec = (branchVariant
-      ? getBranchVariantSpec(branchVariant)
-      : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
-    const isShapeNode = !spec.allowDescription;
-    const isChangingToScreen = prevNodeType !== 'Screen' && nodeType === 'Screen';
-    const prevBranchVariant = prevNodeType === 'Branch'
-      ? normalizeBranchVariant(safeGetPluginData(card, 'branch_variant'))
-      : undefined;
-
-    const DEFAULT_SHAPE_NAMES = new Set([
-      'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
-      'Action', 'System', 'Database', 'Square', 'Junction', 'Diamond', 'Pill', 'Capsule',
-      'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Circle',
-    ]);
-    const incomingIsPlaceholder = !rawTitle
-      || DEFAULT_SHAPE_NAMES.has(rawTitle)
-      || (prevBranchVariant ? rawTitle === BRANCH_VARIANT_LABELS[prevBranchVariant] : false);
-    const leavingUntitledBranch = prevNodeType === 'Branch'
-      && nodeType !== 'Branch'
-      && Boolean(prevBranchVariant && !branchVariantHasTitle(prevBranchVariant));
-    const effectiveTitle = leavingUntitledBranch && incomingIsPlaceholder
-      ? (nodeType === 'Screen' ? 'Screen' : nodeType)
-      : ((isChangingToScreen && incomingIsPlaceholder) ? 'Screen' : title);
-
-    card.name = effectiveTitle;
-    card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
-
-    const cardStrokes: Paint[] = typeof payload.strokeWeight === 'number' && payload.strokeWeight === 0
-      ? []
-      : [{ type: 'SOLID', color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
-    const cardStrokeWeight = branchVariant && !branchVariantUsesStroke(branchVariant)
-      ? 0
-      : (typeof payload.strokeWeight === 'number' ? clampStrokeWeight(payload.strokeWeight) : 1.5);
-
-    // 카드 레이아웃 모드 및 정렬 방향 사전 보장 (ABSOLUTE 자식 배치를 위해 반드시 layoutMode !== NONE 필요)
-    if (card.layoutMode !== 'VERTICAL') {
-      card.layoutMode = 'VERTICAL';
-    }
-
-    // 쉐이프 커스텀 벡터(Junction, Diamond, Capsule) 탐색 (ShapeVector 또는 구버전 DiamondShape)
-    const existingShapeVector = card.children.find(
-      (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && c.type === 'VECTOR'
-    ) as VectorNode | undefined;
-
-    // 이전에 저장된 Screen 전용 치수 및 데이터 확인
-    const savedScreenW = safeGetPluginData(card, 'screen_width');
-    const savedScreenH = safeGetPluginData(card, 'screen_height');
-    const savedScreenR = safeGetPluginData(card, 'screen_corner_radius');
-    const restoredScreenW = savedScreenW ? parseInt(savedScreenW, 10) : spec.width;
-    const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
-    const restoredScreenR = savedScreenR !== '' && savedScreenR !== undefined ? parseInt(savedScreenR, 10) : (spec.cornerRadius ?? 0);
-
-    const prevSizeMode = (safeGetPluginData(card, 'size_mode') as 'fixed' | 'hug' | 'fit') || 'fixed';
-    const effectiveSizeMode = (!isShapeNode && payload.sizeMode !== undefined) ? payload.sizeMode : prevSizeMode;
-    const isChangingFromFitToFixed = prevSizeMode === 'fit' && effectiveSizeMode === 'fixed';
-
-    // Screen 복귀 시 또는 Fit에서 Fixed 복귀 시: 이전에 저장된 screen_width/height를 payload 기본값보다 우선 복원
-    // payload.width=250 같은 타입 기본값이 truthy여서 사용자 설정값(300 등)을 덮어쓰던 버그 수정
-    const targetW = isShapeNode
-      ? spec.width
-      : (isChangingToScreen
-          ? (payload.width ? clampScreenWidth(payload.width) : (restoredScreenW ? clampScreenWidth(restoredScreenW) : spec.width))
-          : (isChangingFromFitToFixed
-              ? (payload.width ? clampScreenWidth(payload.width) : (restoredScreenW ? clampScreenWidth(restoredScreenW) : clampScreenWidth(card.width)))
-              : (payload.width ? clampScreenWidth(payload.width) : clampScreenWidth(card.width))));
-    const targetH = isShapeNode
-      ? spec.height
-      : (isChangingToScreen
-          ? (payload.height ? clampScreenHeight(payload.height) : (restoredScreenH ? clampScreenHeight(restoredScreenH) : spec.height))
-          : (payload.height ? clampScreenHeight(payload.height) : clampScreenHeight(card.height)));
-
-    const prevDescription = safeGetPluginData(card, 'node_desc') || '';
-    const prevStatus = (safeGetPluginData(card, 'workflow_status') || '') as WorkflowStatus;
-    const prevFigmaLink = safeGetPluginData(card, 'figma_link') || safeGetPluginData(card, 'cached_figma_link') || '';
-
-    const existingDescNode = card.children.find(
-      (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
-    ) as TextNode | undefined;
-    const isDescOn = !isShapeNode && (
-      payload.descriptionOn !== undefined
-        ? payload.descriptionOn
-        : Boolean(existingDescNode || (payload.description && payload.description.trim()))
-    );
-
-    // 복원할 유효 설명: Screen 복귀 시 또는 토글 ON 시 이전 설명 복원, 단 사용자가 직접 빈칸으로 수정한 경우는 제외
-    let effectiveDesc = '';
-    if (!isShapeNode) {
-      if (payload.description !== undefined && payload.description.trim() !== '') {
-        effectiveDesc = payload.description.trim();
-      } else if (isChangingToScreen || isDescOn) {
-        effectiveDesc = prevDescription.trim();
-      } else {
-        effectiveDesc = (payload.description !== undefined ? payload.description : prevDescription).trim();
-      }
-    }
-    const effectiveStatus = (!isShapeNode
-      ? (payload.status
-          ? payload.status
-          : (isChangingToScreen ? prevStatus : (payload.status ?? prevStatus)))
-      : '') as WorkflowStatus;
-    const effectiveLink = !isShapeNode
-      ? (payload.figmaLink !== undefined && payload.figmaLink !== ''
-          ? payload.figmaLink
-          : (isChangingToScreen ? prevFigmaLink : (payload.figmaLink ?? prevFigmaLink)) || '')
-      : '';
-    const existingStatusBadgeOnCard = !isShapeNode ? card.children.find(
-      (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
-    ) : undefined;
-    const hasStatus = Boolean(existingStatusBadgeOnCard || (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]));
-    const hasLink = !isShapeNode && Boolean(effectiveLink && effectiveLink.trim());
-    const hasBottomBar = hasStatus || hasLink;
-
-    let fitW: number | undefined;
-    if (!isShapeNode && effectiveSizeMode === 'fit') {
-      fitW = await calculateScreenFitWidth(
-        card,
-        effectiveTitle,
-        effectiveStatus,
-        effectiveLink
-      );
-    }
-
-    // 카드 레이아웃 모드 및 정렬 방향 선행 보장 (Auto Layout이 켜져 있어야 strokesIncludedInLayout 설정 가능)
-    if (card.layoutMode !== 'VERTICAL') {
-      card.layoutMode = 'VERTICAL';
-    }
-    card.counterAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
-    card.primaryAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
-
-    const vectorPathData = getShapeVectorData(nodeType, targetW, targetH, branchVariant);
-
-    if (vectorPathData) {
-      card.fills = [];
-      card.strokes = [];
-      card.strokeWeight = 0;
-      card.cornerRadius = 0;
-
-      if (existingShapeVector) {
-        existingShapeVector.remove();
-      }
-      const strokeCol = payload.strokeColor
-        ? hexToRgbColor(payload.strokeColor)
-        : (branchVariant ? hexToRgbColor('#1E1E1E') : borderColor);
-      attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true, branchVariant);
-    } else {
-      if (existingShapeVector) {
-        existingShapeVector.remove();
-      }
-      removeBranchMark(card);
-      const defaultRadius = spec.cornerRadius !== undefined ? spec.cornerRadius : 0;
-      const targetRadius = typeof payload.cornerRadius === 'number'
-        ? (nodeType === 'Screen' ? clampScreenCornerRadius(payload.cornerRadius) : Math.max(0, payload.cornerRadius))
-        : (isChangingToScreen && savedScreenR !== '' && savedScreenR !== undefined ? clampScreenCornerRadius(restoredScreenR) : defaultRadius);
-      card.cornerRadius = targetRadius;
-      card.fills = isFillNone ? [] : [{ type: 'SOLID', color: bgColor }];
-      card.strokes = cardStrokes;
-      card.strokeWeight = cardStrokeWeight;
-      card.strokeAlign = 'INSIDE';
-      if ('strokesIncludedInLayout' in card) {
-        card.strokesIncludedInLayout = true;
-      }
-    }
-
-    if (!isShapeNode) {
-      // Screen 노드의 최종 크기 및 Auto Layout 속성(패딩, 간격, 정렬)을 자식 구성 전에 최우선 확정
-      // 다른 타입 → Screen 복귀 시 자식 요소들이 이전 도형 크기나 엉뚱한 좌표로 렌더링되는 중간 상태 원천 차단
-      const initialW = (effectiveSizeMode === 'fit' && fitW !== undefined) ? fitW : targetW;
-      card.primaryAxisSizingMode = 'FIXED';
-      card.counterAxisSizingMode = 'FIXED';
-      card.resize(initialW, targetH);
-      card.itemSpacing = 8;
-      card.paddingLeft = 16;
-      card.paddingRight = 16;
-      card.paddingTop = 14;
-      card.paddingBottom = hasBottomBar ? 36 : (isDescOn ? 16 : 14);
-      card.primaryAxisAlignItems = (!isDescOn && !hasBottomBar) ? 'CENTER' : 'MIN';
-      card.counterAxisAlignItems = 'MIN';
-    }
-
-    // shape 노드로 전환된 경우 카드 캔버스 상의 배지만 분리 (pluginData 데이터는 보존)
-    if (isShapeNode) {
-      const existingStatusBadge = card.children.find(
-        (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
-      );
-      if (existingStatusBadge) existingStatusBadge.remove();
-
-      const existingLinkBadge = card.children.find(
-        (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
-      );
-      if (existingLinkBadge) existingLinkBadge.remove();
-    }
-
-    // 헤더 행 및 타이틀 텍스트 갱신 (도형 노드는 Header 없이 직속 자식으로 정중앙 배치)
-    let titleText = card.findOne(
-      (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
-    ) as TextNode | null;
-
-    if (isShapeNode) {
-      // shape 노드: Header 프레임 제거 및 card 직속으로 titleText 배치
-      const existingHeader = card.children.find(isHeaderFrame) as FrameNode | undefined;
-      if (existingHeader) {
-        if (!titleText) {
-          titleText = existingHeader.children.find((c) => c.type === 'TEXT') as TextNode | null;
-        }
-        if (titleText && titleText.parent === existingHeader) {
-          card.appendChild(titleText);
-        }
-        existingHeader.remove();
-      }
-
-      if (!titleText) {
-        titleText = figma.createText();
-        titleText.name = 'TitleText';
-        titleText.fontName = { family: 'Inter', style: 'Bold' };
-        titleText.fontSize = 13;
-        titleText.setPluginData('node_role', 'title');
-        card.appendChild(titleText);
-      }
-
-      const showBranchTitle = Boolean(branchVariant && branchVariantHasTitle(branchVariant));
-      titleText.layoutAlign = 'STRETCH';
-      titleText.textAlignHorizontal = 'CENTER';
-      titleText.textAlignVertical = 'CENTER';
-      titleText.lineHeight = { value: showBranchTitle ? 22 : 18, unit: 'PIXELS' };
-      titleText.visible = !branchVariant || showBranchTitle;
-
-      if (nodeType === 'Decision') {
-        const availW = Math.max(10, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
-        try { titleText.resize(availW, 54); } catch (_) {}
-        try { titleText.maxHeight = 54; } catch (_) {}
-        try { titleText.textAutoResize = 'TRUNCATE'; } catch (_) {}
-        try { titleText.textTruncation = 'ENDING'; } catch (_) {}
-        try { titleText.maxLines = 3; } catch (_) {}
-      } else {
-        try { titleText.maxHeight = null; } catch (_) {}
-        try { titleText.textAutoResize = 'HEIGHT'; } catch (_) {}
-        try { titleText.textTruncation = 'ENDING'; } catch (_) {}
-        try { titleText.maxLines = 3; } catch (_) {}
-      }
-      await safeSetCharacters(titleText, (branchVariant && !showBranchTitle) ? '' : effectiveTitle);
-      const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
-      if (!hasExistingTitleFill || payload.colorHex) {
-        titleText.fills = [titleFill];
-      }
-    } else {
-      // Screen 노드 등: Header 프레임 내에 titleText 배치
-      const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 16;
-      const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 16;
-
-      let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
-      if (!headerRow) {
-        headerRow = figma.createFrame();
-        headerRow.name = 'Header';
-        headerRow.fills = [];
-        card.insertChild(0, headerRow);
-      }
-      headerRow.layoutMode = 'VERTICAL';
-      headerRow.layoutAlign = 'STRETCH';
-      headerRow.primaryAxisSizingMode = 'AUTO';
-      headerRow.counterAxisSizingMode = 'AUTO';
-      headerRow.primaryAxisAlignItems = 'MIN';
-      headerRow.counterAxisAlignItems = 'MIN';
-      headerRow.itemSpacing = 0;
-      headerRow.paddingLeft = 0;
-      headerRow.paddingRight = 0;
-      headerRow.paddingTop = 0;
-      headerRow.paddingBottom = 0;
-
-      if (!titleText) {
-        titleText = figma.createText();
-        titleText.name = 'TitleText';
-        titleText.fontName = { family: 'Inter', style: 'Bold' };
-        titleText.fontSize = 13;
-        titleText.setPluginData('node_role', 'title');
-        headerRow.appendChild(titleText);
-      } else if (titleText.parent !== headerRow) {
-        headerRow.appendChild(titleText);
-      }
-
-      titleText.visible = true;
-      titleText.lineHeight = { value: 18, unit: 'PIXELS' };
-      titleText.textAlignHorizontal = 'LEFT';
-      titleText.textAlignVertical = 'TOP';
-      titleText.layoutAlign = 'STRETCH';
-
-      if (fitW === undefined && !isShapeNode && effectiveSizeMode === 'fit') {
-        fitW = await calculateScreenFitWidth(
-          card,
-          effectiveTitle,
-          effectiveStatus,
-          effectiveLink
-        );
-      }
-      titleText.textAutoResize = 'HEIGHT';
-      titleText.fontName = { family: 'Inter', style: 'Bold' };
-      await safeSetCharacters(titleText, effectiveTitle);
-
-      titleText.textTruncation = 'DISABLED';
-      titleText.maxLines = null;
-      try { titleText.maxHeight = null; } catch (_) {}
-      const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
-      if (!hasExistingTitleFill || payload.colorHex) {
-        titleText.fills = [titleFill];
-      }
-    }
-
-    // 설명 텍스트 갱신 (isShapeNode이거나 설명이 없는 경우 카드에서 제거하되 pluginData는 보존)
-    let descText = card.children.find(
-      (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
-    ) as TextNode | undefined;
-
-    if (isShapeNode || !isDescOn || !effectiveDesc) {
-      if (descText) {
-        descText.remove();
-        descText = undefined;
-      }
-    } else {
-      const isNewDesc = !descText;
-      if (!descText) {
-        descText = figma.createText();
-        descText.name = 'DescText';
-        descText.setPluginData('node_role', 'desc');
-      }
-
-      descText.textAlignHorizontal = 'LEFT';
-      descText.layoutAlign = 'STRETCH';
-      const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
-      const descAvailW = Math.max(10, (fitW !== undefined ? fitW : targetW) - card.paddingLeft - card.paddingRight - descStrokeOffset);
-      descText.fontName = { family: 'Inter', style: 'Regular' };
-      descText.fontSize = 11;
-      descText.characters = effectiveDesc;
-      descText.textAutoResize = 'HEIGHT';
-      descText.resize(descAvailW, descText.height || 16);
-
-      if (!isShapeNode && (effectiveSizeMode === 'fit' || effectiveSizeMode === 'hug')) {
-        descText.maxLines = null;
-        try { descText.maxHeight = null; } catch (_) {}
-        descText.textTruncation = 'DISABLED';
-      } else if (isChangingToScreen || effectiveSizeMode === 'fixed') {
-        // Screen 복귀 시: card를 AUTO로 바꾸는 calculateCardHugHeight 없이 가용 높이로 직접 Truncation 계산
-        descText.textTruncation = 'ENDING';
-        const pb = hasBottomBar ? 36 : 16;
-        const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
-        const headerH = headerRow ? headerRow.height : 18;
-        const availableH = Math.max(14, targetH - 14 - pb - 8 - Math.round(headerH));
-        descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
-      } else {
-        const currentH = payload.height || card.height;
-        await updateDescTextTruncation(card, descText, currentH, effectiveDesc, targetW);
-      }
-
-      const hasExistingDescFill = descText.fills === figma.mixed || (Array.isArray(descText.fills) && descText.fills.length > 0);
-      if (!hasExistingDescFill || payload.colorHex) {
-        descText.fills = [descFill];
-      }
-
-      // 텍스트, 폰트, 크기, 말줄임이 완전히 확정된 후 card에 append (빈 텍스트 노출 원천 차단)
-      if (isNewDesc || descText.parent !== card) {
-        card.appendChild(descText);
-      }
-    }
-
-    // 패딩 및 정렬 동기화
-    let statusBadge = !isShapeNode ? (card.children.find(
-      (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
-    ) as FrameNode | undefined) : undefined;
-
-    if (isShapeNode) {
-      const showBranchTitle = Boolean(branchVariant && branchVariantHasTitle(branchVariant));
-      const hPad = branchVariant
-        ? (showBranchTitle ? 16 : 0)
-        : (nodeType === 'Decision' ? 24 : 12);
-      card.paddingLeft = hPad;
-      card.paddingRight = hPad;
-      card.paddingTop = branchVariant ? (showBranchTitle ? 5 : 0) : 12;
-      card.paddingBottom = branchVariant ? (showBranchTitle ? 5 : 0) : 12;
-      card.primaryAxisAlignItems = 'CENTER';
-      card.counterAxisAlignItems = 'CENTER';
-      card.itemSpacing = 0;
-    } else {
-      card.itemSpacing = 8;
-      if (!isDescOn && !hasBottomBar) {
-        card.paddingLeft = 16;
-        card.paddingRight = 16;
-        card.paddingTop = 14;
-        card.paddingBottom = 14;
-        card.primaryAxisAlignItems = 'CENTER';
-        card.counterAxisAlignItems = 'MIN';
-      } else {
-        card.paddingLeft = 16;
-        card.paddingRight = 16;
-        card.paddingTop = 14;
-        card.paddingBottom = hasBottomBar ? 36 : 16;
-        card.primaryAxisAlignItems = 'MIN';
-        card.counterAxisAlignItems = 'MIN';
-      }
-    }
-
-    if (!isShapeNode && effectiveStatus && STATUS_CONFIG[effectiveStatus]) {
-      if (!statusBadge) {
-        statusBadge = figma.createFrame();
-        statusBadge.name = 'StatusBadge';
-        statusBadge.layoutMode = 'HORIZONTAL';
-        statusBadge.primaryAxisSizingMode = 'AUTO';
-        statusBadge.counterAxisSizingMode = 'AUTO';
-        statusBadge.primaryAxisAlignItems = 'CENTER';
-        statusBadge.counterAxisAlignItems = 'CENTER';
-        statusBadge.paddingLeft = 9;
-        statusBadge.paddingRight = 9;
-        statusBadge.paddingTop = 3;
-        statusBadge.paddingBottom = 3;
-        statusBadge.cornerRadius = getStatusBadgeCornerRadius(
-          typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
-        );
-        statusBadge.setPluginData('is_status_badge', 'true');
-
-        const badgeText = figma.createText();
-        badgeText.name = 'StatusText';
-        badgeText.fontName = { family: 'Inter', style: 'Bold' };
-        badgeText.fontSize = 9;
-        const cfg = STATUS_CONFIG[effectiveStatus];
-        if (cfg) {
-          badgeText.characters = cfg.label.toUpperCase();
-        }
-        badgeText.textAutoResize = 'WIDTH_AND_HEIGHT';
-        badgeText.locked = true;
-        statusBadge.appendChild(badgeText);
-
-        // 자식 텍스트의 실제 실측 너비/높이에 패딩(좌우 18, 상하 6)을 더해 프레임 크기 선행 확정 (기본 100x100 왜곡 방지)
-        const badgeW = Math.round(badgeText.width + 18);
-        const badgeH = Math.round(badgeText.height + 6);
-        statusBadge.resize(badgeW, badgeH);
-
-        card.appendChild(statusBadge);
-        if ((card.layoutMode as any) !== 'NONE') {
-          statusBadge.layoutPositioning = 'ABSOLUTE';
-        }
-        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-        statusBadge.locked = true;
-        statusBadge.x = targetW - badgeW - 10;
-        statusBadge.y = targetH - badgeH - 10;
-      }
-
-      statusBadge.paddingLeft = 9;
-      statusBadge.paddingRight = 9;
-      statusBadge.cornerRadius = getStatusBadgeCornerRadius(
-        typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
-      );
-      statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-
-      // 노드 배경색 변화에 따른 상태 뱃지 컬러 동기화
-      const currentStatus = effectiveStatus;
-      if (currentStatus && STATUS_CONFIG[currentStatus]) {
-        const { badgeBg, badgeTextColor } = getStatusBadgeColors(currentStatus, bgColor, isDark);
-        statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
-        const bText = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
-        if (bText) {
-          bText.locked = false;
-          bText.fills = [{ type: 'SOLID', color: badgeTextColor }];
-          bText.locked = true;
-        }
-      }
-    }
-
-    // Figma Screen Link 펜 아이콘 뱃지(하단 왼쪽) 갱신 (Screen 등에서만)
-    if (!isShapeNode) {
-      await updateFigmaLinkBadge(card, effectiveLink, isBgDark, payload.clearLinkCache);
-    }
-
-    // 기존 스텝 뱃지가 존재하는 경우 노드 색상/보더 변화에 맞춰 컬러 동기화
-    const existingStepBadge = card.children.find(
-      (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
-    ) as FrameNode | undefined;
-    if (existingStepBadge) {
-      const stepText = existingStepBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
-      if (stepText) {
-        const currentMode = (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
-        applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
-      }
-    }
-
-    // 내부 자식(DescText, Header, Badges 등) 정리 완료 후 최종 크기 조정 및 min/max 재잠금
-    const isHug = !isShapeNode && effectiveSizeMode === 'hug';
-    const isFit = !isShapeNode && effectiveSizeMode === 'fit';
-    const finalW = isFit && fitW !== undefined ? fitW : (nodeType === 'Screen' ? clampScreenWidth(targetW) : (branchVariant ? targetW : Math.max(50, targetW)));
-    const finalH = nodeType === 'Screen' ? clampScreenHeight(targetH) : (branchVariant ? targetH : Math.max(40, targetH));
-
-    card.minWidth = null;
-    card.maxWidth = null;
-    card.minHeight = null;
-    card.maxHeight = null;
-
-    if (isHug || isFit) {
-      if (descText) {
-        descText.maxLines = null;
-        try { descText.maxHeight = null; } catch (_) {}
-        descText.textTruncation = 'DISABLED';
-        const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
-        const descAvailW = Math.max(10, finalW - card.paddingLeft - card.paddingRight - descStrokeOffset);
-        try { descText.resize(descAvailW, descText.height); } catch (_) {}
-      }
-      const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
-      card.counterAxisSizingMode = 'FIXED';
-      card.minWidth = finalW;
-      card.maxWidth = finalW;
-      card.minHeight = minH;
-      card.maxHeight = null;
-      card.primaryAxisSizingMode = 'AUTO';
-      card.resize(finalW, Math.max(minH, card.height));
-      syncTitleWidthToCard(card, finalW, nodeType);
-
-      const autoH = Math.max(minH, Math.round(card.height));
-      card.resize(finalW, autoH);
-      card.primaryAxisSizingMode = 'AUTO';
-      card.counterAxisSizingMode = 'FIXED';
-      card.setPluginData('size_mode', isFit ? 'fit' : 'hug');
-    } else {
-      card.primaryAxisSizingMode = 'FIXED';
-      card.counterAxisSizingMode = 'FIXED';
-      card.resize(finalW, finalH);
-      card.minWidth = finalW;
-      card.maxWidth = finalW;
-      card.minHeight = finalH;
-      card.maxHeight = finalH;
-      card.setPluginData('size_mode', 'fixed');
-      syncTitleWidthToCard(card, finalW, nodeType);
-    }
-
-    // 최종 높이에 맞춰 상태 뱃지 및 링크 뱃지 Y좌표 동기화
-    const curH = card.height;
-    if (statusBadge) {
-      statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-      statusBadge.x = finalW - statusBadge.width - 10;
-      statusBadge.y = curH - statusBadge.height - 10;
-    }
-    const linkBadge = card.children.find(
-      (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
-    ) as FrameNode | undefined;
-    if (linkBadge) {
-      linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
-      linkBadge.x = 16;
-      linkBadge.y = curH - linkBadge.height - 10;
-    }
-    const shapeVec = card.children.find(
-      (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape')
-    ) as (VectorNode | FrameNode) | undefined;
-    if (shapeVec) {
-      shapeVec.remove();
-      if (isShapeNode) {
-        const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
-        attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true, branchVariant);
-      }
-    }
-
-    // 최종 크기 변경에 맞춰 스텝 뱃지 위치 재동기화 (미지원 노드는 스텝 뱃지 제거 및 데이터 정리)
-    if (!supportsOption(card, 'stepBadge')) {
-      if (existingStepBadge) existingStepBadge.remove();
-      card.setPluginData('step_number', '');
-      card.setPluginData('badge_corner', '');
-      card.setPluginData('badge_shape', '');
-      card.setPluginData('badge_color_mode', '');
-    } else if (existingStepBadge) {
-      const stepCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
-      const bw = Math.max(24, Math.round(existingStepBadge.width));
-      const bh = 24;
-      const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, curH, bw, bh, stepCorner, branchVariant);
-      existingStepBadge.x = badgeCoords.x;
-      existingStepBadge.y = badgeCoords.y;
-      existingStepBadge.constraints = badgeCoords.constraints;
-    }
-
-    // 실제 FigJam 프레임 노드 이름 동기화
-    card.name = effectiveTitle;
-
-    // 메타데이터 갱신 (FigJam 네이티브 객체 속성을 Source of Truth로 유지하며, 중복 데이터 제거)
-    card.setPluginData('is_flow_node', 'true');
-    card.setPluginData('schema_version', '2');
-    card.setPluginData('node_title', '');
-    card.setPluginData('node_tag', '');
-    card.setPluginData('node_width', '');
-    card.setPluginData('node_height', '');
-
-    // 노드 속성 및 데이터 개별 기억/보존 (옵션을 지원하는 노드에만 적용, 미지원 노드는 데이터 오염 차단)
-    if (supportsOption(card, 'description')) {
-      const descToSave = effectiveDesc || prevDescription;
-      card.setPluginData('node_desc', descToSave);
-      card.setPluginData('description_on', isDescOn ? 'true' : '');
-    } else {
-      card.setPluginData('node_desc', '');
-    }
-    if (supportsOption(card, 'status')) {
-      if (effectiveStatus) card.setPluginData('workflow_status', effectiveStatus);
-      else card.setPluginData('workflow_status', '');
-    } else {
-      card.setPluginData('workflow_status', '');
-    }
-    if (supportsOption(card, 'figmaLink')) {
-      if (effectiveLink) card.setPluginData('figma_link', effectiveLink);
-      else if (payload.clearLinkCache) card.setPluginData('figma_link', '');
-    } else {
-      card.setPluginData('figma_link', '');
-    }
-
-    if (!isShapeNode) {
-      if (!isFit) {
-        card.setPluginData('screen_width', String(finalW));
-        card.setPluginData('screen_height', String(isHug ? Math.round(card.height) : finalH));
-      }
-      card.setPluginData('screen_corner_radius', String(card.cornerRadius || 0));
-      card.setPluginData('screen_size_mode', payload.sizeMode || card.getPluginData('size_mode') || 'fixed');
-    }
-
-    if (payload.theme) card.setPluginData('node_theme', payload.theme);
-    card.setPluginData('node_type', nodeType);
-    if (branchVariant) {
-      card.setPluginData('branch_variant', branchVariant);
-    } else if (nodeType !== 'Branch') {
-      card.setPluginData('branch_variant', '');
-    }
-
-    if (!supportsOption(card, 'elevation')) {
-      card.setPluginData('node_elevation', '');
-      card.effects = [];
-    } else if (typeof payload.elevation === 'number') {
-      card.setPluginData('node_elevation', `${payload.elevation}`);
-      card.effects = getElevationEffects(payload.elevation, isBgDark);
-      card.clipsContent = false;
-    } else if (payload.elevation === null || payload.elevation === undefined) {
-      card.setPluginData('node_elevation', '');
-      card.effects = [];
-    }
-
-    const currentSel = figma.currentPage.selection;
-    const isAlreadyOnlySelected = currentSel.length === 1 && currentSel[0].id === card.id;
-    if (!isAlreadyOnlySelected) {
-      figma.currentPage.selection = [card];
-    }
+    // selection 재할당을 절대 하지 않음 (다중/단일 선택 100% 보존)
     handleSelectionChange();
+    const title = (flowNode as FrameNode).name || payload.title || '노드';
     notify(`[${title}] 노드가 업데이트되었습니다!`, 'success');
   } catch (err) {
     notify(`노드 수정 실패: ${String(err)}`, 'error');
@@ -4188,648 +4274,18 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
     let currentBadgeNum = patch.badgeNumber !== undefined ? patch.badgeNumber : undefined;
 
     for (const card of targetCards) {
-      card.minWidth = null;
-      card.maxWidth = null;
-      card.minHeight = null;
-      card.maxHeight = null;
+      const itemPatch: FlowNodePatch = { ...patch };
+      const rawType = patch.nodeType || safeGetPluginData(card, 'node_type') || 'Screen';
+      const targetType = normalizeNodeType(rawType);
+      const supportsBadge = supportsOption({ flowNodeType: targetType, isFlowNode: true }, 'stepBadge');
 
-      // 1. 기존 노드 데이터 읽기
-      const prevRawType = safeGetPluginData(card, 'node_type') || 'Screen';
-      const prevNodeType = normalizeNodeType(prevRawType);
-      const rawType = patch.nodeType || prevRawType;
-      const nodeType = normalizeNodeType(rawType);
-      const batchBranchVariant = nodeType === 'Branch'
-        ? normalizeBranchVariant(patch.branchVariant || safeGetPluginData(card, 'branch_variant'))
-        : undefined;
-      const spec = (batchBranchVariant
-        ? getBranchVariantSpec(batchBranchVariant)
-        : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
-      const isShapeNode = !spec.allowDescription;
-      const isChangingToScreen = prevNodeType !== 'Screen' && nodeType === 'Screen';
-
-      // 기존 자식 ShapeVector 탐색 (Junction, Decision, Terminator 등)
-      const existingShapeVector = card.children.find(
-        (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && (c.type === 'VECTOR' || c.type === 'FRAME')
-      ) as (VectorNode | FrameNode) | undefined;
-
-      // 2. 테마 및 색상
-      const prevTheme = (safeGetPluginData(card, 'node_theme') as 'light' | 'dark') || 'light';
-      const isDark = prevTheme === 'dark';
-
-      let isFillNone = false;
-      let bgColor: RGB = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
-
-      if (patch.colorHex !== undefined) {
-        isFillNone = patch.colorHex.toLowerCase() === 'none' || patch.colorHex.toLowerCase() === 'transparent';
-        if (!isFillNone) {
-          bgColor = hexToRgbColor(patch.colorHex);
-        }
-      } else {
-        // Shape 노드는 Frame의 fills가 비어있으므로 자식 ShapeVector의 fills를 우선 판독
-        if (isShapeNode && existingShapeVector && 'fills' in existingShapeVector && Array.isArray(existingShapeVector.fills) && existingShapeVector.fills.length > 0 && existingShapeVector.fills[0].type === 'SOLID') {
-          bgColor = existingShapeVector.fills[0].color;
-          isFillNone = false;
-        } else {
-          const currentFill = card.fills;
-          if (Array.isArray(currentFill) && currentFill.length > 0 && currentFill[0].type === 'SOLID') {
-            bgColor = currentFill[0].color;
-          } else if (!Array.isArray(currentFill) || currentFill.length === 0) {
-            isFillNone = true;
-          }
-        }
+      if (currentBadgeNum !== undefined && supportsBadge) {
+        itemPatch.badgeNumber = currentBadgeNum++;
       }
-
-      const { titleFill, descFill, isBgDark } = isFillNone
-        ? {
-            titleFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } } as SolidPaint,
-            descFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 } as SolidPaint,
-            isBgDark: isDark,
-          }
-        : getTextFillsByBackground(bgColor, isDark);
-
-      const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
-
-      // 3. Fills 적용
-      const vectorPathData = getShapeVectorData(nodeType, card.width, card.height, batchBranchVariant);
-      if (patch.colorHex !== undefined) {
-        if (vectorPathData) {
-          card.fills = [];
-        } else if (isFillNone) {
-          card.fills = [];
-        } else {
-          card.fills = [{ type: 'SOLID', color: bgColor }];
-        }
-      }
-
-      // 4. Strokes 적용 (patch.strokeWeight 또는 patch.strokeColor가 제공된 경우)
-      if (card.layoutMode !== 'VERTICAL') {
-        card.layoutMode = 'VERTICAL';
-      }
-      card.counterAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
-      card.primaryAxisAlignItems = isShapeNode ? 'CENTER' : 'MIN';
-      if (isShapeNode) {
-        card.itemSpacing = 0;
-      }
-
-      // Shape 노드는 card.strokeWeight가 0이므로 자식 ShapeVector의 속성을 우선 판독
-      let existingStrokeWeight = 1.5;
-      let existingStrokeColor: RGB | null = null;
-      if (isShapeNode && existingShapeVector) {
-        if ('strokeWeight' in existingShapeVector && typeof existingShapeVector.strokeWeight === 'number') {
-          existingStrokeWeight = existingShapeVector.strokeWeight;
-        }
-        if ('strokes' in existingShapeVector && Array.isArray(existingShapeVector.strokes) && existingShapeVector.strokes.length > 0 && existingShapeVector.strokes[0]?.type === 'SOLID') {
-          existingStrokeColor = existingShapeVector.strokes[0].color;
-        }
-      } else {
-        if (typeof card.strokeWeight === 'number') {
-          existingStrokeWeight = card.strokeWeight;
-        }
-        if (Array.isArray(card.strokes) && card.strokes.length > 0 && card.strokes[0]?.type === 'SOLID') {
-          existingStrokeColor = card.strokes[0].color;
-        }
-      }
-
-      let cardStrokeWeight = existingStrokeWeight;
-      if (patch.strokeWeight !== undefined || patch.strokeColor !== undefined) {
-        cardStrokeWeight = patch.strokeWeight !== undefined ? clampStrokeWeight(patch.strokeWeight) : cardStrokeWeight;
-        if (!vectorPathData) {
-          if (cardStrokeWeight === 0) {
-            card.strokes = [];
-          } else {
-            const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : (existingStrokeColor || borderColor);
-            card.strokes = [{ type: 'SOLID', color: strokeCol }];
-            card.strokeWeight = cardStrokeWeight;
-            card.strokeAlign = 'INSIDE';
-            if ('strokesIncludedInLayout' in card) {
-              card.strokesIncludedInLayout = true;
-            }
-          }
-        }
-      }
-
-      // 5. 타이틀 (도형 기본명 갱신 또는 기존 타이틀 유지)
-      const prevBranchVariant = prevNodeType === 'Branch'
-        ? normalizeBranchVariant(safeGetPluginData(card, 'branch_variant'))
-        : undefined;
-      const DEFAULT_SHAPE_NAMES = new Set([
-        'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
-        'Action', 'System', 'Database', 'Square', 'Junction', 'Diamond', 'Pill', 'Capsule',
-        'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Circle',
-      ]);
-      const currentTitle = card.name || 'Untitled';
-      const incomingIsPlaceholder = !currentTitle
-        || currentTitle === 'Untitled'
-        || DEFAULT_SHAPE_NAMES.has(currentTitle)
-        || (prevBranchVariant ? currentTitle === BRANCH_VARIANT_LABELS[prevBranchVariant] : false);
-      const leavingUntitledBranch = prevNodeType === 'Branch'
-        && nodeType !== 'Branch'
-        && Boolean(prevBranchVariant && !branchVariantHasTitle(prevBranchVariant));
-      let effectiveTitle = currentTitle;
-      if ((leavingUntitledBranch && incomingIsPlaceholder) || (isChangingToScreen && incomingIsPlaceholder)) {
-        effectiveTitle = nodeType === 'Screen' ? 'Screen' : nodeType;
-        card.name = effectiveTitle;
-      } else if (patch.nodeType !== undefined && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
-        effectiveTitle = nodeType;
-        card.name = effectiveTitle;
-      }
-
-      card.clipsContent = false;
-
-      // 6. 치수(Size) 계산: patch에 있으면 적용, 없으면 기존 치수 보존
-      const savedScreenW = safeGetPluginData(card, 'screen_width');
-      const savedScreenH = safeGetPluginData(card, 'screen_height');
-      const savedScreenR = safeGetPluginData(card, 'screen_corner_radius');
-      const restoredScreenW = savedScreenW ? parseInt(savedScreenW, 10) : spec.width;
-      const restoredScreenH = savedScreenH ? parseInt(savedScreenH, 10) : spec.height;
-      const restoredScreenR = savedScreenR !== '' && savedScreenR !== undefined ? parseInt(savedScreenR, 10) : (spec.cornerRadius ?? 0);
-
-      const prevSizeMode = (safeGetPluginData(card, 'size_mode') as 'fixed' | 'hug' | 'fit') || 'fixed';
-      const effectiveSizeMode = patch.sizeMode !== undefined ? patch.sizeMode : prevSizeMode;
-
-      let targetW: number;
-      let targetH: number;
-      let targetR: number;
-
-      if (isShapeNode) {
-        targetW = spec.width;
-        targetH = spec.height;
-        targetR = spec.cornerRadius ?? 0;
-      } else if (isChangingToScreen) {
-        targetW = patch.width !== undefined ? clampScreenWidth(patch.width) : clampScreenWidth(restoredScreenW);
-        targetH = patch.height !== undefined ? clampScreenHeight(patch.height) : clampScreenHeight(restoredScreenH);
-        targetR = patch.cornerRadius !== undefined ? clampScreenCornerRadius(patch.cornerRadius) : clampScreenCornerRadius(restoredScreenR);
-      } else {
-        targetW = patch.width !== undefined ? clampScreenWidth(patch.width) : card.width;
-        targetH = patch.height !== undefined ? clampScreenHeight(patch.height) : card.height;
-        targetR = patch.cornerRadius !== undefined ? clampScreenCornerRadius(patch.cornerRadius) : (typeof card.cornerRadius === 'number' ? card.cornerRadius : 0);
-      }
-
-      if (nodeType === 'Screen' || nodeType === 'Process' || nodeType === 'Branch') {
-        card.cornerRadius = targetR;
-      } else {
-        card.cornerRadius = spec.cornerRadius ?? 0;
-      }
-
-      // 7. 자식 레이아웃 및 텍스트 갱신
-      const pl = isShapeNode ? 12 : 16;
-      const pr = isShapeNode ? 12 : 16;
-      const pt = isShapeNode ? 12 : 14;
-      card.paddingLeft = pl;
-      card.paddingRight = pr;
-      card.paddingTop = pt;
-
-      const hasBottomBar = Boolean(safeGetPluginData(card, 'workflow_status') || patch.status || safeGetPluginData(card, 'figma_link') || patch.figmaLink);
-      card.paddingBottom = hasBottomBar ? 36 : (isShapeNode ? 12 : 16);
-
-      let titleText = card.findOne(
-        (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
-      ) as TextNode | null;
-
-      if (isShapeNode) {
-        // shape 노드: Header 프레임 제거 및 card 직속으로 titleText 배치
-        const existingHeader = card.children.find(isHeaderFrame) as FrameNode | undefined;
-        if (existingHeader) {
-          if (!titleText) {
-            titleText = existingHeader.children.find((c) => c.type === 'TEXT') as TextNode | null;
-          }
-          if (titleText && titleText.parent === existingHeader) {
-            card.appendChild(titleText);
-          }
-          existingHeader.remove();
-        }
-
-        if (!titleText) {
-          titleText = figma.createText();
-          titleText.name = 'TitleText';
-          titleText.fontName = { family: 'Inter', style: 'Bold' };
-          titleText.fontSize = 13;
-          titleText.setPluginData('node_role', 'title');
-          card.appendChild(titleText);
-        }
-
-        titleText.layoutAlign = 'STRETCH';
-        titleText.textAlignHorizontal = 'CENTER';
-        titleText.textAlignVertical = 'CENTER';
-        titleText.lineHeight = { value: 18, unit: 'PIXELS' };
-        titleText.textAutoResize = 'HEIGHT';
-        const showBatchBranchTitle = Boolean(batchBranchVariant && branchVariantHasTitle(batchBranchVariant));
-        titleText.visible = !batchBranchVariant || showBatchBranchTitle;
-      } else {
-        let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
-        if (!headerRow) {
-          headerRow = figma.createFrame();
-          headerRow.name = 'Header';
-          headerRow.fills = [];
-          headerRow.layoutMode = 'VERTICAL';
-          headerRow.layoutAlign = 'STRETCH';
-          headerRow.primaryAxisSizingMode = 'AUTO';
-          headerRow.counterAxisSizingMode = 'AUTO';
-          headerRow.primaryAxisAlignItems = 'MIN';
-          headerRow.counterAxisAlignItems = 'MIN';
-          headerRow.itemSpacing = 0;
-          headerRow.paddingLeft = 0;
-          headerRow.paddingRight = 0;
-          headerRow.paddingTop = 0;
-          headerRow.paddingBottom = 0;
-          card.appendChild(headerRow);
-        } else {
-          headerRow.layoutMode = 'VERTICAL';
-          headerRow.layoutAlign = 'STRETCH';
-          headerRow.primaryAxisSizingMode = 'AUTO';
-          headerRow.counterAxisSizingMode = 'AUTO';
-          headerRow.paddingLeft = 0;
-          headerRow.paddingRight = 0;
-          headerRow.paddingTop = 0;
-          headerRow.paddingBottom = 0;
-        }
-
-        if (!titleText) {
-          titleText = figma.createText();
-          titleText.name = 'TitleText';
-          titleText.fontName = { family: 'Inter', style: 'Bold' };
-          titleText.fontSize = 13;
-          titleText.setPluginData('node_role', 'title');
-          headerRow.appendChild(titleText);
-        } else if (titleText.parent !== headerRow) {
-          headerRow.appendChild(titleText);
-        }
-
-        titleText.lineHeight = { value: 18, unit: 'PIXELS' };
-        titleText.textAlignHorizontal = 'LEFT';
-        titleText.textAlignVertical = 'TOP';
-        titleText.layoutAlign = 'STRETCH';
-        titleText.textAutoResize = 'HEIGHT';
-        titleText.visible = true;
-      }
-
-      // 8. 설명 (Description) 갱신
-      const prevDesc = safeGetPluginData(card, 'node_desc') || '';
-      const existingDescChild = card.children.find(
-        (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
-      ) as TextNode | undefined;
-      const isDescOn = !isShapeNode && (
-        patch.descriptionOn !== undefined
-          ? patch.descriptionOn
-          : (patch.description !== undefined ? Boolean(patch.description.trim()) : Boolean(existingDescChild || prevDesc.trim()))
-      );
-
-      let effectiveDesc = '';
-      if (!isShapeNode) {
-        if (patch.description !== undefined && patch.description.trim() !== '') {
-          effectiveDesc = patch.description.trim();
-        } else if (isChangingToScreen || isDescOn) {
-          effectiveDesc = prevDesc.trim();
-        } else {
-          effectiveDesc = (patch.description !== undefined ? patch.description : prevDesc).trim();
-        }
-      }
-
-      let fitW: number | undefined;
-
-      if (!isShapeNode && effectiveSizeMode === 'fit') {
-        const effectiveStatus = patch.status !== undefined ? patch.status : (safeGetPluginData(card, 'workflow_status') || undefined);
-        const effectiveLink = patch.figmaLink !== undefined ? patch.figmaLink : (safeGetPluginData(card, 'figma_link') || undefined);
-        fitW = await calculateScreenFitWidth(
-          card,
-          effectiveTitle,
-          effectiveStatus,
-          effectiveLink
-        );
-
-        titleText.textAutoResize = 'HEIGHT';
-        await safeSetCharacters(titleText, effectiveTitle);
-      } else {
-        await safeSetCharacters(titleText, effectiveTitle);
-      }
-      if (patch.colorHex !== undefined) {
-        titleText.fills = [titleFill];
-      }
-
-      let descText = card.children.find(
-        (c) => c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc'
-      ) as TextNode | undefined;
-
-      if (!supportsOption(card, 'description') || !isDescOn || !effectiveDesc) {
-        if (descText) {
-          descText.remove();
-          descText = undefined;
-        }
-      } else {
-        if (!descText) {
-          descText = figma.createText();
-          descText.name = 'DescText';
-          descText.setPluginData('node_role', 'desc');
-          card.appendChild(descText);
-        }
-        descText.textAlignHorizontal = 'LEFT';
-        descText.layoutAlign = 'STRETCH';
-        descText.fontName = { family: 'Inter', style: 'Regular' };
-        descText.fontSize = 11;
-        descText.characters = effectiveDesc;
-        descText.textAutoResize = 'HEIGHT';
-        if (patch.colorHex !== undefined) {
-          descText.fills = [descFill];
-        }
-        if (!isShapeNode && (effectiveSizeMode === 'fit' || effectiveSizeMode === 'hug')) {
-          descText.maxLines = null;
-          try { descText.maxHeight = null; } catch (_) {}
-          descText.textTruncation = 'DISABLED';
-        } else {
-          await updateDescTextTruncation(card, descText, targetH, effectiveDesc, targetW);
-        }
-      }
-
-      // 9. 상태 (Status) 갱신 (Screen 노드만 지원)
-      let statusBadge = card.children.find(
-        (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
-      ) as FrameNode | undefined;
-
-      if (!supportsOption(card, 'status')) {
-        // Status 미지원 노드는 기존 뱃지가 있다면 정리하고 추가 변경 안 함
-        if (statusBadge) {
-          statusBadge.remove();
-          statusBadge = undefined;
-        }
-      } else if (patch.status !== undefined) {
-        if (!patch.status) {
-          card.setPluginData('workflow_status', '');
-          card.paddingBottom = 16;
-          if (statusBadge) {
-            statusBadge.remove();
-            statusBadge = undefined;
-          }
-        } else {
-          card.setPluginData('workflow_status', patch.status);
-          card.paddingBottom = 36;
-          if (!statusBadge) {
-            statusBadge = figma.createFrame();
-            statusBadge.name = 'StatusBadge';
-            statusBadge.layoutMode = 'HORIZONTAL';
-            statusBadge.primaryAxisSizingMode = 'AUTO';
-            statusBadge.counterAxisSizingMode = 'AUTO';
-            statusBadge.primaryAxisAlignItems = 'CENTER';
-            statusBadge.counterAxisAlignItems = 'CENTER';
-            statusBadge.paddingLeft = 9;
-            statusBadge.paddingRight = 9;
-            statusBadge.paddingTop = 3;
-            statusBadge.paddingBottom = 3;
-            statusBadge.cornerRadius = getStatusBadgeCornerRadius(
-              typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
-            );
-            statusBadge.setPluginData('is_status_badge', 'true');
-            card.appendChild(statusBadge);
-
-            const bText = figma.createText();
-            bText.name = 'StatusText';
-            bText.fontName = { family: 'Inter', style: 'Bold' };
-            bText.fontSize = 9;
-            bText.textAutoResize = 'WIDTH_AND_HEIGHT';
-            statusBadge.appendChild(bText);
-          }
-          if (statusBadge.layoutPositioning !== 'ABSOLUTE') {
-            statusBadge.layoutPositioning = 'ABSOLUTE';
-          }
-          const { badgeBg, badgeTextColor } = getStatusBadgeColors(patch.status, bgColor, isDark);
-          statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
-          statusBadge.cornerRadius = getStatusBadgeCornerRadius(
-            typeof card.cornerRadius === 'number' ? card.cornerRadius : 0
-          );
-          statusBadge.locked = true;
-          const bText = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
-          if (bText) {
-            bText.locked = false;
-            const statusLabel = STATUS_CONFIG[patch.status]?.label || patch.status;
-            await safeSetCharacters(bText, statusLabel.toUpperCase());
-            bText.fills = [{ type: 'SOLID', color: badgeTextColor }];
-            bText.locked = true;
-          }
-        }
-      } else if (statusBadge && patch.colorHex !== undefined) {
-        const curStatus = safeGetPluginData(card, 'workflow_status') as WorkflowStatus;
-        if (curStatus && STATUS_CONFIG[curStatus]) {
-          const { badgeBg, badgeTextColor } = getStatusBadgeColors(curStatus, bgColor, isDark);
-          statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
-          const bText = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
-          if (bText) bText.fills = [{ type: 'SOLID', color: badgeTextColor }];
-        }
-      }
-
-      // 10. 링크 (Figma Link) 갱신
-      if (supportsOption(card, 'figmaLink')) {
-        const effectiveLink = patch.figmaLink !== undefined ? patch.figmaLink : (safeGetPluginData(card, 'figma_link') || '');
-        if (patch.figmaLink !== undefined || patch.clearLinkCache || patch.colorHex !== undefined) {
-          await updateFigmaLinkBadge(card, effectiveLink, isBgDark, patch.clearLinkCache);
-        }
-      }
-
-      // 11. 엘리베이션 (Elevation) 갱신
-      if (supportsOption(card, 'elevation')) {
-        if (patch.elevation !== undefined) {
-          if (patch.elevation === null) {
-            card.setPluginData('node_elevation', '');
-            card.effects = [];
-          } else {
-            card.setPluginData('node_elevation', `${patch.elevation}`);
-            card.effects = getElevationEffects(patch.elevation, isBgDark);
-            card.clipsContent = false;
-          }
-        } else if (patch.colorHex !== undefined) {
-          const curElev = safeGetPluginData(card, 'node_elevation');
-          if (curElev) {
-            const lvl = parseInt(curElev, 10);
-            if (!isNaN(lvl)) card.effects = getElevationEffects(lvl, isBgDark);
-          }
-        }
-      }
-
-      // 12. 스텝 배지 (Badge) 갱신
-      const existingStepBadge = card.children.find(
-        (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
-      ) as FrameNode | undefined;
-
-      if (!supportsOption(card, 'stepBadge')) {
-        // Step Badge 미지원 노드(Bridge, FigmaObject 등)는 데이터 오염 방지를 위해 뱃지 제거 및 스텝 데이터 미부여
-        if (existingStepBadge) existingStepBadge.remove();
-        card.setPluginData('step_number', '');
-        card.setPluginData('badge_corner', '');
-        card.setPluginData('badge_shape', '');
-        card.setPluginData('badge_color_mode', '');
-      } else if (patch.badgeOn === false) {
-        card.setPluginData('step_number', '');
-        card.setPluginData('badge_corner', '');
-        card.setPluginData('badge_shape', '');
-        card.setPluginData('badge_color_mode', '');
-        if (existingStepBadge) existingStepBadge.remove();
-      } else if (
-        patch.badgeOn === true ||
-        patch.badgeNumber !== undefined ||
-        patch.badgeCorner !== undefined ||
-        patch.badgeShape !== undefined ||
-        patch.badgeColorMode !== undefined
-      ) {
-        const curNum = safeGetPluginData(card, 'step_number') ? parseInt(safeGetPluginData(card, 'step_number'), 10) : 1;
-        const curCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
-        const curShape = safeGetPluginData(card, 'badge_shape') || 'Square';
-        const curMode = (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
-
-        const finalNum = currentBadgeNum !== undefined ? currentBadgeNum++ : curNum;
-        const finalCorner = patch.badgeCorner !== undefined ? patch.badgeCorner : curCorner;
-        const finalShape = patch.badgeShape !== undefined ? patch.badgeShape : curShape;
-        const finalMode = patch.badgeColorMode !== undefined ? patch.badgeColorMode : curMode;
-
-        await applyStepBadgeToSingleCard(card, finalNum, finalCorner, finalShape, finalMode);
-      } else if (existingStepBadge && patch.colorHex !== undefined) {
-        const stepText = existingStepBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
-        if (stepText) {
-          const currentMode = (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style') || 'Style';
-          applyStepBadgeColors(existingStepBadge, stepText, currentMode, card);
-        }
-      }
-
-      const isHug = nodeType === 'Screen' && effectiveSizeMode === 'hug';
-      const isFit = nodeType === 'Screen' && effectiveSizeMode === 'fit';
-      const finalW = isFit && fitW !== undefined ? fitW : (nodeType === 'Screen' ? clampScreenWidth(targetW) : (batchBranchVariant ? targetW : Math.max(50, targetW)));
-      const finalH = nodeType === 'Screen' ? clampScreenHeight(targetH) : (batchBranchVariant ? targetH : Math.max(40, targetH));
-
-      card.minWidth = null;
-      card.maxWidth = null;
-      card.minHeight = null;
-      card.maxHeight = null;
-
-      if (isHug || isFit) {
-        if (descText) {
-          descText.maxLines = null;
-          try { descText.maxHeight = null; } catch (_) {}
-          descText.textTruncation = 'DISABLED';
-          const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
-          const descAvailW = Math.max(10, finalW - card.paddingLeft - card.paddingRight - descStrokeOffset);
-          try { descText.resize(descAvailW, descText.height); } catch (_) {}
-        }
-        const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
-      card.counterAxisSizingMode = 'FIXED';
-      card.minWidth = finalW;
-      card.maxWidth = finalW;
-      card.minHeight = minH;
-      card.maxHeight = null;
-      card.primaryAxisSizingMode = 'AUTO';
-      card.resize(finalW, Math.max(minH, card.height));
-      syncTitleWidthToCard(card, finalW, nodeType);
-
-      const autoH = Math.max(minH, Math.round(card.height));
-      card.resize(finalW, autoH);
-      card.primaryAxisSizingMode = 'AUTO';
-      card.counterAxisSizingMode = 'FIXED';
-      card.setPluginData('size_mode', isFit ? 'fit' : 'hug');
-    } else {
-      card.primaryAxisSizingMode = 'FIXED';
-      card.counterAxisSizingMode = 'FIXED';
-      card.resize(finalW, finalH);
-      card.minWidth = finalW;
-      card.maxWidth = finalW;
-      card.minHeight = finalH;
-      card.maxHeight = finalH;
-      card.setPluginData('size_mode', effectiveSizeMode);
-      syncTitleWidthToCard(card, finalW, nodeType);
-    }
-
-    if (statusBadge) {
-        statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-        statusBadge.x = finalW - statusBadge.width - 10;
-        statusBadge.y = card.height - statusBadge.height - 10;
-      }
-      const linkBadge = card.children.find(
-        (c) => safeGetPluginData(c, 'is_figma_link_badge') === 'true' || c.name === 'FigmaLinkBadge'
-      ) as FrameNode | undefined;
-      if (linkBadge) {
-        linkBadge.constraints = { horizontal: 'MIN', vertical: 'MAX' };
-        linkBadge.x = 16;
-        linkBadge.y = card.height - linkBadge.height - 10;
-      }
-
-      // 14. Shape 커스텀 벡터 교체/생성
-      const shapeVec = card.children.find(
-        (c) => (c.name === 'ShapeVector' || c.name === 'DiamondShape') && (c.type === 'VECTOR' || c.type === 'FRAME')
-      ) as (VectorNode | FrameNode) | undefined;
-
-      if (!isShapeNode) {
-        // Shape 노드가 아닌데(예: Screen) 이전 ShapeVector가 남아있다면 제거
-        if (shapeVec) {
-          shapeVec.remove();
-        }
-      } else {
-        // Shape 노드인 경우: 기존 ShapeVector가 없거나, 실제 Shape 외관/치수 속성이 변경된 경우에만 재생성
-        const shouldRecreateShapeVector = !shapeVec ||
-          patch.nodeType !== undefined ||
-          patch.width !== undefined ||
-          patch.height !== undefined ||
-          patch.colorHex !== undefined ||
-          patch.strokeWeight !== undefined ||
-          patch.strokeColor !== undefined;
-
-        if (shouldRecreateShapeVector) {
-          if (shapeVec) {
-            shapeVec.remove();
-          }
-          const defaultStrokeCol = existingStrokeColor || borderColor;
-          const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : defaultStrokeCol;
-          attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant);
-        }
-      }
-
-      // 15. 스텝 배지 위치 재동기화
-      const curStepBadge = card.children.find(
-        (c) => c.name.startsWith('[Step]') || safeGetPluginData(c, 'is_step_badge') === 'true'
-      ) as FrameNode | undefined;
-      if (curStepBadge) {
-        const stepCorner = safeGetPluginData(card, 'badge_corner') || 'TOP_LEFT';
-        const bw = Math.max(24, Math.round(curStepBadge.width));
-        const bh = 24;
-        const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, card.height, bw, bh, stepCorner, batchBranchVariant);
-        curStepBadge.x = badgeCoords.x;
-        curStepBadge.y = badgeCoords.y;
-        curStepBadge.constraints = badgeCoords.constraints;
-      }
-
-      // 16. PluginData 동기화 및 Screen 치수 보존
-      card.setPluginData('is_flow_node', 'true');
-      card.setPluginData('schema_version', '2');
-      if (nodeType === 'Screen') {
-        if (!isFit) {
-          card.setPluginData('screen_width', String(finalW));
-          card.setPluginData('screen_height', String(isHug ? Math.round(card.height) : finalH));
-        }
-        card.setPluginData('screen_corner_radius', String(targetR));
-        card.setPluginData('screen_size_mode', effectiveSizeMode);
-        if (supportsOption(card, 'description')) {
-          const descToSave = effectiveDesc || prevDesc;
-          card.setPluginData('node_desc', descToSave);
-        } else {
-          card.setPluginData('node_desc', '');
-        }
-        if (patch.figmaLink !== undefined) card.setPluginData('figma_link', patch.figmaLink);
-      } else {
-        if (supportsOption(card, 'description')) {
-          const descToSave = effectiveDesc || prevDesc;
-          card.setPluginData('node_desc', descToSave);
-        } else {
-          card.setPluginData('node_desc', '');
-        }
-        if (patch.figmaLink !== undefined) card.setPluginData('figma_link', patch.figmaLink);
-      }
-      if (patch.nodeType !== undefined) {
-        card.setPluginData('node_type', nodeType);
-      }
-      if (batchBranchVariant) {
-        card.setPluginData('branch_variant', batchBranchVariant);
-      } else if (nodeType !== 'Branch') {
-        card.setPluginData('branch_variant', '');
-      }
-
+      await applyNodePatch(card, itemPatch);
       updatedCount++;
     }
 
-    // 17. 전체 노드 처리 완료 후 단 1회 UI 동기화 및 알림 (선택 보존!)
     handleSelectionChange();
     if (updatedCount > 0) {
       notify(`${updatedCount}개 노드가 업데이트되었습니다!`, 'success');
