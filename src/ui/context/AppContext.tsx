@@ -2039,7 +2039,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const flowNodeCount = typeof meta?.flowNodeCount === 'number'
       ? meta.flowNodeCount
-      : nodes.filter(n => n && (n.isFlowNode || (!n.isConnector && n.flowNodeType))).length;
+      : nodes.filter(n => n && Boolean(n.isFlowNode)).length;
     const otherObjectCount = typeof meta?.otherObjectCount === 'number'
       ? meta.otherObjectCount
       : Math.max(0, count - flowNodeCount - (meta?.connectorCount || 0));
@@ -2109,8 +2109,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const targetTab = lastNodeTabRef.current || 'node';
       setCurrentTab(targetTab);
 
-      // 플러그인으로 생성된 플로우 노드(isFlowNode === true) 및 Figma Screen 프레임에 대해 스타일 및 속성 캐시 동기화
-      const flowNodes = nodes.filter(n => n && (n.isFlowNode || (!n.isConnector && (n.flowNodeType || n.nodeType === 'FRAME'))));
+      // 플러그인으로 생성된 플로우 노드(isFlowNode === true)에 대해 스타일 및 속성 캐시 동기화
+      const flowNodes = nodes.filter(n => n && Boolean(n.isFlowNode));
       if (flowNodes.length > 0) {
         const first = flowNodes[0];
         const eOn = Boolean(first.elevationOn);

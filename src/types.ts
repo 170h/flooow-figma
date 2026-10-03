@@ -332,18 +332,12 @@ export function getNodeCategory(node: any): NodeCategory {
   const hasPluginDataFn = typeof node.getPluginData === 'function';
   const isFlowNode = Boolean(
     node.isFlowNode ||
-    (hasPluginDataFn && node.getPluginData('is_flow_node') === 'true') ||
-    (node.type === 'FRAME' && hasPluginDataFn && Boolean(
-      node.getPluginData('node_type') ||
-      node.children?.some?.((c: any) => c.name === 'Header' || c.name === 'TitleText' || (typeof c.getPluginData === 'function' && c.getPluginData('node_role') === 'title'))
-    ))
+    (hasPluginDataFn && (node.getPluginData('is_flow_node') === 'true' || Boolean(node.getPluginData('node_type'))))
   );
 
   // 플로우 노드가 아니고 구형 쉐이프(SHAPE_WITH_TEXT)도 아닌 경우 일반 Figma 객체
   if (!isFlowNode && node.type !== 'SHAPE_WITH_TEXT') {
-    if (!node.flowNodeType) {
-      return 'FigmaObject';
-    }
+    return 'FigmaObject';
   }
 
   // 현재 최종 노드 타입 추출 및 정규화
@@ -389,6 +383,50 @@ export function getMutationTargets<T = any>(nodes: T[], option: PluginOption): T
   return nodes.filter((n) => supportsOption(n, option));
 }
 
+export type OptionCapability =
+  | 'SUPPORTED'
+  | 'PARTIAL'
+  | 'UNSUPPORTED';
+
+/**
+ * 플로우 노드 Capability 검사 대상 객체 규격
+ * Core(SceneNode)와 UI(SelectedNodeInfo, NodeInfo) 양측에서 전달되는 노드 객체를 타입 안전하게 수용
+ */
+export interface CapabilityNodeTarget {
+  id?: string;
+  isFlowNode?: boolean;
+  isConnector?: boolean;
+  flowNodeType?: DiagramNodeType | string;
+  nodeType?: string;
+  type?: string;
+  getPluginData?: (key: string) => string;
+  [key: string]: any;
+}
+
+/**
+ * 선택된 노드 집합 전체에 대한 특정 옵션의 지원 상태(Capability)를 단일하게 산출합니다.
+ *
+ * - SUPPORTED: 선택된 모든 관련 플로우 노드가 해당 옵션을 지원함
+ * - PARTIAL: 선택된 관련 플로우 노드 중 일부만 해당 옵션을 지원함
+ * - UNSUPPORTED: 선택된 관련 플로우 노드가 없거나, 어떤 노드도 해당 옵션을 지원하지 않음
+ */
+export function getOptionCapability<T extends CapabilityNodeTarget = SelectedNodeInfo>(
+  nodes: (T | null | undefined)[] | null | undefined,
+  option: PluginOption
+): OptionCapability {
+  if (!nodes || nodes.length === 0) return 'UNSUPPORTED';
+
+  const validNodes = nodes.filter((n): n is T => Boolean(n));
+  const relevantNodes = validNodes.filter((n) => getNodeCategory(n) !== 'FigmaObject');
+  if (relevantNodes.length === 0) return 'UNSUPPORTED';
+
+  const supportedCount = relevantNodes.filter((n) => supportsOption(n, option)).length;
+  if (supportedCount === relevantNodes.length) return 'SUPPORTED';
+  if (supportedCount > 0) return 'PARTIAL';
+  return 'UNSUPPORTED';
+}
+
+
 /**
  * 토글 스위치 최종 상태 4종
  * - ON: 켜짐
@@ -409,6 +447,7 @@ export interface OptionStateResult {
   isMixed: boolean;
   disabled: boolean;
   isOpen: boolean;
+  capability?: OptionCapability;
 }
 
 /**
@@ -419,11 +458,13 @@ export function computeOptionSwitchState(
   option: PluginOption,
   isNodeOnFn: (node: any) => boolean
 ): OptionStateResult {
+  const capability = getOptionCapability(nodes, option);
+
   const validNodes = (nodes || []).filter(Boolean);
   const supportedNodes = validNodes.filter((n) => supportsOption(n, option));
   const unsupportedNodes = validNodes.filter((n) => !supportsOption(n, option));
 
-  if (supportedNodes.length === 0) {
+  if (capability === 'UNSUPPORTED') {
     return {
       state: 'OFF',
       supportedCount: 0,
@@ -434,6 +475,22 @@ export function computeOptionSwitchState(
       isMixed: false,
       disabled: true,
       isOpen: false,
+      capability,
+    };
+  }
+
+  if (capability === 'PARTIAL') {
+    return {
+      state: 'MIXED_DISABLED',
+      supportedCount: supportedNodes.length,
+      unsupportedCount: unsupportedNodes.length,
+      supportedNodes,
+      unsupportedNodes,
+      checked: false,
+      isMixed: true,
+      disabled: true,
+      isOpen: false,
+      capability,
     };
   }
 
@@ -451,6 +508,7 @@ export function computeOptionSwitchState(
       isMixed: false,
       disabled: false,
       isOpen: true,
+      capability,
     };
   }
 
@@ -465,6 +523,7 @@ export function computeOptionSwitchState(
       isMixed: false,
       disabled: false,
       isOpen: false,
+      capability,
     };
   }
 
@@ -478,6 +537,7 @@ export function computeOptionSwitchState(
     isMixed: true,
     disabled: false,
     isOpen: true,
+    capability,
   };
 }
 

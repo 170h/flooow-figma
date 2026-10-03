@@ -106,7 +106,7 @@ export interface SelectionSummary {
  */
 export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): SelectionSummary {
   const validNodes = (nodes || []).filter((n): n is NodeInfo => Boolean(n));
-  const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode || (!n.isConnector && (n.flowNodeType || n.nodeType === 'FRAME'))));
+  const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode));
   const connectorNodes = validNodes.filter((n) => Boolean(n.isConnector));
   const figjamNodes = validNodes.filter((n) => !flowNodes.includes(n) && !n.isConnector);
 
@@ -136,7 +136,7 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     elevationOn: getCommonProperty(flowNodes, (n) => (n.elevationOn ? true : undefined)),
     status: getCommonProperty(flowNodes, (n) => (n.status ? (n.status as WorkflowStatus) : undefined)),
     statusOn: getCommonProperty(flowNodes, (n) => (n.status ? true : undefined)),
-    nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || (n.nodeType === 'FRAME' ? 'Screen' : n.nodeType))),
+    nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || n.nodeType)),
     width: getCommonProperty(flowNodes, (n) => n.width),
     height: getCommonProperty(flowNodes, (n) => n.height),
     cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius),

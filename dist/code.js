@@ -215,14 +215,10 @@
     }
     const hasPluginDataFn = typeof node.getPluginData === "function";
     const isFlowNode = Boolean(
-      node.isFlowNode || hasPluginDataFn && node.getPluginData("is_flow_node") === "true" || node.type === "FRAME" && hasPluginDataFn && Boolean(
-        node.getPluginData("node_type") || node.children?.some?.((c) => c.name === "Header" || c.name === "TitleText" || typeof c.getPluginData === "function" && c.getPluginData("node_role") === "title")
-      )
+      node.isFlowNode || hasPluginDataFn && (node.getPluginData("is_flow_node") === "true" || Boolean(node.getPluginData("node_type")))
     );
     if (!isFlowNode && node.type !== "SHAPE_WITH_TEXT") {
-      if (!node.flowNodeType) {
-        return "FigmaObject";
-      }
+      return "FigmaObject";
     }
     let rawType = node.flowNodeType;
     if (!rawType && hasPluginDataFn) {
@@ -1964,19 +1960,13 @@
     if (!node) return null;
     if (findConnectorNode(node)) return null;
     let curr = node;
-    let topCandidate = null;
     while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
-      if (safeGetPluginData2(curr, "is_flow_node") === "true") {
+      if (safeGetPluginData2(curr, "is_flow_node") === "true" || Boolean(safeGetPluginData2(curr, "node_type"))) {
         return curr;
-      }
-      if (curr.type === "FRAME" || curr.type === "SHAPE_WITH_TEXT") {
-        if (safeGetPluginData2(curr, "is_connector_label") !== "true" && curr.name !== "ConnectorLabel") {
-          topCandidate = curr;
-        }
       }
       curr = curr.parent;
     }
-    return topCandidate;
+    return null;
   }
   function getNextFlowTag() {
     try {
@@ -2536,13 +2526,7 @@
     const connNodes = allResolvedNodes.filter((n) => Boolean(findConnectorNode(n)));
     const nonConnNodes = allResolvedNodes.filter((n) => !findConnectorNode(n));
     const flowNodes = nonConnNodes.filter((n) => {
-      if (safeGetPluginData2(n, "is_flow_node") === "true") return true;
-      if (n.type === "FRAME") {
-        const frame = n;
-        if (safeGetPluginData2(frame, "node_type")) return true;
-        if (frame.children && frame.children.some((c) => c.name === "Header" || c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")) return true;
-      }
-      return false;
+      return safeGetPluginData2(n, "is_flow_node") === "true" || Boolean(safeGetPluginData2(n, "node_type"));
     });
     const otherObjects = nonConnNodes.filter((n) => !flowNodes.includes(n));
     const flowNodeCount = flowNodes.length;
@@ -2595,9 +2579,7 @@
       }
     }
     const nodes = await Promise.all(uniqueNodes.map(async (node) => {
-      const isFlowNode = safeGetPluginData2(node, "is_flow_node") === "true" || node.type === "FRAME" && Boolean(
-        safeGetPluginData2(node, "node_type") || node.children?.some((c) => c.name === "Header" || c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
-      );
+      const isFlowNode = safeGetPluginData2(node, "is_flow_node") === "true" || Boolean(safeGetPluginData2(node, "node_type"));
       let title = "";
       let description = "";
       let tag = safeGetPluginData2(node, "node_tag") || "";
@@ -2807,7 +2789,7 @@
         description = extracted.description;
       }
       const savedType = node.getPluginData("node_type");
-      const flowNodeType = isFlowNode ? savedType || "Screen" : node.type === "FRAME" ? "Screen" : void 0;
+      const flowNodeType = isFlowNode ? savedType || "Screen" : void 0;
       const savedStatus = isFlowNode ? node.getPluginData("workflow_status") : void 0;
       let sizeMode = "fixed";
       let hugHeight = Math.round(node.height);

@@ -739,20 +739,17 @@ function findFlowNode(node: BaseNode | null): (FrameNode | ShapeWithTextNode) | 
   if (findConnectorNode(node)) return null;
 
   let curr: BaseNode | null = node;
-  let topCandidate: (FrameNode | ShapeWithTextNode) | null = null;
 
   while (curr && curr.type !== 'PAGE' && curr.type !== 'DOCUMENT') {
-    if (safeGetPluginData(curr, 'is_flow_node') === 'true') {
+    if (
+      safeGetPluginData(curr, 'is_flow_node') === 'true' ||
+      Boolean(safeGetPluginData(curr, 'node_type'))
+    ) {
       return curr as FrameNode | ShapeWithTextNode;
-    }
-    if (curr.type === 'FRAME' || curr.type === 'SHAPE_WITH_TEXT') {
-      if (safeGetPluginData(curr, 'is_connector_label') !== 'true' && curr.name !== 'ConnectorLabel') {
-        topCandidate = curr as FrameNode | ShapeWithTextNode;
-      }
     }
     curr = curr.parent;
   }
-  return topCandidate;
+  return null;
 }
 
 // 캔버스 내 플로우 노드 개수 확인 (태그 자동 넘버링: p1, p2, p3...)
@@ -1452,13 +1449,10 @@ async function handleSelectionChange() {
   const connNodes = allResolvedNodes.filter((n) => Boolean(findConnectorNode(n)));
   const nonConnNodes = allResolvedNodes.filter((n) => !findConnectorNode(n));
   const flowNodes = nonConnNodes.filter((n) => {
-    if (safeGetPluginData(n, 'is_flow_node') === 'true') return true;
-    if (n.type === 'FRAME') {
-      const frame = n as FrameNode;
-      if (safeGetPluginData(frame, 'node_type')) return true;
-      if (frame.children && frame.children.some((c) => c.name === 'Header' || c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')) return true;
-    }
-    return false;
+    return (
+      safeGetPluginData(n, 'is_flow_node') === 'true' ||
+      Boolean(safeGetPluginData(n, 'node_type'))
+    );
   });
   const otherObjects = nonConnNodes.filter((n) => !flowNodes.includes(n));
 
@@ -1522,11 +1516,9 @@ async function handleSelectionChange() {
   }
 
   const nodes: SelectedNodeInfo[] = await Promise.all(uniqueNodes.map(async (node) => {
-    const isFlowNode = safeGetPluginData(node, 'is_flow_node') === 'true' ||
-      (node.type === 'FRAME' && Boolean(
-        safeGetPluginData(node, 'node_type') ||
-        (node as FrameNode).children?.some((c) => c.name === 'Header' || c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
-      ));
+    const isFlowNode =
+      safeGetPluginData(node, 'is_flow_node') === 'true' ||
+      Boolean(safeGetPluginData(node, 'node_type'));
 
 
 
@@ -1773,7 +1765,7 @@ async function handleSelectionChange() {
     }
 
     const savedType = node.getPluginData('node_type') as DiagramNodeType;
-    const flowNodeType: DiagramNodeType | undefined = isFlowNode ? (savedType || 'Screen') : (node.type === 'FRAME' ? 'Screen' : undefined);
+    const flowNodeType: DiagramNodeType | undefined = isFlowNode ? (savedType || 'Screen') : undefined;
     const savedStatus = isFlowNode ? (node.getPluginData('workflow_status') as WorkflowStatus) : undefined;
 
     let sizeMode: 'fixed' | 'hug' | 'fit' = 'fixed';

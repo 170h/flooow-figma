@@ -101,7 +101,7 @@ export function useFigmaMessage() {
           if (nodes && nodes.length === 1) {
             const node = nodes[0] as NodeInfo;
 
-            if (node.isFlowNode || (!node.isConnector && (node.flowNodeType || node.nodeType === 'FRAME'))) {
+            if (node.isFlowNode) {
               // Node 탭 관련
               const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
               const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;

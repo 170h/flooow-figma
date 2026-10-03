@@ -29137,14 +29137,10 @@
     }
     const hasPluginDataFn = typeof node.getPluginData === "function";
     const isFlowNode = Boolean(
-      node.isFlowNode || hasPluginDataFn && node.getPluginData("is_flow_node") === "true" || node.type === "FRAME" && hasPluginDataFn && Boolean(
-        node.getPluginData("node_type") || node.children?.some?.((c) => c.name === "Header" || c.name === "TitleText" || typeof c.getPluginData === "function" && c.getPluginData("node_role") === "title")
-      )
+      node.isFlowNode || hasPluginDataFn && (node.getPluginData("is_flow_node") === "true" || Boolean(node.getPluginData("node_type")))
     );
     if (!isFlowNode && node.type !== "SHAPE_WITH_TEXT") {
-      if (!node.flowNodeType) {
-        return "FigmaObject";
-      }
+      return "FigmaObject";
     }
     let rawType = node.flowNodeType;
     if (!rawType && hasPluginDataFn) {
@@ -29174,11 +29170,22 @@
     const category = getNodeCategory(node);
     return OPTION_CAPABILITY_MATRIX[category]?.[option] ?? false;
   }
+  function getOptionCapability(nodes, option) {
+    if (!nodes || nodes.length === 0) return "UNSUPPORTED";
+    const validNodes = nodes.filter((n) => Boolean(n));
+    const relevantNodes = validNodes.filter((n) => getNodeCategory(n) !== "FigmaObject");
+    if (relevantNodes.length === 0) return "UNSUPPORTED";
+    const supportedCount = relevantNodes.filter((n) => supportsOption(n, option)).length;
+    if (supportedCount === relevantNodes.length) return "SUPPORTED";
+    if (supportedCount > 0) return "PARTIAL";
+    return "UNSUPPORTED";
+  }
   function computeOptionSwitchState(nodes, option, isNodeOnFn) {
+    const capability = getOptionCapability(nodes, option);
     const validNodes = (nodes || []).filter(Boolean);
     const supportedNodes = validNodes.filter((n) => supportsOption(n, option));
     const unsupportedNodes = validNodes.filter((n) => !supportsOption(n, option));
-    if (supportedNodes.length === 0) {
+    if (capability === "UNSUPPORTED") {
       return {
         state: "OFF",
         supportedCount: 0,
@@ -29188,7 +29195,22 @@
         checked: false,
         isMixed: false,
         disabled: true,
-        isOpen: false
+        isOpen: false,
+        capability
+      };
+    }
+    if (capability === "PARTIAL") {
+      return {
+        state: "MIXED_DISABLED",
+        supportedCount: supportedNodes.length,
+        unsupportedCount: unsupportedNodes.length,
+        supportedNodes,
+        unsupportedNodes,
+        checked: false,
+        isMixed: true,
+        disabled: true,
+        isOpen: false,
+        capability
       };
     }
     const onCount = supportedNodes.filter((n) => isNodeOnFn(n)).length;
@@ -29203,7 +29225,8 @@
         checked: true,
         isMixed: false,
         disabled: false,
-        isOpen: true
+        isOpen: true,
+        capability
       };
     }
     if (offCount === supportedNodes.length) {
@@ -29216,7 +29239,8 @@
         checked: false,
         isMixed: false,
         disabled: false,
-        isOpen: false
+        isOpen: false,
+        capability
       };
     }
     return {
@@ -29228,7 +29252,8 @@
       checked: true,
       isMixed: true,
       disabled: false,
-      isOpen: true
+      isOpen: true,
+      capability
     };
   }
   var SCREEN_NODE_CONSTRAINTS = {
@@ -30716,7 +30741,7 @@
         originalSelectedNodeRef.current = null;
         isApplyingSingleRef.current = false;
       }
-      const flowNodeCount = typeof meta?.flowNodeCount === "number" ? meta.flowNodeCount : nodes.filter((n) => n && (n.isFlowNode || !n.isConnector && n.flowNodeType)).length;
+      const flowNodeCount = typeof meta?.flowNodeCount === "number" ? meta.flowNodeCount : nodes.filter((n) => n && Boolean(n.isFlowNode)).length;
       const otherObjectCount = typeof meta?.otherObjectCount === "number" ? meta.otherObjectCount : Math.max(0, count - flowNodeCount - (meta?.connectorCount || 0));
       const connectorCount = typeof meta?.connectorCount === "number" ? meta.connectorCount : nodes.filter((n) => n && n.isConnector).length;
       const allConnectors = connectorCount > 0 && flowNodeCount === 0 && otherObjectCount === 0 || count > 0 && nodes.length > 0 && nodes.every((n) => n && n.isConnector);
@@ -30766,7 +30791,7 @@
       } else {
         const targetTab = lastNodeTabRef.current || "node";
         setCurrentTab(targetTab);
-        const flowNodes = nodes.filter((n) => n && (n.isFlowNode || !n.isConnector && (n.flowNodeType || n.nodeType === "FRAME")));
+        const flowNodes = nodes.filter((n) => n && Boolean(n.isFlowNode));
         if (flowNodes.length > 0) {
           const first = flowNodes[0];
           const eOn = Boolean(first.elevationOn);
@@ -31023,7 +31048,7 @@
             }
             if (nodes && nodes.length === 1) {
               const node = nodes[0];
-              if (node.isFlowNode || !node.isConnector && (node.flowNodeType || node.nodeType === "FRAME")) {
+              if (node.isFlowNode) {
                 const titleEl = document.getElementById("node-title-input");
                 const descEl = document.getElementById("node-description-input");
                 if (isDifferentNode) {
@@ -31166,7 +31191,7 @@
   }
   function analyzeSelection(nodes) {
     const validNodes = (nodes || []).filter((n) => Boolean(n));
-    const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode || !n.isConnector && (n.flowNodeType || n.nodeType === "FRAME")));
+    const flowNodes = validNodes.filter((n) => Boolean(n.isFlowNode));
     const connectorNodes = validNodes.filter((n) => Boolean(n.isConnector));
     const figjamNodes = validNodes.filter((n) => !flowNodes.includes(n) && !n.isConnector);
     const totalCount = validNodes.length;
@@ -31193,7 +31218,7 @@
       elevationOn: getCommonProperty(flowNodes, (n) => n.elevationOn ? true : void 0),
       status: getCommonProperty(flowNodes, (n) => n.status ? n.status : void 0),
       statusOn: getCommonProperty(flowNodes, (n) => n.status ? true : void 0),
-      nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || (n.nodeType === "FRAME" ? "Screen" : n.nodeType))),
+      nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || n.nodeType)),
       width: getCommonProperty(flowNodes, (n) => n.width),
       height: getCommonProperty(flowNodes, (n) => n.height),
       cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius),
