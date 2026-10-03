@@ -68,7 +68,7 @@ export function ElevationSection() {
           isOpen: false,
         };
       }
-      const on = Boolean(uiState.selectedElevation !== undefined && uiState.selectedElevation !== null ? uiState.selectedElevation >= 0 : lastNodeConfig.elevationOn);
+      const on = Boolean(lastNodeConfig.elevationOn);
       return {
         state: (on ? 'ON' : 'OFF') as OptionSwitchState,
         supportedCount: 1,

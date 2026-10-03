@@ -169,13 +169,19 @@ export function SizeSection() {
     if (multiDraft.sizeMode) return multiDraft.sizeMode;
     if (summary.isMultiFlowNode) {
       if (summary.sizeMode.isMixed) return 'mixed';
-      return summary.sizeMode.value || lastNodeConfig.sizeMode || 'fixed';
+      return summary.sizeMode.value || lastNodeConfig.sizeMode || 'hug';
     }
     if (summary.isSingleFlowNode) {
-      return summary.sizeMode.value || lastNodeConfig.sizeMode || 'fixed';
+      return summary.sizeMode.value || lastNodeConfig.sizeMode || 'hug';
     }
-    return lastNodeConfig.sizeMode || 'fixed';
+    return lastNodeConfig.sizeMode || 'hug';
   })();
+
+  React.useEffect(() => {
+    if (currentSizeMode === 'mixed') return;
+    const el = document.getElementById('select-size-mode') as HTMLInputElement | null;
+    if (el && el.value !== currentSizeMode) el.value = currentSizeMode;
+  }, [currentSizeMode]);
 
   const isWMixed = multiDraft.width !== undefined ? false : (summary.isMultiFlowNode && summary.width.isMixed);
   const isHMixed = multiDraft.height !== undefined ? false : (summary.isMultiFlowNode && summary.height.isMixed);
@@ -755,7 +761,7 @@ export function SizeSection() {
                 </div>
               </div>
             )}
-            <input type="hidden" id="select-size-mode" defaultValue="fixed" />
+            <input type="hidden" id="select-size-mode" defaultValue="hug" />
           </div>
         </div>
 

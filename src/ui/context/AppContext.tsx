@@ -322,6 +322,8 @@ const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
   cornerRadius: 0,
   sizeMode: 'hug',
   color: '#ffffff',
+  strokeWeight: 1.5,
+  strokeColor: '#000000',
   elevationOn: false,
   elevation: 0,
   statusOn: false,
@@ -333,7 +335,7 @@ const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
   badgeColorMode: 'Style',
   singleLinkOn: false,
   singleLinkUrl: '',
-  descriptionOn: false,
+  descriptionOn: true,
   branchVariant: 'CIRCLE',
 };
 
@@ -386,6 +388,8 @@ const DEFAULT_LAST_CONNECTOR_CONFIG: LastConnectorConfig = {
 
 const DEFAULT_UI_STATE: UIState = {
   selectedColor: '#ffffff',
+  selectedStrokeWeight: 1.5,
+  selectedStrokeColor: '#000000',
   selectedElevation: 0,
   selectedStatus: 'draft',
   selectedBadgeCorner: 'TOP_LEFT',
@@ -1230,7 +1234,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ? styleOverrides.strokeColor
       : (uiStateRef.current.selectedStrokeColor || lastNodeConfigRef.current.strokeColor);
 
-    const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || 'fixed';
+    const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || 'hug';
 
     setLastNodeConfig({
       width: w,
@@ -1890,6 +1894,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           payload: {
             title,
             description: effectiveDesc,
+            descriptionOn: isDescOn,
             width: w,
             height: h,
             cornerRadius: radius,
@@ -2032,18 +2037,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } else if (count === 0) {
-      // 바탕화면 클릭 (신규 생성 모드): 항상 node 탭이 기본 (플러그인 노드의 이전 속성 캐시를 유지하여 UI 동기화)
+      // 바탕화면 클릭 (신규 생성 모드): Screen / Hug / White / Elevation off
       setCurrentTab('node');
       setUIState({
-        selectedNodeType: lastNodeConfigRef.current.nodeType || 'Screen',
-        selectedColor: lastNodeConfigRef.current.color || '#ffffff',
-        selectedStrokeWeight: lastNodeConfigRef.current.strokeWeight,
-        selectedStrokeColor: lastNodeConfigRef.current.strokeColor,
-        selectedElevation: lastNodeConfigRef.current.elevation ?? 0,
-        selectedStatus: lastNodeConfigRef.current.status || 'draft',
-        selectedBadgeCorner: lastNodeConfigRef.current.badgeCorner || 'TOP_LEFT',
-        selectedBadgeShape: lastNodeConfigRef.current.badgeShape || 'Square',
-        selectedBadgeColorMode: lastNodeConfigRef.current.badgeColorMode || 'Style',
+        selectedNodeType: 'Screen',
+        selectedColor: '#ffffff',
+        selectedStrokeWeight: 1.5,
+        selectedStrokeColor: '#000000',
+        selectedElevation: 0,
+        selectedStatus: 'draft',
+        selectedBadgeCorner: 'TOP_LEFT',
+        selectedBadgeShape: 'Square',
+        selectedBadgeColorMode: 'Style',
       });
     } else {
       // 일반 노드 선택: 이전 노드에서 마지막으로 선택했던 탭으로 복원

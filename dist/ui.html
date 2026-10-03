@@ -29294,6 +29294,8 @@
     cornerRadius: 0,
     sizeMode: "hug",
     color: "#ffffff",
+    strokeWeight: 1.5,
+    strokeColor: "#000000",
     elevationOn: false,
     elevation: 0,
     statusOn: false,
@@ -29305,7 +29307,7 @@
     badgeColorMode: "Style",
     singleLinkOn: false,
     singleLinkUrl: "",
-    descriptionOn: false,
+    descriptionOn: true,
     branchVariant: "CIRCLE"
   };
   var DEFAULT_CONNECTOR_COLOR = "#000000";
@@ -29349,6 +29351,8 @@
   };
   var DEFAULT_UI_STATE = {
     selectedColor: "#ffffff",
+    selectedStrokeWeight: 1.5,
+    selectedStrokeColor: "#000000",
     selectedElevation: 0,
     selectedStatus: "draft",
     selectedBadgeCorner: "TOP_LEFT",
@@ -30022,7 +30026,7 @@
       const finalColor = styleOverrides?.colorHex ?? selectedColor;
       const finalStrokeWeight = styleOverrides?.strokeWeight !== void 0 ? styleOverrides.strokeWeight : uiStateRef.current.selectedStrokeWeight !== void 0 ? uiStateRef.current.selectedStrokeWeight : lastNodeConfigRef.current.strokeWeight;
       const finalStrokeColor = styleOverrides?.strokeColor !== void 0 ? styleOverrides.strokeColor : uiStateRef.current.selectedStrokeColor || lastNodeConfigRef.current.strokeColor;
-      const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || "fixed";
+      const sizeMode = overrideSizeMode || sizeModeEl?.value || lastNodeConfigRef.current.sizeMode || "hug";
       setLastNodeConfig({
         width: w,
         height: h,
@@ -30609,6 +30613,7 @@
             payload: {
               title,
               description: effectiveDesc,
+              descriptionOn: isDescOn,
               width: w,
               height: h,
               cornerRadius: radius,
@@ -30710,15 +30715,15 @@
       } else if (count === 0) {
         setCurrentTab("node");
         setUIState({
-          selectedNodeType: lastNodeConfigRef.current.nodeType || "Screen",
-          selectedColor: lastNodeConfigRef.current.color || "#ffffff",
-          selectedStrokeWeight: lastNodeConfigRef.current.strokeWeight,
-          selectedStrokeColor: lastNodeConfigRef.current.strokeColor,
-          selectedElevation: lastNodeConfigRef.current.elevation ?? 0,
-          selectedStatus: lastNodeConfigRef.current.status || "draft",
-          selectedBadgeCorner: lastNodeConfigRef.current.badgeCorner || "TOP_LEFT",
-          selectedBadgeShape: lastNodeConfigRef.current.badgeShape || "Square",
-          selectedBadgeColorMode: lastNodeConfigRef.current.badgeColorMode || "Style"
+          selectedNodeType: "Screen",
+          selectedColor: "#ffffff",
+          selectedStrokeWeight: 1.5,
+          selectedStrokeColor: "#000000",
+          selectedElevation: 0,
+          selectedStatus: "draft",
+          selectedBadgeCorner: "TOP_LEFT",
+          selectedBadgeShape: "Square",
+          selectedBadgeColorMode: "Style"
         });
       } else {
         const targetTab = lastNodeTabRef.current || "node";
@@ -31033,21 +31038,34 @@
                 const linkUrlEl = document.getElementById("single-screen-url");
                 if (titleEl) titleEl.value = "Screen";
                 if (descEl) descEl.value = "";
-                if (descToggleEl) descToggleEl.checked = false;
+                if (descToggleEl) descToggleEl.checked = true;
                 if (fixedValEl) fixedValEl.textContent = "90";
                 if (linkToggleEl) linkToggleEl.checked = false;
                 if (linkUrlEl) linkUrlEl.value = "";
+                const sizeModeEl = document.getElementById("select-size-mode");
+                if (sizeModeEl) sizeModeEl.value = "hug";
                 setLastNodeConfig({
                   nodeType: "Screen",
                   width: 250,
                   height: 90,
                   cornerRadius: 0,
                   sizeMode: "hug",
-                  descriptionOn: false,
+                  color: "#ffffff",
+                  strokeWeight: 1.5,
+                  strokeColor: "#000000",
+                  elevationOn: false,
+                  elevation: 0,
+                  descriptionOn: true,
                   singleLinkOn: false,
                   singleLinkUrl: ""
                 });
-                setUIState({ selectedNodeType: "Screen" });
+                setUIState({
+                  selectedNodeType: "Screen",
+                  selectedColor: "#ffffff",
+                  selectedStrokeWeight: 1.5,
+                  selectedStrokeColor: "#000000",
+                  selectedElevation: 0
+                });
               }
             }
             break;
@@ -33728,13 +33746,18 @@
       if (multiDraft.sizeMode) return multiDraft.sizeMode;
       if (summary.isMultiFlowNode) {
         if (summary.sizeMode.isMixed) return "mixed";
-        return summary.sizeMode.value || lastNodeConfig.sizeMode || "fixed";
+        return summary.sizeMode.value || lastNodeConfig.sizeMode || "hug";
       }
       if (summary.isSingleFlowNode) {
-        return summary.sizeMode.value || lastNodeConfig.sizeMode || "fixed";
+        return summary.sizeMode.value || lastNodeConfig.sizeMode || "hug";
       }
-      return lastNodeConfig.sizeMode || "fixed";
+      return lastNodeConfig.sizeMode || "hug";
     })();
+    import_react11.default.useEffect(() => {
+      if (currentSizeMode === "mixed") return;
+      const el = document.getElementById("select-size-mode");
+      if (el && el.value !== currentSizeMode) el.value = currentSizeMode;
+    }, [currentSizeMode]);
     const isWMixed = multiDraft.width !== void 0 ? false : summary.isMultiFlowNode && summary.width.isMixed;
     const isHMixed = multiDraft.height !== void 0 ? false : summary.isMultiFlowNode && summary.height.isMixed;
     const isRMixed = multiDraft.cornerRadius !== void 0 ? false : summary.isMultiFlowNode && summary.cornerRadius.isMixed;
@@ -34283,7 +34306,7 @@
                     ]
                   }
                 ),
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("input", { type: "hidden", id: "select-size-mode", defaultValue: "fixed" })
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("input", { type: "hidden", id: "select-size-mode", defaultValue: "hug" })
               ]
             }
           )
@@ -34926,7 +34949,7 @@
             isOpen: false
           };
         }
-        const on = Boolean(uiState.selectedElevation !== void 0 && uiState.selectedElevation !== null ? uiState.selectedElevation >= 0 : lastNodeConfig.elevationOn);
+        const on = Boolean(lastNodeConfig.elevationOn);
         return {
           state: on ? "ON" : "OFF",
           supportedCount: 1,

@@ -561,6 +561,7 @@ export type ConnectorLabelAlign = 'LEFT' | 'CENTER' | 'RIGHT';
 export interface FlowNodePayload {
   title: string;
   description: string;
+  descriptionOn?: boolean;
   tag?: string;
   theme?: 'light' | 'dark';
   figmaLink?: string;

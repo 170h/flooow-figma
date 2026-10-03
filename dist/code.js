@@ -2851,7 +2851,7 @@
         const savedSizeMode = frame.getPluginData("size_mode");
         if (savedSizeMode === "fit" || isAutoPrimary && isAutoCounter) {
           sizeMode = "fit";
-        } else if (isAutoPrimary) {
+        } else if (savedSizeMode === "hug" || isAutoPrimary) {
           sizeMode = "hug";
         } else {
           sizeMode = "fixed";
@@ -2976,7 +2976,7 @@
         const descChild = frameNode.children.find(
           (c) => c.type === "TEXT" && (c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc")
         );
-        isDescriptionOn = Boolean(descChild);
+        isDescriptionOn = Boolean(descChild) || safeGetPluginData2(node, "description_on") === "true";
       }
       return {
         id: node.id,
@@ -4213,12 +4213,13 @@
         }
         if (isCreateFit || isCreateHug) {
           card.counterAxisSizingMode = "FIXED";
-          card.primaryAxisSizingMode = "AUTO";
           card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
           card.maxHeight = null;
           card.minWidth = effectiveCreateW;
           card.maxWidth = effectiveCreateW;
           card.resize(effectiveCreateW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, card.height));
+          card.primaryAxisSizingMode = "AUTO";
+          card.counterAxisSizingMode = "FIXED";
           card.setPluginData("size_mode", isCreateFit ? "fit" : "hug");
         }
         titleText.textTruncation = "DISABLED";
@@ -4264,6 +4265,7 @@
       }
       if (!isShapeNode) {
         if (description) card.setPluginData("node_desc", description);
+        card.setPluginData("description_on", description || payload.descriptionOn ? "true" : "");
         card.setPluginData("screen_width", String(width));
         card.setPluginData("screen_height", String(height));
         card.setPluginData("screen_corner_radius", String(cornerRadius));
@@ -4314,6 +4316,8 @@
         if (isCreateFit || isCreateHug) {
           const finalCreateH = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
           card.resize(effectiveCreateW, finalCreateH);
+          card.primaryAxisSizingMode = "AUTO";
+          card.counterAxisSizingMode = "FIXED";
           const statusBadge = card.children.find(
             (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
           );
@@ -4861,15 +4865,17 @@
         }
         const minH = nodeType === "Screen" ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
         card.counterAxisSizingMode = "FIXED";
-        card.primaryAxisSizingMode = "AUTO";
         card.minWidth = finalW;
         card.maxWidth = finalW;
         card.minHeight = minH;
         card.maxHeight = null;
+        card.primaryAxisSizingMode = "AUTO";
         card.resize(finalW, Math.max(minH, card.height));
         syncTitleWidthToCard(card, finalW, nodeType);
         const autoH = Math.max(minH, Math.round(card.height));
         card.resize(finalW, autoH);
+        card.primaryAxisSizingMode = "AUTO";
+        card.counterAxisSizingMode = "FIXED";
         card.setPluginData("size_mode", isFit ? "fit" : "hug");
       } else {
         card.primaryAxisSizingMode = "FIXED";
@@ -4931,6 +4937,7 @@
       if (supportsOption(card, "description")) {
         const descToSave = effectiveDesc || prevDescription;
         card.setPluginData("node_desc", descToSave);
+        card.setPluginData("description_on", isDescOn ? "true" : "");
       } else {
         card.setPluginData("node_desc", "");
       }
@@ -4949,7 +4956,7 @@
       if (!isShapeNode) {
         if (!isFit) {
           card.setPluginData("screen_width", String(finalW));
-          card.setPluginData("screen_height", String(finalH));
+          card.setPluginData("screen_height", String(isHug ? Math.round(card.height) : finalH));
         }
         card.setPluginData("screen_corner_radius", String(card.cornerRadius || 0));
         card.setPluginData("screen_size_mode", payload.sizeMode || card.getPluginData("size_mode") || "fixed");
@@ -5464,15 +5471,17 @@
           }
           const minH = nodeType === "Screen" ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
           card.counterAxisSizingMode = "FIXED";
-          card.primaryAxisSizingMode = "AUTO";
           card.minWidth = finalW;
           card.maxWidth = finalW;
           card.minHeight = minH;
           card.maxHeight = null;
+          card.primaryAxisSizingMode = "AUTO";
           card.resize(finalW, Math.max(minH, card.height));
           syncTitleWidthToCard(card, finalW, nodeType);
           const autoH = Math.max(minH, Math.round(card.height));
           card.resize(finalW, autoH);
+          card.primaryAxisSizingMode = "AUTO";
+          card.counterAxisSizingMode = "FIXED";
           card.setPluginData("size_mode", isFit ? "fit" : "hug");
         } else {
           card.primaryAxisSizingMode = "FIXED";
@@ -5533,7 +5542,7 @@
         if (nodeType === "Screen") {
           if (!isFit) {
             card.setPluginData("screen_width", String(finalW));
-            card.setPluginData("screen_height", String(finalH));
+            card.setPluginData("screen_height", String(isHug ? Math.round(card.height) : finalH));
           }
           card.setPluginData("screen_corner_radius", String(targetR));
           card.setPluginData("screen_size_mode", effectiveSizeMode);
@@ -6655,12 +6664,14 @@
             card.minWidth = newFitW;
             card.maxWidth = newFitW;
             card.counterAxisSizingMode = "FIXED";
-            card.primaryAxisSizingMode = "AUTO";
             card.resize(newFitW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+            card.primaryAxisSizingMode = "AUTO";
+            card.counterAxisSizingMode = "FIXED";
           } else if (sMode === "hug") {
             card.counterAxisSizingMode = "FIXED";
-            card.primaryAxisSizingMode = "AUTO";
             card.resize(card.width, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+            card.primaryAxisSizingMode = "AUTO";
+            card.counterAxisSizingMode = "FIXED";
           }
           const descText = card.children.find(
             (c) => c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"
@@ -6729,12 +6740,14 @@
             card.minWidth = newFitW;
             card.maxWidth = newFitW;
             card.counterAxisSizingMode = "FIXED";
-            card.primaryAxisSizingMode = "AUTO";
             card.resize(newFitW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+            card.primaryAxisSizingMode = "AUTO";
+            card.counterAxisSizingMode = "FIXED";
           } else if (sMode === "hug") {
             card.counterAxisSizingMode = "FIXED";
-            card.primaryAxisSizingMode = "AUTO";
             card.resize(card.width, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+            card.primaryAxisSizingMode = "AUTO";
+            card.counterAxisSizingMode = "FIXED";
           }
           if (card.layoutMode !== "NONE") {
             statusBadge.layoutPositioning = "ABSOLUTE";
@@ -7578,13 +7591,14 @@
                     }
                     if (targetW !== currentW || targetH !== currentH) {
                       card.counterAxisSizingMode = "FIXED";
-                      card.primaryAxisSizingMode = "AUTO";
                       card.minWidth = targetW;
                       card.maxWidth = targetW;
                       card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
                       card.maxHeight = null;
                       internalLayoutNodeIds.add(card.id);
                       card.resize(targetW, targetH);
+                      card.primaryAxisSizingMode = "AUTO";
+                      card.counterAxisSizingMode = "FIXED";
                       if (sMode === "hug") {
                         card.setPluginData("screen_height", String(targetH));
                       }

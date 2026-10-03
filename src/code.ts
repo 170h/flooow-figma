@@ -1809,9 +1809,10 @@ async function handleSelectionChange() {
       const isAutoCounter = frame.counterAxisSizingMode === 'AUTO';
       const savedSizeMode = frame.getPluginData('size_mode');
 
+      // resize()가 primaryAxisSizingMode를 FIXED로 되돌릴 수 있으므로 pluginData를 우선한다
       if (savedSizeMode === 'fit' || (isAutoPrimary && isAutoCounter)) {
         sizeMode = 'fit';
-      } else if (isAutoPrimary) {
+      } else if (savedSizeMode === 'hug' || isAutoPrimary) {
         sizeMode = 'hug';
       } else {
         sizeMode = 'fixed';
@@ -1917,7 +1918,7 @@ async function handleSelectionChange() {
       const descChild = frameNode.children.find(
         (c) => c.type === 'TEXT' && (c.name === 'DescText' || safeGetPluginData(c, 'node_role') === 'desc')
       );
-      isDescriptionOn = Boolean(descChild);
+      isDescriptionOn = Boolean(descChild) || safeGetPluginData(node, 'description_on') === 'true';
     }
 
     return {
@@ -3267,12 +3268,13 @@ async function createFlowNode(payload: FlowNodePayload) {
 
       if (isCreateFit || isCreateHug) {
         card.counterAxisSizingMode = 'FIXED';
-        card.primaryAxisSizingMode = 'AUTO';
         card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
         card.maxHeight = null;
         card.minWidth = effectiveCreateW;
         card.maxWidth = effectiveCreateW;
         card.resize(effectiveCreateW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, card.height));
+        card.primaryAxisSizingMode = 'AUTO';
+        card.counterAxisSizingMode = 'FIXED';
         card.setPluginData('size_mode', isCreateFit ? 'fit' : 'hug');
       }
 
@@ -3325,6 +3327,7 @@ async function createFlowNode(payload: FlowNodePayload) {
     }
     if (!isShapeNode) {
       if (description) card.setPluginData('node_desc', description);
+      card.setPluginData('description_on', (description || payload.descriptionOn) ? 'true' : '');
       card.setPluginData('screen_width', String(width));
       card.setPluginData('screen_height', String(height));
       card.setPluginData('screen_corner_radius', String(cornerRadius));
@@ -3380,6 +3383,8 @@ async function createFlowNode(payload: FlowNodePayload) {
       if (isCreateFit || isCreateHug) {
         const finalCreateH = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height));
         card.resize(effectiveCreateW, finalCreateH);
+        card.primaryAxisSizingMode = 'AUTO';
+        card.counterAxisSizingMode = 'FIXED';
         const statusBadge = card.children.find(
           (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
         ) as FrameNode | undefined;
@@ -4007,16 +4012,18 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       }
       const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
       card.counterAxisSizingMode = 'FIXED';
-      card.primaryAxisSizingMode = 'AUTO';
       card.minWidth = finalW;
       card.maxWidth = finalW;
       card.minHeight = minH;
       card.maxHeight = null;
+      card.primaryAxisSizingMode = 'AUTO';
       card.resize(finalW, Math.max(minH, card.height));
       syncTitleWidthToCard(card, finalW, nodeType);
 
       const autoH = Math.max(minH, Math.round(card.height));
       card.resize(finalW, autoH);
+      card.primaryAxisSizingMode = 'AUTO';
+      card.counterAxisSizingMode = 'FIXED';
       card.setPluginData('size_mode', isFit ? 'fit' : 'hug');
     } else {
       card.primaryAxisSizingMode = 'FIXED';
@@ -4088,6 +4095,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     if (supportsOption(card, 'description')) {
       const descToSave = effectiveDesc || prevDescription;
       card.setPluginData('node_desc', descToSave);
+      card.setPluginData('description_on', isDescOn ? 'true' : '');
     } else {
       card.setPluginData('node_desc', '');
     }
@@ -4107,7 +4115,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     if (!isShapeNode) {
       if (!isFit) {
         card.setPluginData('screen_width', String(finalW));
-        card.setPluginData('screen_height', String(finalH));
+        card.setPluginData('screen_height', String(isHug ? Math.round(card.height) : finalH));
       }
       card.setPluginData('screen_corner_radius', String(card.cornerRadius || 0));
       card.setPluginData('screen_size_mode', payload.sizeMode || card.getPluginData('size_mode') || 'fixed');
@@ -4700,16 +4708,18 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         }
         const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
       card.counterAxisSizingMode = 'FIXED';
-      card.primaryAxisSizingMode = 'AUTO';
       card.minWidth = finalW;
       card.maxWidth = finalW;
       card.minHeight = minH;
       card.maxHeight = null;
+      card.primaryAxisSizingMode = 'AUTO';
       card.resize(finalW, Math.max(minH, card.height));
       syncTitleWidthToCard(card, finalW, nodeType);
 
       const autoH = Math.max(minH, Math.round(card.height));
       card.resize(finalW, autoH);
+      card.primaryAxisSizingMode = 'AUTO';
+      card.counterAxisSizingMode = 'FIXED';
       card.setPluginData('size_mode', isFit ? 'fit' : 'hug');
     } else {
       card.primaryAxisSizingMode = 'FIXED';
@@ -4787,7 +4797,7 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       if (nodeType === 'Screen') {
         if (!isFit) {
           card.setPluginData('screen_width', String(finalW));
-          card.setPluginData('screen_height', String(finalH));
+          card.setPluginData('screen_height', String(isHug ? Math.round(card.height) : finalH));
         }
         card.setPluginData('screen_corner_radius', String(targetR));
         card.setPluginData('screen_size_mode', effectiveSizeMode);
@@ -6177,12 +6187,14 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
           card.minWidth = newFitW;
           card.maxWidth = newFitW;
           card.counterAxisSizingMode = 'FIXED';
-          card.primaryAxisSizingMode = 'AUTO';
           card.resize(newFitW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+          card.primaryAxisSizingMode = 'AUTO';
+          card.counterAxisSizingMode = 'FIXED';
         } else if (sMode === 'hug') {
           card.counterAxisSizingMode = 'FIXED';
-          card.primaryAxisSizingMode = 'AUTO';
           card.resize(card.width, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+          card.primaryAxisSizingMode = 'AUTO';
+          card.counterAxisSizingMode = 'FIXED';
         }
 
         const descText = card.children.find(
@@ -6261,12 +6273,14 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
           card.minWidth = newFitW;
           card.maxWidth = newFitW;
           card.counterAxisSizingMode = 'FIXED';
-          card.primaryAxisSizingMode = 'AUTO';
           card.resize(newFitW, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+          card.primaryAxisSizingMode = 'AUTO';
+          card.counterAxisSizingMode = 'FIXED';
         } else if (sMode === 'hug') {
           card.counterAxisSizingMode = 'FIXED';
-          card.primaryAxisSizingMode = 'AUTO';
           card.resize(card.width, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT, Math.round(card.height)));
+          card.primaryAxisSizingMode = 'AUTO';
+          card.counterAxisSizingMode = 'FIXED';
         }
 
         // 3. 하단 오른쪽 박스 안쪽에 절대 위치 배치
@@ -7382,7 +7396,6 @@ figma.on('documentchange', async (event) => {
                   // 실제 변경이 있을 때만 resize 호출 (동일 크기 시 불필요한 resize 및 무한 루프 방지)
                   if (targetW !== currentW || targetH !== currentH) {
                     card.counterAxisSizingMode = 'FIXED';
-                    card.primaryAxisSizingMode = 'AUTO';
                     card.minWidth = targetW;
                     card.maxWidth = targetW;
                     card.minHeight = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
@@ -7390,6 +7403,8 @@ figma.on('documentchange', async (event) => {
 
                     internalLayoutNodeIds.add(card.id);
                     card.resize(targetW, targetH);
+                    card.primaryAxisSizingMode = 'AUTO';
+                    card.counterAxisSizingMode = 'FIXED';
 
                     if (sMode === 'hug') {
                       card.setPluginData('screen_height', String(targetH));

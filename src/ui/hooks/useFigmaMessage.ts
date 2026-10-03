@@ -167,10 +167,13 @@ export function useFigmaMessage() {
 
               if (titleEl) titleEl.value = 'Screen';
               if (descEl) descEl.value = '';
-              if (descToggleEl) descToggleEl.checked = false;
+              if (descToggleEl) descToggleEl.checked = true;
               if (fixedValEl) fixedValEl.textContent = '90';
               if (linkToggleEl) linkToggleEl.checked = false;
               if (linkUrlEl) linkUrlEl.value = '';
+
+              const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
+              if (sizeModeEl) sizeModeEl.value = 'hug';
 
               setLastNodeConfig({
                 nodeType: 'Screen',
@@ -178,11 +181,22 @@ export function useFigmaMessage() {
                 height: 90,
                 cornerRadius: 0,
                 sizeMode: 'hug',
-                descriptionOn: false,
+                color: '#ffffff',
+                strokeWeight: 1.5,
+                strokeColor: '#000000',
+                elevationOn: false,
+                elevation: 0,
+                descriptionOn: true,
                 singleLinkOn: false,
                 singleLinkUrl: '',
               });
-              setUIState({ selectedNodeType: 'Screen' });
+              setUIState({
+                selectedNodeType: 'Screen',
+                selectedColor: '#ffffff',
+                selectedStrokeWeight: 1.5,
+                selectedStrokeColor: '#000000',
+                selectedElevation: 0,
+              });
             }
           }
           break;
