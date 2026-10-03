@@ -627,9 +627,11 @@ export function App() {
       {activeModal === 'label-fill-color' && (
         <FillColorModal
           title="Label Fill"
+          showStylePresets
           initialColor={lastConnectorConfig.labelFillColor || '#EA2039'}
           onApply={(colorHex) => {
-            const clean = colorHex.toUpperCase();
+            // None(투명)은 'None'으로 정규화 (어피어런스 Style과 동일 규격)
+            const clean = colorHex.toLowerCase() === 'none' ? 'None' : colorHex.toUpperCase();
             setLastConnectorConfig({ labelFillColor: clean });
             setTimeout(() => applyCurrentConnectorState(), 0);
           }}
@@ -639,11 +641,14 @@ export function App() {
       {activeModal === 'label-stroke-color' && (
         <StrokeColorModal
           title="Label Stroke"
+          showStylePresets
           hideWeightControl={true}
           initialColor={lastConnectorConfig.labelStrokeColor || '#EA2039'}
-          initialWeight={1}
-          onApply={(strokeColor) => {
-            const clean = strokeColor.toUpperCase();
+          initialWeight={(lastConnectorConfig.labelStrokeColor || '').toLowerCase() === 'none' ? 0 : 1}
+          onApply={(strokeColor, strokeWeight) => {
+            // 두께 0 또는 None이면 보더 삭제('None'), 그 외에는 HEX 저장
+            const isStrokeNone = strokeWeight === 0 || strokeColor.toLowerCase() === 'none';
+            const clean = isStrokeNone ? 'None' : strokeColor.toUpperCase();
             setLastConnectorConfig({ labelStrokeColor: clean });
             setTimeout(() => applyCurrentConnectorState(), 0);
           }}

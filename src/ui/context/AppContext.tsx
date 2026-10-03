@@ -8,7 +8,13 @@ import React, {
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
 import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload, ConnectorLabelBoxStyle, ConnectorLabelAlign } from '../../types';
-import { NODE_TYPE_SHAPE_SPECS, normalizeNodeType } from '../../types';
+import {
+  NODE_TYPE_SHAPE_SPECS,
+  normalizeNodeType,
+  normalizeBranchVariant,
+  getBranchVariantSpec,
+  BRANCH_VARIANT_LABELS,
+} from '../../types';
 
 // ============================================================
 // 타입 정의
@@ -116,6 +122,7 @@ export interface NodeInfo {
   strokeColorHex?: string;
   strokeWeight?: number;
   sizeMode?: 'fixed' | 'hug' | string;
+  branchVariant?: string;
   hugHeight?: number;
   cachedFigmaLink?: string;
   connectorIsReversed?: boolean;
@@ -145,6 +152,7 @@ export interface LastNodeConfig {
   singleLinkOn: boolean;
   singleLinkUrl: string;
   descriptionOn?: boolean;
+  branchVariant?: string;
 }
 
 export interface LastConnectorConfig {
@@ -323,6 +331,7 @@ const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
   singleLinkOn: false,
   singleLinkUrl: '',
   descriptionOn: false,
+  branchVariant: 'CIRCLE',
 };
 
 const DEFAULT_LAST_CONNECTOR_CONFIG: LastConnectorConfig = {
@@ -931,6 +940,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       descriptionOn: isDescAllowed ? hasDesc : false,
       singleLinkOn: isDescAllowed ? hasLink : false,
       singleLinkUrl: orig.figmaLink || '',
+      branchVariant: origType === 'Branch'
+        ? normalizeBranchVariant(orig.branchVariant)
+        : lastNodeConfigRef.current.branchVariant,
     });
 
     triggerFormChange();
@@ -1079,7 +1091,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const domNodeType = (activeTypeBtn?.dataset.type as DiagramNodeType) || undefined;
     const rawNodeType = overrideNodeType || domNodeType || nodeActualType || selectedNodeType;
     const effectiveNodeType = normalizeNodeType(rawNodeType);
-    const spec = NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
+    const branchVariant = effectiveNodeType === 'Branch'
+      ? normalizeBranchVariant(
+          lastNodeConfigRef.current.branchVariant || firstNode?.branchVariant
+        )
+      : undefined;
+    const spec = effectiveNodeType === 'Branch' && branchVariant
+      ? getBranchVariantSpec(branchVariant)
+      : NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
     const isDescAllowed = spec?.allowDescription ?? false;
     const isScreen = effectiveNodeType === 'Screen';
 
@@ -1151,6 +1170,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       singleLinkUrl: figmaUrl,
       sizeMode,
       descriptionOn: isDescOn,
+      branchVariant,
     });
 
     nodes.forEach(node => {
@@ -1167,6 +1187,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             figmaLink: figmaUrl,
             clearLinkCache: linkOverrides?.clearLinkCache,
             nodeType: effectiveNodeType,
+            branchVariant,
             colorHex: finalColor,
             strokeWeight: finalStrokeWeight !== undefined ? finalStrokeWeight : node.strokeWeight,
             strokeColor: finalStrokeColor !== undefined ? finalStrokeColor : node.strokeColorHex,
@@ -1600,11 +1621,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const activeTypeBtn = document.querySelector('#node-type-icons .type-icon-btn.active') as HTMLElement | null;
     const domNodeType = (activeTypeBtn?.dataset.type as DiagramNodeType) || undefined;
     const selectedNodeType = domNodeType || lastNodeConfigRef.current.nodeType || uiStateRef.current.selectedNodeType || 'Screen';
-    const spec = NODE_TYPE_SHAPE_SPECS[selectedNodeType];
+    const createBranchVariant = selectedNodeType === 'Branch'
+      ? normalizeBranchVariant(lastNodeConfigRef.current.branchVariant)
+      : undefined;
+    const spec = selectedNodeType === 'Branch' && createBranchVariant
+      ? getBranchVariantSpec(createBranchVariant)
+      : NODE_TYPE_SHAPE_SPECS[selectedNodeType];
     const isDescAllowed = spec?.allowDescription ?? false;
 
     const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
-    const defaultTitle = selectedNodeType === 'Screen' ? 'Screen' : selectedNodeType;
+    const defaultTitle = selectedNodeType === 'Screen'
+      ? 'Screen'
+      : (createBranchVariant ? BRANCH_VARIANT_LABELS[createBranchVariant] : selectedNodeType);
     const rawTitle = titleEl?.value.trim() || defaultTitle;
     if (rawTitle.length > 32) {
       showToast('제목은 최대 32자까지 입력할 수 있습니다.', 'warning');
@@ -1662,6 +1690,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       singleLinkOn: (isDescAllowed && singleLinkToggleEl?.checked) || false,
       singleLinkUrl: figmaUrl,
       descriptionOn: isDescAllowed ? isDescOn : false,
+      branchVariant: createBranchVariant,
     };
     setLastNodeConfig(newConfig);
 
@@ -1710,6 +1739,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             theme: getCurrentUITheme(),
             figmaLink: figmaUrl,
             nodeType: selectedNodeType,
+            branchVariant: selectedNodeType === 'Branch'
+              ? normalizeBranchVariant(lastNodeConfigRef.current.branchVariant)
+              : undefined,
             colorHex: selectedColor,
             strokeWeight: lastNodeConfigRef.current.strokeWeight !== undefined ? lastNodeConfigRef.current.strokeWeight : 1.5,
             strokeColor: lastNodeConfigRef.current.strokeColor,
@@ -1887,6 +1919,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const baseConfigUpdates: Partial<LastNodeConfig> = {
           nodeType: nodeTypeVal,
+          branchVariant: normalizeNodeType(nodeTypeVal) === 'Branch'
+            ? normalizeBranchVariant(first.branchVariant)
+            : lastNodeConfigRef.current.branchVariant,
           width: first.width,
           height: first.height,
           cornerRadius: nodeRadius,

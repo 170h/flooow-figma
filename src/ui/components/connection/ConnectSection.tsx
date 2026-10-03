@@ -186,8 +186,6 @@ export function ConnectSection() {
   });
 
   const hexInputRef = useRef<HTMLInputElement>(null);
-  const nativeColorInputRef = useRef<HTMLInputElement>(null);
-
   // 스타일 섹션의 컬러 및 프리셋 변경 시 커넥터 라인 컬러 동기화 (보더컬러 우선, 없을 시 배경컬러)
   useEffect(() => {
     if (activeStylePreset) {
@@ -837,8 +835,8 @@ export function ConnectSection() {
                   backgroundColor: isColorMixed ? 'transparent' : selectedColor,
                 }}
                 onClick={(e) => {
+                  // 컬러칩은 색상 표시 전용 (클릭 시 컬러피커/입력 포커스 등 어떤 반응도 없음)
                   e.stopPropagation();
-                  nativeColorInputRef.current?.click();
                 }}
                 title={isColorMixed ? 'Mixed' : `Color: ${selectedColor}`}
               >
@@ -868,15 +866,6 @@ export function ConnectSection() {
                 }}
                 spellCheck={false}
                 autoComplete="off"
-              />
-
-              {/* 네이티브 컬러 피커 (숨김) */}
-              <input
-                ref={nativeColorInputRef}
-                type="color"
-                style={{ display: 'none' }}
-                value={selectedColor.length === 7 ? selectedColor : (selectedConnectorColor && selectedConnectorColor.length === 7 ? selectedConnectorColor : '#000000')}
-                onChange={(e) => selectColor(e.target.value)}
               />
 
               {/* 피그마 UI3 컬러 팔레트 아이콘 버튼 (클릭 시 피그마 공식 컬러 휠 모달 열기) */}

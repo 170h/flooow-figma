@@ -65,7 +65,52 @@ export function getContrastTextColor(hex?: string): RGB {
   return brightness > 0.55 ? { r: 0.1, g: 0.1, b: 0.1 } : { r: 1, g: 1, b: 1 };
 }
 
-// 커넥터 라벨 스타일 적용 헬퍼 (글자크기 9px 고정, 트래킹 없음, 박스/캡슐/라운드박스/라인 스타일 적용)
+// 커넥터 라벨 디자인 스펙 (Figma UI3 1027448:1714~1732 — 5종 타입 × 한 줄/여러 줄)
+export const LABEL_FONT_SIZE = 9;
+const LABEL_LINE_HEIGHT_PERCENT = 140; // 라인하이트 140% (글자 크기 대비)
+const LABEL_LINE_HEIGHT = (LABEL_FONT_SIZE * LABEL_LINE_HEIGHT_PERCENT) / 100; // 한 줄 높이 추정용 px 환산값 (9px → 12.6px)
+const LABEL_STROKE_WEIGHT = 1.5;
+const LABEL_PADDING_X = 12;
+const LABEL_PADDING_Y = 7.5;
+const LABEL_RADIUS_ROUNDED = 8;
+const LABEL_RADIUS_CAPSULE = 999; // Figma가 높이의 1/2로 자동 클램프 (한 줄 16 / 여러 줄 32 모두 완전한 캡슐)
+const LABEL_MULTILINE_TEXT_WIDTH = 82; // 텍스트가 이 폭을 넘으면 고정 폭으로 줄바꿈(여러 줄 라벨)
+
+// 라벨 프레임에 저장하는 직전 방향 pluginData 키 ('1' 세로 / '0' 가로)
+export const LABEL_IS_VERTICAL_KEY = 'connector_label_is_vertical';
+
+// 라벨 프레임에 저장된 직전 방향 조회 (없으면 undefined)
+export function readPrevLabelVertical(labelFrame: SceneNode | null | undefined): boolean | undefined {
+  const v = safeGetPluginData(labelFrame, LABEL_IS_VERTICAL_KEY);
+  return v === '1' ? true : v === '0' ? false : undefined;
+}
+
+// 라벨 박스 크기 힌트
+// - 스타일이 한 번이라도 적용된 프레임이면 실제 크기를 반환
+// - 신규 프레임(Figma 기본 100×100)이면 텍스트 길이로 추정 (높이: 라인하이트 + 상하 패딩 + 보더, 폭: 글자 수 × 평균 글자폭 + 좌우 패딩 + 보더, 여러 줄 폭 상한 적용)
+export function getLabelSizeHint(
+  labelFrame: SceneNode | null | undefined,
+  labelText?: string
+): { width: number; height: number } {
+  if (labelFrame && readPrevLabelVertical(labelFrame) !== undefined && labelFrame.width > 0 && labelFrame.height > 0) {
+    return { width: labelFrame.width, height: labelFrame.height };
+  }
+  const charCount = (labelText || '').length;
+  const textWidth = Math.min(LABEL_MULTILINE_TEXT_WIDTH, Math.max(1, charCount) * LABEL_FONT_SIZE * 0.6);
+  return {
+    // 실측: 상하 패딩 8 → 높이 32px (라인하이트 12.6 + 패딩 16 + 보더 1.5×2 ≈ 31.6) 이므로 보더 두께도 크기에 포함
+    width: textWidth + LABEL_PADDING_X * 2 + LABEL_STROKE_WEIGHT * 2,
+    height: LABEL_LINE_HEIGHT + LABEL_PADDING_Y * 2 + LABEL_STROKE_WEIGHT * 2,
+  };
+}
+
+// 라벨 컬러 None(배경 투명 / 보더 삭제) 값 판별
+function isNoneColorValue(color?: string): boolean {
+  const c = (color || '').trim().toLowerCase();
+  return c === 'none' || c === 'transparent';
+}
+
+// 커넥터 라벨 스타일 적용 헬퍼 (글자크기 9px, 트래킹 없음, 박스/캡슐/라운드박스/라인 스타일 적용)
 export async function applyConnectorLabelStyle(
   labelFrame: FrameNode,
   textNode: TextNode,
@@ -76,6 +121,8 @@ export async function applyConnectorLabelStyle(
     fillColor?: string;
     strokeColor?: string;
     isVertical?: boolean;
+    /** 연결된 커넥터 라인의 스트로크 두께 (라벨 보더 두께와 연동, 미지정/0 이하면 기본 1.5px) */
+    connectorStrokeWeight?: number;
   }
 ): Promise<void> {
   const {
@@ -85,24 +132,35 @@ export async function applyConnectorLabelStyle(
     fillColor = '#EA2039',
     strokeColor = '#EA2039',
     isVertical = false,
+    connectorStrokeWeight,
   } = options;
 
-  // 1. 폰트 로드 (기본 Regular 및 Medium 안전 로드 후 fontName 명시적 지정)
-  try {
-    await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
-    await figma.loadFontAsync({ family: 'Inter', style: 'Medium' });
-    textNode.fontName = { family: 'Inter', style: 'Medium' };
-  } catch {
-    await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
-    textNode.fontName = { family: 'Inter', style: 'Regular' };
-  }
+  // 라벨 보더 두께는 커넥터 라인 스트로크 두께와 연동
+  const labelStrokeWeight =
+    typeof connectorStrokeWeight === 'number' && connectorStrokeWeight > 0
+      ? connectorStrokeWeight
+      : LABEL_STROKE_WEIGHT;
 
-  // 2. 텍스트 설정: 9px 고정, 수평 정렬, tracking(letter-spacing) 절대 부여 금지 (규칙 준수)
+  // 1. 폰트 로드: Inter Regular(400)
+  //    (FigJam 전용 플러그인이라 Variables API로 UI3 토큰 450 바인딩 불가 → 가장 가까운 이름 스타일 Regular 사용)
+  await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+  textNode.fontName = { family: 'Inter', style: 'Regular' };
+
+  // 2. 텍스트 설정: 9px / 라인하이트 140%, 수평 정렬, tracking(letter-spacing) 절대 부여 금지 (규칙 준수)
   textNode.characters = labelText;
-  textNode.fontSize = 9;
-  textNode.textAutoResize = 'WIDTH_AND_HEIGHT';
+  textNode.fontSize = LABEL_FONT_SIZE;
+  textNode.lineHeight = { value: LABEL_LINE_HEIGHT_PERCENT, unit: 'PERCENT' };
   textNode.textAlignHorizontal = textAlign;
-  const textFill = getContrastTextColor(fillColor);
+  // 한 줄 라벨: 내용 폭에 맞춰 늘어남 / 여러 줄 라벨: 고정 폭(82px)으로 줄바꿈하고 높이만 늘어남
+  textNode.textAutoResize = 'WIDTH_AND_HEIGHT';
+  if (textNode.width > LABEL_MULTILINE_TEXT_WIDTH) {
+    textNode.textAutoResize = 'HEIGHT';
+    textNode.resize(LABEL_MULTILINE_TEXT_WIDTH, textNode.height);
+  }
+  // 배경 None(투명)이면 대비 산출 기준이 없으므로 어두운 텍스트 색 사용
+  const isFillNone = isNoneColorValue(fillColor);
+  const isStrokeNone = isNoneColorValue(strokeColor);
+  const textFill = isFillNone ? { r: 0.1, g: 0.1, b: 0.1 } : getContrastTextColor(fillColor);
   textNode.fills = [{ type: 'SOLID', color: textFill }];
 
   // 3. 라벨 프레임 오토레이아웃 및 패딩
@@ -112,54 +170,57 @@ export async function applyConnectorLabelStyle(
   labelFrame.counterAxisAlignItems = 'CENTER';
   labelFrame.primaryAxisAlignItems = textAlign === 'LEFT' ? 'MIN' : textAlign === 'RIGHT' ? 'MAX' : 'CENTER';
 
-  labelFrame.paddingTop = 2;
-  labelFrame.paddingBottom = 2;
-  labelFrame.paddingLeft = boxStyle === 'CAPSULE' ? 8 : 6;
-  labelFrame.paddingRight = boxStyle === 'CAPSULE' ? 8 : 6;
+  labelFrame.paddingTop = LABEL_PADDING_Y;
+  labelFrame.paddingBottom = LABEL_PADDING_Y;
+  labelFrame.paddingLeft = LABEL_PADDING_X;
+  labelFrame.paddingRight = LABEL_PADDING_X;
 
   // 4. 배경 채움 (fills)
-  const fillRgb = parseHexColor(fillColor);
-  labelFrame.fills = [{ type: 'SOLID', color: fillRgb }];
+  // None이면 배경 투명(fills 비움)
+  labelFrame.fills = isFillNone ? [] : [{ type: 'SOLID', color: parseHexColor(fillColor) }];
 
-  // 5. 보더(strokes) 및 코너 라운드
-  const strokeRgb = parseHexColor(strokeColor);
-  labelFrame.strokes = [{ type: 'SOLID', color: strokeRgb }];
+  // 직전 방향 기억 (다음 재배치 시 모호 구간 히스테리시스 기준)
+  labelFrame.setPluginData(LABEL_IS_VERTICAL_KEY, isVertical ? '1' : '0');
+
+  // 5. 보더(strokes) 및 코너 라운드 — None이면 보더 삭제(strokes 비움)
+  labelFrame.strokes = isStrokeNone ? [] : [{ type: 'SOLID', color: parseHexColor(strokeColor) }];
 
   switch (boxStyle) {
     case 'BOX':
       labelFrame.cornerRadius = 0;
-      labelFrame.strokeWeight = 1;
+      labelFrame.strokeWeight = labelStrokeWeight;
       break;
 
     case 'CAPSULE':
-      labelFrame.cornerRadius = 999;
-      labelFrame.strokeWeight = 1;
+      labelFrame.cornerRadius = LABEL_RADIUS_CAPSULE;
+      labelFrame.strokeWeight = labelStrokeWeight;
       break;
 
     case 'ROUNDED_BOX':
-      labelFrame.cornerRadius = 4;
-      labelFrame.strokeWeight = 1;
+      labelFrame.cornerRadius = LABEL_RADIUS_ROUNDED;
+      labelFrame.strokeWeight = labelStrokeWeight;
       break;
 
     case 'LINE':
       labelFrame.cornerRadius = 0;
+      // 세그먼트가 세로면 위/아래 라인(1718·1726), 가로면 좌/우 라인(1730)
       if (isVertical) {
         if ('strokeTopWeight' in labelFrame) {
-          labelFrame.strokeTopWeight = 1;
-          labelFrame.strokeBottomWeight = 1;
+          labelFrame.strokeTopWeight = labelStrokeWeight;
+          labelFrame.strokeBottomWeight = labelStrokeWeight;
           labelFrame.strokeLeftWeight = 0;
           labelFrame.strokeRightWeight = 0;
         } else {
-          (labelFrame as any).strokeWeight = 1;
+          (labelFrame as any).strokeWeight = labelStrokeWeight;
         }
       } else {
         if ('strokeLeftWeight' in labelFrame) {
-          labelFrame.strokeLeftWeight = 1;
-          labelFrame.strokeRightWeight = 1;
+          labelFrame.strokeLeftWeight = labelStrokeWeight;
+          labelFrame.strokeRightWeight = labelStrokeWeight;
           labelFrame.strokeTopWeight = 0;
           labelFrame.strokeBottomWeight = 0;
         } else {
-          (labelFrame as any).strokeWeight = 1;
+          (labelFrame as any).strokeWeight = labelStrokeWeight;
         }
       }
       break;
@@ -369,15 +430,36 @@ export function buildVectorVertices(
   return buildVectorNetwork(localPoints, routingType, startTerminal, endTerminal).vertices;
 }
 
+// 세그먼트 방향(가로/세로) 판정 시 45° 부근의 모호 구간 비율 (±20%: 한쪽 축이 다른 축의 1.2배 이상이어야 확정)
+const LABEL_DIRECTION_HYSTERESIS = 1.2;
+
+/**
+ * 세그먼트의 가로/세로 판정 (히스테리시스 적용)
+ * - |dy| ≥ |dx|×1.2 → 세로 확정, |dx| ≥ |dy|×1.2 → 가로 확정
+ * - 그 사이(대각선 45° 부근)는 직전 판정(prevIsVertical)을 유지하여 방향이 자주 뒤바뀌는 것을 방지
+ * - 직전 판정이 없으면 기존 규칙(|dy| > |dx| 이면 세로)을 사용
+ */
+export function classifySegmentVertical(dx: number, dy: number, prevIsVertical?: boolean): boolean {
+  const ax = Math.abs(dx);
+  const ay = Math.abs(dy);
+  if (ay >= ax * LABEL_DIRECTION_HYSTERESIS && ay > 0) return true;
+  if (ax >= ay * LABEL_DIRECTION_HYSTERESIS) return false;
+  return prevIsVertical !== undefined ? prevIsVertical : ay > ax;
+}
+
 // 라우팅 타입별 라벨 중심점 및 세그먼트 방향 산출 헬퍼
+// prevIsVertical: 직전 라벨 방향 (대각선·곡선의 모호 구간에서 방향 유지용)
+// labelSize: 라벨 박스 크기 (직각 경로의 꺾임이 박스 안쪽 길이 이내면 흐름 방향 라인 스타일 유지)
 export function getLabelPlacement(
   worldPoints: Point[],
-  routingType: ConnectorRoutingType = 'ORTHOGONAL'
+  routingType: ConnectorRoutingType = 'ORTHOGONAL',
+  prevIsVertical?: boolean,
+  labelSize?: { width: number; height: number }
 ): { point: Point; isVertical: boolean } {
   if (worldPoints.length <= 2) {
     const p1 = worldPoints[0] || { x: 0, y: 0 };
     const p2 = worldPoints[worldPoints.length - 1] || p1;
-    const isVertical = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
+    const isVertical = classifySegmentVertical(p2.x - p1.x, p2.y - p1.y, prevIsVertical);
     return {
       point: {
         x: (p1.x + p2.x) / 2,
@@ -391,7 +473,7 @@ export function getLabelPlacement(
     const midIdx = Math.floor(worldPoints.length / 2);
     const pPrev = worldPoints[Math.max(0, midIdx - 1)];
     const pNext = worldPoints[Math.min(worldPoints.length - 1, midIdx + 1)];
-    const isVertical = Math.abs(pNext.y - pPrev.y) > Math.abs(pNext.x - pPrev.x);
+    const isVertical = classifySegmentVertical(pNext.x - pPrev.x, pNext.y - pPrev.y, prevIsVertical);
     return {
       point: worldPoints[midIdx],
       isVertical,
@@ -414,13 +496,39 @@ export function getLabelPlacement(
     const p2 = worldPoints[i + 1];
     const segLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
     if (segLen > 0 && walked + segLen >= half) {
+      // 꺾임(Jog) 보정: 양옆 구간이 같은 축(평행)인 짧은 중간 구간이 라벨 박스 안쪽 길이면
+      // 흐름 방향(양옆 구간 축)의 라벨 방향을 유지하고, 라벨은 꺾임 구간 중앙에 배치
+      //  - 상하 꺾임: 가로-세로-가로, 세로 구간 길이 ≤ 라벨 높이 → 가로 방향(좌우 세로선) 유지
+      //  - 좌우 꺾임: 세로-가로-세로, 가로 구간 길이 ≤ 라벨 폭   → 세로 방향(상하 라인) 유지
+      if (labelSize && i > 0 && i < worldPoints.length - 2) {
+        const pBefore = worldPoints[i - 1];
+        const pAfter = worldPoints[i + 2];
+        const segIsVertical = Math.abs(p2.x - p1.x) < 0.5 && Math.abs(p2.y - p1.y) > 0.5;
+        const segIsHorizontal = Math.abs(p2.y - p1.y) < 0.5 && Math.abs(p2.x - p1.x) > 0.5;
+        const beforeIsHorizontal = Math.abs(p1.x - pBefore.x) > 0.5 && Math.abs(p1.y - pBefore.y) < 0.5;
+        const afterIsHorizontal = Math.abs(pAfter.x - p2.x) > 0.5 && Math.abs(pAfter.y - p2.y) < 0.5;
+        const beforeIsVertical = Math.abs(p1.y - pBefore.y) > 0.5 && Math.abs(p1.x - pBefore.x) < 0.5;
+        const afterIsVertical = Math.abs(pAfter.y - p2.y) > 0.5 && Math.abs(pAfter.x - p2.x) < 0.5;
+
+        const isShortVerticalJog =
+          segIsVertical && beforeIsHorizontal && afterIsHorizontal && segLen <= labelSize.height;
+        const isShortHorizontalJog =
+          segIsHorizontal && beforeIsVertical && afterIsVertical && segLen <= labelSize.width;
+
+        if (isShortVerticalJog || isShortHorizontalJog) {
+          return {
+            point: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 },
+            isVertical: isShortHorizontalJog,
+          };
+        }
+      }
       const t = (half - walked) / segLen;
       return {
         point: {
           x: p1.x + (p2.x - p1.x) * t,
           y: p1.y + (p2.y - p1.y) * t,
         },
-        isVertical: Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x),
+        isVertical: classifySegmentVertical(p2.x - p1.x, p2.y - p1.y, prevIsVertical),
       };
     }
     walked += segLen;
@@ -864,7 +972,12 @@ export async function createOrthogonalVectorConnector(
     vector.setPluginData('connector_label_stroke_color', strokeCol);
 
     // 라우팅 타입별 라벨 중심점 및 세그먼트 방향 산출
-    const { point: midSegmentPoint, isVertical } = getLabelPlacement(worldPoints, routingType);
+    const { point: midSegmentPoint, isVertical } = getLabelPlacement(
+      worldPoints,
+      routingType,
+      undefined,
+      getLabelSizeHint(null, labelText)
+    );
 
     // 라벨 태그 박스 생성
     labelFrame = figma.createFrame();
@@ -882,6 +995,7 @@ export async function createOrthogonalVectorConnector(
       fillColor: fillCol,
       strokeColor: strokeCol,
       isVertical,
+      connectorStrokeWeight: strokeWeight,
     });
 
     placeNodeAtWorldCenter(labelFrame, midSegmentPoint);
@@ -1356,11 +1470,15 @@ export async function updateOrthogonalVectorConnector(
 
   // 라벨 위치 및 스타일 갱신
   if (labelFrame) {
-    const { point: midSegmentPoint, isVertical } = getLabelPlacement(worldPoints, routingType);
-
     const textNode = labelFrame.findOne((n) => n.type === 'TEXT') as TextNode | null;
     const labelText = safeGetPluginData(rootNode, 'connector_label') ||
                       safeGetPluginData(vector, 'connector_label') || '';
+    const { point: midSegmentPoint, isVertical } = getLabelPlacement(
+      worldPoints,
+      routingType,
+      readPrevLabelVertical(labelFrame),
+      getLabelSizeHint(labelFrame, labelText)
+    );
     const labelOn = safeGetPluginData(rootNode, 'connector_label_on') === 'true' ||
                     safeGetPluginData(vector, 'connector_label_on') === 'true' ||
                     Boolean(labelText);
@@ -1381,6 +1499,7 @@ export async function updateOrthogonalVectorConnector(
         fillColor: fillCol,
         strokeColor: strokeCol,
         isVertical,
+        connectorStrokeWeight: strokeWeight,
       });
     }
 

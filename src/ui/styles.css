@@ -2416,6 +2416,14 @@
       transform: scale(1.08);
     }
 
+    /* 커넥터 컬러 입력 박스 내 컬러칩은 표시 전용 (클릭 반응 없음 → 포인터/호버 확대 제거) */
+    .conn-color-input-box .conn-color-chip {
+      cursor: default;
+    }
+    .conn-color-input-box .conn-color-chip:hover {
+      transform: none;
+    }
+
     /* conn-color-chip 다크모드 버전 (화이트 반투명 0.15 직접 명시하여 라이트모드 검정 상속 완벽 차단) */
     .figma-dropdown-menu .conn-color-chip,
     .size-mode-menu-popover .conn-color-chip,
@@ -3814,6 +3822,11 @@
       flex-direction: column;
       gap: 7px;
       padding: 2px 0;
+    }
+
+    /* Fill/Stroke 모달 내 노드 스타일 컬러 칩 영역과 컬러 입력 필드 사이 간격 */
+    .conn-color-presets-wrapper.color-preset-section {
+      margin-bottom: 12px;
     }
 
     .conn-color-presets-row {

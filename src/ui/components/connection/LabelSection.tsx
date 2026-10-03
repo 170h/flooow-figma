@@ -48,6 +48,14 @@ function normalizeHex(hex: string): string {
 }
 
 /**
+ * None(배경 투명 / 보더 삭제) 컬러 값 판별
+ */
+function isNoneColor(color?: string): boolean {
+  const c = (color || '').trim().toLowerCase();
+  return c === 'none' || c === 'transparent';
+}
+
+/**
  * Label 섹션 (Figma UI3 1027430:2049 디자인 스펙)
  * - 1행: Label 타이틀 + 토글 스위치
  * - 2행: Add a label 텍스트 인풋
@@ -81,6 +89,20 @@ export function LabelSection() {
   const [strokeHexInput, setStrokeHexInput] = useState((lastConnectorConfig.labelStrokeColor || '#EA2039').replace('#', ''));
   const [align, setAlign] = useState<ConnectorLabelAlign>(lastConnectorConfig.labelAlign || 'LEFT');
   const [boxStyle, setBoxStyle] = useState<ConnectorLabelBoxStyle>(lastConnectorConfig.labelBoxStyle || 'BOX');
+
+  // None(배경 투명 / 보더 삭제) 상태 판별 — 어피어런스 Style과 동일 규격
+  const isFillNone = isNoneColor(fillColor);
+  const isStrokeNone = isNoneColor(strokeColor);
+
+  // 직전 유효 컬러 기억 (None 해제 시 복원용)
+  const lastValidFillRef = useRef<string>(isNoneColor(fillColor) ? '#FFFFFF' : fillColor);
+  const lastValidStrokeRef = useRef<string>(isNoneColor(strokeColor) ? '#000000' : strokeColor);
+  useEffect(() => {
+    if (!isNoneColor(fillColor)) lastValidFillRef.current = fillColor;
+  }, [fillColor]);
+  useEffect(() => {
+    if (!isNoneColor(strokeColor)) lastValidStrokeRef.current = strokeColor;
+  }, [strokeColor]);
 
   const labelDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const labelInputRef = useRef<HTMLInputElement | null>(null);
@@ -159,7 +181,23 @@ export function LabelSection() {
     setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
+  /**
+   * 라벨 최대 글자수 = 입력필드에 한 줄로 보이는 폭까지.
+   * 텍스트가 입력필드 폭을 넘으면(scrollWidth > clientWidth) 넘치지 않을 때까지 끝 글자를 잘라냄.
+   * (글자 폭을 직접 반영하므로 한글/영문 폭 차이도 자동 대응, IME 조합 중에는 호출하지 않음)
+   */
+  function clampToInputWidth(el: HTMLInputElement) {
+    while (el.value.length > 0 && el.scrollWidth > el.clientWidth) {
+      el.value = el.value.slice(0, -1);
+    }
+  }
+
   function handleInput(e: React.FormEvent<HTMLInputElement>) {
+    const nativeEvt = e.nativeEvent as InputEvent;
+    // IME 조합 중에는 글자가 확정되지 않았으므로 조합 종료(onCompositionEnd) 시점에 제한 적용
+    if (!nativeEvt.isComposing) {
+      clampToInputWidth(e.currentTarget);
+    }
     const val = e.currentTarget.value;
     setLabelText(val);
     setLastConnectorConfig({ labelText: val });
@@ -177,12 +215,39 @@ export function LabelSection() {
     setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
+  // 배경 투명(None) 적용
+  function handleFillNone() {
+    setFillColor('None');
+    setFillHexInput('None');
+    setLastConnectorConfig({ labelFillColor: 'None' });
+    setTimeout(() => applyCurrentConnectorState(), 0);
+  }
+
+  // Fill 칩 클릭: 배경 끄기/켜기 토글
+  function handleFillChipClick() {
+    if (isFillNone) {
+      handleFillColorSelect(lastValidFillRef.current || '#FFFFFF');
+    } else {
+      handleFillNone();
+    }
+  }
+
+  function handleFillHexChange(raw: string) {
+    if (raw.trim().toLowerCase() === 'none') {
+      handleFillNone();
+      return;
+    }
+    setFillHexInput(raw);
+  }
+
   function handleFillHexBlur() {
     const clean = fillHexInput.replace('#', '').trim();
-    if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
+    if (clean === '' || clean.toLowerCase() === 'none') {
+      if (!isFillNone) handleFillNone();
+    } else if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
       handleFillColorSelect(`#${clean}`);
     } else {
-      setFillHexInput(fillColor.replace('#', ''));
+      setFillHexInput(isFillNone ? 'None' : fillColor.replace('#', ''));
     }
   }
 
@@ -194,12 +259,39 @@ export function LabelSection() {
     setTimeout(() => applyCurrentConnectorState(), 0);
   }
 
+  // 보더 삭제(None) 적용
+  function handleStrokeNone() {
+    setStrokeColor('None');
+    setStrokeHexInput('None');
+    setLastConnectorConfig({ labelStrokeColor: 'None' });
+    setTimeout(() => applyCurrentConnectorState(), 0);
+  }
+
+  // Stroke 칩 클릭: 보더 끄기/켜기 토글
+  function handleStrokeChipClick() {
+    if (isStrokeNone) {
+      handleStrokeColorSelect(lastValidStrokeRef.current || '#000000');
+    } else {
+      handleStrokeNone();
+    }
+  }
+
+  function handleStrokeHexChange(raw: string) {
+    if (raw.trim().toLowerCase() === 'none') {
+      handleStrokeNone();
+      return;
+    }
+    setStrokeHexInput(raw);
+  }
+
   function handleStrokeHexBlur() {
     const clean = strokeHexInput.replace('#', '').trim();
-    if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
+    if (clean === '' || clean.toLowerCase() === 'none') {
+      if (!isStrokeNone) handleStrokeNone();
+    } else if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
       handleStrokeColorSelect(`#${clean}`);
     } else {
-      setStrokeHexInput(strokeColor.replace('#', ''));
+      setStrokeHexInput(isStrokeNone ? 'None' : strokeColor.replace('#', ''));
     }
   }
 
@@ -245,6 +337,11 @@ export function LabelSection() {
                 applyCurrentConnectorState();
               }}
               onInput={handleInput}
+              onCompositionEnd={e => {
+                // 한글 등 IME 조합이 끝난 뒤 폭 제한 적용 후 변경 내용 반영
+                clampToInputWidth(e.currentTarget);
+                handleInput(e);
+              }}
               spellCheck={false}
               autoComplete="off"
             />
@@ -253,19 +350,20 @@ export function LabelSection() {
             <div className="style-inputs-row">
               {/* (1) Fill Color 컨트롤 박스 (Style 컴포넌트 규격) */}
               <div className="style-input-box style-color-input-box">
+                {/* 컬러 칩 (클릭 시 배경 투명 None 토글) */}
                 <FillColorIcon
-                  color={fillColor}
-                  isNone={false}
-                  onClick={() => setActiveModal('label-fill-color')}
-                  title="Fill color"
+                  color={isFillNone ? lastValidFillRef.current : fillColor}
+                  isNone={isFillNone}
+                  onClick={handleFillChipClick}
+                  title={isFillNone ? '배경 켜기' : '배경 끄기 (None)'}
                 />
                 <input
                   type="text"
-                  className="style-text-input"
+                  className={`style-text-input${isFillNone ? ' is-none' : ''}`}
                   value={fillHexInput}
                   maxLength={6}
-                  placeholder="FFFFFF"
-                  onChange={e => setFillHexInput(e.target.value)}
+                  placeholder={isFillNone ? 'None' : 'FFFFFF'}
+                  onChange={e => handleFillHexChange(e.target.value)}
                   onBlur={handleFillHexBlur}
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleFillHexBlur();
@@ -289,21 +387,21 @@ export function LabelSection() {
                 <button
                   type="button"
                   className="style-stroke-btn"
-                  title="Stroke color"
-                  onClick={() => setActiveModal('label-stroke-color')}
+                  title={isStrokeNone ? '보더 켜기' : '보더 끄기 (None)'}
+                  onClick={handleStrokeChipClick}
                 >
                   <StrokeColorIcon
-                    color={strokeColor}
-                    isNone={false}
+                    color={isStrokeNone ? lastValidStrokeRef.current : strokeColor}
+                    isNone={isStrokeNone}
                   />
                 </button>
                 <input
                   type="text"
-                  className="style-text-input"
+                  className={`style-text-input${isStrokeNone ? ' is-none' : ''}`}
                   value={strokeHexInput}
                   maxLength={6}
-                  placeholder="000000"
-                  onChange={e => setStrokeHexInput(e.target.value)}
+                  placeholder={isStrokeNone ? 'None' : '000000'}
+                  onChange={e => handleStrokeHexChange(e.target.value)}
                   onBlur={handleStrokeHexBlur}
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleStrokeHexBlur();

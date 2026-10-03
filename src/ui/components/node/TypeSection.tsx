@@ -1,7 +1,18 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
-import { DiagramNodeType, normalizeNodeType, NODE_TYPE_SHAPE_SPECS } from '../../../types';
+import {
+  DiagramNodeType,
+  normalizeNodeType,
+  NODE_TYPE_SHAPE_SPECS,
+  BranchVariant,
+  BRANCH_VARIANT_ORDER,
+  BRANCH_VARIANT_LABELS,
+  normalizeBranchVariant,
+  getBranchVariantSpec,
+  getBranchVariantDefaultFill,
+  branchVariantUsesStroke,
+} from '../../../types';
 
 /**
  * 1. Screen 아이콘 (1027415-4991 공식 규격: 위 11, 왼쪽 7, 아래 13, 오른쪽 9 간격)
@@ -26,9 +37,9 @@ function ProcessIcon() {
 }
 
 /**
- * 3. Circle 아이콘 (1027415-4985 공식 SVG)
+ * 3. Junction 아이콘 (1027415-4985 공식 SVG)
  */
-function CircleIcon() {
+function JunctionIcon() {
   return (
     <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M14 1C21.17 1 27 6.83 27 14C27 21.17 21.17 27 14 27C6.83 27 1 21.17 1 14C1 6.83 6.83 1 14 1ZM14 0C6.27 0 0 6.27 0 14C0 21.73 6.27 28 14 28C21.73 28 28 21.73 28 14C28 6.27 21.73 0 14 0Z" fill="currentColor" />
@@ -79,7 +90,7 @@ interface NodeTypeOption {
 const NODE_TYPE_OPTIONS: NodeTypeOption[] = [
   { type: 'Screen', label: 'Screen', tooltip: 'Screen', icon: <ScreenIcon /> },
   { type: 'Process', label: 'Process', tooltip: 'Process', icon: <ProcessIcon /> },
-  { type: 'Circle', label: 'Circle', tooltip: 'Circle', icon: <CircleIcon /> },
+  { type: 'Junction', label: 'Junction', tooltip: 'Junction', icon: <JunctionIcon /> },
   { type: 'Decision', label: 'Decision', tooltip: 'Decision', icon: <DecisionIcon /> },
   { type: 'Terminator', label: 'Terminator', tooltip: 'Terminator', icon: <TerminatorIcon /> },
   { type: 'Branch', label: 'Branch', tooltip: 'Branch', icon: <BranchIcon /> },
@@ -107,19 +118,29 @@ export function TypeSection() {
   const isTypeMixed = multiDraft.nodeType !== undefined
     ? false
     : (summary.isMultiFlowNode && summary.nodeType.isMixed);
+  // 클릭 직후 selectedNodeType이 먼저 바뀌므로, 선택된 노드의 늦은 동기화보다 클릭 값을 우선한다
   const currentRawType = multiDraft.nodeType !== undefined
     ? multiDraft.nodeType
     : (isTypeMixed
         ? undefined
-        : (summary.isSingleFlowNode || summary.isMultiFlowNode
-            ? summary.nodeType.value
-            : selectedNodeType));
+        : (selectedNodeType || summary.nodeType.value));
   const activeType = currentRawType ? normalizeNodeType(currentRawType) : undefined;
 
   const DEFAULT_TYPE_TITLES = new Set([
     'Screen', 'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
-    'Action', 'System', 'Database', 'Square', 'Circle', 'Diamond', 'Pill', 'Capsule',
+    'Action', 'System', 'Database', 'Square', 'Junction', 'Diamond', 'Pill', 'Capsule',
+    'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Circle',
   ]);
+
+  const activeBranchVariant = normalizeBranchVariant(
+    multiDraft.branchVariant
+      ?? (selectedNodes.length === 1 ? selectedNodes[0]?.branchVariant : undefined)
+      ?? lastNodeConfig.branchVariant
+  );
+  const showBranchVariants =
+    activeType === 'Branch' ||
+    normalizeNodeType(selectedNodeType) === 'Branch' ||
+    normalizeNodeType(multiDraft.nodeType) === 'Branch';
 
   function selectNodeType(type: DiagramNodeType) {
     // 다중 선택 시 실제 Figma 노드를 변경하지 않고 Draft에만 기록
@@ -129,7 +150,12 @@ export function TypeSection() {
       return;
     }
 
-    const spec = NODE_TYPE_SHAPE_SPECS[type];
+    const nextVariant = type === 'Branch'
+      ? normalizeBranchVariant(lastNodeConfig.branchVariant)
+      : undefined;
+    const spec = type === 'Branch' && nextVariant
+      ? getBranchVariantSpec(nextVariant)
+      : NODE_TYPE_SHAPE_SPECS[type];
     const titleInputEl = document.getElementById('node-title-input') as HTMLInputElement | null;
     const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
     const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
@@ -143,8 +169,8 @@ export function TypeSection() {
     if (titleInputEl) {
       const currentTitle = titleInputEl.value.trim();
       if (!currentTitle || DEFAULT_TYPE_TITLES.has(currentTitle)) {
-        targetTitle = type;
-        titleInputEl.value = type;
+        targetTitle = nextVariant ? BRANCH_VARIANT_LABELS[nextVariant] : type;
+        titleInputEl.value = targetTitle;
       } else {
         targetTitle = currentTitle;
       }
@@ -162,16 +188,102 @@ export function TypeSection() {
       cornerRadius: spec.cornerRadius ?? 0,
     } : undefined;
 
-    setUIState({ selectedNodeType: type });
+    const nextFill = type === 'Branch' && nextVariant
+      ? getBranchVariantDefaultFill(nextVariant)
+      : undefined;
+    if (nextFill) {
+      setUIState({ selectedNodeType: type, selectedColor: nextFill });
+    } else {
+      setUIState({ selectedNodeType: type });
+    }
     setLastNodeConfig({
       nodeType: type,
       width: spec?.width,
       height: spec?.height,
       cornerRadius: spec?.cornerRadius ?? 0,
+      branchVariant: nextVariant,
+      color: nextFill,
+      strokeWeight: nextVariant && !branchVariantUsesStroke(nextVariant) ? 0 : (nextVariant ? 1.5 : undefined),
+      strokeColor: nextVariant && branchVariantUsesStroke(nextVariant) ? '#1E1E1E' : undefined,
     });
 
     // 디폴트 규격(크기, 모서리 곡률, 타이틀)을 명시적으로 전달하여 레이스 컨디션 없이 즉시 적용
-    applyCurrentNodeState(undefined, undefined, undefined, type, targetSize, targetTitle);
+    applyCurrentNodeState(
+      undefined,
+      nextFill
+        ? {
+            colorHex: nextFill,
+            strokeWeight: nextVariant && !branchVariantUsesStroke(nextVariant) ? 0 : 1.5,
+            strokeColor: nextVariant && branchVariantUsesStroke(nextVariant) ? '#1E1E1E' : undefined,
+          }
+        : undefined,
+      undefined,
+      type,
+      targetSize,
+      targetTitle
+    );
+  }
+
+  function selectBranchVariant(variant: BranchVariant) {
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({
+        nodeType: 'Branch',
+        branchVariant: variant,
+        width: getBranchVariantSpec(variant).width,
+        height: getBranchVariantSpec(variant).height,
+        cornerRadius: getBranchVariantSpec(variant).cornerRadius ?? 0,
+        colorHex: getBranchVariantDefaultFill(variant),
+        strokeWeight: branchVariantUsesStroke(variant) ? 1.5 : 0,
+        strokeColor: branchVariantUsesStroke(variant) ? '#1E1E1E' : undefined,
+      });
+      setLastNodeConfig({ branchVariant: variant });
+      return;
+    }
+
+    const spec = getBranchVariantSpec(variant);
+    const titleInputEl = document.getElementById('node-title-input') as HTMLInputElement | null;
+    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
+    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
+    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+    const label = BRANCH_VARIANT_LABELS[variant];
+    let targetTitle: string | undefined;
+    if (titleInputEl) {
+      const currentTitle = titleInputEl.value.trim();
+      if (!currentTitle || DEFAULT_TYPE_TITLES.has(currentTitle)) {
+        targetTitle = label;
+        titleInputEl.value = label;
+      } else {
+        targetTitle = currentTitle;
+      }
+    }
+    if (wEl) wEl.value = String(spec.width);
+    if (hEl) hEl.value = String(spec.height);
+    if (rEl) rEl.value = String(spec.cornerRadius ?? 0);
+
+    const fill = getBranchVariantDefaultFill(variant);
+    setUIState({ selectedNodeType: 'Branch', selectedColor: fill });
+    setLastNodeConfig({
+      nodeType: 'Branch',
+      branchVariant: variant,
+      width: spec.width,
+      height: spec.height,
+      cornerRadius: spec.cornerRadius ?? 0,
+      color: fill,
+      strokeWeight: branchVariantUsesStroke(variant) ? 1.5 : 0,
+      strokeColor: branchVariantUsesStroke(variant) ? '#1E1E1E' : undefined,
+    });
+    applyCurrentNodeState(
+      undefined,
+      {
+        colorHex: fill,
+        strokeWeight: branchVariantUsesStroke(variant) ? 1.5 : 0,
+        strokeColor: branchVariantUsesStroke(variant) ? '#1E1E1E' : undefined,
+      },
+      undefined,
+      'Branch',
+      { width: spec.width, height: spec.height, cornerRadius: spec.cornerRadius ?? 0 },
+      targetTitle
+    );
   }
 
   return (
@@ -198,6 +310,23 @@ export function TypeSection() {
             );
           })}
         </div>
+        {showBranchVariants && (
+          <div className="chip-group" style={{ marginTop: '8px', gap: '8px' }}>
+            {BRANCH_VARIANT_ORDER.map((variant) => {
+              const isActive = !isTypeMixed && activeBranchVariant === variant;
+              return (
+                <button
+                  key={variant}
+                  type="button"
+                  className={`chip-btn${isActive ? ' active' : ''}`}
+                  onClick={() => selectBranchVariant(variant)}
+                >
+                  {BRANCH_VARIANT_LABELS[variant]}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -73,11 +73,11 @@
       case "true":
       case "false":
         return "Process";
-      case "circle":
+      case "junction":
       case "connector":
       case "system":
       case "database":
-        return "Circle";
+        return "Junction";
       case "decision":
       case "diamond":
         return "Decision";
@@ -97,7 +97,7 @@
   var NODE_TYPE_SHAPE_SPECS = {
     Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
     Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-    Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Junction: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
@@ -113,6 +113,59 @@
     Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false }
   };
+  var BRANCH_VARIANT_LABELS = {
+    CHECK: "Check",
+    CROSS: "Cross",
+    YES: "Yes",
+    NO: "No",
+    TRUE: "True",
+    FALSE: "False",
+    SQUARE: "Square",
+    DIAMOND: "Diamond",
+    CIRCLE: "Circle"
+  };
+  function normalizeBranchVariant(value) {
+    const key = String(value || "").trim().toUpperCase();
+    if (key === "CHECK" || key === "CROSS" || key === "YES" || key === "NO" || key === "TRUE" || key === "FALSE" || key === "SQUARE" || key === "DIAMOND" || key === "CIRCLE") {
+      return key;
+    }
+    const byLabel = String(value || "").trim();
+    const found = Object.keys(BRANCH_VARIANT_LABELS).find(
+      (k) => BRANCH_VARIANT_LABELS[k] === byLabel
+    );
+    return found || "CIRCLE";
+  }
+  function getBranchVariantSpec(variant) {
+    switch (variant) {
+      case "DIAMOND":
+        return { width: 40, height: 40, cornerRadius: 0, allowDescription: false, allowFigmaLink: false };
+      case "YES":
+        return { width: 58, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+      case "NO":
+        return { width: 53, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+      case "TRUE":
+        return { width: 64, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+      case "FALSE":
+        return { width: 68, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+      case "CHECK":
+      case "CROSS":
+      case "SQUARE":
+      case "CIRCLE":
+      default:
+        return { width: 32, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+    }
+  }
+  function branchVariantHasTitle(variant) {
+    return variant === "YES" || variant === "NO" || variant === "TRUE" || variant === "FALSE";
+  }
+  function getBranchVariantDefaultFill(variant) {
+    if (variant === "CHECK") return "#14AE5C";
+    if (variant === "CROSS") return "#F24822";
+    return "#FFFFFF";
+  }
+  function branchVariantUsesStroke(variant) {
+    return variant !== "CHECK" && variant !== "CROSS";
+  }
   var OPTION_CAPABILITY_MATRIX = {
     Screen: {
       title: true,
@@ -183,7 +236,7 @@
       case "Screen":
         return "Screen";
       case "Process":
-      case "Circle":
+      case "Junction":
       case "Connector":
       case "Decision":
       case "Terminator":
@@ -251,6 +304,36 @@
     const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1e3;
     return brightness > 0.55 ? { r: 0.1, g: 0.1, b: 0.1 } : { r: 1, g: 1, b: 1 };
   }
+  var LABEL_FONT_SIZE = 9;
+  var LABEL_LINE_HEIGHT_PERCENT = 140;
+  var LABEL_LINE_HEIGHT = LABEL_FONT_SIZE * LABEL_LINE_HEIGHT_PERCENT / 100;
+  var LABEL_STROKE_WEIGHT = 1.5;
+  var LABEL_PADDING_X = 12;
+  var LABEL_PADDING_Y = 7.5;
+  var LABEL_RADIUS_ROUNDED = 8;
+  var LABEL_RADIUS_CAPSULE = 999;
+  var LABEL_MULTILINE_TEXT_WIDTH = 82;
+  var LABEL_IS_VERTICAL_KEY = "connector_label_is_vertical";
+  function readPrevLabelVertical(labelFrame) {
+    const v = safeGetPluginData(labelFrame, LABEL_IS_VERTICAL_KEY);
+    return v === "1" ? true : v === "0" ? false : void 0;
+  }
+  function getLabelSizeHint(labelFrame, labelText) {
+    if (labelFrame && readPrevLabelVertical(labelFrame) !== void 0 && labelFrame.width > 0 && labelFrame.height > 0) {
+      return { width: labelFrame.width, height: labelFrame.height };
+    }
+    const charCount = (labelText || "").length;
+    const textWidth = Math.min(LABEL_MULTILINE_TEXT_WIDTH, Math.max(1, charCount) * LABEL_FONT_SIZE * 0.6);
+    return {
+      // 실측: 상하 패딩 8 → 높이 32px (라인하이트 12.6 + 패딩 16 + 보더 1.5×2 ≈ 31.6) 이므로 보더 두께도 크기에 포함
+      width: textWidth + LABEL_PADDING_X * 2 + LABEL_STROKE_WEIGHT * 2,
+      height: LABEL_LINE_HEIGHT + LABEL_PADDING_Y * 2 + LABEL_STROKE_WEIGHT * 2
+    };
+  }
+  function isNoneColorValue(color) {
+    const c = (color || "").trim().toLowerCase();
+    return c === "none" || c === "transparent";
+  }
   async function applyConnectorLabelStyle(labelFrame, textNode, options) {
     const {
       labelText,
@@ -258,67 +341,69 @@
       textAlign = "CENTER",
       fillColor = "#EA2039",
       strokeColor = "#EA2039",
-      isVertical = false
+      isVertical = false,
+      connectorStrokeWeight
     } = options;
-    try {
-      await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-      await figma.loadFontAsync({ family: "Inter", style: "Medium" });
-      textNode.fontName = { family: "Inter", style: "Medium" };
-    } catch {
-      await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-      textNode.fontName = { family: "Inter", style: "Regular" };
-    }
+    const labelStrokeWeight = typeof connectorStrokeWeight === "number" && connectorStrokeWeight > 0 ? connectorStrokeWeight : LABEL_STROKE_WEIGHT;
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+    textNode.fontName = { family: "Inter", style: "Regular" };
     textNode.characters = labelText;
-    textNode.fontSize = 9;
-    textNode.textAutoResize = "WIDTH_AND_HEIGHT";
+    textNode.fontSize = LABEL_FONT_SIZE;
+    textNode.lineHeight = { value: LABEL_LINE_HEIGHT_PERCENT, unit: "PERCENT" };
     textNode.textAlignHorizontal = textAlign;
-    const textFill = getContrastTextColor(fillColor);
+    textNode.textAutoResize = "WIDTH_AND_HEIGHT";
+    if (textNode.width > LABEL_MULTILINE_TEXT_WIDTH) {
+      textNode.textAutoResize = "HEIGHT";
+      textNode.resize(LABEL_MULTILINE_TEXT_WIDTH, textNode.height);
+    }
+    const isFillNone = isNoneColorValue(fillColor);
+    const isStrokeNone = isNoneColorValue(strokeColor);
+    const textFill = isFillNone ? { r: 0.1, g: 0.1, b: 0.1 } : getContrastTextColor(fillColor);
     textNode.fills = [{ type: "SOLID", color: textFill }];
     labelFrame.layoutMode = "HORIZONTAL";
     labelFrame.primaryAxisSizingMode = "AUTO";
     labelFrame.counterAxisSizingMode = "AUTO";
     labelFrame.counterAxisAlignItems = "CENTER";
     labelFrame.primaryAxisAlignItems = textAlign === "LEFT" ? "MIN" : textAlign === "RIGHT" ? "MAX" : "CENTER";
-    labelFrame.paddingTop = 2;
-    labelFrame.paddingBottom = 2;
-    labelFrame.paddingLeft = boxStyle === "CAPSULE" ? 8 : 6;
-    labelFrame.paddingRight = boxStyle === "CAPSULE" ? 8 : 6;
-    const fillRgb = parseHexColor(fillColor);
-    labelFrame.fills = [{ type: "SOLID", color: fillRgb }];
-    const strokeRgb = parseHexColor(strokeColor);
-    labelFrame.strokes = [{ type: "SOLID", color: strokeRgb }];
+    labelFrame.paddingTop = LABEL_PADDING_Y;
+    labelFrame.paddingBottom = LABEL_PADDING_Y;
+    labelFrame.paddingLeft = LABEL_PADDING_X;
+    labelFrame.paddingRight = LABEL_PADDING_X;
+    labelFrame.fills = isFillNone ? [] : [{ type: "SOLID", color: parseHexColor(fillColor) }];
+    labelFrame.setPluginData(LABEL_IS_VERTICAL_KEY, isVertical ? "1" : "0");
+    labelFrame.strokes = isStrokeNone ? [] : [{ type: "SOLID", color: parseHexColor(strokeColor) }];
     switch (boxStyle) {
       case "BOX":
         labelFrame.cornerRadius = 0;
-        labelFrame.strokeWeight = 1;
+        labelFrame.strokeWeight = labelStrokeWeight;
         break;
       case "CAPSULE":
-        labelFrame.cornerRadius = 999;
-        labelFrame.strokeWeight = 1;
+        labelFrame.cornerRadius = LABEL_RADIUS_CAPSULE;
+        labelFrame.strokeWeight = labelStrokeWeight;
         break;
       case "ROUNDED_BOX":
-        labelFrame.cornerRadius = 4;
-        labelFrame.strokeWeight = 1;
+        labelFrame.cornerRadius = LABEL_RADIUS_ROUNDED;
+        labelFrame.strokeWeight = labelStrokeWeight;
         break;
       case "LINE":
         labelFrame.cornerRadius = 0;
         if (isVertical) {
           if ("strokeTopWeight" in labelFrame) {
-            labelFrame.strokeTopWeight = 1;
-            labelFrame.strokeBottomWeight = 1;
+            labelFrame.strokeTopWeight = labelStrokeWeight;
+            labelFrame.strokeBottomWeight = labelStrokeWeight;
             labelFrame.strokeLeftWeight = 0;
             labelFrame.strokeRightWeight = 0;
           } else {
-            labelFrame.strokeWeight = 1;
+            labelFrame.strokeWeight = labelStrokeWeight;
           }
         } else {
           if ("strokeLeftWeight" in labelFrame) {
-            labelFrame.strokeLeftWeight = 1;
-            labelFrame.strokeRightWeight = 1;
+            labelFrame.strokeLeftWeight = labelStrokeWeight;
+            labelFrame.strokeRightWeight = labelStrokeWeight;
             labelFrame.strokeTopWeight = 0;
             labelFrame.strokeBottomWeight = 0;
           } else {
-            labelFrame.strokeWeight = 1;
+            labelFrame.strokeWeight = labelStrokeWeight;
           }
         }
         break;
@@ -460,11 +545,19 @@
     const regions = [];
     return { vertices, segments, regions };
   }
-  function getLabelPlacement(worldPoints, routingType = "ORTHOGONAL") {
+  var LABEL_DIRECTION_HYSTERESIS = 1.2;
+  function classifySegmentVertical(dx, dy, prevIsVertical) {
+    const ax = Math.abs(dx);
+    const ay = Math.abs(dy);
+    if (ay >= ax * LABEL_DIRECTION_HYSTERESIS && ay > 0) return true;
+    if (ax >= ay * LABEL_DIRECTION_HYSTERESIS) return false;
+    return prevIsVertical !== void 0 ? prevIsVertical : ay > ax;
+  }
+  function getLabelPlacement(worldPoints, routingType = "ORTHOGONAL", prevIsVertical, labelSize) {
     if (worldPoints.length <= 2) {
       const p1 = worldPoints[0] || { x: 0, y: 0 };
       const p2 = worldPoints[worldPoints.length - 1] || p1;
-      const isVertical = Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x);
+      const isVertical = classifySegmentVertical(p2.x - p1.x, p2.y - p1.y, prevIsVertical);
       return {
         point: {
           x: (p1.x + p2.x) / 2,
@@ -477,7 +570,7 @@
       const midIdx = Math.floor(worldPoints.length / 2);
       const pPrev = worldPoints[Math.max(0, midIdx - 1)];
       const pNext = worldPoints[Math.min(worldPoints.length - 1, midIdx + 1)];
-      const isVertical = Math.abs(pNext.y - pPrev.y) > Math.abs(pNext.x - pPrev.x);
+      const isVertical = classifySegmentVertical(pNext.x - pPrev.x, pNext.y - pPrev.y, prevIsVertical);
       return {
         point: worldPoints[midIdx],
         isVertical
@@ -497,13 +590,31 @@
       const p2 = worldPoints[i + 1];
       const segLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
       if (segLen > 0 && walked + segLen >= half) {
+        if (labelSize && i > 0 && i < worldPoints.length - 2) {
+          const pBefore = worldPoints[i - 1];
+          const pAfter = worldPoints[i + 2];
+          const segIsVertical = Math.abs(p2.x - p1.x) < 0.5 && Math.abs(p2.y - p1.y) > 0.5;
+          const segIsHorizontal = Math.abs(p2.y - p1.y) < 0.5 && Math.abs(p2.x - p1.x) > 0.5;
+          const beforeIsHorizontal = Math.abs(p1.x - pBefore.x) > 0.5 && Math.abs(p1.y - pBefore.y) < 0.5;
+          const afterIsHorizontal = Math.abs(pAfter.x - p2.x) > 0.5 && Math.abs(pAfter.y - p2.y) < 0.5;
+          const beforeIsVertical = Math.abs(p1.y - pBefore.y) > 0.5 && Math.abs(p1.x - pBefore.x) < 0.5;
+          const afterIsVertical = Math.abs(pAfter.y - p2.y) > 0.5 && Math.abs(pAfter.x - p2.x) < 0.5;
+          const isShortVerticalJog = segIsVertical && beforeIsHorizontal && afterIsHorizontal && segLen <= labelSize.height;
+          const isShortHorizontalJog = segIsHorizontal && beforeIsVertical && afterIsVertical && segLen <= labelSize.width;
+          if (isShortVerticalJog || isShortHorizontalJog) {
+            return {
+              point: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 },
+              isVertical: isShortHorizontalJog
+            };
+          }
+        }
         const t = (half - walked) / segLen;
         return {
           point: {
             x: p1.x + (p2.x - p1.x) * t,
             y: p1.y + (p2.y - p1.y) * t
           },
-          isVertical: Math.abs(p2.y - p1.y) > Math.abs(p2.x - p1.x)
+          isVertical: classifySegmentVertical(p2.x - p1.x, p2.y - p1.y, prevIsVertical)
         };
       }
       walked += segLen;
@@ -804,7 +915,12 @@
       vector.setPluginData("connector_label_align", align);
       vector.setPluginData("connector_label_fill_color", fillCol);
       vector.setPluginData("connector_label_stroke_color", strokeCol);
-      const { point: midSegmentPoint, isVertical } = getLabelPlacement(worldPoints, routingType);
+      const { point: midSegmentPoint, isVertical } = getLabelPlacement(
+        worldPoints,
+        routingType,
+        void 0,
+        getLabelSizeHint(null, labelText)
+      );
       labelFrame = figma.createFrame();
       labelFrame.name = "ConnectorLabel";
       const textNode = figma.createText();
@@ -817,7 +933,8 @@
         textAlign: align,
         fillColor: fillCol,
         strokeColor: strokeCol,
-        isVertical
+        isVertical,
+        connectorStrokeWeight: strokeWeight
       });
       placeNodeAtWorldCenter(labelFrame, midSegmentPoint);
       labelFrame.setPluginData("is_connector_label", "true");
@@ -1126,9 +1243,14 @@
       rootNode.parent.appendChild(rootNode);
     }
     if (labelFrame) {
-      const { point: midSegmentPoint, isVertical } = getLabelPlacement(worldPoints, routingType);
       const textNode = labelFrame.findOne((n) => n.type === "TEXT");
       const labelText = safeGetPluginData(rootNode, "connector_label") || safeGetPluginData(vector, "connector_label") || "";
+      const { point: midSegmentPoint, isVertical } = getLabelPlacement(
+        worldPoints,
+        routingType,
+        readPrevLabelVertical(labelFrame),
+        getLabelSizeHint(labelFrame, labelText)
+      );
       const labelOn = safeGetPluginData(rootNode, "connector_label_on") === "true" || safeGetPluginData(vector, "connector_label_on") === "true" || Boolean(labelText);
       if (labelOn && textNode) {
         const boxStyle = safeGetPluginData(rootNode, "connector_label_box_style") || safeGetPluginData(vector, "connector_label_box_style") || "BOX";
@@ -1141,7 +1263,8 @@
           textAlign: align,
           fillColor: fillCol,
           strokeColor: strokeCol,
-          isVertical
+          isVertical,
+          connectorStrokeWeight: strokeWeight
         });
       }
       placeNodeAtWorldCenter(labelFrame, midSegmentPoint);
@@ -1877,7 +2000,7 @@
         (c) => Boolean(c && c.type === "TEXT" && (c.name === "DescText" || safeGetPluginData2(c, "node_role") === "desc"))
       );
       if (titleTextNode) {
-        title = titleTextNode.characters;
+        title = titleTextNode.characters || node.name || "";
       }
       if (descTextNode) {
         description = descTextNode.characters;
@@ -2787,6 +2910,7 @@
         isConnector,
         nodeType: node.type,
         flowNodeType,
+        branchVariant: flowNodeType === "Branch" ? normalizeBranchVariant(node.getPluginData("branch_variant")) : void 0,
         status: savedStatus || void 0,
         title,
         description,
@@ -3249,6 +3373,55 @@
       console.warn("\uD3F0\uD2B8 \uC0AC\uC774\uC988 \uBC0F \uB9AC\uC0AC\uC774\uC988 \uBAA8\uB4DC \uACE0\uC815 \uC2E4\uD328:", err);
     }
   }
+  async function lockTextEditorStyle(textNode, target) {
+    try {
+      if (!textNode || textNode.removed || textNode.characters.length === 0) return false;
+      const isDeviating = (seg) => seg.fontName.family !== target.family || seg.fontName.style !== target.style || seg.fontSize !== target.size || seg.hyperlink !== null || seg.textDecoration !== "NONE" || seg.listOptions && seg.listOptions.type !== "NONE";
+      const fields = ["fontName", "fontSize", "hyperlink", "textDecoration", "listOptions"];
+      if (!textNode.getStyledTextSegments([...fields]).some(isDeviating)) return false;
+      await figma.loadFontAsync({ family: target.family, style: target.style });
+      await ensureTextNodeFontsLoaded(textNode);
+      if (textNode.removed) return false;
+      const segments = textNode.getStyledTextSegments([...fields]);
+      for (const seg of segments) {
+        if (!isDeviating(seg)) continue;
+        if (seg.hyperlink !== null) {
+          try {
+            textNode.setRangeHyperlink(seg.start, seg.end, null);
+          } catch (_) {
+          }
+        }
+        if (seg.textDecoration !== "NONE") {
+          try {
+            textNode.setRangeTextDecoration(seg.start, seg.end, "NONE");
+          } catch (_) {
+          }
+        }
+        if (seg.listOptions && seg.listOptions.type !== "NONE") {
+          try {
+            textNode.setRangeListOptions(seg.start, seg.end, { type: "NONE" });
+          } catch (_) {
+          }
+        }
+        if (seg.fontName.family !== target.family || seg.fontName.style !== target.style) {
+          try {
+            textNode.setRangeFontName(seg.start, seg.end, { family: target.family, style: target.style });
+          } catch (_) {
+          }
+        }
+        if (seg.fontSize !== target.size) {
+          try {
+            textNode.setRangeFontSize(seg.start, seg.end, target.size);
+          } catch (_) {
+          }
+        }
+      }
+      return true;
+    } catch (err) {
+      console.warn("\uD14D\uC2A4\uD2B8 \uC5D0\uB514\uD130 \uC11C\uC2DD \uC7A0\uAE08 \uC2E4\uD328:", err);
+      return false;
+    }
+  }
   async function enforceTitleStandardStyle(textNode, flowNode) {
     try {
       const targetFont = { family: "Inter", style: "Bold" };
@@ -3696,13 +3869,35 @@
     shape.remove();
     return card;
   }
-  function getShapeVectorData(nodeType, w, h) {
-    if (nodeType === "Connector" || nodeType === "Circle") {
-      const rx = w / 2;
-      const ry = h / 2;
-      const kx = rx * 0.55228475;
-      const ky = ry * 0.55228475;
-      return `M ${rx} 0 C ${rx + kx} 0 ${w} ${ry - ky} ${w} ${ry} C ${w} ${ry + ky} ${rx + kx} ${h} ${rx} ${h} C ${rx - kx} ${h} 0 ${ry + ky} 0 ${ry} C 0 ${ry - ky} ${rx - kx} 0 ${rx} 0 Z`;
+  function getJunctionCapsulePath(w, h) {
+    const r = h / 2;
+    const k = r * 0.55228475;
+    const straightEnd = Math.max(r, w - r);
+    return `M ${r} 0 L ${straightEnd} 0 C ${straightEnd + k} 0 ${w} ${r - k} ${w} ${r} C ${w} ${r + k} ${straightEnd + k} ${h} ${straightEnd} ${h} L ${r} ${h} C ${r - k} ${h} 0 ${r + k} 0 ${r} C 0 ${r - k} ${r - k} 0 ${r} 0 Z`;
+  }
+  function getJunctionEllipsePath(w, h) {
+    const rx = w / 2;
+    const ry = h / 2;
+    const kx = rx * 0.55228475;
+    const ky = ry * 0.55228475;
+    return `M ${rx} 0 C ${rx + kx} 0 ${w} ${ry - ky} ${w} ${ry} C ${w} ${ry + ky} ${rx + kx} ${h} ${rx} ${h} C ${rx - kx} ${h} 0 ${ry + ky} 0 ${ry} C 0 ${ry - ky} ${rx - kx} 0 ${rx} 0 Z`;
+  }
+  function getShapeVectorData(nodeType, w, h, branchVariant) {
+    if (nodeType === "Branch") {
+      const variant = branchVariant || "CIRCLE";
+      if (variant === "SQUARE") {
+        return `M 0 0 L ${w} 0 L ${w} ${h} L 0 ${h} Z`;
+      }
+      if (variant === "DIAMOND") {
+        return `M ${w / 2} 0 L ${w} ${h / 2} L ${w / 2} ${h} L 0 ${h / 2} Z`;
+      }
+      if (variant === "YES" || variant === "NO" || variant === "TRUE" || variant === "FALSE") {
+        return getJunctionCapsulePath(w, h);
+      }
+      return getJunctionEllipsePath(w, h);
+    }
+    if (nodeType === "Connector" || nodeType === "Junction") {
+      return getJunctionEllipsePath(w, h);
     }
     if (nodeType === "Decision" || nodeType === "Diamond") {
       return `M ${w / 2} 0 L ${w} ${h / 2} L ${w / 2} ${h} L 0 ${h / 2} Z`;
@@ -3715,8 +3910,59 @@
     }
     return null;
   }
-  function createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight) {
-    const pathD = getShapeVectorData(nodeType, w, h);
+  var BRANCH_CHECK_MARK = "M21.2016 9.4138C21.4835 8.9309 22.1031 8.76812 22.5861 9.04987C23.069 9.33174 23.2318 9.95136 22.95 10.4344L15.8614 22.5863C15.6952 22.8711 15.4009 23.057 15.0723 23.0847C14.7435 23.1121 14.4213 22.978 14.2099 22.7247L9.14664 16.6488C8.78876 16.2193 8.84608 15.5809 9.2752 15.2227C9.70465 14.8649 10.3431 14.9222 10.7012 15.3513L14.8389 20.3177L21.2016 9.4138Z";
+  var BRANCH_CROSS_MARK = "M20.347 10.2205C20.7425 9.82499 21.3835 9.82499 21.779 10.2205C22.1745 10.6159 22.1745 11.2569 21.779 11.6524L17.4317 15.9997L21.779 20.347C22.1745 20.7425 22.1745 21.3835 21.779 21.779C21.3835 22.1745 20.7425 22.1745 20.347 21.779L15.9997 17.4317L11.6524 21.779C11.2569 22.1745 10.6159 22.1745 10.2205 21.779C9.82499 21.3835 9.82499 20.7425 10.2205 20.347L14.5678 15.9997L10.2205 11.6524C9.82504 11.2569 9.82501 10.6159 10.2205 10.2205C10.6159 9.82506 11.257 9.82506 11.6524 10.2205L15.9997 14.5678L20.347 10.2205Z";
+  function removeBranchMark(card) {
+    for (const child of [...card.children]) {
+      if (child.name === "BranchMark" || child.name === "JunctionMark") {
+        child.remove();
+      }
+    }
+  }
+  function attachBranchMark(card, variant, w, h) {
+    removeBranchMark(card);
+    if (variant !== "CHECK" && variant !== "CROSS") return;
+    const markD = variant === "CHECK" ? BRANCH_CHECK_MARK : BRANCH_CROSS_MARK;
+    const svgStr = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${markD}" fill="#FFFFFF"/></svg>`;
+    try {
+      const imported = figma.createNodeFromSvg(svgStr);
+      imported.name = "BranchMark";
+      imported.fills = [];
+      imported.strokes = [];
+      imported.clipsContent = false;
+      const vectors = imported.findAll((n) => n.type === "VECTOR");
+      for (const vector of vectors) {
+        vector.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+        vector.strokes = [];
+        try {
+          vector.strokeWeight = 0;
+        } catch (_) {
+        }
+      }
+      const originalParent = imported.parent;
+      card.appendChild(imported);
+      if (originalParent && originalParent !== card) {
+        originalParent.remove();
+      }
+      if (card.layoutMode !== "NONE") {
+        imported.layoutPositioning = "ABSOLUTE";
+      }
+      const scale = Math.min(w, h) / 32;
+      if (Math.abs(scale - 1) > 1e-3) {
+        try {
+          imported.rescale(scale);
+        } catch (_) {
+        }
+      }
+      imported.x = (w - imported.width) / 2;
+      imported.y = (h - imported.height) / 2;
+      imported.locked = true;
+    } catch (err) {
+      console.error("attachBranchMark error:", err);
+    }
+  }
+  function createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight, branchVariant) {
+    const pathD = getShapeVectorData(nodeType, w, h, branchVariant);
     if (!pathD) return null;
     const bgHex = rgbToHexColor(bgColor);
     const strokeHex = rgbToHexColor(strokeColor);
@@ -3737,8 +3983,8 @@
       return null;
     }
   }
-  function attachShapeVectorNode(card, nodeType, w, h, bgColor, strokeColor, strokeWeight, insertAtBottom = false) {
-    const shape = createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight);
+  function attachShapeVectorNode(card, nodeType, w, h, bgColor, strokeColor, strokeWeight, insertAtBottom = false, branchVariant) {
+    const shape = createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight, branchVariant);
     if (!shape) return null;
     const originalParent = shape.parent;
     if (insertAtBottom) {
@@ -3755,15 +4001,21 @@
     shape.x = 0;
     shape.y = 0;
     shape.locked = true;
+    if (branchVariant) {
+      attachBranchMark(card, branchVariant, w, h);
+    } else {
+      removeBranchMark(card);
+    }
     return shape;
   }
   async function createFlowNode(payload) {
     try {
       await loadRequiredFonts();
       const nodeType = normalizeNodeType(payload.nodeType || "Screen");
-      const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
+      const branchVariant = nodeType === "Branch" ? normalizeBranchVariant(payload.branchVariant) : void 0;
+      const spec = (branchVariant ? getBranchVariantSpec(branchVariant) : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
       const isShapeNode = !spec.allowDescription;
-      const rawTitle = payload.title !== void 0 ? payload.title.trim() : nodeType === "Screen" ? "Screen" : nodeType;
+      const rawTitle = payload.title !== void 0 ? payload.title.trim() : branchVariant ? BRANCH_VARIANT_LABELS[branchVariant] : nodeType === "Screen" ? "Screen" : nodeType;
       const title = rawTitle;
       const width = isShapeNode ? spec.width : payload.width ? clampScreenWidth(payload.width) : spec.width;
       const height = isShapeNode ? spec.height : payload.height ? clampScreenHeight(payload.height) : spec.height;
@@ -3776,6 +4028,8 @@
       let bgColor = isDark ? { r: 0.14, g: 0.14, b: 0.15 } : { r: 1, g: 1, b: 1 };
       if (!isFillNone && payload.colorHex) {
         bgColor = hexToRgbColor(payload.colorHex);
+      } else if (!isFillNone && branchVariant) {
+        bgColor = hexToRgbColor(getBranchVariantDefaultFill(branchVariant));
       }
       const { titleFill, descFill, isBgDark } = isFillNone ? {
         titleFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } },
@@ -3791,8 +4045,8 @@
       card.resize(width, height);
       card.cornerRadius = cornerRadius;
       const cardStrokes = typeof payload.strokeWeight === "number" && payload.strokeWeight === 0 ? [] : [{ type: "SOLID", color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
-      const cardStrokeWeight = typeof payload.strokeWeight === "number" ? clampStrokeWeight(payload.strokeWeight) : 1.5;
-      const vectorPathData = getShapeVectorData(nodeType, width, height);
+      const cardStrokeWeight = branchVariant && !branchVariantUsesStroke(branchVariant) ? 0 : typeof payload.strokeWeight === "number" ? clampStrokeWeight(payload.strokeWeight) : 1.5;
+      const vectorPathData = getShapeVectorData(nodeType, width, height, branchVariant);
       if (vectorPathData) {
         card.fills = [];
         card.strokes = [];
@@ -3816,28 +4070,30 @@
       card.minHeight = height;
       card.maxHeight = height;
       if (isShapeNode) {
-        const hPad = nodeType === "Decision" ? 24 : nodeType === "Circle" || nodeType === "Connector" ? 18 : 12;
+        const showBranchTitle = Boolean(branchVariant && branchVariantHasTitle(branchVariant));
+        const hPad = branchVariant ? showBranchTitle ? 16 : 0 : nodeType === "Decision" ? 24 : nodeType === "Junction" || nodeType === "Connector" ? 18 : 12;
         card.paddingLeft = hPad;
         card.paddingRight = hPad;
-        card.paddingTop = 12;
-        card.paddingBottom = 12;
+        card.paddingTop = branchVariant ? showBranchTitle ? 5 : 0 : 12;
+        card.paddingBottom = branchVariant ? showBranchTitle ? 5 : 0 : 12;
         card.primaryAxisAlignItems = "CENTER";
         card.counterAxisAlignItems = "CENTER";
         card.itemSpacing = 0;
         if (vectorPathData) {
-          const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
-          attachShapeVectorNode(card, nodeType, width, height, bgColor, strokeCol, cardStrokeWeight, false);
+          const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : branchVariant ? hexToRgbColor("#1E1E1E") : borderColor;
+          attachShapeVectorNode(card, nodeType, width, height, bgColor, strokeCol, cardStrokeWeight, false, branchVariant);
         }
         const titleText = figma.createText();
         titleText.name = "TitleText";
         titleText.fontName = { family: "Inter", style: "Bold" };
         titleText.fontSize = 13;
-        titleText.lineHeight = { value: 18, unit: "PIXELS" };
-        titleText.characters = title;
+        titleText.lineHeight = { value: showBranchTitle ? 22 : 18, unit: "PIXELS" };
+        titleText.characters = showBranchTitle || !branchVariant ? title : "";
         titleText.fills = [titleFill];
         titleText.textAlignHorizontal = "CENTER";
         titleText.textAlignVertical = "CENTER";
         titleText.layoutAlign = "STRETCH";
+        titleText.visible = !branchVariant || showBranchTitle;
         if (nodeType === "Decision") {
           const availW = Math.max(10, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
           titleText.resize(availW, 54);
@@ -3947,6 +4203,11 @@
       card.setPluginData("schema_version", "2");
       card.setPluginData("node_theme", theme);
       card.setPluginData("node_type", nodeType);
+      if (branchVariant) {
+        card.setPluginData("branch_variant", branchVariant);
+      } else {
+        card.setPluginData("branch_variant", "");
+      }
       if (!isShapeNode) {
         if (description) card.setPluginData("node_desc", description);
         card.setPluginData("screen_width", String(width));
@@ -4098,7 +4359,8 @@
       const prevNodeType = normalizeNodeType(prevRawType);
       const rawType = payload.nodeType || prevRawType;
       const nodeType = normalizeNodeType(rawType);
-      const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
+      const branchVariant = nodeType === "Branch" ? normalizeBranchVariant(payload.branchVariant || safeGetPluginData2(card, "branch_variant")) : void 0;
+      const spec = (branchVariant ? getBranchVariantSpec(branchVariant) : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
       const isShapeNode = !spec.allowDescription;
       const isChangingToScreen = prevNodeType !== "Screen" && nodeType === "Screen";
       const DEFAULT_SHAPE_NAMES = /* @__PURE__ */ new Set([
@@ -4111,16 +4373,23 @@
         "System",
         "Database",
         "Square",
-        "Circle",
+        "Junction",
         "Diamond",
         "Pill",
-        "Capsule"
+        "Capsule",
+        "Check",
+        "Cross",
+        "Yes",
+        "No",
+        "True",
+        "False",
+        "Circle"
       ]);
       const effectiveTitle = isChangingToScreen && (DEFAULT_SHAPE_NAMES.has(rawTitle) || !rawTitle) ? "Screen" : title;
       card.name = effectiveTitle;
       card.clipsContent = false;
       const cardStrokes = typeof payload.strokeWeight === "number" && payload.strokeWeight === 0 ? [] : [{ type: "SOLID", color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
-      const cardStrokeWeight = typeof payload.strokeWeight === "number" ? clampStrokeWeight(payload.strokeWeight) : 1.5;
+      const cardStrokeWeight = branchVariant && !branchVariantUsesStroke(branchVariant) ? 0 : typeof payload.strokeWeight === "number" ? clampStrokeWeight(payload.strokeWeight) : 1.5;
       if (card.layoutMode !== "VERTICAL") {
         card.layoutMode = "VERTICAL";
       }
@@ -4177,7 +4446,7 @@
       }
       card.counterAxisAlignItems = isShapeNode ? "CENTER" : "MIN";
       card.primaryAxisAlignItems = isShapeNode ? "CENTER" : "MIN";
-      const vectorPathData = getShapeVectorData(nodeType, targetW, targetH);
+      const vectorPathData = getShapeVectorData(nodeType, targetW, targetH, branchVariant);
       if (vectorPathData) {
         card.fills = [];
         card.strokes = [];
@@ -4186,12 +4455,13 @@
         if (existingShapeVector) {
           existingShapeVector.remove();
         }
-        const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
-        attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true);
+        const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : branchVariant ? hexToRgbColor("#1E1E1E") : borderColor;
+        attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true, branchVariant);
       } else {
         if (existingShapeVector) {
           existingShapeVector.remove();
         }
+        removeBranchMark(card);
         const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
         const targetRadius = typeof payload.cornerRadius === "number" ? nodeType === "Screen" ? clampScreenCornerRadius(payload.cornerRadius) : Math.max(0, payload.cornerRadius) : isChangingToScreen && savedScreenR !== "" && savedScreenR !== void 0 ? clampScreenCornerRadius(restoredScreenR) : defaultRadius;
         card.cornerRadius = targetRadius;
@@ -4248,10 +4518,12 @@
           titleText.setPluginData("node_role", "title");
           card.appendChild(titleText);
         }
+        const showBranchTitle = Boolean(branchVariant && branchVariantHasTitle(branchVariant));
         titleText.layoutAlign = "STRETCH";
         titleText.textAlignHorizontal = "CENTER";
         titleText.textAlignVertical = "CENTER";
-        titleText.lineHeight = { value: 18, unit: "PIXELS" };
+        titleText.lineHeight = { value: showBranchTitle ? 22 : 18, unit: "PIXELS" };
+        titleText.visible = !branchVariant || showBranchTitle;
         if (nodeType === "Decision") {
           const availW = Math.max(10, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
           try {
@@ -4292,7 +4564,7 @@
           } catch (_) {
           }
         }
-        await safeSetCharacters(titleText, title);
+        await safeSetCharacters(titleText, branchVariant && !showBranchTitle ? "" : title);
         const hasExistingTitleFill = titleText.fills === figma.mixed || Array.isArray(titleText.fills) && titleText.fills.length > 0;
         if (!hasExistingTitleFill || payload.colorHex) {
           titleText.fills = [titleFill];
@@ -4408,11 +4680,12 @@
         (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
       ) : void 0;
       if (isShapeNode) {
-        const hPad = nodeType === "Decision" ? 24 : 12;
+        const showBranchTitle = Boolean(branchVariant && branchVariantHasTitle(branchVariant));
+        const hPad = branchVariant ? showBranchTitle ? 16 : 0 : nodeType === "Decision" ? 24 : 12;
         card.paddingLeft = hPad;
         card.paddingRight = hPad;
-        card.paddingTop = 12;
-        card.paddingBottom = 12;
+        card.paddingTop = branchVariant ? showBranchTitle ? 5 : 0 : 12;
+        card.paddingBottom = branchVariant ? showBranchTitle ? 5 : 0 : 12;
         card.primaryAxisAlignItems = "CENTER";
         card.counterAxisAlignItems = "CENTER";
         card.itemSpacing = 0;
@@ -4507,8 +4780,8 @@
       }
       const isHug = !isShapeNode && effectiveSizeMode === "hug";
       const isFit = !isShapeNode && effectiveSizeMode === "fit";
-      const finalW = isFit && fitW !== void 0 ? fitW : nodeType === "Screen" ? clampScreenWidth(targetW) : Math.max(50, targetW);
-      const finalH = nodeType === "Screen" ? clampScreenHeight(targetH) : Math.max(40, targetH);
+      const finalW = isFit && fitW !== void 0 ? fitW : nodeType === "Screen" ? clampScreenWidth(targetW) : branchVariant ? targetW : Math.max(50, targetW);
+      const finalH = nodeType === "Screen" ? clampScreenHeight(targetH) : branchVariant ? targetH : Math.max(40, targetH);
       card.minWidth = null;
       card.maxWidth = null;
       card.minHeight = null;
@@ -4569,7 +4842,7 @@
         shapeVec.remove();
         if (isShapeNode) {
           const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor;
-          attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
+          attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true, branchVariant);
         }
       }
       if (!supportsOption(card, "stepBadge")) {
@@ -4582,7 +4855,7 @@
         const stepCorner = safeGetPluginData2(card, "badge_corner") || "TOP_LEFT";
         const bw = Math.max(24, Math.round(existingStepBadge.width));
         const bh = 24;
-        const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, curH, bw, bh, stepCorner);
+        const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, curH, bw, bh, stepCorner, branchVariant);
         existingStepBadge.x = badgeCoords.x;
         existingStepBadge.y = badgeCoords.y;
         existingStepBadge.constraints = badgeCoords.constraints;
@@ -4622,6 +4895,11 @@
       }
       if (payload.theme) card.setPluginData("node_theme", payload.theme);
       card.setPluginData("node_type", nodeType);
+      if (branchVariant) {
+        card.setPluginData("branch_variant", branchVariant);
+      } else if (nodeType !== "Branch") {
+        card.setPluginData("branch_variant", "");
+      }
       if (!supportsOption(card, "elevation")) {
         card.setPluginData("node_elevation", "");
         card.effects = [];
@@ -4673,7 +4951,8 @@
         const prevNodeType = normalizeNodeType(prevRawType);
         const rawType = patch.nodeType || prevRawType;
         const nodeType = normalizeNodeType(rawType);
-        const spec = NODE_TYPE_SHAPE_SPECS[nodeType] || NODE_TYPE_SHAPE_SPECS.Screen;
+        const batchBranchVariant = nodeType === "Branch" ? normalizeBranchVariant(patch.branchVariant || safeGetPluginData2(card, "branch_variant")) : void 0;
+        const spec = (batchBranchVariant ? getBranchVariantSpec(batchBranchVariant) : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
         const isShapeNode = !spec.allowDescription;
         const isChangingToScreen = prevNodeType !== "Screen" && nodeType === "Screen";
         const existingShapeVector = card.children.find(
@@ -4707,7 +4986,7 @@
           isBgDark: isDark
         } : getTextFillsByBackground(bgColor, isDark);
         const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
-        const vectorPathData = getShapeVectorData(nodeType, card.width, card.height);
+        const vectorPathData = getShapeVectorData(nodeType, card.width, card.height, batchBranchVariant);
         if (patch.colorHex !== void 0) {
           if (vectorPathData) {
             card.fills = [];
@@ -4769,7 +5048,7 @@
           "System",
           "Database",
           "Square",
-          "Circle",
+          "Junction",
           "Diamond",
           "Pill",
           "Capsule"
@@ -5088,8 +5367,8 @@
         }
         const isHug = nodeType === "Screen" && effectiveSizeMode === "hug";
         const isFit = nodeType === "Screen" && effectiveSizeMode === "fit";
-        const finalW = isFit && fitW !== void 0 ? fitW : nodeType === "Screen" ? clampScreenWidth(targetW) : Math.max(50, targetW);
-        const finalH = nodeType === "Screen" ? clampScreenHeight(targetH) : Math.max(40, targetH);
+        const finalW = isFit && fitW !== void 0 ? fitW : nodeType === "Screen" ? clampScreenWidth(targetW) : batchBranchVariant ? targetW : Math.max(50, targetW);
+        const finalH = nodeType === "Screen" ? clampScreenHeight(targetH) : batchBranchVariant ? targetH : Math.max(40, targetH);
         card.minWidth = null;
         card.maxWidth = null;
         card.minHeight = null;
@@ -5157,7 +5436,7 @@
             }
             const defaultStrokeCol = existingStrokeColor || borderColor;
             const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : defaultStrokeCol;
-            attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true);
+            attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant);
           }
         }
         const curStepBadge = card.children.find(
@@ -5167,7 +5446,7 @@
           const stepCorner = safeGetPluginData2(card, "badge_corner") || "TOP_LEFT";
           const bw = Math.max(24, Math.round(curStepBadge.width));
           const bh = 24;
-          const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, card.height, bw, bh, stepCorner);
+          const badgeCoords = getStepBadgeCoordinates(nodeType, finalW, card.height, bw, bh, stepCorner, batchBranchVariant);
           curStepBadge.x = badgeCoords.x;
           curStepBadge.y = badgeCoords.y;
           curStepBadge.constraints = badgeCoords.constraints;
@@ -5199,6 +5478,11 @@
         }
         if (patch.nodeType !== void 0) {
           card.setPluginData("node_type", nodeType);
+        }
+        if (batchBranchVariant) {
+          card.setPluginData("branch_variant", batchBranchVariant);
+        } else if (nodeType !== "Branch") {
+          card.setPluginData("branch_variant", "");
         }
         updatedCount++;
       }
@@ -5342,7 +5626,8 @@
           curStrokeWeight = shapeVec.strokeWeight;
         }
         shapeVec.remove();
-        attachShapeVectorNode(frame, nType, w, h, curBgColor, curStrokeColor, curStrokeWeight, true);
+        const frameBranchVariant = nType === "Branch" ? normalizeBranchVariant(safeGetPluginData2(frame, "branch_variant")) : void 0;
+        attachShapeVectorNode(frame, nType, w, h, curBgColor, curStrokeColor, curStrokeWeight, true, frameBranchVariant);
       }
       if (nType === "Screen") {
         frame.strokeAlign = "INSIDE";
@@ -5386,7 +5671,15 @@
         const stepCorner = safeGetPluginData2(frame, "badge_corner") || "TOP_LEFT";
         const bw = Math.max(24, Math.round(stepBadge.width));
         const bh = 24;
-        const badgeCoords = getStepBadgeCoordinates(nType, w, h, bw, bh, stepCorner);
+        const badgeCoords = getStepBadgeCoordinates(
+          nType,
+          w,
+          h,
+          bw,
+          bh,
+          stepCorner,
+          nType === "Branch" ? normalizeBranchVariant(safeGetPluginData2(frame, "branch_variant")) : void 0
+        );
         stepBadge.x = badgeCoords.x;
         stepBadge.y = badgeCoords.y;
         stepBadge.constraints = badgeCoords.constraints;
@@ -5986,7 +6279,12 @@
               startOffset,
               endOffset
             );
-            const placement = getLabelPlacement(worldPoints, routingType);
+            const placement = getLabelPlacement(
+              worldPoints,
+              routingType,
+              readPrevLabelVertical(labelFrame),
+              getLabelSizeHint(labelFrame, labelText)
+            );
             midPoint = placement.point;
             isVerticalSegment = placement.isVertical;
           } else if (vectorNode) {
@@ -6002,7 +6300,9 @@
               textAlign: align,
               fillColor: fillCol,
               strokeColor: strokeCol,
-              isVertical: isVerticalSegment
+              isVertical: isVerticalSegment,
+              // 라벨 보더 두께는 커넥터 라인 스트로크 두께와 연동 (이번 payload 값 우선, 없으면 현재 벡터 값)
+              connectorStrokeWeight: typeof payload.strokeWeight === "number" ? payload.strokeWeight : vectorNode && typeof vectorNode.strokeWeight === "number" ? vectorNode.strokeWeight : void 0
             });
           }
           if (midPoint) {
@@ -6538,13 +6838,26 @@
     const bh = 24;
     const rawNodeType = safeGetPluginData2(card, "node_type");
     const nType = normalizeNodeType(rawNodeType);
-    const badgeCoords = getStepBadgeCoordinates(nType, card.width, card.height, bw, bh, corner);
+    const badgeCoords = getStepBadgeCoordinates(
+      nType,
+      card.width,
+      card.height,
+      bw,
+      bh,
+      corner,
+      nType === "Branch" ? normalizeBranchVariant(safeGetPluginData2(card, "branch_variant")) : void 0
+    );
     stepBadge.x = badgeCoords.x;
     stepBadge.y = badgeCoords.y;
     stepBadge.constraints = badgeCoords.constraints;
   }
-  function getStepBadgeCoordinates(nodeType, cardW, cardH, bw, bh, corner) {
-    if (nodeType !== "Circle" && nodeType !== "Connector" && nodeType !== "Decision" && nodeType !== "Terminator") {
+  function getStepBadgeCoordinates(nodeType, cardW, cardH, bw, bh, corner, branchVariant) {
+    const branchShape = nodeType === "Branch" ? branchVariant || "CIRCLE" : void 0;
+    const treatBranchAsRect = branchShape === "SQUARE";
+    const treatBranchAsDiamond = branchShape === "DIAMOND";
+    const treatBranchAsCapsule = branchShape === "YES" || branchShape === "NO" || branchShape === "TRUE" || branchShape === "FALSE";
+    const treatBranchAsCircle = Boolean(branchShape) && !treatBranchAsRect && !treatBranchAsDiamond && !treatBranchAsCapsule;
+    if (!treatBranchAsCircle && !treatBranchAsDiamond && !treatBranchAsCapsule && nodeType !== "Junction" && nodeType !== "Connector" && nodeType !== "Decision" && nodeType !== "Terminator") {
       const offset = 11;
       if (corner === "TOP_RIGHT") {
         return { x: cardW - bw + offset, y: -offset, constraints: { horizontal: "MAX", vertical: "MIN" } };
@@ -6556,7 +6869,7 @@
         return { x: -offset, y: -offset, constraints: { horizontal: "MIN", vertical: "MIN" } };
       }
     }
-    if (nodeType === "Circle" || nodeType === "Connector") {
+    if (treatBranchAsCircle || nodeType === "Junction" || nodeType === "Connector") {
       const rx = cardW / 2;
       const ry = cardH / 2;
       const cos45 = Math.SQRT1_2;
@@ -6580,7 +6893,7 @@
         return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MIN", vertical: "MIN" } };
       }
     }
-    if (nodeType === "Decision") {
+    if (treatBranchAsDiamond || nodeType === "Decision") {
       let cx = cardW / 2;
       let cy = cardH / 2;
       if (corner === "TOP_RIGHT") {
@@ -6601,7 +6914,7 @@
         return { x: Math.round(cx - bw / 2), y: Math.round(cy - bh / 2), constraints: { horizontal: "MIN", vertical: "MIN" } };
       }
     }
-    if (nodeType === "Terminator") {
+    if (treatBranchAsCapsule || nodeType === "Terminator") {
       const r = cardH / 2;
       const cos45 = Math.SQRT1_2;
       let cx = r;
@@ -7027,6 +7340,24 @@
             }
           }
         }
+        if (change.properties.includes("characters") || change.properties.includes("fontSize") || change.properties.includes("fontName") || change.properties.includes("hyperlink") || change.properties.includes("textDecoration") || change.properties.includes("textStyleId")) {
+          const styleLockCandidate = figma.getNodeById(change.id);
+          if (styleLockCandidate && styleLockCandidate.type === "TEXT") {
+            const lockText = styleLockCandidate;
+            const lockRole = safeGetPluginData2(lockText, "node_role");
+            const lockParent = lockText.parent;
+            const lockIsLabel = !!lockParent && (safeGetPluginData2(lockParent, "is_connector_label") === "true" || lockParent.name === "ConnectorLabel");
+            const lockIsTitle = lockRole === "title" || lockText.name === "TitleText" || !!lockParent && lockParent.name === "Header";
+            const lockIsDesc = lockRole === "desc" || lockText.name === "DescText";
+            if (lockIsLabel) {
+              await lockTextEditorStyle(lockText, { family: "Inter", style: "Regular", size: LABEL_FONT_SIZE });
+            } else if (lockIsTitle && findFlowNode(lockText)) {
+              await lockTextEditorStyle(lockText, { family: "Inter", style: "Bold", size: 13 });
+            } else if (lockIsDesc && findFlowNode(lockText)) {
+              await lockTextEditorStyle(lockText, { family: "Inter", style: "Regular", size: 11 });
+            }
+          }
+        }
         if (change.properties.includes("characters")) {
           const textNodeCandidate = figma.getNodeById(change.id);
           if (textNodeCandidate && textNodeCandidate.type === "TEXT") {
@@ -7213,6 +7544,31 @@
               statusTextNode.locked = true;
               if (badgeFrame) {
                 badgeFrame.locked = true;
+              }
+            }
+          }
+        }
+        if (change.properties.includes("characters")) {
+          const labelTextCandidate = figma.getNodeById(change.id);
+          const labelFrameCandidate = labelTextCandidate && labelTextCandidate.type === "TEXT" ? labelTextCandidate.parent : null;
+          if (labelTextCandidate && labelTextCandidate.type === "TEXT" && labelFrameCandidate && (safeGetPluginData2(labelFrameCandidate, "is_connector_label") === "true" || labelFrameCandidate.name === "ConnectorLabel")) {
+            const labelConnRoot = findConnectorNode(labelFrameCandidate);
+            if (labelConnRoot && labelConnRoot.type !== "CONNECTOR") {
+              const editedLabelText = labelTextCandidate.characters.replace(/\s*[\r\n\u2028\u2029]+\s*/g, " ").trim();
+              const storedLabelText = safeGetPluginData2(labelConnRoot, "connector_label");
+              if (editedLabelText !== storedLabelText) {
+                labelConnRoot.setPluginData("connector_label", editedLabelText);
+                if (labelConnRoot.type === "GROUP") {
+                  for (const child of labelConnRoot.children) {
+                    if (child.type === "VECTOR" && safeGetPluginData2(child, "is_flow_connector") === "true") {
+                      child.setPluginData("connector_label", editedLabelText);
+                    }
+                  }
+                }
+                const labelSel = figma.currentPage.selection;
+                if (labelSel.some((sel) => sel.id === labelConnRoot.id || findConnectorNode(sel)?.id === labelConnRoot.id)) {
+                  connectorSelectionChanged = true;
+                }
               }
             }
           }

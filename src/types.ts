@@ -80,7 +80,7 @@ export type MagnetPosition = 'TOP' | 'BOTTOM' | 'LEFT' | 'RIGHT';
 export type DiagramNodeType =
   | 'Screen'
   | 'Process'
-  | 'Circle'
+  | 'Junction'
   | 'Decision'
   | 'Terminator'
   | 'Branch'
@@ -116,11 +116,11 @@ export function normalizeNodeType(type?: string): DiagramNodeType {
     case 'true':
     case 'false':
       return 'Process';
-    case 'circle':
+    case 'junction':
     case 'connector':
     case 'system':
     case 'database':
-      return 'Circle';
+      return 'Junction';
     case 'decision':
     case 'diamond':
       return 'Decision';
@@ -152,7 +152,7 @@ export interface NodeTypeShapeSpec {
 export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
   Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
   Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+  Junction: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
   Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
   Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
   Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
@@ -168,6 +168,84 @@ export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
   Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
   Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
 };
+
+/** Branch(Type Bridge) 하위 형태 (Type 칩 → 캔버스 노드) */
+export type BranchVariant =
+  | 'CHECK'
+  | 'CROSS'
+  | 'YES'
+  | 'NO'
+  | 'TRUE'
+  | 'FALSE'
+  | 'SQUARE'
+  | 'DIAMOND'
+  | 'CIRCLE';
+
+export const BRANCH_VARIANT_ORDER: BranchVariant[] = [
+  'CHECK', 'CROSS', 'YES', 'NO', 'TRUE', 'FALSE', 'SQUARE', 'DIAMOND', 'CIRCLE',
+];
+
+export const BRANCH_VARIANT_LABELS: Record<BranchVariant, string> = {
+  CHECK: 'Check',
+  CROSS: 'Cross',
+  YES: 'Yes',
+  NO: 'No',
+  TRUE: 'True',
+  FALSE: 'False',
+  SQUARE: 'Square',
+  DIAMOND: 'Diamond',
+  CIRCLE: 'Circle',
+};
+
+export function normalizeBranchVariant(value?: string | null): BranchVariant {
+  const key = String(value || '').trim().toUpperCase();
+  if (
+    key === 'CHECK' || key === 'CROSS' || key === 'YES' || key === 'NO' ||
+    key === 'TRUE' || key === 'FALSE' || key === 'SQUARE' || key === 'DIAMOND' || key === 'CIRCLE'
+  ) {
+    return key;
+  }
+  const byLabel = String(value || '').trim();
+  const found = (Object.keys(BRANCH_VARIANT_LABELS) as BranchVariant[]).find(
+    (k) => BRANCH_VARIANT_LABELS[k] === byLabel
+  );
+  return found || 'CIRCLE';
+}
+
+export function getBranchVariantSpec(variant: BranchVariant): NodeTypeShapeSpec {
+  switch (variant) {
+    case 'DIAMOND':
+      return { width: 40, height: 40, cornerRadius: 0, allowDescription: false, allowFigmaLink: false };
+    case 'YES':
+      return { width: 58, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+    case 'NO':
+      return { width: 53, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+    case 'TRUE':
+      return { width: 64, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+    case 'FALSE':
+      return { width: 68, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+    case 'CHECK':
+    case 'CROSS':
+    case 'SQUARE':
+    case 'CIRCLE':
+    default:
+      return { width: 32, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+  }
+}
+
+export function branchVariantHasTitle(variant: BranchVariant): boolean {
+  return variant === 'YES' || variant === 'NO' || variant === 'TRUE' || variant === 'FALSE';
+}
+
+export function getBranchVariantDefaultFill(variant: BranchVariant): string {
+  if (variant === 'CHECK') return '#14AE5C';
+  if (variant === 'CROSS') return '#F24822';
+  return '#FFFFFF';
+}
+
+export function branchVariantUsesStroke(variant: BranchVariant): boolean {
+  return variant !== 'CHECK' && variant !== 'CROSS';
+}
 
 /**
  * 노드 분류 4대 범주 (Option Capability Matrix 기준)
@@ -282,7 +360,7 @@ export function getNodeCategory(node: any): NodeCategory {
     case 'Screen':
       return 'Screen';
     case 'Process':
-    case 'Circle':
+    case 'Junction':
     case 'Connector':
     case 'Decision':
     case 'Terminator':
@@ -500,6 +578,7 @@ export interface FlowNodePayload {
   strokeWeight?: number;
   strokeColor?: string;
   sizeMode?: 'fixed' | 'hug' | 'fit';
+  branchVariant?: BranchVariant;
 }
 
 export interface ConnectPointsPayload {
@@ -582,6 +661,7 @@ export interface UpdateNodePayload {
   strokeWeight?: number;
   strokeColor?: string;
   sizeMode?: 'fixed' | 'hug' | 'fit';
+  branchVariant?: BranchVariant;
 }
 
 // 피그마 디자인 프레임 정보
@@ -614,6 +694,7 @@ export interface NodePatchPayload {
   badgeShape?: BadgeShape;
   badgeColorMode?: 'White' | 'Black' | 'Style';
   badgeOn?: boolean;
+  branchVariant?: BranchVariant;
 }
 
 // 메시지 액션 타입

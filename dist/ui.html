@@ -2422,6 +2422,14 @@
       transform: scale(1.08);
     }
 
+    /* 커넥터 컬러 입력 박스 내 컬러칩은 표시 전용 (클릭 반응 없음 → 포인터/호버 확대 제거) */
+    .conn-color-input-box .conn-color-chip {
+      cursor: default;
+    }
+    .conn-color-input-box .conn-color-chip:hover {
+      transform: none;
+    }
+
     /* conn-color-chip 다크모드 버전 (화이트 반투명 0.15 직접 명시하여 라이트모드 검정 상속 완벽 차단) */
     .figma-dropdown-menu .conn-color-chip,
     .size-mode-menu-popover .conn-color-chip,
@@ -3820,6 +3828,11 @@
       flex-direction: column;
       gap: 7px;
       padding: 2px 0;
+    }
+
+    /* Fill/Stroke 모달 내 노드 스타일 컬러 칩 영역과 컬러 입력 필드 사이 간격 */
+    .conn-color-presets-wrapper.color-preset-section {
+      margin-bottom: 12px;
     }
 
     .conn-color-presets-row {
@@ -5486,7 +5499,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useCallback(callback, deps);
           }
-          function useMemo6(create, deps) {
+          function useMemo7(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useMemo(create, deps);
           }
@@ -6258,7 +6271,7 @@
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
           exports.useLayoutEffect = useLayoutEffect;
-          exports.useMemo = useMemo6;
+          exports.useMemo = useMemo7;
           exports.useReducer = useReducer;
           exports.useRef = useRef19;
           exports.useState = useState18;
@@ -6757,9 +6770,9 @@
           if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function") {
             __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
           }
-          var React23 = require_react();
+          var React24 = require_react();
           var Scheduler = require_scheduler();
-          var ReactSharedInternals = React23.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React24.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           var suppressWarning = false;
           function setSuppressWarning(newSuppressWarning) {
             {
@@ -8366,7 +8379,7 @@
             {
               if (props.value == null) {
                 if (typeof props.children === "object" && props.children !== null) {
-                  React23.Children.forEach(props.children, function(child) {
+                  React24.Children.forEach(props.children, function(child) {
                     if (child == null) {
                       return;
                     }
@@ -27962,7 +27975,7 @@
       if (true) {
         (function() {
           "use strict";
-          var React23 = require_react();
+          var React24 = require_react();
           var REACT_ELEMENT_TYPE = Symbol.for("react.element");
           var REACT_PORTAL_TYPE = Symbol.for("react.portal");
           var REACT_FRAGMENT_TYPE = Symbol.for("react.fragment");
@@ -27988,7 +28001,7 @@
             }
             return null;
           }
-          var ReactSharedInternals = React23.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React24.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           function error(format) {
             {
               {
@@ -28838,10 +28851,10 @@
               return jsxWithValidation(type, props, key, false);
             }
           }
-          var jsx29 = jsxWithValidationDynamic;
+          var jsx30 = jsxWithValidationDynamic;
           var jsxs26 = jsxWithValidationStatic;
           exports.Fragment = REACT_FRAGMENT_TYPE;
-          exports.jsx = jsx29;
+          exports.jsx = jsx30;
           exports.jsxs = jsxs26;
         })();
       }
@@ -28971,11 +28984,11 @@
       case "true":
       case "false":
         return "Process";
-      case "circle":
+      case "junction":
       case "connector":
       case "system":
       case "database":
-        return "Circle";
+        return "Junction";
       case "decision":
       case "diamond":
         return "Decision";
@@ -28995,7 +29008,7 @@
   var NODE_TYPE_SHAPE_SPECS = {
     Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
     Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-    Circle: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
+    Junction: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
     Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
     Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
@@ -29011,6 +29024,67 @@
     Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
     Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false }
   };
+  var BRANCH_VARIANT_ORDER = [
+    "CHECK",
+    "CROSS",
+    "YES",
+    "NO",
+    "TRUE",
+    "FALSE",
+    "SQUARE",
+    "DIAMOND",
+    "CIRCLE"
+  ];
+  var BRANCH_VARIANT_LABELS = {
+    CHECK: "Check",
+    CROSS: "Cross",
+    YES: "Yes",
+    NO: "No",
+    TRUE: "True",
+    FALSE: "False",
+    SQUARE: "Square",
+    DIAMOND: "Diamond",
+    CIRCLE: "Circle"
+  };
+  function normalizeBranchVariant(value) {
+    const key = String(value || "").trim().toUpperCase();
+    if (key === "CHECK" || key === "CROSS" || key === "YES" || key === "NO" || key === "TRUE" || key === "FALSE" || key === "SQUARE" || key === "DIAMOND" || key === "CIRCLE") {
+      return key;
+    }
+    const byLabel = String(value || "").trim();
+    const found = Object.keys(BRANCH_VARIANT_LABELS).find(
+      (k) => BRANCH_VARIANT_LABELS[k] === byLabel
+    );
+    return found || "CIRCLE";
+  }
+  function getBranchVariantSpec(variant) {
+    switch (variant) {
+      case "DIAMOND":
+        return { width: 40, height: 40, cornerRadius: 0, allowDescription: false, allowFigmaLink: false };
+      case "YES":
+        return { width: 58, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+      case "NO":
+        return { width: 53, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+      case "TRUE":
+        return { width: 64, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+      case "FALSE":
+        return { width: 68, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+      case "CHECK":
+      case "CROSS":
+      case "SQUARE":
+      case "CIRCLE":
+      default:
+        return { width: 32, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
+    }
+  }
+  function getBranchVariantDefaultFill(variant) {
+    if (variant === "CHECK") return "#14AE5C";
+    if (variant === "CROSS") return "#F24822";
+    return "#FFFFFF";
+  }
+  function branchVariantUsesStroke(variant) {
+    return variant !== "CHECK" && variant !== "CROSS";
+  }
   var OPTION_CAPABILITY_MATRIX = {
     Screen: {
       title: true,
@@ -29081,7 +29155,7 @@
       case "Screen":
         return "Screen";
       case "Process":
-      case "Circle":
+      case "Junction":
       case "Connector":
       case "Decision":
       case "Terminator":
@@ -29228,7 +29302,8 @@
     badgeColorMode: "Style",
     singleLinkOn: false,
     singleLinkUrl: "",
-    descriptionOn: false
+    descriptionOn: false,
+    branchVariant: "CIRCLE"
   };
   var DEFAULT_LAST_CONNECTOR_CONFIG = {
     labelOn: false,
@@ -29734,7 +29809,8 @@
         badgeColorMode: orig.badgeColorMode || "Style",
         descriptionOn: isDescAllowed ? hasDesc : false,
         singleLinkOn: isDescAllowed ? hasLink : false,
-        singleLinkUrl: orig.figmaLink || ""
+        singleLinkUrl: orig.figmaLink || "",
+        branchVariant: origType === "Branch" ? normalizeBranchVariant(orig.branchVariant) : lastNodeConfigRef.current.branchVariant
       });
       triggerFormChange();
     }, [setUIState, setLastNodeConfig, setLastConnectorConfig, triggerFormChange]);
@@ -29850,7 +29926,10 @@
       const domNodeType = activeTypeBtn?.dataset.type || void 0;
       const rawNodeType = overrideNodeType || domNodeType || nodeActualType || selectedNodeType;
       const effectiveNodeType = normalizeNodeType(rawNodeType);
-      const spec = NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
+      const branchVariant = effectiveNodeType === "Branch" ? normalizeBranchVariant(
+        lastNodeConfigRef.current.branchVariant || firstNode?.branchVariant
+      ) : void 0;
+      const spec = effectiveNodeType === "Branch" && branchVariant ? getBranchVariantSpec(branchVariant) : NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
       const isDescAllowed = spec?.allowDescription ?? false;
       const isScreen = effectiveNodeType === "Screen";
       const currentTitleVal = titleEl?.value.trim();
@@ -29894,7 +29973,8 @@
         singleLinkOn: isLinkOn,
         singleLinkUrl: figmaUrl,
         sizeMode,
-        descriptionOn: isDescOn
+        descriptionOn: isDescOn,
+        branchVariant
       });
       nodes.forEach((node) => {
         parent.postMessage({
@@ -29912,6 +29992,7 @@
               figmaLink: figmaUrl,
               clearLinkCache: linkOverrides?.clearLinkCache,
               nodeType: effectiveNodeType,
+              branchVariant,
               colorHex: finalColor,
               strokeWeight: finalStrokeWeight !== void 0 ? finalStrokeWeight : node.strokeWeight,
               strokeColor: finalStrokeColor !== void 0 ? finalStrokeColor : node.strokeColorHex,
@@ -30296,10 +30377,11 @@
       const activeTypeBtn = document.querySelector("#node-type-icons .type-icon-btn.active");
       const domNodeType = activeTypeBtn?.dataset.type || void 0;
       const selectedNodeType = domNodeType || lastNodeConfigRef.current.nodeType || uiStateRef.current.selectedNodeType || "Screen";
-      const spec = NODE_TYPE_SHAPE_SPECS[selectedNodeType];
+      const createBranchVariant = selectedNodeType === "Branch" ? normalizeBranchVariant(lastNodeConfigRef.current.branchVariant) : void 0;
+      const spec = selectedNodeType === "Branch" && createBranchVariant ? getBranchVariantSpec(createBranchVariant) : NODE_TYPE_SHAPE_SPECS[selectedNodeType];
       const isDescAllowed = spec?.allowDescription ?? false;
       const descToggleEl = document.getElementById("toggle-description");
-      const defaultTitle = selectedNodeType === "Screen" ? "Screen" : selectedNodeType;
+      const defaultTitle = selectedNodeType === "Screen" ? "Screen" : createBranchVariant ? BRANCH_VARIANT_LABELS[createBranchVariant] : selectedNodeType;
       const rawTitle = titleEl?.value.trim() || defaultTitle;
       if (rawTitle.length > 32) {
         showToast("\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "warning");
@@ -30354,7 +30436,8 @@
         badgeColorMode: uiStateRef.current.selectedBadgeColorMode,
         singleLinkOn: isDescAllowed && singleLinkToggleEl?.checked || false,
         singleLinkUrl: figmaUrl,
-        descriptionOn: isDescAllowed ? isDescOn : false
+        descriptionOn: isDescAllowed ? isDescOn : false,
+        branchVariant: createBranchVariant
       };
       setLastNodeConfig(newConfig);
       if (nodes.length === 1) {
@@ -30400,6 +30483,7 @@
               theme: getCurrentUITheme(),
               figmaLink: figmaUrl,
               nodeType: selectedNodeType,
+              branchVariant: selectedNodeType === "Branch" ? normalizeBranchVariant(lastNodeConfigRef.current.branchVariant) : void 0,
               colorHex: selectedColor,
               strokeWeight: lastNodeConfigRef.current.strokeWeight !== void 0 ? lastNodeConfigRef.current.strokeWeight : 1.5,
               strokeColor: lastNodeConfigRef.current.strokeColor,
@@ -30532,6 +30616,7 @@
           }
           const baseConfigUpdates = {
             nodeType: nodeTypeVal,
+            branchVariant: normalizeNodeType(nodeTypeVal) === "Branch" ? normalizeBranchVariant(first.branchVariant) : lastNodeConfigRef.current.branchVariant,
             width: first.width,
             height: first.height,
             cornerRadius: nodeRadius,
@@ -30668,7 +30753,7 @@
   }
 
   // src/ui/App.tsx
-  var import_react25 = __toESM(require_react());
+  var import_react26 = __toESM(require_react());
 
   // src/ui/hooks/useFigmaMessage.ts
   var import_react3 = __toESM(require_react());
@@ -30964,7 +31049,7 @@
   function ProcessIcon() {
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "26", height: "26", viewBox: "0 0 26 26", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M25 1V25H1V1H25ZM26 0H0V26H26V0Z", fill: "currentColor" }) });
   }
-  function CircleIcon() {
+  function JunctionIcon() {
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "28", height: "28", viewBox: "0 0 28 28", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M14 1C21.17 1 27 6.83 27 14C27 21.17 21.17 27 14 27C6.83 27 1 21.17 1 14C1 6.83 6.83 1 14 1ZM14 0C6.27 0 0 6.27 0 14C0 21.73 6.27 28 14 28C21.73 28 28 21.73 28 14C28 6.27 21.73 0 14 0Z", fill: "currentColor" }) });
   }
   function DecisionIcon() {
@@ -30979,7 +31064,7 @@
   var NODE_TYPE_OPTIONS = [
     { type: "Screen", label: "Screen", tooltip: "Screen", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ScreenIcon, {}) },
     { type: "Process", label: "Process", tooltip: "Process", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ProcessIcon, {}) },
-    { type: "Circle", label: "Circle", tooltip: "Circle", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CircleIcon, {}) },
+    { type: "Junction", label: "Junction", tooltip: "Junction", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(JunctionIcon, {}) },
     { type: "Decision", label: "Decision", tooltip: "Decision", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(DecisionIcon, {}) },
     { type: "Terminator", label: "Terminator", tooltip: "Terminator", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TerminatorIcon, {}) },
     { type: "Branch", label: "Branch", tooltip: "Branch", icon: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(BranchIcon, {}) }
@@ -30998,7 +31083,7 @@
     const summary = useSelectionSummary();
     const { selectedNodeType } = uiState;
     const isTypeMixed = multiDraft.nodeType !== void 0 ? false : summary.isMultiFlowNode && summary.nodeType.isMixed;
-    const currentRawType = multiDraft.nodeType !== void 0 ? multiDraft.nodeType : isTypeMixed ? void 0 : summary.isSingleFlowNode || summary.isMultiFlowNode ? summary.nodeType.value : selectedNodeType;
+    const currentRawType = multiDraft.nodeType !== void 0 ? multiDraft.nodeType : isTypeMixed ? void 0 : selectedNodeType || summary.nodeType.value;
     const activeType = currentRawType ? normalizeNodeType(currentRawType) : void 0;
     const DEFAULT_TYPE_TITLES = /* @__PURE__ */ new Set([
       "Screen",
@@ -31011,17 +31096,29 @@
       "System",
       "Database",
       "Square",
-      "Circle",
+      "Junction",
       "Diamond",
       "Pill",
-      "Capsule"
+      "Capsule",
+      "Check",
+      "Cross",
+      "Yes",
+      "No",
+      "True",
+      "False",
+      "Circle"
     ]);
+    const activeBranchVariant = normalizeBranchVariant(
+      multiDraft.branchVariant ?? (selectedNodes.length === 1 ? selectedNodes[0]?.branchVariant : void 0) ?? lastNodeConfig.branchVariant
+    );
+    const showBranchVariants = activeType === "Branch" || normalizeNodeType(selectedNodeType) === "Branch" || normalizeNodeType(multiDraft.nodeType) === "Branch";
     function selectNodeType(type) {
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ nodeType: type });
         return;
       }
-      const spec = NODE_TYPE_SHAPE_SPECS[type];
+      const nextVariant = type === "Branch" ? normalizeBranchVariant(lastNodeConfig.branchVariant) : void 0;
+      const spec = type === "Branch" && nextVariant ? getBranchVariantSpec(nextVariant) : NODE_TYPE_SHAPE_SPECS[type];
       const titleInputEl = document.getElementById("node-title-input");
       const wEl = document.getElementById("input-size-w");
       const hEl = document.getElementById("input-size-h");
@@ -31034,8 +31131,8 @@
       if (titleInputEl) {
         const currentTitle = titleInputEl.value.trim();
         if (!currentTitle || DEFAULT_TYPE_TITLES.has(currentTitle)) {
-          targetTitle = type;
-          titleInputEl.value = type;
+          targetTitle = nextVariant ? BRANCH_VARIANT_LABELS[nextVariant] : type;
+          titleInputEl.value = targetTitle;
         } else {
           targetTitle = currentTitle;
         }
@@ -31050,33 +31147,127 @@
         height: spec.height,
         cornerRadius: spec.cornerRadius ?? 0
       } : void 0;
-      setUIState({ selectedNodeType: type });
+      const nextFill = type === "Branch" && nextVariant ? getBranchVariantDefaultFill(nextVariant) : void 0;
+      if (nextFill) {
+        setUIState({ selectedNodeType: type, selectedColor: nextFill });
+      } else {
+        setUIState({ selectedNodeType: type });
+      }
       setLastNodeConfig({
         nodeType: type,
         width: spec?.width,
         height: spec?.height,
-        cornerRadius: spec?.cornerRadius ?? 0
+        cornerRadius: spec?.cornerRadius ?? 0,
+        branchVariant: nextVariant,
+        color: nextFill,
+        strokeWeight: nextVariant && !branchVariantUsesStroke(nextVariant) ? 0 : nextVariant ? 1.5 : void 0,
+        strokeColor: nextVariant && branchVariantUsesStroke(nextVariant) ? "#1E1E1E" : void 0
       });
-      applyCurrentNodeState(void 0, void 0, void 0, type, targetSize, targetTitle);
+      applyCurrentNodeState(
+        void 0,
+        nextFill ? {
+          colorHex: nextFill,
+          strokeWeight: nextVariant && !branchVariantUsesStroke(nextVariant) ? 0 : 1.5,
+          strokeColor: nextVariant && branchVariantUsesStroke(nextVariant) ? "#1E1E1E" : void 0
+        } : void 0,
+        void 0,
+        type,
+        targetSize,
+        targetTitle
+      );
+    }
+    function selectBranchVariant(variant) {
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({
+          nodeType: "Branch",
+          branchVariant: variant,
+          width: getBranchVariantSpec(variant).width,
+          height: getBranchVariantSpec(variant).height,
+          cornerRadius: getBranchVariantSpec(variant).cornerRadius ?? 0,
+          colorHex: getBranchVariantDefaultFill(variant),
+          strokeWeight: branchVariantUsesStroke(variant) ? 1.5 : 0,
+          strokeColor: branchVariantUsesStroke(variant) ? "#1E1E1E" : void 0
+        });
+        setLastNodeConfig({ branchVariant: variant });
+        return;
+      }
+      const spec = getBranchVariantSpec(variant);
+      const titleInputEl = document.getElementById("node-title-input");
+      const wEl = document.getElementById("input-size-w");
+      const hEl = document.getElementById("input-size-h");
+      const rEl = document.getElementById("input-size-radius");
+      const label = BRANCH_VARIANT_LABELS[variant];
+      let targetTitle;
+      if (titleInputEl) {
+        const currentTitle = titleInputEl.value.trim();
+        if (!currentTitle || DEFAULT_TYPE_TITLES.has(currentTitle)) {
+          targetTitle = label;
+          titleInputEl.value = label;
+        } else {
+          targetTitle = currentTitle;
+        }
+      }
+      if (wEl) wEl.value = String(spec.width);
+      if (hEl) hEl.value = String(spec.height);
+      if (rEl) rEl.value = String(spec.cornerRadius ?? 0);
+      const fill = getBranchVariantDefaultFill(variant);
+      setUIState({ selectedNodeType: "Branch", selectedColor: fill });
+      setLastNodeConfig({
+        nodeType: "Branch",
+        branchVariant: variant,
+        width: spec.width,
+        height: spec.height,
+        cornerRadius: spec.cornerRadius ?? 0,
+        color: fill,
+        strokeWeight: branchVariantUsesStroke(variant) ? 1.5 : 0,
+        strokeColor: branchVariantUsesStroke(variant) ? "#1E1E1E" : void 0
+      });
+      applyCurrentNodeState(
+        void 0,
+        {
+          colorHex: fill,
+          strokeWeight: branchVariantUsesStroke(variant) ? 1.5 : 0,
+          strokeColor: branchVariantUsesStroke(variant) ? "#1E1E1E" : void 0
+        },
+        void 0,
+        "Branch",
+        { width: spec.width, height: spec.height, cornerRadius: spec.cornerRadius ?? 0 },
+        targetTitle
+      );
     }
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "section-title", children: "Type" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "type-icon-group", id: "node-type-icons", children: NODE_TYPE_OPTIONS.map(({ type, label, tooltip, icon }) => {
-        const isActive = !isTypeMixed && activeType === type;
-        return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "button",
-          {
-            type: "button",
-            className: `type-icon-btn${isActive ? " active" : ""}`,
-            "data-type": type,
-            "data-tooltip": tooltip,
-            "aria-label": label,
-            onClick: () => selectNodeType(type),
-            children: icon
-          },
-          type
-        );
-      }) }) })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "section-body", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "type-icon-group", id: "node-type-icons", children: NODE_TYPE_OPTIONS.map(({ type, label, tooltip, icon }) => {
+          const isActive = !isTypeMixed && activeType === type;
+          return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "button",
+            {
+              type: "button",
+              className: `type-icon-btn${isActive ? " active" : ""}`,
+              "data-type": type,
+              "data-tooltip": tooltip,
+              "aria-label": label,
+              onClick: () => selectNodeType(type),
+              children: icon
+            },
+            type
+          );
+        }) }),
+        showBranchVariants && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "chip-group", style: { marginTop: "8px", gap: "8px" }, children: BRANCH_VARIANT_ORDER.map((variant) => {
+          const isActive = !isTypeMixed && activeBranchVariant === variant;
+          return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "button",
+            {
+              type: "button",
+              className: `chip-btn${isActive ? " active" : ""}`,
+              onClick: () => selectBranchVariant(variant),
+              children: BRANCH_VARIANT_LABELS[variant]
+            },
+            variant
+          );
+        }) })
+      ] })
     ] });
   }
 
@@ -31283,21 +31474,27 @@
   var IcTextAlignLeft = ({ size = 24 }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
     "path",
     {
-      d: "M5 6.75C4.58579 6.75 4.25 7.08579 4.25 7.5C4.25 7.91421 4.58579 8.25 5 8.25H19C19.4142 8.25 19.75 7.91421 19.75 7.5C19.75 7.08579 19.4142 6.75 19 6.75H5ZM5 11.25C4.58579 11.25 4.25 11.5858 4.25 12C4.25 12.4142 4.58579 12.75 5 12.75H13C13.4142 12.75 13.75 12.4142 13.75 12C13.75 11.5858 13.4142 11.25 13 11.25H5ZM5 15.75C4.58579 15.75 4.25 16.0858 4.25 16.5C4.25 16.9142 4.58579 17.25 5 17.25H19C19.4142 17.25 19.75 16.9142 19.75 16.5C19.75 16.0858 19.4142 15.75 19 15.75H5Z",
+      fillRule: "evenodd",
+      clipRule: "evenodd",
+      d: "M5 7.5C5 7.22386 5.22386 7 5.5 7H18.5C18.7761 7 19 7.22386 19 7.5C19 7.77614 18.7761 8 18.5 8H5.5C5.22386 8 5 7.77614 5 7.5ZM5 11.5C5 11.2239 5.22386 11 5.5 11H12.5C12.7761 11 13 11.2239 13 11.5C13 11.7761 12.7761 12 12.5 12H5.5C5.22386 12 5 11.7761 5 11.5ZM5.5 15C5.22386 15 5 15.2239 5 15.5C5 15.7761 5.22386 16 5.5 16H14.5C14.7761 16 15 15.7761 15 15.5C15 15.2239 14.7761 15 14.5 15H5.5Z",
       fill: "currentColor"
     }
   ) });
   var IcTextAlignCenter = ({ size = 24 }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
     "path",
     {
-      d: "M5 6.75C4.58579 6.75 4.25 7.08579 4.25 7.5C4.25 7.91421 4.58579 8.25 5 8.25H19C19.4142 8.25 19.75 7.91421 19.75 7.5C19.75 7.08579 19.4142 6.75 19 6.75H5ZM8 11.25C7.58579 11.25 7.25 11.5858 7.25 12C7.25 12.4142 7.58579 12.75 8 12.75H16C16.4142 12.75 16.75 12.4142 16.75 12C16.75 11.5858 16.4142 11.25 16 11.25H8ZM5 15.75C4.58579 15.75 4.25 16.0858 4.25 16.5C4.25 16.9142 4.58579 17.25 5 17.25H19C19.4142 17.25 19.75 16.9142 19.75 16.5C19.75 16.0858 19.4142 15.75 19 15.75H5Z",
+      fillRule: "evenodd",
+      clipRule: "evenodd",
+      d: "M5 7.5C5 7.22386 5.22386 7 5.5 7H18.5C18.7761 7 19 7.22386 19 7.5C19 7.77614 18.7761 8 18.5 8H5.5C5.22386 8 5 7.77614 5 7.5ZM8 11.5C8 11.2239 8.22386 11 8.5 11H15.5C15.7761 11 16 11.2239 16 11.5C16 11.7761 15.7761 12 15.5 12H8.5C8.22386 12 8 11.7761 8 11.5ZM7.5 15C7.22386 15 7 15.2239 7 15.5C7 15.7761 7.22386 16 7.5 16H16.5C16.7761 16 17 15.7761 17 15.5C17 15.2239 16.7761 15 16.5 15H7.5Z",
       fill: "currentColor"
     }
   ) });
   var IcTextAlignRight = ({ size = 24 }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
     "path",
     {
-      d: "M5 6.75C4.58579 6.75 4.25 7.08579 4.25 7.5C4.25 7.91421 4.58579 8.25 5 8.25H19C19.4142 8.25 19.75 7.91421 19.75 7.5C19.75 7.08579 19.4142 6.75 19 6.75H5ZM11 11.25C10.5858 11.25 10.25 11.5858 10.25 12C10.25 12.4142 10.5858 12.75 11 12.75H19C19.4142 12.75 19.75 12.4142 19.75 12C19.75 11.5858 19.4142 11.25 19 11.25H11ZM5 15.75C4.58579 15.75 4.25 16.0858 4.25 16.5C4.25 16.9142 4.58579 17.25 5 17.25H19C19.4142 17.25 19.75 16.9142 19.75 16.5C19.75 16.0858 19.4142 15.75 19 15.75H5Z",
+      fillRule: "evenodd",
+      clipRule: "evenodd",
+      d: "M19 7.5C19 7.22386 18.7761 7 18.5 7H5.5C5.22386 7 5 7.22386 5 7.5C5 7.77614 5.22386 8 5.5 8H18.5C18.7761 8 19 7.77614 19 7.5ZM19 11.5C19 11.2239 18.7761 11 18.5 11H11.5C11.2239 11 11 11.2239 11 11.5C11 11.7761 11.2239 12 11.5 12H18.5C18.7761 12 19 11.7761 19 11.5ZM18.5 15C18.7761 15 19 15.2239 19 15.5C19 15.7761 18.7761 16 18.5 16H9.5C9.22386 16 9 15.7761 9 15.5C9 15.2239 9.22386 15 9.5 15H18.5Z",
       fill: "currentColor"
     }
   ) });
@@ -35052,7 +35249,6 @@
       return "000000";
     });
     const hexInputRef = (0, import_react14.useRef)(null);
-    const nativeColorInputRef = (0, import_react14.useRef)(null);
     (0, import_react14.useEffect)(() => {
       if (activeStylePreset) {
         const connectorColor = getPresetLineColor2(activeStylePreset);
@@ -35614,7 +35810,6 @@
                       },
                       onClick: (e) => {
                         e.stopPropagation();
-                        nativeColorInputRef.current?.click();
                       },
                       title: isColorMixed ? "Mixed" : `Color: ${selectedColor}`,
                       children: isColorMixed && COLOR_MIXED_ICON
@@ -35644,16 +35839,6 @@
                       },
                       spellCheck: false,
                       autoComplete: "off"
-                    }
-                  ),
-                  /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
-                    "input",
-                    {
-                      ref: nativeColorInputRef,
-                      type: "color",
-                      style: { display: "none" },
-                      value: selectedColor.length === 7 ? selectedColor : selectedConnectorColor && selectedConnectorColor.length === 7 ? selectedConnectorColor : "#000000",
-                      onChange: (e) => selectColor(e.target.value)
                     }
                   ),
                   /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
@@ -36370,6 +36555,10 @@
     }
     return hex.startsWith("#") ? hex.toUpperCase() : `#${hex.toUpperCase()}`;
   }
+  function isNoneColor(color) {
+    const c = (color || "").trim().toLowerCase();
+    return c === "none" || c === "transparent";
+  }
   function LabelSection() {
     const {
       selectedNodes,
@@ -36392,6 +36581,16 @@
     const [strokeHexInput, setStrokeHexInput] = (0, import_react15.useState)((lastConnectorConfig.labelStrokeColor || "#EA2039").replace("#", ""));
     const [align, setAlign] = (0, import_react15.useState)(lastConnectorConfig.labelAlign || "LEFT");
     const [boxStyle, setBoxStyle] = (0, import_react15.useState)(lastConnectorConfig.labelBoxStyle || "BOX");
+    const isFillNone = isNoneColor(fillColor);
+    const isStrokeNone = isNoneColor(strokeColor);
+    const lastValidFillRef = (0, import_react15.useRef)(isNoneColor(fillColor) ? "#FFFFFF" : fillColor);
+    const lastValidStrokeRef = (0, import_react15.useRef)(isNoneColor(strokeColor) ? "#000000" : strokeColor);
+    (0, import_react15.useEffect)(() => {
+      if (!isNoneColor(fillColor)) lastValidFillRef.current = fillColor;
+    }, [fillColor]);
+    (0, import_react15.useEffect)(() => {
+      if (!isNoneColor(strokeColor)) lastValidStrokeRef.current = strokeColor;
+    }, [strokeColor]);
     const labelDebounceRef = (0, import_react15.useRef)(null);
     const labelInputRef = (0, import_react15.useRef)(null);
     const lastSelectedNodeIdRef = (0, import_react15.useRef)(null);
@@ -36454,7 +36653,16 @@
       autoResizeWindow();
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
+    function clampToInputWidth(el) {
+      while (el.value.length > 0 && el.scrollWidth > el.clientWidth) {
+        el.value = el.value.slice(0, -1);
+      }
+    }
     function handleInput(e) {
+      const nativeEvt = e.nativeEvent;
+      if (!nativeEvt.isComposing) {
+        clampToInputWidth(e.currentTarget);
+      }
       const val = e.currentTarget.value;
       setLabelText(val);
       setLastConnectorConfig({ labelText: val });
@@ -36470,12 +36678,34 @@
       setLastConnectorConfig({ labelFillColor: norm });
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
+    function handleFillNone() {
+      setFillColor("None");
+      setFillHexInput("None");
+      setLastConnectorConfig({ labelFillColor: "None" });
+      setTimeout(() => applyCurrentConnectorState(), 0);
+    }
+    function handleFillChipClick() {
+      if (isFillNone) {
+        handleFillColorSelect(lastValidFillRef.current || "#FFFFFF");
+      } else {
+        handleFillNone();
+      }
+    }
+    function handleFillHexChange(raw) {
+      if (raw.trim().toLowerCase() === "none") {
+        handleFillNone();
+        return;
+      }
+      setFillHexInput(raw);
+    }
     function handleFillHexBlur() {
       const clean = fillHexInput.replace("#", "").trim();
-      if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
+      if (clean === "" || clean.toLowerCase() === "none") {
+        if (!isFillNone) handleFillNone();
+      } else if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
         handleFillColorSelect(`#${clean}`);
       } else {
-        setFillHexInput(fillColor.replace("#", ""));
+        setFillHexInput(isFillNone ? "None" : fillColor.replace("#", ""));
       }
     }
     function handleStrokeColorSelect(color) {
@@ -36485,12 +36715,34 @@
       setLastConnectorConfig({ labelStrokeColor: norm });
       setTimeout(() => applyCurrentConnectorState(), 0);
     }
+    function handleStrokeNone() {
+      setStrokeColor("None");
+      setStrokeHexInput("None");
+      setLastConnectorConfig({ labelStrokeColor: "None" });
+      setTimeout(() => applyCurrentConnectorState(), 0);
+    }
+    function handleStrokeChipClick() {
+      if (isStrokeNone) {
+        handleStrokeColorSelect(lastValidStrokeRef.current || "#000000");
+      } else {
+        handleStrokeNone();
+      }
+    }
+    function handleStrokeHexChange(raw) {
+      if (raw.trim().toLowerCase() === "none") {
+        handleStrokeNone();
+        return;
+      }
+      setStrokeHexInput(raw);
+    }
     function handleStrokeHexBlur() {
       const clean = strokeHexInput.replace("#", "").trim();
-      if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
+      if (clean === "" || clean.toLowerCase() === "none") {
+        if (!isStrokeNone) handleStrokeNone();
+      } else if (/^[0-9A-Fa-f]{6}$/.test(clean)) {
         handleStrokeColorSelect(`#${clean}`);
       } else {
-        setStrokeHexInput(strokeColor.replace("#", ""));
+        setStrokeHexInput(isStrokeNone ? "None" : strokeColor.replace("#", ""));
       }
     }
     function handleAlignSelect(newAlign) {
@@ -36534,6 +36786,10 @@
               applyCurrentConnectorState();
             },
             onInput: handleInput,
+            onCompositionEnd: (e) => {
+              clampToInputWidth(e.currentTarget);
+              handleInput(e);
+            },
             spellCheck: false,
             autoComplete: "off"
           }
@@ -36543,21 +36799,21 @@
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
               FillColorIcon,
               {
-                color: fillColor,
-                isNone: false,
-                onClick: () => setActiveModal("label-fill-color"),
-                title: "Fill color"
+                color: isFillNone ? lastValidFillRef.current : fillColor,
+                isNone: isFillNone,
+                onClick: handleFillChipClick,
+                title: isFillNone ? "\uBC30\uACBD \uCF1C\uAE30" : "\uBC30\uACBD \uB044\uAE30 (None)"
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
               "input",
               {
                 type: "text",
-                className: "style-text-input",
+                className: `style-text-input${isFillNone ? " is-none" : ""}`,
                 value: fillHexInput,
                 maxLength: 6,
-                placeholder: "FFFFFF",
-                onChange: (e) => setFillHexInput(e.target.value),
+                placeholder: isFillNone ? "None" : "FFFFFF",
+                onChange: (e) => handleFillHexChange(e.target.value),
                 onBlur: handleFillHexBlur,
                 onKeyDown: (e) => {
                   if (e.key === "Enter") handleFillHexBlur();
@@ -36584,13 +36840,13 @@
               {
                 type: "button",
                 className: "style-stroke-btn",
-                title: "Stroke color",
-                onClick: () => setActiveModal("label-stroke-color"),
+                title: isStrokeNone ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)",
+                onClick: handleStrokeChipClick,
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
                   StrokeColorIcon,
                   {
-                    color: strokeColor,
-                    isNone: false
+                    color: isStrokeNone ? lastValidStrokeRef.current : strokeColor,
+                    isNone: isStrokeNone
                   }
                 )
               }
@@ -36599,11 +36855,11 @@
               "input",
               {
                 type: "text",
-                className: "style-text-input",
+                className: `style-text-input${isStrokeNone ? " is-none" : ""}`,
                 value: strokeHexInput,
                 maxLength: 6,
-                placeholder: "000000",
-                onChange: (e) => setStrokeHexInput(e.target.value),
+                placeholder: isStrokeNone ? "None" : "000000",
+                onChange: (e) => handleStrokeHexChange(e.target.value),
                 onBlur: handleStrokeHexBlur,
                 onKeyDown: (e) => {
                   if (e.key === "Enter") handleStrokeHexBlur();
@@ -38716,9 +38972,67 @@
   }
 
   // src/ui/components/modals/FillColorModal.tsx
+  var import_react24 = __toESM(require_react());
+
+  // src/ui/components/shared/StylePresetColorGrid.tsx
   var import_react23 = __toESM(require_react());
   var import_jsx_runtime25 = __toESM(require_jsx_runtime());
-  var CLOSE_SVG3 = /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+  var BASE_COLORS = [
+    { id: "base-white", color: "#FFFFFF" },
+    { id: "base-gray", color: "#757575" },
+    { id: "base-black", color: "#000000" }
+  ];
+  function isNoneLike(color) {
+    const c = (color || "").trim().toLowerCase();
+    return c === "" || c === "none" || c === "transparent";
+  }
+  function StylePresetColorGrid({
+    mode,
+    currentHex,
+    onSelect
+  }) {
+    const { stylePresets } = useApp();
+    const colors = (0, import_react23.useMemo)(() => {
+      const seen = /* @__PURE__ */ new Set();
+      const result = [];
+      for (const base of BASE_COLORS) {
+        seen.add(base.color);
+        result.push(base);
+      }
+      for (const preset of stylePresets) {
+        let raw;
+        if (mode === "fill") {
+          raw = preset.fillColor;
+        } else {
+          raw = (preset.strokeWeight ?? 0) > 0 ? preset.strokeColor : void 0;
+        }
+        if (isNoneLike(raw)) continue;
+        const color = raw.toUpperCase();
+        if (!/^#[0-9A-F]{6}$/.test(color) || seen.has(color)) continue;
+        seen.add(color);
+        result.push({ id: preset.id, name: preset.name, color });
+      }
+      return result;
+    }, [stylePresets, mode]);
+    const selected = currentHex ? `#${currentHex.replace("#", "").toUpperCase()}` : "";
+    const rows = [colors.slice(0, 5), colors.slice(5)].filter((r) => r.length > 0);
+    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-wrapper color-preset-section", children: rows.map((row, idx) => /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "conn-color-presets-row", children: row.map((item) => /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+      "button",
+      {
+        type: "button",
+        className: `conn-preset-card${selected === item.color ? " selected" : ""}`,
+        style: { backgroundColor: item.color },
+        "data-color": item.color.toLowerCase(),
+        title: item.name ? `${item.name} ${item.color}` : item.color,
+        onClick: () => onSelect(item.color.replace("#", ""))
+      },
+      item.id
+    )) }, idx)) });
+  }
+
+  // src/ui/components/modals/FillColorModal.tsx
+  var import_jsx_runtime26 = __toESM(require_jsx_runtime());
+  var CLOSE_SVG3 = /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
     "path",
     {
       d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
@@ -38729,6 +39043,7 @@
     title,
     initialColor,
     isMixed = false,
+    showStylePresets = false,
     onApply,
     onClose
   }) {
@@ -38736,11 +39051,11 @@
     const isInitialNone = !isMixed && (rawInit.toLowerCase() === "none" || rawInit.toLowerCase() === "transparent");
     const resolvedColor = (isInitialNone ? "FFFFFF" : rawInit).replace("#", "").trim().toUpperCase();
     const validFill = resolvedColor.length === 6 ? resolvedColor : "FFFFFF";
-    const [fillHex, setFillHex] = (0, import_react23.useState)(isMixed ? "" : validFill);
-    const [isNone, setIsNone] = (0, import_react23.useState)(isInitialNone);
-    const [isFillMixed, setIsFillMixed] = (0, import_react23.useState)(Boolean(isMixed));
-    const [showWheel, setShowWheel] = (0, import_react23.useState)(true);
-    const lastValidFillRef = (0, import_react23.useRef)(validFill);
+    const [fillHex, setFillHex] = (0, import_react24.useState)(isMixed ? "" : validFill);
+    const [isNone, setIsNone] = (0, import_react24.useState)(isInitialNone);
+    const [isFillMixed, setIsFillMixed] = (0, import_react24.useState)(Boolean(isMixed));
+    const [showWheel, setShowWheel] = (0, import_react24.useState)(false);
+    const lastValidFillRef = (0, import_react24.useRef)(validFill);
     const handleColorChange = (hex) => {
       setIsFillMixed(false);
       setFillHex(hex);
@@ -38777,7 +39092,7 @@
       onApply(finalColor);
       onClose();
     };
-    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
       "div",
       {
         id: "modal-fill-color-backdrop",
@@ -38790,17 +39105,17 @@
         onClick: (e) => {
           if (e.target === e.currentTarget) handleCancel();
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(
           "div",
           {
             id: "modal-fill-color",
             className: "style-modal-card",
             onClick: (e) => e.stopPropagation(),
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { className: "style-modal-header", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("span", { className: "style-modal-title", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "style-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("span", { className: "style-modal-title", children: [
                   title || "Fill",
-                  isFillMixed && /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+                  isFillMixed && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
                     "span",
                     {
                       style: {
@@ -38813,7 +39128,7 @@
                     }
                   )
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
                   "button",
                   {
                     type: "button",
@@ -38824,42 +39139,52 @@
                   }
                 )
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime25.jsx)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(
                 "div",
                 {
                   className: "style-section-group",
                   style: { display: "flex", flexDirection: "column" },
-                  children: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
-                    ColorWheelField,
-                    {
-                      value: fillHex,
-                      isMixed: isFillMixed,
-                      isNone,
-                      onNoneToggle: handleNoneToggle,
-                      onMixedClear: () => setIsFillMixed(false),
-                      onChange: handleColorChange,
-                      onEnter: handleSave,
-                      isOpen: showWheel,
-                      onToggleOpen: setShowWheel,
-                      customChip: /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
-                        FillColorIcon,
-                        {
-                          color: `#${fillHex}`,
-                          isNone,
-                          isMixed: isFillMixed,
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            handleChipClick();
-                          },
-                          title: isFillMixed ? "Fill color (Mixed)" : isNone ? "\uBC30\uACBD \uCF1C\uAE30" : "\uBC30\uACBD \uB044\uAE30 (None)"
-                        }
-                      )
-                    }
-                  )
+                  children: [
+                    showStylePresets && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+                      StylePresetColorGrid,
+                      {
+                        mode: "fill",
+                        currentHex: isNone || isFillMixed ? "" : fillHex,
+                        onSelect: handleColorChange
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+                      ColorWheelField,
+                      {
+                        value: fillHex,
+                        isMixed: isFillMixed,
+                        isNone,
+                        onNoneToggle: handleNoneToggle,
+                        onMixedClear: () => setIsFillMixed(false),
+                        onChange: handleColorChange,
+                        onEnter: handleSave,
+                        isOpen: showWheel,
+                        onToggleOpen: setShowWheel,
+                        customChip: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+                          FillColorIcon,
+                          {
+                            color: `#${fillHex}`,
+                            isNone,
+                            isMixed: isFillMixed,
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              handleChipClick();
+                            },
+                            title: isFillMixed ? "Fill color (Mixed)" : isNone ? "\uBC30\uACBD \uCF1C\uAE30" : "\uBC30\uACBD \uB044\uAE30 (None)"
+                          }
+                        )
+                      }
+                    )
+                  ]
                 }
               ) }),
-              /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)("div", { className: "style-modal-footer", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "style-modal-footer", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
                   "button",
                   {
                     type: "button",
@@ -38868,13 +39193,13 @@
                     children: "Cancel"
                   }
                 ),
-                /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
                   "button",
                   {
                     type: "button",
                     className: "btn-phase-modal-save",
                     onClick: handleSave,
-                    children: "Save"
+                    children: "Apply"
                   }
                 )
               ] })
@@ -38886,16 +39211,16 @@
   }
 
   // src/ui/components/modals/StrokeColorModal.tsx
-  var import_react24 = __toESM(require_react());
-  var import_jsx_runtime26 = __toESM(require_jsx_runtime());
-  var CLOSE_SVG4 = /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+  var import_react25 = __toESM(require_react());
+  var import_jsx_runtime27 = __toESM(require_jsx_runtime());
+  var CLOSE_SVG4 = /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
     "path",
     {
       d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
       fill: "currentColor"
     }
   ) });
-  var STROKE_ICON_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+  var STROKE_ICON_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
     "path",
     {
       d: "M17.25 14C17.6642 14 18 14.3358 18 14.75V17.25C18 17.6642 17.6642 18 17.25 18H6.75C6.33579 18 6 17.6642 6 17.25V14.75C6 14.3358 6.33579 14 6.75 14H17.25ZM7 17H17V15H7V17ZM17.25 9C17.6642 9 18 9.33579 18 9.75V11.25C18 11.6642 17.6642 12 17.25 12H6.75C6.33579 12 6 11.6642 6 11.25V9.75C6 9.33579 6.33579 9 6.75 9H17.25ZM7 11H17V10H7V11ZM17.5 6C17.7761 6 18 6.22386 18 6.5C18 6.77614 17.7761 7 17.5 7H6.5C6.22386 7 6 6.77614 6 6.5C6 6.22386 6.22386 6 6.5 6H17.5Z",
@@ -38909,6 +39234,7 @@
     initialWeight,
     isColorMixed = false,
     isWeightMixed = false,
+    showStylePresets = false,
     onApply,
     onClose
   }) {
@@ -38916,13 +39242,13 @@
     const isInitialNone = !isColorMixed && (initialWeight === 0 || rawInit.toLowerCase() === "none" || rawInit.toLowerCase() === "transparent");
     const resolvedColor = (isInitialNone ? "000000" : rawInit).replace("#", "").trim().toUpperCase();
     const validStroke = resolvedColor.length === 6 ? resolvedColor : "000000";
-    const [strokeHex, setStrokeHex] = (0, import_react24.useState)(isColorMixed ? "" : validStroke);
-    const [strokeWeight, setStrokeWeight] = (0, import_react24.useState)(
+    const [strokeHex, setStrokeHex] = (0, import_react25.useState)(isColorMixed ? "" : validStroke);
+    const [strokeWeight, setStrokeWeight] = (0, import_react25.useState)(
       isWeightMixed ? 0 : initialWeight
     );
-    const [showWheel, setShowWheel] = (0, import_react24.useState)(true);
-    const lastValidColorRef = (0, import_react24.useRef)(validStroke);
-    const lastValidWeightRef = (0, import_react24.useRef)(
+    const [showWheel, setShowWheel] = (0, import_react25.useState)(false);
+    const lastValidColorRef = (0, import_react25.useRef)(validStroke);
+    const lastValidWeightRef = (0, import_react25.useRef)(
       initialWeight > 0 ? initialWeight : 1.5
     );
     const handleColorChange = (hex) => {
@@ -38975,7 +39301,7 @@
       onApply(finalColor, finalWeight);
       onClose();
     };
-    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
       "div",
       {
         id: "modal-stroke-color-backdrop",
@@ -38988,17 +39314,17 @@
         onClick: (e) => {
           if (e.target === e.currentTarget) handleCancel();
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(
           "div",
           {
             id: "modal-stroke-color",
             className: "style-modal-card",
             onClick: (e) => e.stopPropagation(),
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "style-modal-header", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("span", { className: "style-modal-title", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { className: "style-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("span", { className: "style-modal-title", children: [
                   title || "Stroke",
-                  (isColorMixed || isWeightMixed) && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+                  (isColorMixed || isWeightMixed) && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
                     "span",
                     {
                       style: {
@@ -39011,7 +39337,7 @@
                     }
                   )
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
                   "button",
                   {
                     type: "button",
@@ -39022,74 +39348,84 @@
                   }
                 )
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "style-modal-body", style: { padding: "12px 16px" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(
                 "div",
                 {
                   className: "style-section-group",
                   style: { display: "flex", flexDirection: "column" },
-                  children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
-                    ColorWheelField,
-                    {
-                      value: strokeHex,
-                      isNone: strokeWeight === 0,
-                      onNoneToggle: handleNoneToggle,
-                      onChange: handleColorChange,
-                      onEnter: handleSave,
-                      isOpen: showWheel,
-                      onToggleOpen: setShowWheel,
-                      customChip: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
-                        StrokeColorIcon,
-                        {
-                          color: `#${strokeHex}`,
-                          isNone: strokeWeight === 0,
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            handleChipClick();
-                          },
-                          title: strokeWeight === 0 ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)"
-                        }
-                      ),
-                      extraControlPosition: hideWeightControl ? void 0 : "left",
-                      extraControl: hideWeightControl ? void 0 : /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "stroke-width-box", children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
-                          "span",
+                  children: [
+                    showStylePresets && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+                      StylePresetColorGrid,
+                      {
+                        mode: "stroke",
+                        currentHex: strokeWeight === 0 || isColorMixed ? "" : strokeHex,
+                        onSelect: handleColorChange
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+                      ColorWheelField,
+                      {
+                        value: strokeHex,
+                        isNone: strokeWeight === 0,
+                        onNoneToggle: handleNoneToggle,
+                        onChange: handleColorChange,
+                        onEnter: handleSave,
+                        isOpen: showWheel,
+                        onToggleOpen: setShowWheel,
+                        customChip: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+                          StrokeColorIcon,
                           {
-                            style: {
-                              width: 24,
-                              height: 24,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "rgba(255, 255, 255, 0.6)",
-                              flexShrink: 0
+                            color: `#${strokeHex}`,
+                            isNone: strokeWeight === 0,
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              handleChipClick();
                             },
-                            children: STROKE_ICON_SVG2
+                            title: strokeWeight === 0 ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)"
                           }
                         ),
-                        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
-                          "input",
-                          {
-                            type: "number",
-                            className: "prefix-input",
-                            min: SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT,
-                            max: SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT,
-                            value: strokeWeight,
-                            onChange: (e) => handleWeightChange(parseFloat(e.target.value) || 0),
-                            onKeyDown: (e) => e.key === "Enter" && handleSave(),
-                            style: {
-                              width: "100%",
-                              textAlign: "left",
-                              letterSpacing: 0
+                        extraControlPosition: hideWeightControl ? void 0 : "left",
+                        extraControl: hideWeightControl ? void 0 : /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { className: "stroke-width-box", children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+                            "span",
+                            {
+                              style: {
+                                width: 24,
+                                height: 24,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "rgba(255, 255, 255, 0.6)",
+                                flexShrink: 0
+                              },
+                              children: STROKE_ICON_SVG2
                             }
-                          }
-                        )
-                      ] })
-                    }
-                  )
+                          ),
+                          /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+                            "input",
+                            {
+                              type: "number",
+                              className: "prefix-input",
+                              min: SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT,
+                              max: SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT,
+                              value: strokeWeight,
+                              onChange: (e) => handleWeightChange(parseFloat(e.target.value) || 0),
+                              onKeyDown: (e) => e.key === "Enter" && handleSave(),
+                              style: {
+                                width: "100%",
+                                textAlign: "left",
+                                letterSpacing: 0
+                              }
+                            }
+                          )
+                        ] })
+                      }
+                    )
+                  ]
                 }
               ) }),
-              /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "style-modal-footer", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { className: "style-modal-footer", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
                   "button",
                   {
                     type: "button",
@@ -39098,13 +39434,13 @@
                     children: "Cancel"
                   }
                 ),
-                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
                   "button",
                   {
                     type: "button",
                     className: "btn-phase-modal-save",
                     onClick: handleSave,
-                    children: "Save"
+                    children: "Apply"
                   }
                 )
               ] })
@@ -39116,7 +39452,7 @@
   }
 
   // src/ui/App.tsx
-  var import_jsx_runtime27 = __toESM(require_jsx_runtime());
+  var import_jsx_runtime28 = __toESM(require_jsx_runtime());
   var TABS = [
     { id: "node", label: "Node" },
     { id: "appearance", label: "Appearance" },
@@ -39167,11 +39503,11 @@
       canUndo,
       handleUndo
     } = useApp();
-    const handleAddSizeSave = (0, import_react25.useCallback)((preset) => {
+    const handleAddSizeSave = (0, import_react26.useCallback)((preset) => {
       addSizePreset(preset);
     }, [addSizePreset]);
     const editSizePreset = sizePresets?.find((p) => p.id === selectedSizePresetId) || sizePresets?.[0];
-    const handleEditSizeSave = (0, import_react25.useCallback)((preset) => {
+    const handleEditSizeSave = (0, import_react26.useCallback)((preset) => {
       if (editSizePreset) updateSizePreset(editSizePreset.id, preset);
     }, [editSizePreset, updateSizePreset]);
     const summary = useSelectionSummary();
@@ -39184,7 +39520,7 @@
     const isMultiConn = nodeCount >= 2 && allConnectors;
     const isConnSel = isSingleConn || isMultiConn;
     const ctaLabel = getCtaLabel(nodeCount);
-    (0, import_react25.useEffect)(() => {
+    (0, import_react26.useEffect)(() => {
       if (isSingleFigjam) {
         if (currentTab !== "node") setCurrentTab("node");
       } else if (isMultiFigjam) {
@@ -39197,13 +39533,13 @@
         if (currentTab === "connection") setCurrentTab("node");
       }
     }, [isSingleFigjam, isMultiFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
-    (0, import_react25.useEffect)(() => {
+    (0, import_react26.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
-    (0, import_react25.useEffect)(() => {
+    (0, import_react26.useEffect)(() => {
       autoResizeWindow();
     }, [isSingleFigjam, isMultiFigjam, autoResizeWindow]);
-    (0, import_react25.useEffect)(() => {
+    (0, import_react26.useEffect)(() => {
       let newlyFocusedInput = null;
       const handleFocusIn = (e) => {
         const target = e.target;
@@ -39263,8 +39599,8 @@
     function handleContextDelete() {
       setContextMenuOpen(false);
     }
-    const titleDebounceRef = (0, import_react25.useRef)(null);
-    (0, import_react25.useEffect)(() => {
+    const titleDebounceRef = (0, import_react26.useRef)(null);
+    (0, import_react26.useEffect)(() => {
       return () => {
         if (titleDebounceRef.current) {
           clearTimeout(titleDebounceRef.current);
@@ -39273,13 +39609,13 @@
     }, []);
     function renderTitleBanner() {
       if (isSingleFigjam) {
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "figjam-title-label", children: "Figjam object" });
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "figjam-title-label", children: "Figjam object" });
       }
       if (isMultiFigjam) {
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figjam objects selected` }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figjam objects selected` }) });
       }
       if (isSingleConn) {
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
           "input",
           {
             type: "text",
@@ -39303,10 +39639,10 @@
         } else {
           selText = `${nodeCount} objects selected`;
         }
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("span", { id: "multi-selection-text", children: selText }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { id: "multi-selection-text", children: selText }) });
       }
       const activeNodeId = nodeCount === 1 ? selectedNodes[0]?.id || "single" : "none";
-      return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
         "input",
         {
           type: "text",
@@ -39323,15 +39659,15 @@
         activeNodeId
       ) });
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, onInput: triggerFormChange, onChange: triggerFormChange, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "title-banner", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
+    return /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, onInput: triggerFormChange, onChange: triggerFormChange, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "title-banner", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
         const isConnectionDisabled = isSingleFigjam || !isConnSel && nodeCount < 2;
         const isAppearanceDisabled = isFigjamSelected || nodeCount === 0 || isConnSel;
         const isNodeDisabled = isFigjamSelected || isConnSel;
         const isDisabled = tab.id === "connection" ? isConnectionDisabled : tab.id === "appearance" ? isAppearanceDisabled : isNodeDisabled;
         const isActive = !isSingleFigjam && currentTab === tab.id;
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
           "button",
           {
             id: `tab-btn-${tab.id}`,
@@ -39344,44 +39680,44 @@
           tab.id
         );
       }) }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("hr", { className: "section-divider" }),
-      /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("main", { className: "tab-panels", children: isSingleFigjam ? /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "figjam-empty-card", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("span", { children: "Select a Flooow node" }) }) : /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(import_jsx_runtime27.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("hr", { className: "section-divider" }),
+      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("main", { className: "tab-panels", children: isSingleFigjam ? /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "figjam-empty-card", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { children: "Select a Flooow node" }) }) : /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(import_jsx_runtime28.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
           "section",
           {
             id: "panel-node",
             className: "tab-panel",
             style: { display: currentTab === "node" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(NodePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(NodePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
           "section",
           {
             id: "panel-appearance",
             className: "tab-panel",
             style: { display: currentTab === "appearance" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(AppearancePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(AppearancePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
           "section",
           {
             id: "panel-connection",
             className: "tab-panel",
             style: { display: currentTab === "connection" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(ConnectionPanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(ConnectionPanel, {})
           }
         )
       ] }) }),
       (() => {
         const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
         const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected;
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("footer", { className: "app-footer", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "footer-left", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("span", { className: "footer-plan-badge", children: "Free Plan" }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("div", { className: "footer-right", children: isSingleFlow || isSingleFigjam ? (
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("footer", { className: "app-footer", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "footer-left", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "footer-plan-badge", children: "Free Plan" }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "footer-right", children: isSingleFlow || isSingleFigjam ? (
             /* 단일 선택: Undo / Apply 미렌더링, Upgrade 버튼 표시 */
-            /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
               "button",
               {
                 id: "btn-upgrade",
@@ -39394,8 +39730,8 @@
             )
           ) : isMultiFlow ? (
             /* 복수 선택: Undo + Apply (Draft가 없으면 Apply disabled) */
-            /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(import_jsx_runtime27.Fragment, { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(import_jsx_runtime28.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
                 "button",
                 {
                   id: "btn-undo",
@@ -39406,7 +39742,7 @@
                   children: "Undo"
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
                 "button",
                 {
                   id: "btn-main-cta",
@@ -39420,8 +39756,8 @@
             ] })
           ) : (
             /* 기타 상태 (0개 선택 생성 모드, 커넥터 선택 등) */
-            /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(import_jsx_runtime27.Fragment, { children: [
-              isConnSel && canUndo && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(import_jsx_runtime28.Fragment, { children: [
+              isConnSel && canUndo && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
                 "button",
                 {
                   id: "btn-undo",
@@ -39431,7 +39767,7 @@
                   children: "Undo"
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
                 "button",
                 {
                   id: "btn-main-cta",
@@ -39446,8 +39782,8 @@
           ) })
         ] });
       })(),
-      /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
-      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
+      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
         SizeModal,
         {
           mode: "add",
@@ -39459,7 +39795,7 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
         SizeModal,
         {
           mode: "edit",
@@ -39472,13 +39808,13 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "figma-design-picker" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      activeModal === "figma-design-picker" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
         FigmaDesignPickerModal,
         {
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "add-style" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      activeModal === "add-style" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
         StyleModal,
         {
           mode: "add",
@@ -39487,7 +39823,7 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "edit-style" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      activeModal === "edit-style" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
         StyleModal,
         {
           mode: "edit",
@@ -39499,7 +39835,7 @@
       ),
       activeModal === "connector-color" && (() => {
         const isConnectorColorMixed = summary.isMultiConnector ? summary.connectorColor.isMixed : false;
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
           ConnectorColorModal,
           {
             initialColor: isConnectorColorMixed ? "" : uiState.selectedConnectorColor || "#000000",
@@ -39532,7 +39868,7 @@
       activeModal === "fill-color" && (() => {
         const isFillMixed = summary.isMultiFlowNode ? multiDraft.colorHex !== void 0 ? false : summary.color.isMixed : false;
         const currentFill = multiDraft.colorHex !== void 0 ? multiDraft.colorHex : (summary.isMultiFlowNode ? summary.color.value : summary.isSingleFlowNode ? summary.color.value : uiState.selectedColor) || uiState.selectedColor || "#FFFFFF";
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
           FillColorModal,
           {
             initialColor: currentFill,
@@ -39556,7 +39892,7 @@
         const currentStrokeColor = multiDraft.strokeColor !== void 0 ? multiDraft.strokeColor : (summary.isMultiFlowNode ? summary.strokeColor.value : summary.isSingleFlowNode ? summary.strokeColor.value : uiState.selectedStrokeColor) || uiState.selectedStrokeColor || "#000000";
         const rawWeight = summary.isMultiFlowNode ? summary.strokeWeight.value : summary.isSingleFlowNode ? summary.strokeWeight.value : uiState.selectedStrokeWeight;
         const currentStrokeWeight = multiDraft.strokeWeight !== void 0 ? multiDraft.strokeWeight : typeof rawWeight === "number" ? rawWeight : typeof uiState.selectedStrokeWeight === "number" ? uiState.selectedStrokeWeight : 1.5;
-        return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
           StrokeColorModal,
           {
             initialColor: currentStrokeColor,
@@ -39576,45 +39912,48 @@
           }
         );
       })(),
-      activeModal === "label-fill-color" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      activeModal === "label-fill-color" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
         FillColorModal,
         {
           title: "Label Fill",
+          showStylePresets: true,
           initialColor: lastConnectorConfig.labelFillColor || "#EA2039",
           onApply: (colorHex) => {
-            const clean = colorHex.toUpperCase();
+            const clean = colorHex.toLowerCase() === "none" ? "None" : colorHex.toUpperCase();
             setLastConnectorConfig({ labelFillColor: clean });
             setTimeout(() => applyCurrentConnectorState(), 0);
           },
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "label-stroke-color" && /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      activeModal === "label-stroke-color" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
         StrokeColorModal,
         {
           title: "Label Stroke",
+          showStylePresets: true,
           hideWeightControl: true,
           initialColor: lastConnectorConfig.labelStrokeColor || "#EA2039",
-          initialWeight: 1,
-          onApply: (strokeColor) => {
-            const clean = strokeColor.toUpperCase();
+          initialWeight: (lastConnectorConfig.labelStrokeColor || "").toLowerCase() === "none" ? 0 : 1,
+          onApply: (strokeColor, strokeWeight) => {
+            const isStrokeNone = strokeWeight === 0 || strokeColor.toLowerCase() === "none";
+            const clean = isStrokeNone ? "None" : strokeColor.toUpperCase();
             setLastConnectorConfig({ labelStrokeColor: clean });
             setTimeout(() => applyCurrentConnectorState(), 0);
           },
           onClose: () => setActiveModal("none")
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(FigmaTooltip, {})
+      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(FigmaTooltip, {})
     ] });
   }
 
   // src/ui/index.tsx
-  var import_jsx_runtime28 = __toESM(require_jsx_runtime());
+  var import_jsx_runtime29 = __toESM(require_jsx_runtime());
   var container = document.getElementById("root");
   if (!container) throw new Error("#root not found");
   var root = (0, import_client.createRoot)(container);
   root.render(
-    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(App, {}) })
+    /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(App, {}) })
   );
 })();
 /*! Bundled license information:

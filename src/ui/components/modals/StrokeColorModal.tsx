@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { ColorWheelField } from "../shared/ColorWheelField";
 import { StrokeColorIcon } from "../shared/icons";
+import { StylePresetColorGrid } from "../shared/StylePresetColorGrid";
 import { SCREEN_NODE_CONSTRAINTS, clampStrokeWeight } from "../../../types";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
@@ -30,6 +31,8 @@ export interface StrokeColorModalProps {
   initialWeight: number;
   isColorMixed?: boolean;
   isWeightMixed?: boolean;
+  /** 노드 스타일 프리셋 보더 컬러 칩 그리드 표시 여부 (라벨 등) */
+  showStylePresets?: boolean;
   onApply: (strokeColor: string, strokeWeight: number) => void;
   onClose: () => void;
 }
@@ -49,6 +52,7 @@ export function StrokeColorModal({
   initialWeight,
   isColorMixed = false,
   isWeightMixed = false,
+  showStylePresets = false,
   onApply,
   onClose,
 }: StrokeColorModalProps) {
@@ -69,7 +73,7 @@ export function StrokeColorModal({
   const [strokeWeight, setStrokeWeight] = useState(
     isWeightMixed ? 0 : initialWeight,
   );
-  const [showWheel, setShowWheel] = useState(true);
+  const [showWheel, setShowWheel] = useState(false);
 
   // 직전 유효 상태 기억 (복원용)
   const lastValidColorRef = useRef<string>(validStroke);
@@ -220,6 +224,13 @@ export function StrokeColorModal({
             className="style-section-group"
             style={{ display: "flex", flexDirection: "column" }}
           >
+            {showStylePresets && (
+              <StylePresetColorGrid
+                mode="stroke"
+                currentHex={strokeWeight === 0 || isColorMixed ? "" : strokeHex}
+                onSelect={handleColorChange}
+              />
+            )}
             <ColorWheelField
               value={strokeHex}
               isNone={strokeWeight === 0}
@@ -293,7 +304,7 @@ export function StrokeColorModal({
             className="btn-phase-modal-save"
             onClick={handleSave}
           >
-            Save
+            Apply
           </button>
         </div>
       </div>

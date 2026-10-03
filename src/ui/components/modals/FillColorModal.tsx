@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { ColorWheelField } from "../shared/ColorWheelField";
 import { FillColorIcon } from "../shared/icons";
+import { StylePresetColorGrid } from "../shared/StylePresetColorGrid";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -16,6 +17,8 @@ export interface FillColorModalProps {
   title?: string;
   initialColor: string;
   isMixed?: boolean;
+  /** 노드 스타일 프리셋 컬러 칩 그리드 표시 여부 (라벨 등) */
+  showStylePresets?: boolean;
   onApply: (colorHex: string) => void;
   onClose: () => void;
 }
@@ -31,6 +34,7 @@ export function FillColorModal({
   title,
   initialColor,
   isMixed = false,
+  showStylePresets = false,
   onApply,
   onClose,
 }: FillColorModalProps) {
@@ -49,7 +53,7 @@ export function FillColorModal({
   const [fillHex, setFillHex] = useState(isMixed ? "" : validFill);
   const [isNone, setIsNone] = useState(isInitialNone);
   const [isFillMixed, setIsFillMixed] = useState(Boolean(isMixed));
-  const [showWheel, setShowWheel] = useState(true);
+  const [showWheel, setShowWheel] = useState(false);
 
   // 직전 유효 색상 기억 (투명 해제 시 복원용)
   const lastValidFillRef = useRef<string>(validFill);
@@ -164,6 +168,13 @@ export function FillColorModal({
             className="style-section-group"
             style={{ display: "flex", flexDirection: "column" }}
           >
+            {showStylePresets && (
+              <StylePresetColorGrid
+                mode="fill"
+                currentHex={isNone || isFillMixed ? "" : fillHex}
+                onSelect={handleColorChange}
+              />
+            )}
             <ColorWheelField
               value={fillHex}
               isMixed={isFillMixed}
@@ -210,7 +221,7 @@ export function FillColorModal({
             className="btn-phase-modal-save"
             onClick={handleSave}
           >
-            Save
+            Apply
           </button>
         </div>
       </div>
