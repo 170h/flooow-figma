@@ -68,7 +68,7 @@ export function LabelSection() {
     isConnectorSelected,
     lastConnectorConfig,
     setLastConnectorConfig,
-    applyCurrentConnectorState,
+    markConnectorDirty,
     autoResizeWindow,
     setActiveModal,
   } = useApp();
@@ -83,10 +83,10 @@ export function LabelSection() {
   const effectiveIsOn = !isMultiSelection && isOn;
 
   const [labelText, setLabelText] = useState(lastConnectorConfig.labelText || '');
-  const [fillColor, setFillColor] = useState(lastConnectorConfig.labelFillColor || '#EA2039');
-  const [strokeColor, setStrokeColor] = useState(lastConnectorConfig.labelStrokeColor || '#EA2039');
-  const [fillHexInput, setFillHexInput] = useState((lastConnectorConfig.labelFillColor || '#EA2039').replace('#', ''));
-  const [strokeHexInput, setStrokeHexInput] = useState((lastConnectorConfig.labelStrokeColor || '#EA2039').replace('#', ''));
+  const [fillColor, setFillColor] = useState(lastConnectorConfig.labelFillColor || '#FFFFFF');
+  const [strokeColor, setStrokeColor] = useState(lastConnectorConfig.labelStrokeColor || '#000000');
+  const [fillHexInput, setFillHexInput] = useState((lastConnectorConfig.labelFillColor || '#FFFFFF').replace('#', ''));
+  const [strokeHexInput, setStrokeHexInput] = useState((lastConnectorConfig.labelStrokeColor || '#000000').replace('#', ''));
   const [align, setAlign] = useState<ConnectorLabelAlign>(lastConnectorConfig.labelAlign || 'LEFT');
   const [boxStyle, setBoxStyle] = useState<ConnectorLabelBoxStyle>(lastConnectorConfig.labelBoxStyle || 'BOX');
 
@@ -178,7 +178,7 @@ export function LabelSection() {
     setIsOn(checked);
     setLastConnectorConfig({ labelOn: checked });
     autoResizeWindow();
-    setTimeout(() => applyCurrentConnectorState(), 0);
+    setTimeout(() => markConnectorDirty(), 0);
   }
 
   /**
@@ -203,7 +203,7 @@ export function LabelSection() {
     setLastConnectorConfig({ labelText: val });
     if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
     labelDebounceRef.current = setTimeout(() => {
-      applyCurrentConnectorState();
+      markConnectorDirty();
     }, 250);
   }
 
@@ -212,7 +212,7 @@ export function LabelSection() {
     setFillColor(norm);
     setFillHexInput(norm.replace('#', ''));
     setLastConnectorConfig({ labelFillColor: norm });
-    setTimeout(() => applyCurrentConnectorState(), 0);
+    setTimeout(() => markConnectorDirty(), 0);
   }
 
   // 배경 투명(None) 적용
@@ -220,7 +220,7 @@ export function LabelSection() {
     setFillColor('None');
     setFillHexInput('None');
     setLastConnectorConfig({ labelFillColor: 'None' });
-    setTimeout(() => applyCurrentConnectorState(), 0);
+    setTimeout(() => markConnectorDirty(), 0);
   }
 
   // Fill 칩 클릭: 배경 끄기/켜기 토글
@@ -256,7 +256,7 @@ export function LabelSection() {
     setStrokeColor(norm);
     setStrokeHexInput(norm.replace('#', ''));
     setLastConnectorConfig({ labelStrokeColor: norm });
-    setTimeout(() => applyCurrentConnectorState(), 0);
+    setTimeout(() => markConnectorDirty(), 0);
   }
 
   // 보더 삭제(None) 적용
@@ -264,7 +264,7 @@ export function LabelSection() {
     setStrokeColor('None');
     setStrokeHexInput('None');
     setLastConnectorConfig({ labelStrokeColor: 'None' });
-    setTimeout(() => applyCurrentConnectorState(), 0);
+    setTimeout(() => markConnectorDirty(), 0);
   }
 
   // Stroke 칩 클릭: 보더 끄기/켜기 토글
@@ -298,13 +298,13 @@ export function LabelSection() {
   function handleAlignSelect(newAlign: ConnectorLabelAlign) {
     setAlign(newAlign);
     setLastConnectorConfig({ labelAlign: newAlign });
-    setTimeout(() => applyCurrentConnectorState(), 0);
+    setTimeout(() => markConnectorDirty(), 0);
   }
 
   function handleBoxStyleSelect(newStyle: ConnectorLabelBoxStyle) {
     setBoxStyle(newStyle);
     setLastConnectorConfig({ labelBoxStyle: newStyle });
-    setTimeout(() => applyCurrentConnectorState(), 0);
+    setTimeout(() => markConnectorDirty(), 0);
   }
 
   return (
@@ -334,7 +334,7 @@ export function LabelSection() {
               onFocus={() => { isFocusedRef.current = true; }}
               onBlur={() => {
                 isFocusedRef.current = false;
-                applyCurrentConnectorState();
+                markConnectorDirty();
               }}
               onInput={handleInput}
               onCompositionEnd={e => {

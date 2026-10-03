@@ -57,13 +57,13 @@ export function ElevationSection() {
       const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, 'elevation');
       if (!isAllowed) {
         return {
-          state: 'MIXED_DISABLED' as const,
+          state: 'OFF' as const,
           supportedCount: 0,
           unsupportedCount: 1,
           supportedNodes: [],
           unsupportedNodes: [],
           checked: false,
-          isMixed: true,
+          isMixed: false,
           disabled: true,
           isOpen: false,
         };
@@ -101,6 +101,15 @@ export function ElevationSection() {
         : (isOpen !== null ? isOpen : rawOptionState.isOpen));
 
   const effectiveState = React.useMemo(() => {
+    if (selectedNodes.length < 2 && (!isDraftAllowed || rawOptionState.disabled || rawOptionState.state === 'MIXED_DISABLED')) {
+      return {
+        state: 'OFF' as const,
+        checked: false,
+        isMixed: false,
+        disabled: true,
+        isOpen: false,
+      };
+    }
     if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {
       return {
         state: 'MIXED_DISABLED' as const,
@@ -127,7 +136,7 @@ export function ElevationSection() {
       disabled: rawOptionState.disabled,
       isOpen: effectiveIsOpen,
     };
-  }, [isDraftAllowed, rawOptionState, isElevationDrafted, multiDraft.elevation, effectiveIsOpen]);
+  }, [selectedNodes.length, isDraftAllowed, rawOptionState, isElevationDrafted, multiDraft.elevation, effectiveIsOpen]);
 
   // 선택된 레벨 (Mixed 상태인 경우 선택 하이라이트 해제)
   const isElevationMixed = React.useMemo(() => {

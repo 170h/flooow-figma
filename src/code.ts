@@ -841,6 +841,51 @@ function isHeaderFrame(c: SceneNode): boolean {
   return lm === 'HORIZONTAL' || lm === 'VERTICAL';
 }
 
+// 브릿지 필은 타이틀 폭이 수십 px로 고정된다. textAutoResize HEIGHT는 그 폭을 유지하므로,
+// 다른 노드로 바꿀 때 헤더가 그 폭을 끌어안고 타이틀이 한 줄로 남는다.
+// 카드 안쪽 폭으로 다시 맞춘 뒤 가로는 부모를 채우고 세로는 줄바꿈에 맡긴다.
+function syncTitleWidthToCard(card: FrameNode, cardWidth: number, nodeType: DiagramNodeType) {
+  const titleText = card.findOne(
+    (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
+  ) as TextNode | null;
+  if (!titleText) return;
+
+  const header = card.children.find(isHeaderFrame) as FrameNode | undefined;
+  if (header) {
+    if (header.layoutMode !== 'VERTICAL') {
+      try { header.layoutMode = 'VERTICAL'; } catch (_) {}
+    }
+    try { header.primaryAxisSizingMode = 'AUTO'; } catch (_) {}
+    try { header.layoutSizingVertical = 'HUG'; } catch (_) {}
+    try { header.layoutSizingHorizontal = 'FILL'; } catch (_) {
+      try { header.layoutAlign = 'STRETCH'; } catch (_) {}
+    }
+  }
+
+  const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 0;
+  const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 0;
+  const strokeExtra = (typeof card.strokeWeight === 'number' && Array.isArray(card.strokes) && card.strokes.length > 0)
+    ? card.strokeWeight * 2
+    : 0;
+  const availW = Math.max(10, Math.round(cardWidth - pl - pr - strokeExtra));
+  const truncate = nodeType === 'Decision';
+
+  try { titleText.maxWidth = null; } catch (_) {}
+  if (!truncate) {
+    try { titleText.maxHeight = null; } catch (_) {}
+  }
+  try {
+    if (titleText.textAutoResize !== 'NONE') titleText.textAutoResize = 'NONE';
+  } catch (_) {}
+  try {
+    titleText.resize(availW, truncate ? 54 : Math.max(18, Math.round(titleText.height) || 18));
+  } catch (_) {}
+  try { titleText.textAutoResize = truncate ? 'TRUNCATE' : 'HEIGHT'; } catch (_) {}
+  try { titleText.layoutSizingHorizontal = 'FILL'; } catch (_) {
+    try { titleText.layoutAlign = 'STRETCH'; } catch (_) {}
+  }
+}
+
 // 카드의 전체 내용(헤더 + 패딩 + 설명 텍스트 전체 + 상태 뱃지 여백)을 모두 수용하기 위한 최소 Hug 높이 정밀 산출
 // 피그마 네이티브 오토레이아웃 렌더링 엔진을 Source of Truth로 사용하여 1픽셀의 오차도 없이 일원화 (최소 49px 보장)
 function calculateCardHugHeight(card: FrameNode, textCharacters?: string): number {
@@ -1660,11 +1705,12 @@ async function handleSelectionChange() {
         connectorLabelOn = rawCustomLabelOn !== '' ? rawCustomLabelOn === 'true' : Boolean(connectorLabel);
         connectorLabelBoxStyle = (node.getPluginData('connector_label_box_style') as ConnectorLabelBoxStyle) || 'BOX';
         connectorLabelAlign = (node.getPluginData('connector_label_align') as ConnectorLabelAlign) || 'CENTER';
-        connectorLabelFillColor = node.getPluginData('connector_label_fill_color') || '#EA2039';
-        connectorLabelStrokeColor = node.getPluginData('connector_label_stroke_color') || '#EA2039';
         connectorLineType = 'ELBOWED';
         connectorRoutingType = (node.getPluginData('connector_routing') as ConnectorRoutingType) || 'ORTHOGONAL';
         connectorColorHex = node.getPluginData('connector_color');
+        const labelColorFallback = connectorColorHex || '#000000';
+        connectorLabelFillColor = node.getPluginData('connector_label_fill_color') || '#FFFFFF';
+        connectorLabelStrokeColor = node.getPluginData('connector_label_stroke_color') || labelColorFallback;
         const savedWeight = node.getPluginData('connector_weight');
         connectorStrokeWeight = savedWeight ? parseFloat(savedWeight) : undefined;
         connectorStrokePattern = (node.getPluginData('connector_pattern') as ConnectorStrokePattern) || 'SOLID';
@@ -1849,9 +1895,8 @@ async function handleSelectionChange() {
         if (header.primaryAxisSizingMode !== 'AUTO') {
           try { header.primaryAxisSizingMode = 'AUTO'; } catch (_) {}
         }
-        if (header.counterAxisSizingMode !== 'AUTO') {
-          try { header.counterAxisSizingMode = 'AUTO'; } catch (_) {}
-        }
+        try { header.layoutSizingHorizontal = 'FILL'; } catch (_) {}
+        try { header.layoutSizingVertical = 'HUG'; } catch (_) {}
         const tText = header.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
         if (tText) {
           if (tText.layoutAlign !== 'STRETCH') {
@@ -2103,23 +2148,6 @@ async function handleSelectionChange() {
 
     // 선택된 노드들 사이에 실제로 연결된 커넥터 탐색 (체인 여부 무관, Gizmo 상태용)
     const selectedNodeIdSet = new Set(uniqueNodes.map((n) => n.id));
-    const allPageConnectors = figma.currentPage.findAll((n) => n.type === 'CONNECTOR');
-    console.log('[DEBUG 3+ allPageConnectors on page]', {
-      selectedNodeIds: Array.from(selectedNodeIdSet),
-      allPageConnectorsCount: allPageConnectors.length,
-      allPageConnectors: allPageConnectors.map((n) => {
-        const c = n as ConnectorNode;
-        const sId = c.connectorStart && 'endpointNodeId' in c.connectorStart ? c.connectorStart.endpointNodeId : undefined;
-        const tId = c.connectorEnd && 'endpointNodeId' in c.connectorEnd ? c.connectorEnd.endpointNodeId : undefined;
-        return {
-          id: c.id,
-          sId,
-          tId,
-          sInSet: sId ? selectedNodeIdSet.has(sId) : false,
-          tInSet: tId ? selectedNodeIdSet.has(tId) : false,
-        };
-      }),
-    });
 
     const foundConnectors = figma.currentPage.findAll((n) => {
       try {
@@ -2197,27 +2225,6 @@ async function handleSelectionChange() {
         });
       }
     }
-
-    console.log('[3+ Connector Collection Trace]', {
-      selectedNodeIds: Array.from(selectedNodeIdSet),
-      uniqueNodesLength: uniqueNodes.length,
-      connectorCount,
-      foundConnectorsLength: foundConnectors.length,
-      foundConnectors: foundConnectors.map((c) => {
-        if (c.type === 'CONNECTOR') {
-          const conn = c as ConnectorNode;
-          return {
-            id: conn.id,
-            connectorStart: conn.connectorStart,
-            connectorEnd: conn.connectorEnd,
-            startEndpointNodeId: conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined,
-            endEndpointNodeId: conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined,
-          };
-        }
-        return { id: c.id, type: c.type };
-      }),
-      multiNodeConnectors,
-    });
 
     postToUI({
       type: 'SELECTION_CHANGED',
@@ -2582,11 +2589,13 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
         if (headerFrame.layoutMode !== 'VERTICAL') {
           try { headerFrame.layoutMode = 'VERTICAL'; } catch (_) {}
         }
-        headerFrame.layoutAlign = 'STRETCH';
         headerFrame.primaryAxisSizingMode = 'AUTO';
-        headerFrame.counterAxisSizingMode = 'AUTO';
         headerFrame.primaryAxisAlignItems = 'MIN';
         headerFrame.counterAxisAlignItems = 'MIN';
+        try { headerFrame.layoutSizingVertical = 'HUG'; } catch (_) {}
+        try { headerFrame.layoutSizingHorizontal = 'FILL'; } catch (_) {
+          try { headerFrame.layoutAlign = 'STRETCH'; } catch (_) {}
+        }
       }
 
       if (textNode.textAutoResize !== 'HEIGHT') {
@@ -2596,6 +2605,7 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
       textNode.textAlignVertical = 'TOP';
       try { textNode.lineHeight = { value: 18, unit: 'PIXELS' }; } catch (_) {}
       textNode.layoutAlign = 'STRETCH';
+      try { textNode.layoutSizingHorizontal = 'FILL'; } catch (_) {}
       textNode.textTruncation = 'DISABLED';
       textNode.maxLines = null;
     }
@@ -2942,12 +2952,15 @@ function removeBranchMark(card: FrameNode) {
   }
 }
 
-function attachBranchMark(card: FrameNode, variant: BranchVariant, w: number, h: number) {
+function attachBranchMark(card: FrameNode, variant: BranchVariant, w: number, h: number, bgColor: RGB) {
   removeBranchMark(card);
   if (variant !== 'CHECK' && variant !== 'CROSS') return;
   const markD = variant === 'CHECK' ? BRANCH_CHECK_MARK : BRANCH_CROSS_MARK;
+  // 타이틀과 동일하게 배경 명도 0.5를 기준으로 기호를 검정/화이트로 전환
+  const markColor = getTextFillsByBackground(bgColor).titleFill.color;
+  const markHex = rgbToHexColor(markColor);
   // viewBox 32 좌표를 유지해야 원 중앙에 맞는다. 벡터만 꺼내 x/y를 0으로 두면 왼쪽 위로 붙는다.
-  const svgStr = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${markD}" fill="#FFFFFF"/></svg>`;
+  const svgStr = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${markD}" fill="${markHex}"/></svg>`;
   try {
     const imported = figma.createNodeFromSvg(svgStr);
     imported.name = 'BranchMark';
@@ -2956,7 +2969,7 @@ function attachBranchMark(card: FrameNode, variant: BranchVariant, w: number, h:
     imported.clipsContent = false;
     const vectors = imported.findAll((n) => n.type === 'VECTOR') as VectorNode[];
     for (const vector of vectors) {
-      vector.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+      vector.fills = [{ type: 'SOLID', color: markColor }];
       vector.strokes = [];
       try { vector.strokeWeight = 0; } catch (_) {}
     }
@@ -3048,7 +3061,7 @@ function attachShapeVectorNode(
   shape.y = 0;
   shape.locked = true;
   if (branchVariant) {
-    attachBranchMark(card, branchVariant, w, h);
+    attachBranchMark(card, branchVariant, w, h, bgColor);
   } else {
     removeBranchMark(card);
   }
@@ -3496,15 +3509,24 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
     const isShapeNode = !spec.allowDescription;
     const isChangingToScreen = prevNodeType !== 'Screen' && nodeType === 'Screen';
+    const prevBranchVariant = prevNodeType === 'Branch'
+      ? normalizeBranchVariant(safeGetPluginData(card, 'branch_variant'))
+      : undefined;
 
     const DEFAULT_SHAPE_NAMES = new Set([
       'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
       'Action', 'System', 'Database', 'Square', 'Junction', 'Diamond', 'Pill', 'Capsule',
       'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Circle',
     ]);
-    const effectiveTitle = (isChangingToScreen && (DEFAULT_SHAPE_NAMES.has(rawTitle) || !rawTitle))
-      ? 'Screen'
-      : title;
+    const incomingIsPlaceholder = !rawTitle
+      || DEFAULT_SHAPE_NAMES.has(rawTitle)
+      || (prevBranchVariant ? rawTitle === BRANCH_VARIANT_LABELS[prevBranchVariant] : false);
+    const leavingUntitledBranch = prevNodeType === 'Branch'
+      && nodeType !== 'Branch'
+      && Boolean(prevBranchVariant && !branchVariantHasTitle(prevBranchVariant));
+    const effectiveTitle = leavingUntitledBranch && incomingIsPlaceholder
+      ? (nodeType === 'Screen' ? 'Screen' : nodeType)
+      : ((isChangingToScreen && incomingIsPlaceholder) ? 'Screen' : title);
 
     card.name = effectiveTitle;
     card.clipsContent = false; // 스텝 배지(-11px 돌출) 및 엘리베이션이 잘리지 않도록 클리핑 해제
@@ -3721,7 +3743,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         try { titleText.textTruncation = 'ENDING'; } catch (_) {}
         try { titleText.maxLines = 3; } catch (_) {}
       }
-      await safeSetCharacters(titleText, (branchVariant && !showBranchTitle) ? '' : title);
+      await safeSetCharacters(titleText, (branchVariant && !showBranchTitle) ? '' : effectiveTitle);
       const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
       if (!hasExistingTitleFill || payload.colorHex) {
         titleText.fills = [titleFill];
@@ -3761,6 +3783,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
         headerRow.appendChild(titleText);
       }
 
+      titleText.visible = true;
       titleText.lineHeight = { value: 18, unit: 'PIXELS' };
       titleText.textAlignHorizontal = 'LEFT';
       titleText.textAlignVertical = 'TOP';
@@ -3989,6 +4012,8 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.maxWidth = finalW;
       card.minHeight = minH;
       card.maxHeight = null;
+      card.resize(finalW, Math.max(minH, card.height));
+      syncTitleWidthToCard(card, finalW, nodeType);
 
       const autoH = Math.max(minH, Math.round(card.height));
       card.resize(finalW, autoH);
@@ -4002,6 +4027,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
       card.minHeight = finalH;
       card.maxHeight = finalH;
       card.setPluginData('size_mode', 'fixed');
+      syncTitleWidthToCard(card, finalW, nodeType);
     }
 
     // 최종 높이에 맞춰 상태 뱃지 및 링크 뱃지 Y좌표 동기화
@@ -4275,14 +4301,25 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
       }
 
       // 5. 타이틀 (도형 기본명 갱신 또는 기존 타이틀 유지)
+      const prevBranchVariant = prevNodeType === 'Branch'
+        ? normalizeBranchVariant(safeGetPluginData(card, 'branch_variant'))
+        : undefined;
       const DEFAULT_SHAPE_NAMES = new Set([
         'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
         'Action', 'System', 'Database', 'Square', 'Junction', 'Diamond', 'Pill', 'Capsule',
+        'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Circle',
       ]);
       const currentTitle = card.name || 'Untitled';
+      const incomingIsPlaceholder = !currentTitle
+        || currentTitle === 'Untitled'
+        || DEFAULT_SHAPE_NAMES.has(currentTitle)
+        || (prevBranchVariant ? currentTitle === BRANCH_VARIANT_LABELS[prevBranchVariant] : false);
+      const leavingUntitledBranch = prevNodeType === 'Branch'
+        && nodeType !== 'Branch'
+        && Boolean(prevBranchVariant && !branchVariantHasTitle(prevBranchVariant));
       let effectiveTitle = currentTitle;
-      if (isChangingToScreen && (DEFAULT_SHAPE_NAMES.has(currentTitle) || !currentTitle)) {
-        effectiveTitle = 'Screen';
+      if ((leavingUntitledBranch && incomingIsPlaceholder) || (isChangingToScreen && incomingIsPlaceholder)) {
+        effectiveTitle = nodeType === 'Screen' ? 'Screen' : nodeType;
         card.name = effectiveTitle;
       } else if (patch.nodeType !== undefined && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
         effectiveTitle = nodeType;
@@ -4368,6 +4405,8 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         titleText.textAlignVertical = 'CENTER';
         titleText.lineHeight = { value: 18, unit: 'PIXELS' };
         titleText.textAutoResize = 'HEIGHT';
+        const showBatchBranchTitle = Boolean(batchBranchVariant && branchVariantHasTitle(batchBranchVariant));
+        titleText.visible = !batchBranchVariant || showBatchBranchTitle;
       } else {
         let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
         if (!headerRow) {
@@ -4413,6 +4452,7 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
         titleText.textAlignVertical = 'TOP';
         titleText.layoutAlign = 'STRETCH';
         titleText.textAutoResize = 'HEIGHT';
+        titleText.visible = true;
       }
 
       // 8. 설명 (Description) 갱신
@@ -4659,28 +4699,31 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
           try { descText.resize(descAvailW, descText.height); } catch (_) {}
         }
         const minH = nodeType === 'Screen' ? SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT : 49;
-        card.counterAxisSizingMode = 'FIXED';
-        card.primaryAxisSizingMode = 'AUTO';
-        card.minWidth = finalW;
-        card.maxWidth = finalW;
-        card.minHeight = minH;
-        card.maxHeight = null;
+      card.counterAxisSizingMode = 'FIXED';
+      card.primaryAxisSizingMode = 'AUTO';
+      card.minWidth = finalW;
+      card.maxWidth = finalW;
+      card.minHeight = minH;
+      card.maxHeight = null;
+      card.resize(finalW, Math.max(minH, card.height));
+      syncTitleWidthToCard(card, finalW, nodeType);
 
-        const autoH = Math.max(minH, Math.round(card.height));
-        card.resize(finalW, autoH);
-        card.setPluginData('size_mode', isFit ? 'fit' : 'hug');
-      } else {
-        card.primaryAxisSizingMode = 'FIXED';
-        card.counterAxisSizingMode = 'FIXED';
-        card.resize(finalW, finalH);
-        card.minWidth = finalW;
-        card.maxWidth = finalW;
-        card.minHeight = finalH;
-        card.maxHeight = finalH;
-        card.setPluginData('size_mode', effectiveSizeMode);
-      }
+      const autoH = Math.max(minH, Math.round(card.height));
+      card.resize(finalW, autoH);
+      card.setPluginData('size_mode', isFit ? 'fit' : 'hug');
+    } else {
+      card.primaryAxisSizingMode = 'FIXED';
+      card.counterAxisSizingMode = 'FIXED';
+      card.resize(finalW, finalH);
+      card.minWidth = finalW;
+      card.maxWidth = finalW;
+      card.minHeight = finalH;
+      card.maxHeight = finalH;
+      card.setPluginData('size_mode', effectiveSizeMode);
+      syncTitleWidthToCard(card, finalW, nodeType);
+    }
 
-      if (statusBadge) {
+    if (statusBadge) {
         statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
         statusBadge.x = finalW - statusBadge.width - 10;
         statusBadge.y = card.height - statusBadge.height - 10;
@@ -4871,11 +4914,13 @@ async function resizeNode(nodeId: string, width: number, height: number) {
           const headerRow = frame.children.find(isHeaderFrame) as FrameNode | undefined;
           if (headerRow) {
             headerRow.layoutMode = 'VERTICAL';
-            headerRow.layoutAlign = 'STRETCH';
             headerRow.primaryAxisSizingMode = 'AUTO';
-            headerRow.counterAxisSizingMode = 'AUTO';
             headerRow.primaryAxisAlignItems = 'MIN';
             headerRow.counterAxisAlignItems = 'MIN';
+            try { headerRow.layoutSizingVertical = 'HUG'; } catch (_) {}
+            try { headerRow.layoutSizingHorizontal = 'FILL'; } catch (_) {
+              try { headerRow.layoutAlign = 'STRETCH'; } catch (_) {}
+            }
           }
           if (title.layoutGrow !== 0) {
             try { title.layoutGrow = 0; } catch (_) {}
@@ -5082,11 +5127,32 @@ async function connectPoints(payload: ConnectPointsPayload) {
       }
     }
 
+    let sourceMagnet = payload.sourceMagnet;
+    let targetMagnet = payload.targetMagnet;
+    if (!sourceMagnet || !targetMagnet) {
+      const optimal = getOptimalMagnetPair(
+        {
+          x: sourceNode.x,
+          y: sourceNode.y,
+          width: sourceNode.width,
+          height: sourceNode.height,
+        },
+        {
+          x: targetNode.x,
+          y: targetNode.y,
+          width: targetNode.width,
+          height: targetNode.height,
+        }
+      );
+      sourceMagnet = optimal.sourceMagnet;
+      targetMagnet = optimal.targetMagnet;
+    }
+
     const connector = await createSingleConnector(
       sourceNode,
-      payload.sourceMagnet,
+      sourceMagnet,
       targetNode,
-      payload.targetMagnet,
+      targetMagnet,
       payload.label,
       payload.colorHex,
       payload.strokeWeight,
@@ -5726,12 +5792,18 @@ async function updateConnectorProperties(payload: {
         const align = payload.labelAlign ||
           (safeGetPluginData(connectorRootNode, 'connector_label_align') as ConnectorLabelAlign) ||
           (vectorNode ? safeGetPluginData(vectorNode, 'connector_label_align') as ConnectorLabelAlign : 'CENTER') || 'CENTER';
+        const labelColorFallback = payload.colorHex
+          || safeGetPluginData(connectorRootNode, 'connector_color')
+          || (vectorNode ? safeGetPluginData(vectorNode, 'connector_color') : '')
+          || '#000000';
         const fillCol = payload.labelFillColor ||
           safeGetPluginData(connectorRootNode, 'connector_label_fill_color') ||
-          (vectorNode ? safeGetPluginData(vectorNode, 'connector_label_fill_color') : '#EA2039') || '#EA2039';
+          (vectorNode ? safeGetPluginData(vectorNode, 'connector_label_fill_color') : '') ||
+          '#FFFFFF';
         const strokeCol = payload.labelStrokeColor ||
           safeGetPluginData(connectorRootNode, 'connector_label_stroke_color') ||
-          (vectorNode ? safeGetPluginData(vectorNode, 'connector_label_stroke_color') : '#EA2039') || '#EA2039';
+          (vectorNode ? safeGetPluginData(vectorNode, 'connector_label_stroke_color') : '') ||
+          labelColorFallback;
 
         const isNewFrame = !labelFrame;
         // 라벨 프레임이 없는 경우 새로 생성하여 커넥터 그룹에 추가

@@ -54,13 +54,13 @@ export function StatusSection() {
       const isAllowed = normalizeNodeType(creationType) === 'Screen';
       if (!isAllowed) {
         return {
-          state: 'MIXED_DISABLED' as const,
+          state: 'OFF' as const,
           supportedCount: 0,
           unsupportedCount: 1,
           supportedNodes: [],
           unsupportedNodes: [],
           checked: false,
-          isMixed: true,
+          isMixed: false,
           disabled: true,
           isOpen: false,
         };
@@ -123,6 +123,15 @@ export function StatusSection() {
         : (isOpen !== null ? isOpen : rawOptionState.isOpen));
 
   const effectiveState = React.useMemo(() => {
+    if (selectedNodes.length < 2 && (!isDraftAllowed || rawOptionState.disabled || rawOptionState.state === 'MIXED_DISABLED')) {
+      return {
+        state: 'OFF' as const,
+        checked: false,
+        isMixed: false,
+        disabled: true,
+        isOpen: false,
+      };
+    }
     if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {
       return {
         state: 'MIXED_DISABLED' as const,
@@ -149,7 +158,7 @@ export function StatusSection() {
       disabled: rawOptionState.disabled,
       isOpen: effectiveIsOpen,
     };
-  }, [isDraftAllowed, rawOptionState, isStatusDrafted, multiDraft.status, effectiveIsOpen]);
+  }, [selectedNodes.length, isDraftAllowed, rawOptionState, isStatusDrafted, multiDraft.status, effectiveIsOpen]);
 
   // Mixed 상태 판별: 지원 노드들 중에서 상태값이 서로 다른 경우
   const isStatusMixed = React.useMemo(() => {

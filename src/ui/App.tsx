@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { useApp } from './context/AppContext';
+import { labelFillIsDefault, labelStrokeFollowsConnector, useApp } from './context/AppContext';
 import { useFigmaMessage } from './hooks/useFigmaMessage';
 import { useAutoResize } from './hooks/useAutoResize';
 import { useSelectionSummary } from './hooks/useSelectionSummary';
@@ -57,7 +57,7 @@ export function App() {
     setLastNodeConfig,
     lastConnectorConfig,
     setLastConnectorConfig,
-    applyCurrentConnectorState,
+    markConnectorDirty,
     showToast,
     autoResizeWindow,
     stylePresets,
@@ -528,6 +528,14 @@ export function App() {
             isMixed={isConnectorColorMixed}
             onApply={(colorHex) => {
               const formatted = colorHex.toUpperCase();
+              const fillIsDefault = labelFillIsDefault(
+                lastConnectorConfig.labelFillColor,
+                uiState.selectedConnectorColor
+              );
+              const strokeFollows = labelStrokeFollowsConnector(
+                lastConnectorConfig.labelStrokeColor,
+                uiState.selectedConnectorColor
+              );
               setUIState({ selectedConnectorColor: formatted });
 
               // 선택된 커넥터가 있는 경우 모든 커넥터에 즉시 색상 변경 메시지 전송 (실시간 즉시 어플라이)
@@ -541,6 +549,8 @@ export function App() {
                         payload: {
                           connectorId: c.id,
                           colorHex: formatted,
+                          ...(fillIsDefault ? { labelFillColor: '#FFFFFF' } : {}),
+                          ...(strokeFollows ? { labelStrokeColor: formatted } : {}),
                         },
                       },
                     },
@@ -628,12 +638,12 @@ export function App() {
         <FillColorModal
           title="Label Fill"
           showStylePresets
-          initialColor={lastConnectorConfig.labelFillColor || '#EA2039'}
+          initialColor={lastConnectorConfig.labelFillColor || '#FFFFFF'}
           onApply={(colorHex) => {
             // None(투명)은 'None'으로 정규화 (어피어런스 Style과 동일 규격)
             const clean = colorHex.toLowerCase() === 'none' ? 'None' : colorHex.toUpperCase();
             setLastConnectorConfig({ labelFillColor: clean });
-            setTimeout(() => applyCurrentConnectorState(), 0);
+            markConnectorDirty();
           }}
           onClose={() => setActiveModal('none')}
         />
@@ -643,14 +653,14 @@ export function App() {
           title="Label Stroke"
           showStylePresets
           hideWeightControl={true}
-          initialColor={lastConnectorConfig.labelStrokeColor || '#EA2039'}
+          initialColor={lastConnectorConfig.labelStrokeColor || uiState.selectedConnectorColor || '#000000'}
           initialWeight={(lastConnectorConfig.labelStrokeColor || '').toLowerCase() === 'none' ? 0 : 1}
           onApply={(strokeColor, strokeWeight) => {
             // 두께 0 또는 None이면 보더 삭제('None'), 그 외에는 HEX 저장
             const isStrokeNone = strokeWeight === 0 || strokeColor.toLowerCase() === 'none';
             const clean = isStrokeNone ? 'None' : strokeColor.toUpperCase();
             setLastConnectorConfig({ labelStrokeColor: clean });
-            setTimeout(() => applyCurrentConnectorState(), 0);
+            markConnectorDirty();
           }}
           onClose={() => setActiveModal('none')}
         />

@@ -285,6 +285,9 @@ export interface AppContextValue {
   applyStepBadges: (startNumber?: number, corner?: string, shape?: string, colorMode?: 'White' | 'Black' | 'Style') => void;
   removeStepBadgesFromNodes: () => void;
   applyCurrentConnectorState: (customStartOffset?: number, customEndOffset?: number) => void;
+  /** 선택된 커넥터(또는 기존 연결) 설정이 원본과 달라졌는지 */
+  connectorDirty: boolean;
+  markConnectorDirty: () => void;
   connectSelectedNodes: () => void;
   updateConnectedConnectorMagnets: (sourceMagnet?: MagnetPosition, targetMagnet?: MagnetPosition) => void;
   handleMainAction: () => void;
@@ -334,13 +337,49 @@ const DEFAULT_LAST_NODE_CONFIG: LastNodeConfig = {
   branchVariant: 'CIRCLE',
 };
 
+const DEFAULT_CONNECTOR_COLOR = '#000000';
+const DEFAULT_LABEL_FILL = '#FFFFFF';
+const LEGACY_LABEL_COLOR = '#EA2039';
+
+function normalizeHexColor(color?: string): string {
+  const raw = (color || '').trim();
+  const lower = raw.toLowerCase();
+  if (!raw || lower === 'none' || lower === 'transparent') return '';
+  const body = raw.replace('#', '').toUpperCase();
+  return body ? `#${body}` : '';
+}
+
+function isExplicitNoneColor(color?: string): boolean {
+  const lower = (color || '').trim().toLowerCase();
+  return lower === 'none' || lower === 'transparent';
+}
+
+/** 라벨 배경이 아직 기본값(흰색, 또는 선 색을 따라가던 이전 기본)인지 */
+export function labelFillIsDefault(fill?: string, connector?: string): boolean {
+  if (isExplicitNoneColor(fill)) return false;
+  const f = normalizeHexColor(fill);
+  if (!f || f === DEFAULT_LABEL_FILL) return true;
+  const line = normalizeHexColor(connector) || DEFAULT_CONNECTOR_COLOR;
+  if (f === line || f === LEGACY_LABEL_COLOR) return true;
+  return false;
+}
+
+/** 라벨 보더색이 아직 커넥터 선 색(또는 예전 기본 빨강)을 따르는지 */
+export function labelStrokeFollowsConnector(stroke?: string, connector?: string): boolean {
+  if (isExplicitNoneColor(stroke)) return false;
+  const s = normalizeHexColor(stroke);
+  const line = normalizeHexColor(connector) || DEFAULT_CONNECTOR_COLOR;
+  if (!s || s === line || s === LEGACY_LABEL_COLOR) return true;
+  return false;
+}
+
 const DEFAULT_LAST_CONNECTOR_CONFIG: LastConnectorConfig = {
   labelOn: false,
   labelText: '',
   labelBoxStyle: 'BOX',
   labelAlign: 'CENTER',
-  labelFillColor: '#EA2039',
-  labelStrokeColor: '#EA2039',
+  labelFillColor: DEFAULT_LABEL_FILL,
+  labelStrokeColor: DEFAULT_CONNECTOR_COLOR,
   linkOn: false,
   linkUrl: '',
 };
@@ -451,6 +490,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // 단일 선택 원본 노드 스냅샷 및 적용 상태 관리
   const originalSelectedNodeRef = useRef<NodeInfo | null>(null);
   const isApplyingSingleRef = useRef(false);
+  const [connectorDirty, setConnectorDirty] = useState(false);
+  const liveApplyConnectorRef = useRef<((customStartOffset?: number, customEndOffset?: number) => void) | null>(null);
+  const markConnectorDirty = useCallback((customStartOffset?: number, customEndOffset?: number) => {
+    setConnectorDirty(true);
+    const nodes = selectedNodesRef.current;
+    const singleConnector = nodes.length === 1 && Boolean(nodes[0]?.isConnector);
+    const twoConnectedNodes = nodes.length === 2
+      && nodes.every((n) => n && !n.isConnector)
+      && Boolean(uiStateRef.current.hasExistingConnection);
+    if (!singleConnector && !twoConnectedNodes) return;
+    queueMicrotask(() => {
+      liveApplyConnectorRef.current?.(customStartOffset, customEndOffset);
+    });
+  }, []);
   const [formChangeTick, setFormChangeTick] = useState(0);
   const triggerFormChange = useCallback(() => {
     setFormChangeTick(t => t + 1);
@@ -611,6 +664,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { lastConnectorConfigRef.current = lastConnectorConfig; }, [lastConnectorConfig]);
 
   const setUIState = useCallback((partial: Partial<UIState>) => {
+    if (partial.selectedConnectorColor) {
+      const prevLine = uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
+      const nextLine = normalizeHexColor(partial.selectedConnectorColor) || DEFAULT_CONNECTOR_COLOR;
+      const cfg = lastConnectorConfigRef.current;
+      if (nextLine !== normalizeHexColor(prevLine)) {
+        const nextCfg = { ...cfg };
+        let changed = false;
+        if (labelFillIsDefault(cfg.labelFillColor, prevLine)) {
+          nextCfg.labelFillColor = DEFAULT_LABEL_FILL;
+          changed = true;
+        }
+        if (labelStrokeFollowsConnector(cfg.labelStrokeColor, prevLine)) {
+          nextCfg.labelStrokeColor = nextLine;
+          changed = true;
+        }
+        if (changed) {
+          lastConnectorConfigRef.current = nextCfg;
+          setLastConnectorConfigRaw(nextCfg);
+        }
+      }
+    }
     uiStateRef.current = { ...uiStateRef.current, ...partial };
     setUIStateRaw(prev => ({ ...prev, ...partial }));
   }, []);
@@ -858,8 +932,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         labelText: orig.connectorLabel || '',
         labelBoxStyle: orig.connectorLabelBoxStyle || 'BOX',
         labelAlign: orig.connectorLabelAlign || 'CENTER',
-        labelFillColor: orig.connectorLabelFillColor || '#EA2039',
-        labelStrokeColor: orig.connectorLabelStrokeColor || '#EA2039',
+        labelFillColor: labelFillIsDefault(orig.connectorLabelFillColor, orig.connectorColorHex)
+          ? DEFAULT_LABEL_FILL
+          : (orig.connectorLabelFillColor || DEFAULT_LABEL_FILL),
+        labelStrokeColor: labelStrokeFollowsConnector(orig.connectorLabelStrokeColor, orig.connectorColorHex)
+          ? (orig.connectorColorHex || DEFAULT_CONNECTOR_COLOR)
+          : (orig.connectorLabelStrokeColor || orig.connectorColorHex || DEFAULT_CONNECTOR_COLOR),
       });
 
       triggerFormChange();
@@ -1413,8 +1491,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
     const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || 'BOX';
     const labelAlign = lastConnectorConfigRef.current.labelAlign || 'CENTER';
-    const labelFillColor = lastConnectorConfigRef.current.labelFillColor || '#EA2039';
-    const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || '#EA2039';
+    const labelFillColor = lastConnectorConfigRef.current.labelFillColor || DEFAULT_LABEL_FILL;
+    const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
 
     connNodes.forEach(node => {
       parent.postMessage({
@@ -1443,7 +1521,88 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     });
+    setConnectorDirty(false);
   }, []);
+
+  const applyExistingConnectionState = useCallback((customStartOffset?: number, customEndOffset?: number) => {
+    const conns = uiStateRef.current.connectedConnectors || [];
+    if (conns.length === 0) return;
+
+    const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
+    const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
+    const colorEl = document.getElementById('conn-line-color') as HTMLInputElement | null;
+    const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
+    const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
+    const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
+    const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
+    const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
+
+    const hasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
+    const label = hasLabel ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || '').trim()) : '';
+    const colorRaw = colorEl?.value;
+    const color = colorRaw && colorRaw.trim() ? colorRaw : undefined;
+    const weightStr = weightEl?.value;
+    const weight = weightStr && weightStr.trim() !== '' ? parseFloat(weightStr) : undefined;
+    const startTermRaw = startTermEl?.value;
+    const startTerm = startTermRaw && startTermRaw !== 'MIXED' ? (startTermRaw as ConnectorTerminalType) : undefined;
+    const endTermRaw = endTermEl?.value;
+    const endTerm = endTermRaw && endTermRaw !== 'MIXED' ? (endTermRaw as ConnectorTerminalType) : undefined;
+    const startOffStr = startOffEl?.value;
+    const startOffset = typeof customStartOffset === 'number'
+      ? customStartOffset
+      : (startOffStr && startOffStr.trim() !== '' ? parseFloat(startOffStr) : undefined);
+    const endOffStr = endOffEl?.value;
+    const endOffset = typeof customEndOffset === 'number'
+      ? customEndOffset
+      : (endOffStr && endOffStr.trim() !== '' ? parseFloat(endOffStr) : undefined);
+    const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+
+    conns.forEach((conn) => {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'UPDATE_CONNECTOR_PROPERTIES',
+          payload: {
+            connectorId: conn.id,
+            isReversed: conn.isReversed,
+            colorHex: color,
+            strokeWeight: weight,
+            strokePattern: selectedLinePattern,
+            routingType: selectedRoutingType,
+            startTerminal: startTerm,
+            endTerminal: endTerm,
+            startOffset,
+            endOffset,
+            sourceMagnet: sourceMagnet || undefined,
+            targetMagnet: targetMagnet || undefined,
+            label,
+            hasLabel,
+            labelBoxStyle: lastConnectorConfigRef.current.labelBoxStyle || 'BOX',
+            labelAlign: lastConnectorConfigRef.current.labelAlign || 'CENTER',
+            labelFillColor: lastConnectorConfigRef.current.labelFillColor || DEFAULT_LABEL_FILL,
+            labelStrokeColor: lastConnectorConfigRef.current.labelStrokeColor || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR,
+          }
+        }
+      }, '*');
+    });
+    setConnectorDirty(false);
+  }, []);
+
+  useEffect(() => {
+    liveApplyConnectorRef.current = (customStartOffset?: number, customEndOffset?: number) => {
+      const nodes = selectedNodesRef.current;
+      if (nodes.length === 1 && nodes[0]?.isConnector) {
+        applyCurrentConnectorState(customStartOffset, customEndOffset);
+        return;
+      }
+      if (
+        nodes.length === 2
+        && nodes.every((n) => n && !n.isConnector)
+        && uiStateRef.current.hasExistingConnection
+      ) {
+        applyExistingConnectionState(customStartOffset, customEndOffset);
+      }
+    };
+  }, [applyCurrentConnectorState, applyExistingConnectionState]);
 
   const connectSelectedNodes = useCallback(() => {
     const nodes = selectedNodesRef.current;
@@ -1484,16 +1643,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // 라벨 스타일 설정값 (lastConnectorConfigRef에서 일관되게 읽음)
     const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || 'BOX';
     const labelAlign = lastConnectorConfigRef.current.labelAlign || 'CENTER';
-    const labelFillColor = lastConnectorConfigRef.current.labelFillColor || '#EA2039';
-    const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || '#EA2039';
+    const labelFillColor = lastConnectorConfigRef.current.labelFillColor || DEFAULT_LABEL_FILL;
+    const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
 
-    // 기존 연결이 이미 존재하는 경우 신규 생성 경로 차단
+    // 이미 연결된 쌍은 새로 만들지 않고 기존 커넥터에 반영한다
     if (uiStateRef.current.hasExistingConnection) {
+      applyExistingConnectionState();
       return;
     }
-
-    const finalSourceMag: MagnetPosition = sourceMagnet || 'RIGHT';
-    const finalTargetMag: MagnetPosition = targetMagnet || 'LEFT';
 
     if (nodes.length === 2) {
       parent.postMessage({
@@ -1501,9 +1658,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           type: 'CONNECT_POINTS',
           payload: {
             sourceNodeId: nodes[0].id,
-            sourceMagnet: finalSourceMag,
+            sourceMagnet: sourceMagnet || undefined,
             targetNodeId: nodes[1].id,
-            targetMagnet: finalTargetMag,
+            targetMagnet: targetMagnet || undefined,
             label,
             colorHex: color,
             strokeWeight: weight,
@@ -1550,7 +1707,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     }
-  }, [applyCurrentConnectorState, showToast]);
+  }, [applyCurrentConnectorState, applyExistingConnectionState, showToast]);
 
   const updateConnectedConnectorMagnets = useCallback((sourceMagnet?: MagnetPosition, targetMagnet?: MagnetPosition) => {
     const connectedConnectors = uiStateRef.current.connectedConnectors || [];
@@ -1799,6 +1956,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       multiDraftSelectionRef.current = sortedNewIds;
     }
 
+    const prevSelectionKey = selectedNodesRef.current.map((n) => n.id).sort().join(',');
+    const nextSelectionKey = nodes.map((n) => n.id).sort().join(',');
+    if (prevSelectionKey !== nextSelectionKey) {
+      setConnectorDirty(false);
+    }
+
     setSelectedNodes(nodes);
     selectedNodesRef.current = nodes;
 
@@ -1853,8 +2016,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             : (firstConn.connectorLabel || ''),
           labelBoxStyle: firstConn.connectorLabelBoxStyle || 'BOX',
           labelAlign: firstConn.connectorLabelAlign || 'CENTER',
-          labelFillColor: firstConn.connectorLabelFillColor || '#EA2039',
-          labelStrokeColor: firstConn.connectorLabelStrokeColor || '#EA2039',
+          labelFillColor: labelFillIsDefault(firstConn.connectorLabelFillColor, firstConn.connectorColorHex)
+            ? DEFAULT_LABEL_FILL
+            : (firstConn.connectorLabelFillColor || DEFAULT_LABEL_FILL),
+          labelStrokeColor: labelStrokeFollowsConnector(firstConn.connectorLabelStrokeColor, firstConn.connectorColorHex)
+            ? (firstConn.connectorColorHex || DEFAULT_CONNECTOR_COLOR)
+            : (firstConn.connectorLabelStrokeColor || firstConn.connectorColorHex || DEFAULT_CONNECTOR_COLOR),
         });
         setUIState({
           selectedConnectorColor: firstConn.connectorColorHex || '#000000',
@@ -2047,6 +2214,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     applyStepBadges,
     removeStepBadgesFromNodes,
     applyCurrentConnectorState,
+    connectorDirty,
+    markConnectorDirty,
     connectSelectedNodes,
     updateConnectedConnectorMagnets,
     handleMainAction,

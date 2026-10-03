@@ -391,10 +391,11 @@ export function getMutationTargets<T = any>(nodes: T[], option: PluginOption): T
 
 /**
  * 토글 스위치 최종 상태 4종
- * - ON: 켜짐 (보라색 배경, ON 아이콘, 섹션 펼침)
- * - OFF: 꺼짐 (회색 배경, OFF 아이콘, 섹션 접힘)
- * - MIXED_ACTIVE: 혼합 활성 (보라색 배경, '-' 아이콘, 섹션 펼침)
- * - MIXED_DISABLED: 혼합 비활성 (밝은 회색 배경, '-' 아이콘, 섹션 접힘)
+ * - ON: 켜짐
+ * - OFF: 꺼짐
+ * - MIXED_ACTIVE: 복수 선택의 값이 섞인 상태. '-' 표시, 섹션 펼침
+ * - MIXED_DISABLED: 복수 선택에서만 쓰는 혼합 비활성. '-' 표시
+ * 한 개 노드에서 옵션을 지원하지 않으면 OFF + disabled 이며 '-'를 쓰지 않는다.
  */
 export type OptionSwitchState = 'ON' | 'OFF' | 'MIXED_ACTIVE' | 'MIXED_DISABLED';
 
@@ -583,9 +584,11 @@ export interface FlowNodePayload {
 
 export interface ConnectPointsPayload {
   sourceNodeId: string;
-  sourceMagnet: MagnetPosition;
+  /** 미지정이면 Core가 두 노드 거리 기준 최적 마그넷을 계산한다 */
+  sourceMagnet?: MagnetPosition;
   targetNodeId: string;
-  targetMagnet: MagnetPosition;
+  /** 미지정이면 Core가 두 노드 거리 기준 최적 마그넷을 계산한다 */
+  targetMagnet?: MagnetPosition;
   label?: string;
   colorHex?: string;
   strokePattern?: ConnectorStrokePattern;

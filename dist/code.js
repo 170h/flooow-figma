@@ -334,13 +334,17 @@
     const c = (color || "").trim().toLowerCase();
     return c === "none" || c === "transparent";
   }
+  function rgbToHex(rgb) {
+    const toHex = (c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, "0");
+    return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`.toUpperCase();
+  }
   async function applyConnectorLabelStyle(labelFrame, textNode, options) {
     const {
       labelText,
       boxStyle = "BOX",
       textAlign = "CENTER",
-      fillColor = "#EA2039",
-      strokeColor = "#EA2039",
+      fillColor = "#FFFFFF",
+      strokeColor = "#000000",
       isVertical = false,
       connectorStrokeWeight
     } = options;
@@ -907,8 +911,9 @@
     if (shouldBuildLabel) {
       const boxStyle = options.labelBoxStyle || "BOX";
       const align = options.labelAlign || "CENTER";
-      const fillCol = options.labelFillColor || "#EA2039";
-      const strokeCol = options.labelStrokeColor || "#EA2039";
+      const lineHex = rgbToHex(strokeColor);
+      const fillCol = options.labelFillColor || "#FFFFFF";
+      const strokeCol = options.labelStrokeColor || lineHex;
       vector.setPluginData("connector_label_on", "true");
       vector.setPluginData("connector_label", labelText);
       vector.setPluginData("connector_label_box_style", boxStyle);
@@ -1255,8 +1260,9 @@
       if (labelOn && textNode) {
         const boxStyle = safeGetPluginData(rootNode, "connector_label_box_style") || safeGetPluginData(vector, "connector_label_box_style") || "BOX";
         const align = safeGetPluginData(rootNode, "connector_label_align") || safeGetPluginData(vector, "connector_label_align") || "CENTER";
-        const fillCol = safeGetPluginData(rootNode, "connector_label_fill_color") || safeGetPluginData(vector, "connector_label_fill_color") || "#EA2039";
-        const strokeCol = safeGetPluginData(rootNode, "connector_label_stroke_color") || safeGetPluginData(vector, "connector_label_stroke_color") || "#EA2039";
+        const lineHex = rgbToHex(strokeColor);
+        const fillCol = safeGetPluginData(rootNode, "connector_label_fill_color") || safeGetPluginData(vector, "connector_label_fill_color") || "#FFFFFF";
+        const strokeCol = safeGetPluginData(rootNode, "connector_label_stroke_color") || safeGetPluginData(vector, "connector_label_stroke_color") || lineHex;
         await applyConnectorLabelStyle(labelFrame, textNode, {
           labelText,
           boxStyle,
@@ -2046,6 +2052,72 @@
     const lm = c.layoutMode;
     return lm === "HORIZONTAL" || lm === "VERTICAL";
   }
+  function syncTitleWidthToCard(card, cardWidth, nodeType) {
+    const titleText = card.findOne(
+      (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
+    );
+    if (!titleText) return;
+    const header = card.children.find(isHeaderFrame);
+    if (header) {
+      if (header.layoutMode !== "VERTICAL") {
+        try {
+          header.layoutMode = "VERTICAL";
+        } catch (_) {
+        }
+      }
+      try {
+        header.primaryAxisSizingMode = "AUTO";
+      } catch (_) {
+      }
+      try {
+        header.layoutSizingVertical = "HUG";
+      } catch (_) {
+      }
+      try {
+        header.layoutSizingHorizontal = "FILL";
+      } catch (_) {
+        try {
+          header.layoutAlign = "STRETCH";
+        } catch (_2) {
+        }
+      }
+    }
+    const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 0;
+    const pr = typeof card.paddingRight === "number" ? card.paddingRight : 0;
+    const strokeExtra = typeof card.strokeWeight === "number" && Array.isArray(card.strokes) && card.strokes.length > 0 ? card.strokeWeight * 2 : 0;
+    const availW = Math.max(10, Math.round(cardWidth - pl - pr - strokeExtra));
+    const truncate = nodeType === "Decision";
+    try {
+      titleText.maxWidth = null;
+    } catch (_) {
+    }
+    if (!truncate) {
+      try {
+        titleText.maxHeight = null;
+      } catch (_) {
+      }
+    }
+    try {
+      if (titleText.textAutoResize !== "NONE") titleText.textAutoResize = "NONE";
+    } catch (_) {
+    }
+    try {
+      titleText.resize(availW, truncate ? 54 : Math.max(18, Math.round(titleText.height) || 18));
+    } catch (_) {
+    }
+    try {
+      titleText.textAutoResize = truncate ? "TRUNCATE" : "HEIGHT";
+    } catch (_) {
+    }
+    try {
+      titleText.layoutSizingHorizontal = "FILL";
+    } catch (_) {
+      try {
+        titleText.layoutAlign = "STRETCH";
+      } catch (_2) {
+      }
+    }
+  }
   function calculateCardHugHeight(card, textCharacters) {
     const isAuto = card.primaryAxisSizingMode === "AUTO";
     if (isAuto && textCharacters === void 0) {
@@ -2687,11 +2759,12 @@
           connectorLabelOn = rawCustomLabelOn !== "" ? rawCustomLabelOn === "true" : Boolean(connectorLabel);
           connectorLabelBoxStyle = node.getPluginData("connector_label_box_style") || "BOX";
           connectorLabelAlign = node.getPluginData("connector_label_align") || "CENTER";
-          connectorLabelFillColor = node.getPluginData("connector_label_fill_color") || "#EA2039";
-          connectorLabelStrokeColor = node.getPluginData("connector_label_stroke_color") || "#EA2039";
           connectorLineType = "ELBOWED";
           connectorRoutingType = node.getPluginData("connector_routing") || "ORTHOGONAL";
           connectorColorHex = node.getPluginData("connector_color");
+          const labelColorFallback = connectorColorHex || "#000000";
+          connectorLabelFillColor = node.getPluginData("connector_label_fill_color") || "#FFFFFF";
+          connectorLabelStrokeColor = node.getPluginData("connector_label_stroke_color") || labelColorFallback;
           const savedWeight = node.getPluginData("connector_weight");
           connectorStrokeWeight = savedWeight ? parseFloat(savedWeight) : void 0;
           connectorStrokePattern = node.getPluginData("connector_pattern") || "SOLID";
@@ -2871,11 +2944,13 @@
             } catch (_) {
             }
           }
-          if (header.counterAxisSizingMode !== "AUTO") {
-            try {
-              header.counterAxisSizingMode = "AUTO";
-            } catch (_) {
-            }
+          try {
+            header.layoutSizingHorizontal = "FILL";
+          } catch (_) {
+          }
+          try {
+            header.layoutSizingVertical = "HUG";
+          } catch (_) {
           }
           const tText = header.children.find((c) => c.type === "TEXT");
           if (tText) {
@@ -3103,23 +3178,6 @@
       const chainMissingPairs = chainTotalPairs - chainConnectedPairs;
       const hasExistingConnection = chainMissingPairs === 0;
       const selectedNodeIdSet = new Set(uniqueNodes.map((n) => n.id));
-      const allPageConnectors = figma.currentPage.findAll((n) => n.type === "CONNECTOR");
-      console.log("[DEBUG 3+ allPageConnectors on page]", {
-        selectedNodeIds: Array.from(selectedNodeIdSet),
-        allPageConnectorsCount: allPageConnectors.length,
-        allPageConnectors: allPageConnectors.map((n) => {
-          const c = n;
-          const sId = c.connectorStart && "endpointNodeId" in c.connectorStart ? c.connectorStart.endpointNodeId : void 0;
-          const tId = c.connectorEnd && "endpointNodeId" in c.connectorEnd ? c.connectorEnd.endpointNodeId : void 0;
-          return {
-            id: c.id,
-            sId,
-            tId,
-            sInSet: sId ? selectedNodeIdSet.has(sId) : false,
-            tInSet: tId ? selectedNodeIdSet.has(tId) : false
-          };
-        })
-      });
       const foundConnectors = figma.currentPage.findAll((n) => {
         try {
           if (!n) return false;
@@ -3192,26 +3250,6 @@
           });
         }
       }
-      console.log("[3+ Connector Collection Trace]", {
-        selectedNodeIds: Array.from(selectedNodeIdSet),
-        uniqueNodesLength: uniqueNodes.length,
-        connectorCount,
-        foundConnectorsLength: foundConnectors.length,
-        foundConnectors: foundConnectors.map((c) => {
-          if (c.type === "CONNECTOR") {
-            const conn = c;
-            return {
-              id: conn.id,
-              connectorStart: conn.connectorStart,
-              connectorEnd: conn.connectorEnd,
-              startEndpointNodeId: conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0,
-              endEndpointNodeId: conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0
-            };
-          }
-          return { id: c.id, type: c.type };
-        }),
-        multiNodeConnectors
-      });
       postToUI({
         type: "SELECTION_CHANGED",
         count: flowNodeCount + otherObjectCount + connectorCount,
@@ -3619,11 +3657,21 @@
             } catch (_) {
             }
           }
-          headerFrame.layoutAlign = "STRETCH";
           headerFrame.primaryAxisSizingMode = "AUTO";
-          headerFrame.counterAxisSizingMode = "AUTO";
           headerFrame.primaryAxisAlignItems = "MIN";
           headerFrame.counterAxisAlignItems = "MIN";
+          try {
+            headerFrame.layoutSizingVertical = "HUG";
+          } catch (_) {
+          }
+          try {
+            headerFrame.layoutSizingHorizontal = "FILL";
+          } catch (_) {
+            try {
+              headerFrame.layoutAlign = "STRETCH";
+            } catch (_2) {
+            }
+          }
         }
         if (textNode.textAutoResize !== "HEIGHT") {
           textNode.textAutoResize = "HEIGHT";
@@ -3635,6 +3683,10 @@
         } catch (_) {
         }
         textNode.layoutAlign = "STRETCH";
+        try {
+          textNode.layoutSizingHorizontal = "FILL";
+        } catch (_) {
+        }
         textNode.textTruncation = "DISABLED";
         textNode.maxLines = null;
       }
@@ -3919,11 +3971,13 @@
       }
     }
   }
-  function attachBranchMark(card, variant, w, h) {
+  function attachBranchMark(card, variant, w, h, bgColor) {
     removeBranchMark(card);
     if (variant !== "CHECK" && variant !== "CROSS") return;
     const markD = variant === "CHECK" ? BRANCH_CHECK_MARK : BRANCH_CROSS_MARK;
-    const svgStr = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${markD}" fill="#FFFFFF"/></svg>`;
+    const markColor = getTextFillsByBackground(bgColor).titleFill.color;
+    const markHex = rgbToHexColor(markColor);
+    const svgStr = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${markD}" fill="${markHex}"/></svg>`;
     try {
       const imported = figma.createNodeFromSvg(svgStr);
       imported.name = "BranchMark";
@@ -3932,7 +3986,7 @@
       imported.clipsContent = false;
       const vectors = imported.findAll((n) => n.type === "VECTOR");
       for (const vector of vectors) {
-        vector.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+        vector.fills = [{ type: "SOLID", color: markColor }];
         vector.strokes = [];
         try {
           vector.strokeWeight = 0;
@@ -4002,7 +4056,7 @@
     shape.y = 0;
     shape.locked = true;
     if (branchVariant) {
-      attachBranchMark(card, branchVariant, w, h);
+      attachBranchMark(card, branchVariant, w, h, bgColor);
     } else {
       removeBranchMark(card);
     }
@@ -4363,6 +4417,7 @@
       const spec = (branchVariant ? getBranchVariantSpec(branchVariant) : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
       const isShapeNode = !spec.allowDescription;
       const isChangingToScreen = prevNodeType !== "Screen" && nodeType === "Screen";
+      const prevBranchVariant = prevNodeType === "Branch" ? normalizeBranchVariant(safeGetPluginData2(card, "branch_variant")) : void 0;
       const DEFAULT_SHAPE_NAMES = /* @__PURE__ */ new Set([
         "Decision",
         "Process",
@@ -4385,7 +4440,9 @@
         "False",
         "Circle"
       ]);
-      const effectiveTitle = isChangingToScreen && (DEFAULT_SHAPE_NAMES.has(rawTitle) || !rawTitle) ? "Screen" : title;
+      const incomingIsPlaceholder = !rawTitle || DEFAULT_SHAPE_NAMES.has(rawTitle) || (prevBranchVariant ? rawTitle === BRANCH_VARIANT_LABELS[prevBranchVariant] : false);
+      const leavingUntitledBranch = prevNodeType === "Branch" && nodeType !== "Branch" && Boolean(prevBranchVariant && !branchVariantHasTitle(prevBranchVariant));
+      const effectiveTitle = leavingUntitledBranch && incomingIsPlaceholder ? nodeType === "Screen" ? "Screen" : nodeType : isChangingToScreen && incomingIsPlaceholder ? "Screen" : title;
       card.name = effectiveTitle;
       card.clipsContent = false;
       const cardStrokes = typeof payload.strokeWeight === "number" && payload.strokeWeight === 0 ? [] : [{ type: "SOLID", color: payload.strokeColor ? hexToRgbColor(payload.strokeColor) : borderColor }];
@@ -4564,7 +4621,7 @@
           } catch (_) {
           }
         }
-        await safeSetCharacters(titleText, branchVariant && !showBranchTitle ? "" : title);
+        await safeSetCharacters(titleText, branchVariant && !showBranchTitle ? "" : effectiveTitle);
         const hasExistingTitleFill = titleText.fills === figma.mixed || Array.isArray(titleText.fills) && titleText.fills.length > 0;
         if (!hasExistingTitleFill || payload.colorHex) {
           titleText.fills = [titleFill];
@@ -4600,6 +4657,7 @@
         } else if (titleText.parent !== headerRow) {
           headerRow.appendChild(titleText);
         }
+        titleText.visible = true;
         titleText.lineHeight = { value: 18, unit: "PIXELS" };
         titleText.textAlignHorizontal = "LEFT";
         titleText.textAlignVertical = "TOP";
@@ -4808,6 +4866,8 @@
         card.maxWidth = finalW;
         card.minHeight = minH;
         card.maxHeight = null;
+        card.resize(finalW, Math.max(minH, card.height));
+        syncTitleWidthToCard(card, finalW, nodeType);
         const autoH = Math.max(minH, Math.round(card.height));
         card.resize(finalW, autoH);
         card.setPluginData("size_mode", isFit ? "fit" : "hug");
@@ -4820,6 +4880,7 @@
         card.minHeight = finalH;
         card.maxHeight = finalH;
         card.setPluginData("size_mode", "fixed");
+        syncTitleWidthToCard(card, finalW, nodeType);
       }
       const curH = card.height;
       if (statusBadge) {
@@ -5038,6 +5099,7 @@
             }
           }
         }
+        const prevBranchVariant = prevNodeType === "Branch" ? normalizeBranchVariant(safeGetPluginData2(card, "branch_variant")) : void 0;
         const DEFAULT_SHAPE_NAMES = /* @__PURE__ */ new Set([
           "Decision",
           "Process",
@@ -5051,12 +5113,21 @@
           "Junction",
           "Diamond",
           "Pill",
-          "Capsule"
+          "Capsule",
+          "Check",
+          "Cross",
+          "Yes",
+          "No",
+          "True",
+          "False",
+          "Circle"
         ]);
         const currentTitle = card.name || "Untitled";
+        const incomingIsPlaceholder = !currentTitle || currentTitle === "Untitled" || DEFAULT_SHAPE_NAMES.has(currentTitle) || (prevBranchVariant ? currentTitle === BRANCH_VARIANT_LABELS[prevBranchVariant] : false);
+        const leavingUntitledBranch = prevNodeType === "Branch" && nodeType !== "Branch" && Boolean(prevBranchVariant && !branchVariantHasTitle(prevBranchVariant));
         let effectiveTitle = currentTitle;
-        if (isChangingToScreen && (DEFAULT_SHAPE_NAMES.has(currentTitle) || !currentTitle)) {
-          effectiveTitle = "Screen";
+        if (leavingUntitledBranch && incomingIsPlaceholder || isChangingToScreen && incomingIsPlaceholder) {
+          effectiveTitle = nodeType === "Screen" ? "Screen" : nodeType;
           card.name = effectiveTitle;
         } else if (patch.nodeType !== void 0 && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
           effectiveTitle = nodeType;
@@ -5127,6 +5198,8 @@
           titleText.textAlignVertical = "CENTER";
           titleText.lineHeight = { value: 18, unit: "PIXELS" };
           titleText.textAutoResize = "HEIGHT";
+          const showBatchBranchTitle = Boolean(batchBranchVariant && branchVariantHasTitle(batchBranchVariant));
+          titleText.visible = !batchBranchVariant || showBatchBranchTitle;
         } else {
           let headerRow = card.children.find(isHeaderFrame);
           if (!headerRow) {
@@ -5170,6 +5243,7 @@
           titleText.textAlignVertical = "TOP";
           titleText.layoutAlign = "STRETCH";
           titleText.textAutoResize = "HEIGHT";
+          titleText.visible = true;
         }
         const prevDesc = safeGetPluginData2(card, "node_desc") || "";
         const existingDescChild = card.children.find(
@@ -5395,6 +5469,8 @@
           card.maxWidth = finalW;
           card.minHeight = minH;
           card.maxHeight = null;
+          card.resize(finalW, Math.max(minH, card.height));
+          syncTitleWidthToCard(card, finalW, nodeType);
           const autoH = Math.max(minH, Math.round(card.height));
           card.resize(finalW, autoH);
           card.setPluginData("size_mode", isFit ? "fit" : "hug");
@@ -5407,6 +5483,7 @@
           card.minHeight = finalH;
           card.maxHeight = finalH;
           card.setPluginData("size_mode", effectiveSizeMode);
+          syncTitleWidthToCard(card, finalW, nodeType);
         }
         if (statusBadge) {
           statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
@@ -5584,11 +5661,21 @@
             const headerRow = frame.children.find(isHeaderFrame);
             if (headerRow) {
               headerRow.layoutMode = "VERTICAL";
-              headerRow.layoutAlign = "STRETCH";
               headerRow.primaryAxisSizingMode = "AUTO";
-              headerRow.counterAxisSizingMode = "AUTO";
               headerRow.primaryAxisAlignItems = "MIN";
               headerRow.counterAxisAlignItems = "MIN";
+              try {
+                headerRow.layoutSizingVertical = "HUG";
+              } catch (_) {
+              }
+              try {
+                headerRow.layoutSizingHorizontal = "FILL";
+              } catch (_) {
+                try {
+                  headerRow.layoutAlign = "STRETCH";
+                } catch (_2) {
+                }
+              }
             }
             if (title.layoutGrow !== 0) {
               try {
@@ -5763,11 +5850,31 @@
           console.warn("\uAE30\uC874 \uCEE4\uB125\uD130 \uC81C\uAC70 \uC2E4\uD328:", err);
         }
       }
+      let sourceMagnet = payload.sourceMagnet;
+      let targetMagnet = payload.targetMagnet;
+      if (!sourceMagnet || !targetMagnet) {
+        const optimal = getOptimalMagnetPair(
+          {
+            x: sourceNode.x,
+            y: sourceNode.y,
+            width: sourceNode.width,
+            height: sourceNode.height
+          },
+          {
+            x: targetNode.x,
+            y: targetNode.y,
+            width: targetNode.width,
+            height: targetNode.height
+          }
+        );
+        sourceMagnet = optimal.sourceMagnet;
+        targetMagnet = optimal.targetMagnet;
+      }
       const connector = await createSingleConnector(
         sourceNode,
-        payload.sourceMagnet,
+        sourceMagnet,
         targetNode,
-        payload.targetMagnet,
+        targetMagnet,
         payload.label,
         payload.colorHex,
         payload.strokeWeight,
@@ -6237,8 +6344,9 @@
           if (vectorNode) vectorNode.setPluginData("connector_label_on", "true");
           const boxStyle = payload.labelBoxStyle || safeGetPluginData2(connectorRootNode, "connector_label_box_style") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_box_style") : "BOX") || "BOX";
           const align = payload.labelAlign || safeGetPluginData2(connectorRootNode, "connector_label_align") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_align") : "CENTER") || "CENTER";
-          const fillCol = payload.labelFillColor || safeGetPluginData2(connectorRootNode, "connector_label_fill_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_fill_color") : "#EA2039") || "#EA2039";
-          const strokeCol = payload.labelStrokeColor || safeGetPluginData2(connectorRootNode, "connector_label_stroke_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_stroke_color") : "#EA2039") || "#EA2039";
+          const labelColorFallback = payload.colorHex || safeGetPluginData2(connectorRootNode, "connector_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_color") : "") || "#000000";
+          const fillCol = payload.labelFillColor || safeGetPluginData2(connectorRootNode, "connector_label_fill_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_fill_color") : "") || "#FFFFFF";
+          const strokeCol = payload.labelStrokeColor || safeGetPluginData2(connectorRootNode, "connector_label_stroke_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_stroke_color") : "") || labelColorFallback;
           const isNewFrame = !labelFrame;
           if (!labelFrame) {
             labelFrame = figma.createFrame();

@@ -110,6 +110,11 @@ function isNoneColorValue(color?: string): boolean {
   return c === 'none' || c === 'transparent';
 }
 
+function rgbToHex(rgb: RGB): string {
+  const toHex = (c: number) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
+  return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`.toUpperCase();
+}
+
 // 커넥터 라벨 스타일 적용 헬퍼 (글자크기 9px, 트래킹 없음, 박스/캡슐/라운드박스/라인 스타일 적용)
 export async function applyConnectorLabelStyle(
   labelFrame: FrameNode,
@@ -129,8 +134,8 @@ export async function applyConnectorLabelStyle(
     labelText,
     boxStyle = 'BOX',
     textAlign = 'CENTER',
-    fillColor = '#EA2039',
-    strokeColor = '#EA2039',
+    fillColor = '#FFFFFF',
+    strokeColor = '#000000',
     isVertical = false,
     connectorStrokeWeight,
   } = options;
@@ -961,8 +966,9 @@ export async function createOrthogonalVectorConnector(
   if (shouldBuildLabel) {
     const boxStyle = options.labelBoxStyle || 'BOX';
     const align = options.labelAlign || 'CENTER';
-    const fillCol = options.labelFillColor || '#EA2039';
-    const strokeCol = options.labelStrokeColor || '#EA2039';
+    const lineHex = rgbToHex(strokeColor);
+    const fillCol = options.labelFillColor || '#FFFFFF';
+    const strokeCol = options.labelStrokeColor || lineHex;
 
     vector.setPluginData('connector_label_on', 'true');
     vector.setPluginData('connector_label', labelText);
@@ -1487,10 +1493,11 @@ export async function updateOrthogonalVectorConnector(
                         safeGetPluginData(vector, 'connector_label_box_style') || 'BOX') as ConnectorLabelBoxStyle;
       const align = (safeGetPluginData(rootNode, 'connector_label_align') ||
                      safeGetPluginData(vector, 'connector_label_align') || 'CENTER') as ConnectorLabelAlign;
+      const lineHex = rgbToHex(strokeColor);
       const fillCol = safeGetPluginData(rootNode, 'connector_label_fill_color') ||
-                      safeGetPluginData(vector, 'connector_label_fill_color') || '#EA2039';
+                      safeGetPluginData(vector, 'connector_label_fill_color') || '#FFFFFF';
       const strokeCol = safeGetPluginData(rootNode, 'connector_label_stroke_color') ||
-                        safeGetPluginData(vector, 'connector_label_stroke_color') || '#EA2039';
+                        safeGetPluginData(vector, 'connector_label_stroke_color') || lineHex;
 
       await applyConnectorLabelStyle(labelFrame, textNode, {
         labelText,

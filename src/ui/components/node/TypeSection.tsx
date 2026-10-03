@@ -12,6 +12,7 @@ import {
   getBranchVariantSpec,
   getBranchVariantDefaultFill,
   branchVariantUsesStroke,
+  branchVariantHasTitle,
 } from '../../../types';
 
 /**
@@ -165,8 +166,28 @@ export function TypeSection() {
     const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
     const linkInputEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
 
+    const sourceNode = selectedNodes.length === 1 ? selectedNodes[0] : undefined;
+    const sourceBranch = sourceNode?.branchVariant
+      ? normalizeBranchVariant(sourceNode.branchVariant)
+      : undefined;
+    const fromUntitledBridge = Boolean(
+      sourceNode
+      && normalizeNodeType(sourceNode.flowNodeType || sourceNode.nodeType) === 'Branch'
+      && sourceBranch
+      && !branchVariantHasTitle(sourceBranch)
+    );
+
     let targetTitle: string | undefined = undefined;
-    if (titleInputEl) {
+    if (fromUntitledBridge && type !== 'Branch') {
+      const currentTitle = titleInputEl?.value.trim() || '';
+      const variantLabel = sourceBranch ? BRANCH_VARIANT_LABELS[sourceBranch] : '';
+      if (!currentTitle || currentTitle === variantLabel || DEFAULT_TYPE_TITLES.has(currentTitle)) {
+        targetTitle = type;
+        if (titleInputEl) titleInputEl.value = targetTitle;
+      } else {
+        targetTitle = currentTitle;
+      }
+    } else if (titleInputEl) {
       const currentTitle = titleInputEl.value.trim();
       if (!currentTitle || DEFAULT_TYPE_TITLES.has(currentTitle)) {
         targetTitle = nextVariant ? BRANCH_VARIANT_LABELS[nextVariant] : type;

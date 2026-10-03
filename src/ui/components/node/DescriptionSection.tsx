@@ -51,13 +51,13 @@ export function DescriptionSection() {
       const isAllowed = supportsOption({ flowNodeType: creationType, isFlowNode: true }, 'description');
       if (!isAllowed) {
         return {
-          state: 'MIXED_DISABLED' as const,
+          state: 'OFF' as const,
           supportedCount: 0,
           unsupportedCount: 1,
           supportedNodes: [],
           unsupportedNodes: [],
           checked: false,
-          isMixed: true,
+          isMixed: false,
           disabled: true,
           isOpen: false,
         };
@@ -96,6 +96,15 @@ export function DescriptionSection() {
         : (isOn !== null ? isOn : rawOptionState.isOpen));
 
   const effectiveState = useMemo(() => {
+    if (selectedNodes.length < 2 && (!isDraftAllowed || rawOptionState.disabled || rawOptionState.state === 'MIXED_DISABLED')) {
+      return {
+        state: 'OFF' as const,
+        checked: false,
+        isMixed: false,
+        disabled: true,
+        isOpen: false,
+      };
+    }
     if (!isDraftAllowed || rawOptionState.state === 'MIXED_DISABLED') {
       return {
         state: 'MIXED_DISABLED' as const,
@@ -131,7 +140,7 @@ export function DescriptionSection() {
       disabled: rawOptionState.disabled,
       isOpen: effectiveIsOpen,
     };
-  }, [isDraftAllowed, rawOptionState, isDescDrafted, multiDraft.descriptionOn, multiDraft.description, effectiveIsOpen, isOn]);
+  }, [selectedNodes.length, isDraftAllowed, rawOptionState, isDescDrafted, multiDraft.descriptionOn, multiDraft.description, effectiveIsOpen, isOn]);
 
   // 노드 선택 대상이 실제로 변경되었을 때만 토글 상태 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   useEffect(() => {
