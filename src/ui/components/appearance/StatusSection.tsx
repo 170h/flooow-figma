@@ -3,12 +3,12 @@ import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { Switch } from '../shared/Switch';
 import {
-  normalizeNodeType,
   type WorkflowStatus,
   supportsOption,
   getMutationTargets,
   computeOptionSwitchState,
   type OptionSwitchState,
+  getOptionCapability,
 } from '../../../types';
 
 const STATUSES = [
@@ -51,7 +51,7 @@ export function StatusSection() {
   const rawOptionState = React.useMemo(() => {
     if (selectedNodes.length === 0) {
       const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
-      const isAllowed = normalizeNodeType(creationType) === 'Screen';
+      const isAllowed = getOptionCapability([{ flowNodeType: creationType, isFlowNode: true }], 'status') !== 'UNSUPPORTED';
       if (!isAllowed) {
         return {
           state: 'OFF' as const,
@@ -113,7 +113,9 @@ export function StatusSection() {
 
   // Multi Draft 상태 반영
   const isTypeDrafted = multiDraft.nodeType !== undefined;
-  const isDraftAllowed = isTypeDrafted ? normalizeNodeType(multiDraft.nodeType) === 'Screen' : true;
+  const isDraftAllowed = isTypeDrafted
+    ? getOptionCapability([{ flowNodeType: multiDraft.nodeType, isFlowNode: true }], 'status') !== 'UNSUPPORTED'
+    : true;
 
   const isStatusDrafted = multiDraft.status !== undefined;
   const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled

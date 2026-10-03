@@ -6,7 +6,7 @@ import { MixedDashChip } from '../shared/icons';
 import {
   getNodeCategory,
   normalizeNodeType,
-  supportsOption,
+  getOptionCapability,
   SCREEN_NODE_CONSTRAINTS,
   clampScreenWidth,
   clampScreenHeight,
@@ -87,27 +87,19 @@ export function SizeSection() {
   // 스크린(Screen) 노드 타입일 때만 Size 편집 허용 (Multi-selection Capability Rule)
   // 우선순위:
   // 1. 다중 노드 타입 변경 드래프트 중인 경우 해당 타입 기준으로 판별
-  // 2. 선택된 Flow Node 대상 평가 (Figma native object는 capability 평가에서 제외):
-  //    - 모든 Flow Node가 지원 -> Allowed (Enabled / Mixed+Editable)
-  //    - 하나라도 unsupported -> Not allowed (Disabled)
+  // 2. 선택된 노드 대상 평가:
+  //    - SUPPORTED -> Allowed (Enabled / Mixed+Editable)
+  //    - PARTIAL / UNSUPPORTED -> Not allowed (Disabled)
   // 3. 미선택 (신규 생성 대기 모드): 현재 선택된 생성 대상 타입의 지원 여부 판별
   const isSizeAllowed = (() => {
     if (multiDraft.nodeType !== undefined) {
-      return supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, 'size');
-    }
-    const flowNodes = selectedNodes.filter((n) => n && getNodeCategory(n) !== 'FigmaObject');
-    if (flowNodes.length === 1) {
-      return supportsOption(flowNodes[0], 'size');
-    }
-    if (flowNodes.length > 1) {
-      return flowNodes.every((n) => supportsOption(n, 'size'));
+      return getOptionCapability([{ flowNodeType: multiDraft.nodeType, isFlowNode: true }], 'size') === 'SUPPORTED';
     }
     if (selectedNodes.length > 0) {
-      // Flow Node가 0개인데 선택된 객체가 있는 경우 (Figma native object 또는 커넥터만 선택됨)
-      return false;
+      return getOptionCapability(selectedNodes, 'size') === 'SUPPORTED';
     }
     const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || 'Screen';
-    return supportsOption({ flowNodeType: creationType, isFlowNode: true }, 'size');
+    return getOptionCapability([{ flowNodeType: creationType, isFlowNode: true }], 'size') === 'SUPPORTED';
   })();
 
   // 1. 파생 상태 선언 (핸들러 및 Effect보다 먼저 선언)

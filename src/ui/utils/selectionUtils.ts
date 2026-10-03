@@ -1,5 +1,5 @@
 import { NodeInfo } from '../context/AppContext';
-import { DiagramNodeType, normalizeNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition, ConnectorLabelAlign, ConnectorLabelBoxStyle } from '../../types';
+import { DiagramNodeType, normalizeNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition, ConnectorLabelAlign, ConnectorLabelBoxStyle, PluginOption, supportsOption } from '../../types';
 
 export interface PropertySummary<T> {
   value: T | undefined;
@@ -9,17 +9,28 @@ export interface PropertySummary<T> {
 
 /**
  * 배열 내 항목들의 특정 속성을 비교하여 공통값 및 Mixed(혼합) 여부를 판별합니다.
+ * option 매개변수가 제공되면 해당 옵션을 지원하는 노드(Supported nodes)만을 대상으로 집계하여
+ * 미지원 노드(Unsupported nodes)로 인해 공통값이 오염되는 현상을 차단합니다.
  */
 export function getCommonProperty<T>(
   items: unknown[],
   getter: (item: any) => T | undefined,
-  equalityFn: (a: T, b: T) => boolean = (a, b) => a === b
+  equalityFn: (a: T, b: T) => boolean = (a, b) => a === b,
+  option?: PluginOption
 ): PropertySummary<T> {
   if (!items || items.length === 0) {
     return { value: undefined, isMixed: false, hasValue: false };
   }
 
-  const values = items
+  const targetItems = option
+    ? items.filter((item) => supportsOption(item, option))
+    : items;
+
+  if (targetItems.length === 0) {
+    return { value: undefined, isMixed: false, hasValue: false };
+  }
+
+  const values = targetItems
     .map(getter)
     .filter((v): v is T => v !== undefined && v !== null);
 
@@ -27,7 +38,7 @@ export function getCommonProperty<T>(
     return { value: undefined, isMixed: false, hasValue: false };
   }
 
-  const allHaveValue = values.length === items.length;
+  const allHaveValue = values.length === targetItems.length;
   const first = values[0];
   const allSame = allHaveValue && values.every((v) => equalityFn(v, first));
 
@@ -129,27 +140,27 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     isMultiConnector: connectorCount > 1 && flowNodeCount === 0,
 
     // 플로우 노드 속성 요약
-    color: getCommonProperty(flowNodes, (n) => n.fillColorHex, caseInsensitiveEqual),
-    strokeWeight: getCommonProperty(flowNodes, (n) => n.strokeWeight),
-    strokeColor: getCommonProperty(flowNodes, (n) => n.strokeColorHex, caseInsensitiveEqual),
-    elevation: getCommonProperty(flowNodes, (n) => n.elevation),
-    elevationOn: getCommonProperty(flowNodes, (n) => (n.elevationOn ? true : undefined)),
-    status: getCommonProperty(flowNodes, (n) => (n.status ? (n.status as WorkflowStatus) : undefined)),
-    statusOn: getCommonProperty(flowNodes, (n) => (n.status ? true : undefined)),
+    color: getCommonProperty(flowNodes, (n) => n.fillColorHex, caseInsensitiveEqual, 'style'),
+    strokeWeight: getCommonProperty(flowNodes, (n) => n.strokeWeight, undefined, 'style'),
+    strokeColor: getCommonProperty(flowNodes, (n) => n.strokeColorHex, caseInsensitiveEqual, 'style'),
+    elevation: getCommonProperty(flowNodes, (n) => n.elevation, undefined, 'elevation'),
+    elevationOn: getCommonProperty(flowNodes, (n) => (n.elevationOn ? true : undefined), undefined, 'elevation'),
+    status: getCommonProperty(flowNodes, (n) => (n.status ? (n.status as WorkflowStatus) : undefined), undefined, 'status'),
+    statusOn: getCommonProperty(flowNodes, (n) => (n.status ? true : undefined), undefined, 'status'),
     nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || n.nodeType)),
-    width: getCommonProperty(flowNodes, (n) => n.width),
-    height: getCommonProperty(flowNodes, (n) => n.height),
-    cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius),
-    sizeMode: getCommonProperty(flowNodes, (n) => n.sizeMode),
-    stepNumber: getCommonProperty(flowNodes, (n) => n.stepNumber),
-    hasStepBadge: getCommonProperty(flowNodes, (n) => (n.stepNumber !== undefined ? true : undefined)),
-    badgeCorner: getCommonProperty(flowNodes, (n) => n.badgeCorner),
-    badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape),
-    badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode),
-    description: getCommonProperty(flowNodes, (n) => n.description),
-    hasDescription: getCommonProperty(flowNodes, (n) => (n.description && n.description.trim().length > 0 ? true : undefined)),
-    figmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink),
-    hasFigmaLink: getCommonProperty(flowNodes, (n) => (n.figmaLink && n.figmaLink.trim().length > 0 ? true : undefined)),
+    width: getCommonProperty(flowNodes, (n) => n.width, undefined, 'size'),
+    height: getCommonProperty(flowNodes, (n) => n.height, undefined, 'size'),
+    cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius, undefined, 'size'),
+    sizeMode: getCommonProperty(flowNodes, (n) => n.sizeMode, undefined, 'size'),
+    stepNumber: getCommonProperty(flowNodes, (n) => n.stepNumber, undefined, 'stepBadge'),
+    hasStepBadge: getCommonProperty(flowNodes, (n) => (n.stepNumber !== undefined ? true : undefined), undefined, 'stepBadge'),
+    badgeCorner: getCommonProperty(flowNodes, (n) => n.badgeCorner, undefined, 'stepBadge'),
+    badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape, undefined, 'stepBadge'),
+    badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode, undefined, 'stepBadge'),
+    description: getCommonProperty(flowNodes, (n) => n.description, undefined, 'description'),
+    hasDescription: getCommonProperty(flowNodes, (n) => (n.description && n.description.trim().length > 0 ? true : undefined), undefined, 'description'),
+    figmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink, undefined, 'figmaLink'),
+    hasFigmaLink: getCommonProperty(flowNodes, (n) => (n.figmaLink && n.figmaLink.trim().length > 0 ? true : undefined), undefined, 'figmaLink'),
 
     // 커넥터 노드 속성 요약
     connectorColor: getCommonProperty(connectorNodes, (n) => n.connectorColorHex || n.strokeColorHex, caseInsensitiveEqual),

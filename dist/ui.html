@@ -29726,14 +29726,16 @@
       const effectiveNodeType = normalizeNodeType(uiStateRef.current.selectedNodeType || lastNodeConfigRef.current.nodeType || nodeActualType);
       const originalNodeType = normalizeNodeType(nodeActualType);
       if (effectiveNodeType !== originalNodeType) return true;
-      const spec = NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
-      const isDescAllowed = spec?.allowDescription ?? false;
       const isScreen = effectiveNodeType === "Screen";
+      const targetNode = { flowNodeType: effectiveNodeType, isFlowNode: true };
+      const canHaveDescription = supportsOption(targetNode, "description");
+      const canHaveStatus = supportsOption(targetNode, "status");
+      const canHaveFigmaLink = supportsOption(targetNode, "figmaLink");
       const titleEl = document.getElementById("node-title-input");
       const currentTitle = titleEl ? titleEl.value.trim() : (origNode.title || origNode.name || (isScreen ? "Screen" : originalNodeType)).trim();
       const originalTitle = (origNode.title || origNode.name || (isScreen ? "Screen" : originalNodeType)).trim();
       if (currentTitle !== originalTitle) return true;
-      if (isDescAllowed) {
+      if (canHaveDescription) {
         const descToggleEl = document.getElementById("toggle-description");
         const descEl = document.getElementById("node-description-input");
         const isDescOn = descToggleEl ? descToggleEl.checked : Boolean(lastNodeConfigRef.current.descriptionOn);
@@ -29741,14 +29743,14 @@
         const originalDesc = (origNode.description || "").trim();
         if (currentDesc !== originalDesc) return true;
       }
-      if (isDescAllowed) {
+      if (canHaveStatus) {
         const statusToggleEl = document.getElementById("toggle-status");
         const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(lastNodeConfigRef.current.statusOn);
         const currentStatus = isStatusOn ? uiStateRef.current.selectedStatus || lastNodeConfigRef.current.status || "draft" : "";
         const originalStatus = origNode.status || "";
         if (currentStatus !== originalStatus) return true;
       }
-      if (isDescAllowed) {
+      if (canHaveFigmaLink) {
         const linkToggleEl = document.getElementById("toggle-single-figma-link");
         const linkUrlEl = document.getElementById("single-screen-url");
         const isLinkOn = linkToggleEl ? linkToggleEl.checked : Boolean(lastNodeConfigRef.current.singleLinkOn);
@@ -29856,7 +29858,9 @@
       const origType = normalizeNodeType(orig.flowNodeType || (orig.nodeType === "FRAME" ? "Screen" : orig.nodeType) || "Screen");
       const isScreen = origType === "Screen";
       const spec = NODE_TYPE_SHAPE_SPECS[origType];
-      const isDescAllowed = spec?.allowDescription ?? false;
+      const origTargetNode = { flowNodeType: origType, isFlowNode: true };
+      const canHaveDescription = supportsOption(origTargetNode, "description");
+      const canHaveFigmaLink = supportsOption(origTargetNode, "figmaLink");
       const titleEl = document.getElementById("node-title-input");
       if (titleEl) titleEl.value = orig.title || orig.name || (isScreen ? "Screen" : origType);
       const descToggleEl = document.getElementById("toggle-description");
@@ -29915,8 +29919,8 @@
         badgeCorner: orig.badgeCorner || "TOP_LEFT",
         badgeShape: orig.badgeShape || "Square",
         badgeColorMode: orig.badgeColorMode || "Style",
-        descriptionOn: isDescAllowed ? hasDesc : false,
-        singleLinkOn: isDescAllowed ? hasLink : false,
+        descriptionOn: canHaveDescription ? hasDesc : false,
+        singleLinkOn: canHaveFigmaLink ? hasLink : false,
         singleLinkUrl: orig.figmaLink || "",
         branchVariant: origType === "Branch" ? normalizeBranchVariant(orig.branchVariant) : lastNodeConfigRef.current.branchVariant
       });
@@ -30043,8 +30047,8 @@
         lastNodeConfigRef.current.branchVariant || firstNode?.branchVariant
       ) : void 0;
       const spec = effectiveNodeType === "Branch" && branchVariant ? getBranchVariantSpec(branchVariant) : NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
-      const isDescAllowed = spec?.allowDescription ?? false;
       const isScreen = effectiveNodeType === "Screen";
+      const hasFixedShapeSpec = !isScreen && Boolean(spec);
       const currentTitleVal = titleEl?.value.trim();
       const rawTitle = overrideTitle !== void 0 ? overrideTitle : currentTitleVal || (isScreen ? "Screen" : effectiveNodeType);
       if (rawTitle.length > 32) {
@@ -30055,9 +30059,9 @@
       const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
       const currentDesc = rawDesc || firstNode?.description || "";
       const desc = isDescOn ? rawDesc : currentDesc;
-      const w = overrideSize?.width !== void 0 ? overrideSize.width : isScreen ? parseInt(wEl?.value || "", 10) || firstNode?.width || lastNodeConfigRef.current.width || 250 : !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
-      const h = overrideSize?.height !== void 0 ? overrideSize.height : isScreen ? parseInt(hEl?.value || "", 10) || firstNode?.height || lastNodeConfigRef.current.height || 90 : !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
-      const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : isScreen ? rEl?.value !== void 0 && rEl?.value !== "" && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : firstNode?.cornerRadius ?? (lastNodeConfigRef.current.cornerRadius ?? 0) : !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
+      const w = overrideSize?.width !== void 0 ? overrideSize.width : isScreen ? parseInt(wEl?.value || "", 10) || firstNode?.width || lastNodeConfigRef.current.width || 250 : hasFixedShapeSpec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
+      const h = overrideSize?.height !== void 0 ? overrideSize.height : isScreen ? parseInt(hEl?.value || "", 10) || firstNode?.height || lastNodeConfigRef.current.height || 90 : hasFixedShapeSpec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
+      const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : isScreen ? rEl?.value !== void 0 && rEl?.value !== "" && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : firstNode?.cornerRadius ?? (lastNodeConfigRef.current.cornerRadius ?? 0) : hasFixedShapeSpec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
       const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
       const rawFigmaUrl = linkOverrides?.figmaLink !== void 0 ? linkOverrides.figmaLink : urlEl ? urlEl.value.trim() : "";
       const figmaUrl = rawFigmaUrl ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}` : "";
@@ -30577,7 +30581,12 @@
       const selectedNodeType = domNodeType || lastNodeConfigRef.current.nodeType || uiStateRef.current.selectedNodeType || "Screen";
       const createBranchVariant = selectedNodeType === "Branch" ? normalizeBranchVariant(lastNodeConfigRef.current.branchVariant) : void 0;
       const spec = selectedNodeType === "Branch" && createBranchVariant ? getBranchVariantSpec(createBranchVariant) : NODE_TYPE_SHAPE_SPECS[selectedNodeType];
-      const isDescAllowed = spec?.allowDescription ?? false;
+      const isScreen = selectedNodeType === "Screen";
+      const hasFixedShapeSpec = !isScreen && Boolean(spec);
+      const targetNode = { flowNodeType: selectedNodeType, isFlowNode: true };
+      const canHaveDescription = supportsOption(targetNode, "description");
+      const canHaveFigmaLink = supportsOption(targetNode, "figmaLink");
+      const canHaveStatus = supportsOption(targetNode, "status");
       const descToggleEl = document.getElementById("toggle-description");
       const defaultTitle = selectedNodeType === "Screen" ? "Screen" : createBranchVariant ? BRANCH_VARIANT_LABELS[createBranchVariant] : selectedNodeType;
       const rawTitle = titleEl?.value.trim() || defaultTitle;
@@ -30587,10 +30596,10 @@
       const title = rawTitle.slice(0, 32);
       const isDescOn = descToggleEl ? descToggleEl.checked : lastNodeConfigRef.current.descriptionOn ?? false;
       const desc = isDescOn ? descEl?.value.trim() || "" : "";
-      const effectiveDesc = isDescAllowed ? desc : "";
-      const w = !isDescAllowed && spec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
-      const h = !isDescAllowed && spec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
-      let radius = !isDescAllowed && spec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
+      const effectiveDesc = canHaveDescription ? desc : "";
+      const w = hasFixedShapeSpec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
+      const h = hasFixedShapeSpec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
+      let radius = hasFixedShapeSpec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
       if (radius > 999) {
         radius = 999;
         if (rEl) rEl.value = "999";
@@ -30599,7 +30608,7 @@
         radius = 0;
         if (rEl) rEl.value = "0";
       }
-      const rawFigmaUrl = isDescAllowed && singleLinkToggleEl?.checked && urlEl ? urlEl.value.trim() : "";
+      const rawFigmaUrl = canHaveFigmaLink && singleLinkToggleEl?.checked && urlEl ? urlEl.value.trim() : "";
       const figmaUrl = rawFigmaUrl ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}` : "";
       const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(lastNodeConfigRef.current.elevationOn);
       const finalElevation = isElevOn ? selectedElevation : null;
@@ -30632,27 +30641,27 @@
         badgeCorner: selectedBadgeCorner,
         badgeShape: selectedBadgeShape,
         badgeColorMode: uiStateRef.current.selectedBadgeColorMode,
-        singleLinkOn: isDescAllowed && singleLinkToggleEl?.checked || false,
+        singleLinkOn: canHaveFigmaLink && singleLinkToggleEl?.checked || false,
         singleLinkUrl: figmaUrl,
-        descriptionOn: isDescAllowed ? isDescOn : false,
+        descriptionOn: canHaveDescription ? isDescOn : false,
         branchVariant: createBranchVariant
       };
       setLastNodeConfig(newConfig);
       if (nodes.length === 1) {
         isApplyingSingleRef.current = true;
-        const targetNode = nodes[0];
+        const targetNode2 = nodes[0];
         const prevSinglePayload = {
-          nodeId: targetNode.id,
-          title: targetNode.title || targetNode.name || "",
-          description: targetNode.description || "",
-          width: targetNode.width,
-          height: targetNode.height,
-          cornerRadius: targetNode.cornerRadius,
-          theme: targetNode.theme || "light",
-          figmaLink: targetNode.figmaLink || "",
-          nodeType: targetNode.flowNodeType || (targetNode.nodeType === "FRAME" ? "Screen" : targetNode.nodeType),
-          colorHex: targetNode.fillColorHex,
-          elevation: targetNode.elevation !== void 0 && targetNode.elevation !== null ? targetNode.elevation : null
+          nodeId: targetNode2.id,
+          title: targetNode2.title || targetNode2.name || "",
+          description: targetNode2.description || "",
+          width: targetNode2.width,
+          height: targetNode2.height,
+          cornerRadius: targetNode2.cornerRadius,
+          theme: targetNode2.theme || "light",
+          figmaLink: targetNode2.figmaLink || "",
+          nodeType: targetNode2.flowNodeType || (targetNode2.nodeType === "FRAME" ? "Screen" : targetNode2.nodeType),
+          colorHex: targetNode2.fillColorHex,
+          elevation: targetNode2.elevation !== void 0 && targetNode2.elevation !== null ? targetNode2.elevation : null
         };
         const newSnapshot = {
           type: "single",
@@ -30688,7 +30697,7 @@
               strokeColor: lastNodeConfigRef.current.strokeColor,
               sizeMode: lastNodeConfigRef.current.sizeMode || (selectedNodeType === "Screen" ? "hug" : "fixed"),
               elevation: isElevOn ? selectedElevation : void 0,
-              status: !isDescAllowed || !statusToggleEl?.checked ? void 0 : selectedStatus,
+              status: !canHaveStatus || !statusToggleEl?.checked ? void 0 : selectedStatus,
               badgeNumber: isStepOn ? targetStepNum : void 0,
               badgePosition: isStepOn ? selectedBadgeCorner : void 0,
               badgeShape: isStepOn ? selectedBadgeShape : void 0,
@@ -31169,15 +31178,19 @@
   var import_react4 = __toESM(require_react());
 
   // src/ui/utils/selectionUtils.ts
-  function getCommonProperty(items, getter, equalityFn = (a, b) => a === b) {
+  function getCommonProperty(items, getter, equalityFn = (a, b) => a === b, option) {
     if (!items || items.length === 0) {
       return { value: void 0, isMixed: false, hasValue: false };
     }
-    const values = items.map(getter).filter((v) => v !== void 0 && v !== null);
+    const targetItems = option ? items.filter((item) => supportsOption(item, option)) : items;
+    if (targetItems.length === 0) {
+      return { value: void 0, isMixed: false, hasValue: false };
+    }
+    const values = targetItems.map(getter).filter((v) => v !== void 0 && v !== null);
     if (values.length === 0) {
       return { value: void 0, isMixed: false, hasValue: false };
     }
-    const allHaveValue = values.length === items.length;
+    const allHaveValue = values.length === targetItems.length;
     const first = values[0];
     const allSame = allHaveValue && values.every((v) => equalityFn(v, first));
     return {
@@ -31211,27 +31224,27 @@
       isSingleConnector: connectorCount === 1 && flowNodeCount === 0,
       isMultiConnector: connectorCount > 1 && flowNodeCount === 0,
       // 플로우 노드 속성 요약
-      color: getCommonProperty(flowNodes, (n) => n.fillColorHex, caseInsensitiveEqual),
-      strokeWeight: getCommonProperty(flowNodes, (n) => n.strokeWeight),
-      strokeColor: getCommonProperty(flowNodes, (n) => n.strokeColorHex, caseInsensitiveEqual),
-      elevation: getCommonProperty(flowNodes, (n) => n.elevation),
-      elevationOn: getCommonProperty(flowNodes, (n) => n.elevationOn ? true : void 0),
-      status: getCommonProperty(flowNodes, (n) => n.status ? n.status : void 0),
-      statusOn: getCommonProperty(flowNodes, (n) => n.status ? true : void 0),
+      color: getCommonProperty(flowNodes, (n) => n.fillColorHex, caseInsensitiveEqual, "style"),
+      strokeWeight: getCommonProperty(flowNodes, (n) => n.strokeWeight, void 0, "style"),
+      strokeColor: getCommonProperty(flowNodes, (n) => n.strokeColorHex, caseInsensitiveEqual, "style"),
+      elevation: getCommonProperty(flowNodes, (n) => n.elevation, void 0, "elevation"),
+      elevationOn: getCommonProperty(flowNodes, (n) => n.elevationOn ? true : void 0, void 0, "elevation"),
+      status: getCommonProperty(flowNodes, (n) => n.status ? n.status : void 0, void 0, "status"),
+      statusOn: getCommonProperty(flowNodes, (n) => n.status ? true : void 0, void 0, "status"),
       nodeType: getCommonProperty(flowNodes, (n) => normalizeNodeType(n.flowNodeType || n.nodeType)),
-      width: getCommonProperty(flowNodes, (n) => n.width),
-      height: getCommonProperty(flowNodes, (n) => n.height),
-      cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius),
-      sizeMode: getCommonProperty(flowNodes, (n) => n.sizeMode),
-      stepNumber: getCommonProperty(flowNodes, (n) => n.stepNumber),
-      hasStepBadge: getCommonProperty(flowNodes, (n) => n.stepNumber !== void 0 ? true : void 0),
-      badgeCorner: getCommonProperty(flowNodes, (n) => n.badgeCorner),
-      badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape),
-      badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode),
-      description: getCommonProperty(flowNodes, (n) => n.description),
-      hasDescription: getCommonProperty(flowNodes, (n) => n.description && n.description.trim().length > 0 ? true : void 0),
-      figmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink),
-      hasFigmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink && n.figmaLink.trim().length > 0 ? true : void 0),
+      width: getCommonProperty(flowNodes, (n) => n.width, void 0, "size"),
+      height: getCommonProperty(flowNodes, (n) => n.height, void 0, "size"),
+      cornerRadius: getCommonProperty(flowNodes, (n) => n.cornerRadius, void 0, "size"),
+      sizeMode: getCommonProperty(flowNodes, (n) => n.sizeMode, void 0, "size"),
+      stepNumber: getCommonProperty(flowNodes, (n) => n.stepNumber, void 0, "stepBadge"),
+      hasStepBadge: getCommonProperty(flowNodes, (n) => n.stepNumber !== void 0 ? true : void 0, void 0, "stepBadge"),
+      badgeCorner: getCommonProperty(flowNodes, (n) => n.badgeCorner, void 0, "stepBadge"),
+      badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape, void 0, "stepBadge"),
+      badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode, void 0, "stepBadge"),
+      description: getCommonProperty(flowNodes, (n) => n.description, void 0, "description"),
+      hasDescription: getCommonProperty(flowNodes, (n) => n.description && n.description.trim().length > 0 ? true : void 0, void 0, "description"),
+      figmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink, void 0, "figmaLink"),
+      hasFigmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink && n.figmaLink.trim().length > 0 ? true : void 0, void 0, "figmaLink"),
       // 커넥터 노드 속성 요약
       connectorColor: getCommonProperty(connectorNodes, (n) => n.connectorColorHex || n.strokeColorHex, caseInsensitiveEqual),
       connectorStrokeWeight: getCommonProperty(connectorNodes, (n) => {
@@ -32521,7 +32534,7 @@
     const rawOptionState = import_react9.default.useMemo(() => {
       if (selectedNodes.length === 0) {
         const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
-        const isAllowed = normalizeNodeType(creationType) === "Screen";
+        const isAllowed = getOptionCapability([{ flowNodeType: creationType, isFlowNode: true }], "status") !== "UNSUPPORTED";
         if (!isAllowed) {
           return {
             state: "OFF",
@@ -32577,7 +32590,7 @@
       }
     }, [rawOptionState, selectedNodes, setUIState]);
     const isTypeDrafted = multiDraft.nodeType !== void 0;
-    const isDraftAllowed = isTypeDrafted ? normalizeNodeType(multiDraft.nodeType) === "Screen" : true;
+    const isDraftAllowed = isTypeDrafted ? getOptionCapability([{ flowNodeType: multiDraft.nodeType, isFlowNode: true }], "status") !== "UNSUPPORTED" : true;
     const isStatusDrafted = multiDraft.status !== void 0;
     const effectiveIsOpen = !isDraftAllowed || rawOptionState.disabled ? false : isStatusDrafted ? Boolean(multiDraft.status) : isOpen !== null ? isOpen : rawOptionState.isOpen;
     const effectiveState = import_react9.default.useMemo(() => {
@@ -33770,20 +33783,13 @@
     const summary = useSelectionSummary();
     const isSizeAllowed = (() => {
       if (multiDraft.nodeType !== void 0) {
-        return supportsOption({ flowNodeType: multiDraft.nodeType, isFlowNode: true }, "size");
-      }
-      const flowNodes = selectedNodes.filter((n) => n && getNodeCategory(n) !== "FigmaObject");
-      if (flowNodes.length === 1) {
-        return supportsOption(flowNodes[0], "size");
-      }
-      if (flowNodes.length > 1) {
-        return flowNodes.every((n) => supportsOption(n, "size"));
+        return getOptionCapability([{ flowNodeType: multiDraft.nodeType, isFlowNode: true }], "size") === "SUPPORTED";
       }
       if (selectedNodes.length > 0) {
-        return false;
+        return getOptionCapability(selectedNodes, "size") === "SUPPORTED";
       }
       const creationType = uiState.selectedNodeType || lastNodeConfig.nodeType || "Screen";
-      return supportsOption({ flowNodeType: creationType, isFlowNode: true }, "size");
+      return getOptionCapability([{ flowNodeType: creationType, isFlowNode: true }], "size") === "SUPPORTED";
     })();
     const activePreset = sizePresets.find(
       (p) => p.w === lastNodeConfig.width && p.h === lastNodeConfig.height

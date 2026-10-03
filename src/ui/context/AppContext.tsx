@@ -14,6 +14,7 @@ import {
   normalizeBranchVariant,
   getBranchVariantSpec,
   BRANCH_VARIANT_LABELS,
+  supportsOption,
 } from '../../types';
 
 // ============================================================
@@ -809,9 +810,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // 1. Node Type
     if (effectiveNodeType !== originalNodeType) return true;
 
-    const spec = NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
-    const isDescAllowed = spec?.allowDescription ?? false;
     const isScreen = effectiveNodeType === 'Screen';
+    const targetNode = { flowNodeType: effectiveNodeType, isFlowNode: true };
+    const canHaveDescription = supportsOption(targetNode, 'description');
+    const canHaveStatus = supportsOption(targetNode, 'status');
+    const canHaveFigmaLink = supportsOption(targetNode, 'figmaLink');
 
     // 2. Title
     const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
@@ -820,7 +823,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (currentTitle !== originalTitle) return true;
 
     // 3. Description
-    if (isDescAllowed) {
+    if (canHaveDescription) {
       const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
       const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
       const isDescOn = descToggleEl ? descToggleEl.checked : Boolean(lastNodeConfigRef.current.descriptionOn);
@@ -830,7 +833,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 4. Status
-    if (isDescAllowed) {
+    if (canHaveStatus) {
       const statusToggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
       const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(lastNodeConfigRef.current.statusOn);
       const currentStatus = isStatusOn ? (uiStateRef.current.selectedStatus || lastNodeConfigRef.current.status || 'draft') : '';
@@ -839,7 +842,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 5. Figma Link
-    if (isDescAllowed) {
+    if (canHaveFigmaLink) {
       const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
       const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
       const isLinkOn = linkToggleEl ? linkToggleEl.checked : Boolean(lastNodeConfigRef.current.singleLinkOn);
@@ -979,7 +982,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const origType = normalizeNodeType(orig.flowNodeType || (orig.nodeType === 'FRAME' ? 'Screen' : orig.nodeType) || 'Screen');
     const isScreen = origType === 'Screen';
     const spec = NODE_TYPE_SHAPE_SPECS[origType];
-    const isDescAllowed = spec?.allowDescription ?? false;
+    const origTargetNode = { flowNodeType: origType, isFlowNode: true };
+    const canHaveDescription = supportsOption(origTargetNode, 'description');
+    const canHaveFigmaLink = supportsOption(origTargetNode, 'figmaLink');
 
     const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
     if (titleEl) titleEl.value = orig.title || orig.name || (isScreen ? 'Screen' : origType);
@@ -1047,8 +1052,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       badgeCorner: orig.badgeCorner || 'TOP_LEFT',
       badgeShape: orig.badgeShape || 'Square',
       badgeColorMode: orig.badgeColorMode || 'Style',
-      descriptionOn: isDescAllowed ? hasDesc : false,
-      singleLinkOn: isDescAllowed ? hasLink : false,
+      descriptionOn: canHaveDescription ? hasDesc : false,
+      singleLinkOn: canHaveFigmaLink ? hasLink : false,
       singleLinkUrl: orig.figmaLink || '',
       branchVariant: origType === 'Branch'
         ? normalizeBranchVariant(orig.branchVariant)
@@ -1214,8 +1219,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const spec = effectiveNodeType === 'Branch' && branchVariant
       ? getBranchVariantSpec(branchVariant)
       : NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
-    const isDescAllowed = spec?.allowDescription ?? false;
     const isScreen = effectiveNodeType === 'Screen';
+    const hasFixedShapeSpec = !isScreen && Boolean(spec);
 
     const currentTitleVal = titleEl?.value.trim();
     const rawTitle = overrideTitle !== undefined
@@ -1234,17 +1239,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ? overrideSize.width
       : (isScreen
           ? (parseInt(wEl?.value || '', 10) || firstNode?.width || lastNodeConfigRef.current.width || 250)
-          : (!isDescAllowed && spec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250)));
+          : (hasFixedShapeSpec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250)));
     const h = overrideSize?.height !== undefined
       ? overrideSize.height
       : (isScreen
           ? (parseInt(hEl?.value || '', 10) || firstNode?.height || lastNodeConfigRef.current.height || 90)
-          : (!isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90)));
+          : (hasFixedShapeSpec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90)));
     const radius = overrideSize?.cornerRadius !== undefined
       ? overrideSize.cornerRadius
       : (isScreen
           ? (rEl?.value !== undefined && rEl?.value !== '' && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : (firstNode?.cornerRadius ?? (lastNodeConfigRef.current.cornerRadius ?? 0)))
-          : (!isDescAllowed && spec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0)));
+          : (hasFixedShapeSpec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0)));
     const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : lastNodeConfigRef.current.singleLinkOn;
     const rawFigmaUrl = linkOverrides?.figmaLink !== undefined
       ? linkOverrides.figmaLink
@@ -1841,7 +1846,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const spec = selectedNodeType === 'Branch' && createBranchVariant
       ? getBranchVariantSpec(createBranchVariant)
       : NODE_TYPE_SHAPE_SPECS[selectedNodeType];
-    const isDescAllowed = spec?.allowDescription ?? false;
+    const isScreen = selectedNodeType === 'Screen';
+    const hasFixedShapeSpec = !isScreen && Boolean(spec);
+    const targetNode = { flowNodeType: selectedNodeType, isFlowNode: true };
+    const canHaveDescription = supportsOption(targetNode, 'description');
+    const canHaveFigmaLink = supportsOption(targetNode, 'figmaLink');
+    const canHaveStatus = supportsOption(targetNode, 'status');
 
     const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
     const defaultTitle = selectedNodeType === 'Screen'
@@ -1854,11 +1864,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const title = rawTitle.slice(0, 32); // 타이틀 글자 수 제한 (입력필드 너비 최적화)
     const isDescOn = descToggleEl ? descToggleEl.checked : (lastNodeConfigRef.current.descriptionOn ?? false);
     const desc = isDescOn ? (descEl?.value.trim() || '') : '';
-    const effectiveDesc = isDescAllowed ? desc : '';
+    const effectiveDesc = canHaveDescription ? desc : '';
 
-    const w = !isDescAllowed && spec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250);
-    const h = !isDescAllowed && spec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90);
-    let radius = !isDescAllowed && spec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0);
+    const w = hasFixedShapeSpec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250);
+    const h = hasFixedShapeSpec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90);
+    let radius = hasFixedShapeSpec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0);
     if (radius > 999) {
       radius = 999;
       if (rEl) rEl.value = '999';
@@ -1868,7 +1878,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (rEl) rEl.value = '0';
     }
 
-    const rawFigmaUrl = (isDescAllowed && singleLinkToggleEl?.checked && urlEl) ? urlEl.value.trim() : '';
+    const rawFigmaUrl = (canHaveFigmaLink && singleLinkToggleEl?.checked && urlEl) ? urlEl.value.trim() : '';
     const figmaUrl = rawFigmaUrl ? (
       /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}`
     ) : '';
@@ -1901,9 +1911,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       badgeCorner: selectedBadgeCorner,
       badgeShape: selectedBadgeShape,
       badgeColorMode: uiStateRef.current.selectedBadgeColorMode,
-      singleLinkOn: (isDescAllowed && singleLinkToggleEl?.checked) || false,
+      singleLinkOn: (canHaveFigmaLink && singleLinkToggleEl?.checked) || false,
       singleLinkUrl: figmaUrl,
-      descriptionOn: isDescAllowed ? isDescOn : false,
+      descriptionOn: canHaveDescription ? isDescOn : false,
       branchVariant: createBranchVariant,
     };
     setLastNodeConfig(newConfig);
@@ -1962,7 +1972,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             strokeColor: lastNodeConfigRef.current.strokeColor,
             sizeMode: (lastNodeConfigRef.current.sizeMode as ('fixed' | 'hug' | 'fit')) || (selectedNodeType === 'Screen' ? 'hug' : 'fixed'),
             elevation: isElevOn ? selectedElevation : undefined,
-            status: (!isDescAllowed || !statusToggleEl?.checked) ? undefined : selectedStatus,
+            status: (!canHaveStatus || !statusToggleEl?.checked) ? undefined : selectedStatus,
             badgeNumber: isStepOn ? targetStepNum : undefined,
             badgePosition: isStepOn ? (selectedBadgeCorner as BadgePosition) : undefined,
             badgeShape: isStepOn ? (selectedBadgeShape as BadgeShape) : undefined,
