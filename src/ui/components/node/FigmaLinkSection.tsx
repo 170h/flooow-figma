@@ -38,10 +38,15 @@ export function FigmaLinkSection() {
     uiState,
     multiDraft,
     updateMultiDraft,
+    formTextDraft,
+    setFormTextDraft,
   } = useApp();
 
   const [isOn, setIsOn] = useState<boolean | null>(null);
-  const [url, setUrl] = useState("");
+  // URL 텍스트는 AppContext 단일 소유(formTextDraft.linkUrl).
+  // 기존 호출부를 유지하기 위해 동명 로컬 wrapper를 사용한다.
+  const url = formTextDraft.linkUrl;
+  const setUrl = (v: string) => setFormTextDraft({ linkUrl: v });
   const cachedUrlRef = useRef<string>("");
   const userActionLockRef = useRef<number>(0);
   const prevSelectedNodeIdRef = useRef<string | null>(null);

@@ -29385,6 +29385,13 @@
     stepNumber: 1,
     branchVariant: "CIRCLE"
   };
+  var DEFAULT_FORM_TEXT_DRAFT = {
+    sizeW: "",
+    sizeH: "",
+    sizeR: "",
+    stepNum: "1",
+    linkUrl: ""
+  };
   var DEFAULT_CONNECTOR_COLOR = "#000000";
   var DEFAULT_LABEL_FILL = "#FFFFFF";
   var LEGACY_LABEL_COLOR = "#EA2039";
@@ -29456,6 +29463,7 @@
     }, []);
     const [uiState, setUIStateRaw] = (0, import_react2.useState)(DEFAULT_UI_STATE);
     const [nodeOptionState, setNodeOptionStateRaw] = (0, import_react2.useState)(DEFAULT_NODE_OPTION_STATE);
+    const [formTextDraft, setFormTextDraftRaw] = (0, import_react2.useState)(DEFAULT_FORM_TEXT_DRAFT);
     const [lastConnectorConfig, setLastConnectorConfigRaw] = (0, import_react2.useState)(DEFAULT_LAST_CONNECTOR_CONFIG);
     const [activeModal, setActiveModal] = (0, import_react2.useState)("none");
     const [contextMenuOpen, setContextMenuOpen] = (0, import_react2.useState)(false);
@@ -29658,6 +29666,7 @@
     const currentTabRef = (0, import_react2.useRef)(currentTab);
     const uiStateRef = (0, import_react2.useRef)(uiState);
     const nodeOptionStateRef = (0, import_react2.useRef)(nodeOptionState);
+    const formTextDraftRef = (0, import_react2.useRef)(formTextDraft);
     const lastConnectorConfigRef = (0, import_react2.useRef)(lastConnectorConfig);
     (0, import_react2.useEffect)(() => {
       selectedNodesRef.current = selectedNodes;
@@ -29674,6 +29683,9 @@
     (0, import_react2.useEffect)(() => {
       nodeOptionStateRef.current = nodeOptionState;
     }, [nodeOptionState]);
+    (0, import_react2.useEffect)(() => {
+      formTextDraftRef.current = formTextDraft;
+    }, [formTextDraft]);
     (0, import_react2.useEffect)(() => {
       lastConnectorConfigRef.current = lastConnectorConfig;
     }, [lastConnectorConfig]);
@@ -29705,6 +29717,10 @@
     const setNodeOptionState = (0, import_react2.useCallback)((partial) => {
       nodeOptionStateRef.current = { ...nodeOptionStateRef.current, ...partial };
       setNodeOptionStateRaw((prev) => ({ ...prev, ...partial }));
+    }, []);
+    const setFormTextDraft = (0, import_react2.useCallback)((partial) => {
+      formTextDraftRef.current = { ...formTextDraftRef.current, ...partial };
+      setFormTextDraftRaw((prev) => ({ ...prev, ...partial }));
     }, []);
     const setLastConnectorConfig = (0, import_react2.useCallback)((partial) => {
       lastConnectorConfigRef.current = { ...lastConnectorConfigRef.current, ...partial };
@@ -29791,9 +29807,8 @@
         if (currentStatus !== originalStatus) return true;
       }
       if (canHaveFigmaLink) {
-        const linkUrlEl = document.getElementById("single-screen-url");
         const isLinkOn = Boolean(nodeOptionStateRef.current.singleLinkOn);
-        const rawCurrentLink = isLinkOn ? linkUrlEl ? linkUrlEl.value.trim() : (origNode.figmaLink || "").trim() : "";
+        const rawCurrentLink = isLinkOn ? formTextDraftRef.current.linkUrl.trim() : "";
         const currentLink = rawCurrentLink ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawCurrentLink) ? rawCurrentLink : `https://${rawCurrentLink}` : "";
         const originalLink = (origNode.figmaLink || "").trim();
         if (currentLink !== originalLink) return true;
@@ -29802,8 +29817,7 @@
       const originalStepOn = origNode.stepNumber !== void 0;
       if (isStepOn !== originalStepOn) return true;
       if (isStepOn) {
-        const stepNumEl = document.getElementById("input-step-number");
-        const currentStepNum = stepNumEl ? parseInt(stepNumEl.value, 10) || 1 : origNode.stepNumber || 1;
+        const currentStepNum = parseInt(formTextDraftRef.current.stepNum, 10) || 1;
         const originalStepNum = origNode.stepNumber || 1;
         if (currentStepNum !== originalStepNum) return true;
         const currentBadgeCorner = nodeOptionStateRef.current.badgeCorner || "TOP_LEFT";
@@ -29832,19 +29846,19 @@
         if (currentStrokeColor !== actualStrokeColor) return true;
       }
       if (isScreen) {
-        const wEl = document.getElementById("input-size-w");
-        const hEl = document.getElementById("input-size-h");
-        const rEl = document.getElementById("input-size-radius");
-        if (wEl && wEl.value !== "") {
-          const parsedW = parseInt(wEl.value, 10);
+        const wText = formTextDraftRef.current.sizeW;
+        const hText = formTextDraftRef.current.sizeH;
+        const rText = formTextDraftRef.current.sizeR;
+        if (wText !== "") {
+          const parsedW = parseInt(wText, 10);
           if (!isNaN(parsedW) && typeof origNode.width === "number" && parsedW !== origNode.width) return true;
         }
-        if (hEl && hEl.value !== "") {
-          const parsedH = parseInt(hEl.value, 10);
+        if (hText !== "") {
+          const parsedH = parseInt(hText, 10);
           if (!isNaN(parsedH) && typeof origNode.height === "number" && parsedH !== origNode.height) return true;
         }
-        if (rEl && rEl.value !== "") {
-          const parsedR = parseInt(rEl.value, 10);
+        if (rText !== "") {
+          const parsedR = parseInt(rText, 10);
           const origR = origNode.cornerRadius ?? 0;
           if (!isNaN(parsedR) && parsedR !== origR) return true;
         }
@@ -29906,26 +29920,21 @@
       if (descToggleEl) descToggleEl.checked = hasDesc;
       if (descEl) descEl.value = orig.description || "";
       const linkToggleEl = document.getElementById("toggle-single-figma-link");
-      const linkUrlEl = document.getElementById("single-screen-url");
       const hasLink = Boolean(orig.figmaLink);
       if (linkToggleEl) linkToggleEl.checked = hasLink;
-      if (linkUrlEl) linkUrlEl.value = orig.figmaLink || "";
+      setFormTextDraft({ linkUrl: orig.figmaLink || "" });
       const statusToggleEl = document.getElementById("toggle-status");
       if (statusToggleEl) statusToggleEl.checked = Boolean(orig.status);
       const stepToggleEl = document.getElementById("toggle-step-badges");
-      const stepNumEl = document.getElementById("input-step-number");
       const hasStep = orig.stepNumber !== void 0;
       if (stepToggleEl) stepToggleEl.checked = hasStep;
-      if (stepNumEl && hasStep) stepNumEl.value = String(orig.stepNumber);
+      if (hasStep) setFormTextDraft({ stepNum: String(orig.stepNumber) });
       const elevToggleEl = document.getElementById("toggle-elevation");
       const hasElev = orig.elevation !== void 0 && orig.elevation !== null;
       if (elevToggleEl) elevToggleEl.checked = hasElev;
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
-      if (wEl && orig.width) wEl.value = String(orig.width);
-      if (hEl && orig.height) hEl.value = String(orig.height);
-      if (rEl) rEl.value = String(orig.cornerRadius ?? 0);
+      if (orig.width) setFormTextDraft({ sizeW: String(orig.width) });
+      if (orig.height) setFormTextDraft({ sizeH: String(orig.height) });
+      setFormTextDraft({ sizeR: String(orig.cornerRadius ?? 0) });
       setNodeOptionState({
         nodeType: origType,
         fillColor: orig.fillColorHex || "#ffffff",
@@ -29950,7 +29959,7 @@
         branchVariant: origType === "Branch" ? normalizeBranchVariant(orig.branchVariant) : nodeOptionStateRef.current.branchVariant
       });
       triggerFormChange();
-    }, [setNodeOptionState, setLastConnectorConfig, triggerFormChange]);
+    }, [setNodeOptionState, setLastConnectorConfig, setFormTextDraft, triggerFormChange]);
     const hasSingleChanges = selectedNodes.length === 1 ? checkHasSingleChanges() : false;
     const handleUndo = (0, import_react2.useCallback)(() => {
       if (selectedNodesRef.current.length >= 2 && Object.keys(multiDraftRef.current).length > 0) {
@@ -30157,15 +30166,14 @@
         cornerRadius: preset.radius ?? 0,
         sizeMode: preset.sizeMode || "fixed"
       });
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
-      if (wEl) wEl.value = String(preset.w);
-      if (hEl) hEl.value = String(preset.h);
-      if (rEl) rEl.value = String(preset.radius ?? 0);
+      setFormTextDraft({
+        sizeW: String(preset.w),
+        sizeH: String(preset.h),
+        sizeR: String(preset.radius ?? 0)
+      });
       applyCurrentNodeState(preset.sizeMode);
       showToast(`"${preset.name}" \uC0AC\uC774\uC988\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
-    }, [sizePresets, savePresets, setSelectedSizePresetId, setNodeOptionState, applyCurrentNodeState, showToast]);
+    }, [sizePresets, savePresets, setSelectedSizePresetId, setNodeOptionState, setFormTextDraft, applyCurrentNodeState, showToast]);
     const updateSizePreset = (0, import_react2.useCallback)((id, partial) => {
       const next = sizePresets.map((p) => p.id === id ? { ...p, ...partial } : p);
       savePresets(next);
@@ -30176,14 +30184,12 @@
           cornerRadius: partial.radius,
           sizeMode: partial.sizeMode
         });
-        const wEl = document.getElementById("input-size-w");
-        const hEl = document.getElementById("input-size-h");
-        if (wEl && partial.w !== void 0) wEl.value = String(partial.w);
-        if (hEl && partial.h !== void 0) hEl.value = String(partial.h);
+        if (partial.w !== void 0) setFormTextDraft({ sizeW: String(partial.w) });
+        if (partial.h !== void 0) setFormTextDraft({ sizeH: String(partial.h) });
         applyCurrentNodeState(partial.sizeMode);
       }
       showToast("\uC0AC\uC774\uC988\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
-    }, [sizePresets, savePresets, setNodeOptionState, applyCurrentNodeState, showToast]);
+    }, [sizePresets, savePresets, setNodeOptionState, setFormTextDraft, applyCurrentNodeState, showToast]);
     const deleteSizePreset = (0, import_react2.useCallback)((id) => {
       const target = sizePresets.find((p) => p.id === id);
       const next = sizePresets.filter((p) => p.id !== id);
@@ -30860,6 +30866,8 @@
       setUIState,
       nodeOptionState,
       setNodeOptionState,
+      formTextDraft,
+      setFormTextDraft,
       lastConnectorConfig,
       setLastConnectorConfig,
       activeModal,
@@ -31182,6 +31190,7 @@
     const {
       nodeOptionState,
       setNodeOptionState,
+      setFormTextDraft,
       applyCurrentNodeState,
       selectedNodes,
       multiDraft,
@@ -31228,13 +31237,6 @@
       const nextVariant = type === "Branch" ? normalizeBranchVariant(nodeOptionState.branchVariant) : void 0;
       const spec = type === "Branch" && nextVariant ? getBranchVariantSpec(nextVariant) : NODE_TYPE_SHAPE_SPECS[type];
       const titleInputEl = document.getElementById("node-title-input");
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
-      const descToggleEl = document.getElementById("toggle-description");
-      const descInputEl = document.getElementById("node-description-input");
-      const linkToggleEl = document.getElementById("toggle-single-figma-link");
-      const linkInputEl = document.getElementById("single-screen-url");
       const sourceNode = selectedNodes.length === 1 ? selectedNodes[0] : void 0;
       const sourceBranch = sourceNode?.branchVariant ? normalizeBranchVariant(sourceNode.branchVariant) : void 0;
       const fromUntitledBridge = Boolean(
@@ -31260,9 +31262,11 @@
         }
       }
       if (spec) {
-        if (wEl) wEl.value = String(spec.width);
-        if (hEl) hEl.value = String(spec.height);
-        if (rEl) rEl.value = String(spec.cornerRadius ?? 0);
+        setFormTextDraft({
+          sizeW: String(spec.width),
+          sizeH: String(spec.height),
+          sizeR: String(spec.cornerRadius ?? 0)
+        });
       }
       const targetSize = spec ? {
         width: spec.width,
@@ -31314,9 +31318,6 @@
       }
       const spec = getBranchVariantSpec(variant);
       const titleInputEl = document.getElementById("node-title-input");
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
       const label = BRANCH_VARIANT_LABELS[variant];
       let targetTitle;
       if (titleInputEl) {
@@ -31328,9 +31329,11 @@
           targetTitle = currentTitle;
         }
       }
-      if (wEl) wEl.value = String(spec.width);
-      if (hEl) hEl.value = String(spec.height);
-      if (rEl) rEl.value = String(spec.cornerRadius ?? 0);
+      setFormTextDraft({
+        sizeW: String(spec.width),
+        sizeH: String(spec.height),
+        sizeR: String(spec.cornerRadius ?? 0)
+      });
       const fill = getBranchVariantDefaultFill(variant);
       const strokeW = branchVariantUsesStroke(variant) ? 1.5 : 0;
       const strokeC = branchVariantUsesStroke(variant) ? "#1E1E1E" : void 0;
@@ -31978,10 +31981,13 @@
       applyCurrentNodeState,
       uiState,
       multiDraft,
-      updateMultiDraft
+      updateMultiDraft,
+      formTextDraft,
+      setFormTextDraft
     } = useApp();
     const [isOn, setIsOn] = (0, import_react8.useState)(null);
-    const [url, setUrl] = (0, import_react8.useState)("");
+    const url = formTextDraft.linkUrl;
+    const setUrl = (v) => setFormTextDraft({ linkUrl: v });
     const cachedUrlRef = (0, import_react8.useRef)("");
     const userActionLockRef = (0, import_react8.useRef)(0);
     const prevSelectedNodeIdRef = (0, import_react8.useRef)(null);
@@ -32754,7 +32760,9 @@
       autoResizeWindow,
       multiDraft,
       updateMultiDraft,
-      clearMultiDraftKeys
+      clearMultiDraftKeys,
+      formTextDraft,
+      setFormTextDraft
     } = useApp();
     const summary = useSelectionSummary();
     const isMultiMode = summary.isMultiFlowNode;
@@ -32762,7 +32770,8 @@
     const userActionLockRef = (0, import_react10.useRef)(0);
     const prevSelectedNodeIdRef = (0, import_react10.useRef)(null);
     const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react10.useState)(false);
-    const [stepNumText, setStepNumText] = (0, import_react10.useState)("1");
+    const stepNumText = formTextDraft.stepNum;
+    const setStepNumText = (v) => setFormTextDraft({ stepNum: v });
     const [isMixed, setIsMixed] = (0, import_react10.useState)(false);
     const dropdownRef = (0, import_react10.useRef)(null);
     const isCornerMixed = multiDraft.badgeCorner !== void 0 ? false : isMultiMode && summary.badgeCorner.isMixed;
@@ -33577,7 +33586,9 @@
       autoResizeWindow,
       showToast,
       multiDraft,
-      updateMultiDraft
+      updateMultiDraft,
+      formTextDraft,
+      setFormTextDraft
     } = useApp();
     const summary = useSelectionSummary();
     const isSizeAllowed = (() => {
@@ -33604,9 +33615,12 @@
       r: false
     });
     const pendingSizeRef = import_react11.default.useRef(null);
-    const [widthInput, setWidthInput] = import_react11.default.useState("");
-    const [heightInput, setHeightInput] = import_react11.default.useState("");
-    const [radiusInput, setRadiusInput] = import_react11.default.useState("");
+    const widthInput = formTextDraft.sizeW;
+    const heightInput = formTextDraft.sizeH;
+    const radiusInput = formTextDraft.sizeR;
+    const setWidthInput = (v) => setFormTextDraft({ sizeW: v });
+    const setHeightInput = (v) => setFormTextDraft({ sizeH: v });
+    const setRadiusInput = (v) => setFormTextDraft({ sizeR: v });
     import_react11.default.useEffect(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -37525,6 +37539,7 @@
       designFrames,
       loadDesignFrames,
       setNodeOptionState,
+      setFormTextDraft,
       addSizePreset,
       sizePresets,
       applyCurrentNodeState
@@ -37551,14 +37566,11 @@
     }, [designFrames, selectedFrameId]);
     function handleApply() {
       if (!selectedFrame) return;
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
-      if (wEl) wEl.value = String(selectedFrame.width);
-      if (hEl) hEl.value = String(selectedFrame.height);
-      if (rEl) rEl.value = String(selectedFrame.cornerRadius ?? 0);
-      const fixedValEl = document.getElementById("size-mode-val-fixed");
-      if (fixedValEl) fixedValEl.textContent = String(selectedFrame.height);
+      setFormTextDraft({
+        sizeW: String(selectedFrame.width),
+        sizeH: String(selectedFrame.height),
+        sizeR: String(selectedFrame.cornerRadius ?? 0)
+      });
       const updatePayload = {
         width: selectedFrame.width,
         height: selectedFrame.height,
@@ -37568,10 +37580,7 @@
       if (linkToFrame) {
         updatePayload.singleLinkUrl = `figma://node/${selectedFrame.id}`;
         updatePayload.singleLinkOn = true;
-        const urlInput = document.getElementById("single-screen-url");
-        if (urlInput) {
-          urlInput.value = `figma://node/${selectedFrame.id}`;
-        }
+        setFormTextDraft({ linkUrl: `figma://node/${selectedFrame.id}` });
       }
       setNodeOptionState(updatePayload);
       if (saveAsPreset) {

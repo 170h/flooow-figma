@@ -102,6 +102,8 @@ export function StepBadgesSection() {
     multiDraft,
     updateMultiDraft,
     clearMultiDraftKeys,
+    formTextDraft,
+    setFormTextDraft,
   } = useApp();
 
   const summary = useSelectionSummary();
@@ -113,7 +115,10 @@ export function StepBadgesSection() {
   const prevSelectedNodeIdRef = useRef<string | null>(null);
 
   const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
-  const [stepNumText, setStepNumText] = useState("1");
+  // 미확정 입력 텍스트는 AppContext 단일 소유(formTextDraft).
+  // controlled input 표시값이자 dirty 감지 원천이다.
+  const stepNumText = formTextDraft.stepNum;
+  const setStepNumText = (v: string) => setFormTextDraft({ stepNum: v });
   const [isMixed, setIsMixed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 

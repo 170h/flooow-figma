@@ -80,6 +80,8 @@ export function SizeSection() {
     showToast,
     multiDraft,
     updateMultiDraft,
+    formTextDraft,
+    setFormTextDraft,
   } = useApp();
 
   const summary = useSelectionSummary();
@@ -129,9 +131,14 @@ export function SizeSection() {
     cornerRadius?: number;
   } | null>(null);
 
-  const [widthInput, setWidthInput] = React.useState<string>('');
-  const [heightInput, setHeightInput] = React.useState<string>('');
-  const [radiusInput, setRadiusInput] = React.useState<string>('');
+  // 미확정 입력 텍스트는 AppContext 단일 소유(formTextDraft).
+  // controlled input 표시값이자 dirty 감지 원천이다.
+  const widthInput = formTextDraft.sizeW;
+  const heightInput = formTextDraft.sizeH;
+  const radiusInput = formTextDraft.sizeR;
+  const setWidthInput = (v: string) => setFormTextDraft({ sizeW: v });
+  const setHeightInput = (v: string) => setFormTextDraft({ sizeH: v });
+  const setRadiusInput = (v: string) => setFormTextDraft({ sizeR: v });
 
   // 드롭다운 외부 클릭 시에만 안전하게 닫기 (mousedown 기준)
   React.useEffect(() => {

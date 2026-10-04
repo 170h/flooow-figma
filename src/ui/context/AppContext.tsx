@@ -164,6 +164,20 @@ export interface NodeOptionState {
   branchVariant?: string;
 }
 
+/**
+ * 미확정 입력 텍스트 (draft text) — 단일 소유권
+ * controlled 숫자 입력(W/H/Radius, 스텝 번호)의 타이핑 중 텍스트를 보관한다.
+ * 확정값은 NodeOptionState에 있으며, 이 state는 dirty 감지용으로만 읽는다.
+ * NodeOptionState에 합치지 않고 별도 슬라이스로 유지한다.
+ */
+export interface FormTextDraftState {
+  sizeW: string;
+  sizeH: string;
+  sizeR: string;
+  stepNum: string;
+  linkUrl: string;
+}
+
 export interface ConnectorLabelDraft {
   labelOn?: boolean;
   labelText?: string;
@@ -235,6 +249,10 @@ export interface AppContextValue {
   // 노드 옵션 상태 (통합 단일 소유권)
   nodeOptionState: NodeOptionState;
   setNodeOptionState: (state: Partial<NodeOptionState>) => void;
+
+  // 미확정 입력 텍스트 (Size W/H/R, 스텝 번호 타이핑 중 텍스트, 단일 소유권)
+  formTextDraft: FormTextDraftState;
+  setFormTextDraft: (state: Partial<FormTextDraftState>) => void;
 
   // 커넥터 설정 기억
   lastConnectorConfig: LastConnectorConfig;
@@ -353,6 +371,14 @@ export const DEFAULT_NODE_OPTION_STATE: NodeOptionState = {
   branchVariant: 'CIRCLE',
 };
 
+const DEFAULT_FORM_TEXT_DRAFT: FormTextDraftState = {
+  sizeW: '',
+  sizeH: '',
+  sizeR: '',
+  stepNum: '1',
+  linkUrl: '',
+};
+
 const DEFAULT_CONNECTOR_COLOR = '#000000';
 const DEFAULT_LABEL_FILL = '#FFFFFF';
 const LEGACY_LABEL_COLOR = '#EA2039';
@@ -445,6 +471,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [uiState, setUIStateRaw] = useState<UIState>(DEFAULT_UI_STATE);
   const [nodeOptionState, setNodeOptionStateRaw] = useState<NodeOptionState>(DEFAULT_NODE_OPTION_STATE);
+  const [formTextDraft, setFormTextDraftRaw] = useState<FormTextDraftState>(DEFAULT_FORM_TEXT_DRAFT);
   const [lastConnectorConfig, setLastConnectorConfigRaw] = useState<LastConnectorConfig>(DEFAULT_LAST_CONNECTOR_CONFIG);
   const [activeModal, setActiveModal] = useState<ModalType>('none');
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
@@ -681,6 +708,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const currentTabRef = useRef(currentTab);
   const uiStateRef = useRef(uiState);
   const nodeOptionStateRef = useRef(nodeOptionState);
+  const formTextDraftRef = useRef(formTextDraft);
   const lastConnectorConfigRef = useRef(lastConnectorConfig);
 
   useEffect(() => { selectedNodesRef.current = selectedNodes; }, [selectedNodes]);
@@ -688,6 +716,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { currentTabRef.current = currentTab; }, [currentTab]);
   useEffect(() => { uiStateRef.current = uiState; }, [uiState]);
   useEffect(() => { nodeOptionStateRef.current = nodeOptionState; }, [nodeOptionState]);
+  useEffect(() => { formTextDraftRef.current = formTextDraft; }, [formTextDraft]);
   useEffect(() => { lastConnectorConfigRef.current = lastConnectorConfig; }, [lastConnectorConfig]);
 
   const setUIState = useCallback((partial: Partial<UIState>) => {
@@ -719,6 +748,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setNodeOptionState = useCallback((partial: Partial<NodeOptionState>) => {
     nodeOptionStateRef.current = { ...nodeOptionStateRef.current, ...partial };
     setNodeOptionStateRaw(prev => ({ ...prev, ...partial }));
+  }, []);
+
+  const setFormTextDraft = useCallback((partial: Partial<FormTextDraftState>) => {
+    formTextDraftRef.current = { ...formTextDraftRef.current, ...partial };
+    setFormTextDraftRaw(prev => ({ ...prev, ...partial }));
   }, []);
 
   const setLastConnectorConfig = useCallback((partial: Partial<LastConnectorConfig>) => {
@@ -836,24 +870,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 5. Figma Link
-    // truth: NodeOptionState.singleLinkOn (URL 텍스트만 DOM에서 읽음)
+    // truth: NodeOptionState.singleLinkOn (URL 텍스트는 formTextDraft.linkUrl에서 읽음 — controlled input 미러)
     if (canHaveFigmaLink) {
-      const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
       const isLinkOn = Boolean(nodeOptionStateRef.current.singleLinkOn);
-      const rawCurrentLink = isLinkOn ? (linkUrlEl ? linkUrlEl.value.trim() : (origNode.figmaLink || '').trim()) : '';
+      const rawCurrentLink = isLinkOn ? formTextDraftRef.current.linkUrl.trim() : '';
       const currentLink = rawCurrentLink ? (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawCurrentLink) ? rawCurrentLink : `https://${rawCurrentLink}`) : '';
       const originalLink = (origNode.figmaLink || '').trim();
       if (currentLink !== originalLink) return true;
     }
 
     // 6. Step Badges
-    // truth: NodeOptionState.stepBadgesOn (번호 텍스트만 DOM 숫자 입력에서 읽음)
+    // truth: NodeOptionState.stepBadgesOn (번호 텍스트는 formTextDraft.stepNum에서 읽음 — controlled input 미러)
     const isStepOn = Boolean(nodeOptionStateRef.current.stepBadgesOn);
     const originalStepOn = origNode.stepNumber !== undefined;
     if (isStepOn !== originalStepOn) return true;
     if (isStepOn) {
-      const stepNumEl = document.getElementById('input-step-number') as HTMLInputElement | null;
-      const currentStepNum = stepNumEl ? parseInt(stepNumEl.value, 10) || 1 : (origNode.stepNumber || 1);
+      // controlled input 미러이므로 DOM 값과 항상 동일 — 마운트 해제 시에는 구값으로 폴백 불가하므로 파싱 우선
+      const currentStepNum = parseInt(formTextDraftRef.current.stepNum, 10) || 1;
       const originalStepNum = origNode.stepNumber || 1;
       if (currentStepNum !== originalStepNum) return true;
 
@@ -894,21 +927,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 10. Size (Screen 타입)
+    // controlled input 미러(formTextDraft)에서 읽음 — DOM 값과 항상 동일, 미확정 타이핑 포함
     if (isScreen) {
-      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-      const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
+      const wText = formTextDraftRef.current.sizeW;
+      const hText = formTextDraftRef.current.sizeH;
+      const rText = formTextDraftRef.current.sizeR;
 
-      if (wEl && wEl.value !== '') {
-        const parsedW = parseInt(wEl.value, 10);
+      if (wText !== '') {
+        const parsedW = parseInt(wText, 10);
         if (!isNaN(parsedW) && typeof origNode.width === 'number' && parsedW !== origNode.width) return true;
       }
-      if (hEl && hEl.value !== '') {
-        const parsedH = parseInt(hEl.value, 10);
+      if (hText !== '') {
+        const parsedH = parseInt(hText, 10);
         if (!isNaN(parsedH) && typeof origNode.height === 'number' && parsedH !== origNode.height) return true;
       }
-      if (rEl && rEl.value !== '') {
-        const parsedR = parseInt(rEl.value, 10);
+      if (rText !== '') {
+        const parsedR = parseInt(rText, 10);
         const origR = origNode.cornerRadius ?? 0;
         if (!isNaN(parsedR) && parsedR !== origR) return true;
       }
@@ -992,30 +1026,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (descEl) descEl.value = orig.description || '';
 
     const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
-    const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
     const hasLink = Boolean(orig.figmaLink);
     if (linkToggleEl) linkToggleEl.checked = hasLink;
-    if (linkUrlEl) linkUrlEl.value = orig.figmaLink || '';
+    // URL 텍스트는 controlled input이므로 텍스트 state로 복원 (DOM 직접 쓰기 금지)
+    setFormTextDraft({ linkUrl: orig.figmaLink || '' });
 
     const statusToggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
     if (statusToggleEl) statusToggleEl.checked = Boolean(orig.status);
 
     const stepToggleEl = document.getElementById('toggle-step-badges') as HTMLInputElement | null;
-    const stepNumEl = document.getElementById('input-step-number') as HTMLInputElement | null;
     const hasStep = orig.stepNumber !== undefined;
     if (stepToggleEl) stepToggleEl.checked = hasStep;
-    if (stepNumEl && hasStep) stepNumEl.value = String(orig.stepNumber);
+    // 스텝 번호는 controlled input이므로 텍스트 state로 복원 (DOM 직접 쓰기 금지)
+    if (hasStep) setFormTextDraft({ stepNum: String(orig.stepNumber) });
 
     const elevToggleEl = document.getElementById('toggle-elevation') as HTMLInputElement | null;
     const hasElev = orig.elevation !== undefined && orig.elevation !== null;
     if (elevToggleEl) elevToggleEl.checked = hasElev;
 
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-    if (wEl && orig.width) wEl.value = String(orig.width);
-    if (hEl && orig.height) hEl.value = String(orig.height);
-    if (rEl) rEl.value = String(orig.cornerRadius ?? 0);
+    // Size 입력은 controlled이므로 텍스트 state로 복원 (DOM 직접 쓰기 금지)
+    if (orig.width) setFormTextDraft({ sizeW: String(orig.width) });
+    if (orig.height) setFormTextDraft({ sizeH: String(orig.height) });
+    setFormTextDraft({ sizeR: String(orig.cornerRadius ?? 0) });
 
     setNodeOptionState({
       nodeType: origType,
@@ -1044,7 +1076,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     triggerFormChange();
-  }, [setNodeOptionState, setLastConnectorConfig, triggerFormChange]);
+  }, [setNodeOptionState, setLastConnectorConfig, setFormTextDraft, triggerFormChange]);
 
   const hasSingleChanges = selectedNodes.length === 1 ? checkHasSingleChanges() : false;
 
@@ -1311,15 +1343,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       cornerRadius: preset.radius ?? 0,
       sizeMode: preset.sizeMode || 'fixed',
     });
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-    if (wEl) wEl.value = String(preset.w);
-    if (hEl) hEl.value = String(preset.h);
-    if (rEl) rEl.value = String(preset.radius ?? 0);
+    // controlled input이므로 텍스트 state로 즉시 반영 (DOM 직접 쓰기 금지)
+    setFormTextDraft({
+      sizeW: String(preset.w),
+      sizeH: String(preset.h),
+      sizeR: String(preset.radius ?? 0),
+    });
     applyCurrentNodeState(preset.sizeMode);
     showToast(`"${preset.name}" 사이즈가 추가되었습니다.`, 'success');
-  }, [sizePresets, savePresets, setSelectedSizePresetId, setNodeOptionState, applyCurrentNodeState, showToast]);
+  }, [sizePresets, savePresets, setSelectedSizePresetId, setNodeOptionState, setFormTextDraft, applyCurrentNodeState, showToast]);
 
   const updateSizePreset = useCallback((id: string, partial: Partial<SizePreset>) => {
     const next = sizePresets.map((p) => (p.id === id ? { ...p, ...partial } : p));
@@ -1331,14 +1363,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         cornerRadius: partial.radius,
         sizeMode: partial.sizeMode,
       });
-      const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-      const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-      if (wEl && partial.w !== undefined) wEl.value = String(partial.w);
-      if (hEl && partial.h !== undefined) hEl.value = String(partial.h);
+      // controlled input이므로 텍스트 state로 즉시 반영 (DOM 직접 쓰기 금지)
+      if (partial.w !== undefined) setFormTextDraft({ sizeW: String(partial.w) });
+      if (partial.h !== undefined) setFormTextDraft({ sizeH: String(partial.h) });
       applyCurrentNodeState(partial.sizeMode);
     }
     showToast('사이즈가 업데이트되었습니다.', 'success');
-  }, [sizePresets, savePresets, setNodeOptionState, applyCurrentNodeState, showToast]);
+  }, [sizePresets, savePresets, setNodeOptionState, setFormTextDraft, applyCurrentNodeState, showToast]);
 
   const deleteSizePreset = useCallback((id: string) => {
     const target = sizePresets.find((p) => p.id === id);
@@ -2147,6 +2178,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUIState,
     nodeOptionState,
     setNodeOptionState,
+    formTextDraft,
+    setFormTextDraft,
     lastConnectorConfig,
     setLastConnectorConfig,
     activeModal,

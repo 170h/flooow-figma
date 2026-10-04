@@ -107,6 +107,7 @@ export function TypeSection() {
   const {
     nodeOptionState,
     setNodeOptionState,
+    setFormTextDraft,
     applyCurrentNodeState,
     selectedNodes,
     multiDraft,
@@ -158,13 +159,6 @@ export function TypeSection() {
       ? getBranchVariantSpec(nextVariant)
       : NODE_TYPE_SHAPE_SPECS[type];
     const titleInputEl = document.getElementById('node-title-input') as HTMLInputElement | null;
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-    const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
-    const descInputEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
-    const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
-    const linkInputEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
 
     const sourceNode = selectedNodes.length === 1 ? selectedNodes[0] : undefined;
     const sourceBranch = sourceNode?.branchVariant
@@ -198,9 +192,12 @@ export function TypeSection() {
     }
 
     if (spec) {
-      if (wEl) wEl.value = String(spec.width);
-      if (hEl) hEl.value = String(spec.height);
-      if (rEl) rEl.value = String(spec.cornerRadius ?? 0);
+      // controlled input이므로 텍스트 state로 즉시 반영 (DOM 직접 쓰기 금지 — transient flicker 방지)
+      setFormTextDraft({
+        sizeW: String(spec.width),
+        sizeH: String(spec.height),
+        sizeR: String(spec.cornerRadius ?? 0),
+      });
     }
 
     const targetSize = spec ? {
@@ -263,9 +260,6 @@ export function TypeSection() {
 
     const spec = getBranchVariantSpec(variant);
     const titleInputEl = document.getElementById('node-title-input') as HTMLInputElement | null;
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
     const label = BRANCH_VARIANT_LABELS[variant];
     let targetTitle: string | undefined;
     if (titleInputEl) {
@@ -277,9 +271,12 @@ export function TypeSection() {
         targetTitle = currentTitle;
       }
     }
-    if (wEl) wEl.value = String(spec.width);
-    if (hEl) hEl.value = String(spec.height);
-    if (rEl) rEl.value = String(spec.cornerRadius ?? 0);
+    // controlled input이므로 텍스트 state로 즉시 반영 (DOM 직접 쓰기 금지)
+    setFormTextDraft({
+      sizeW: String(spec.width),
+      sizeH: String(spec.height),
+      sizeR: String(spec.cornerRadius ?? 0),
+    });
 
     const fill = getBranchVariantDefaultFill(variant);
     const strokeW = branchVariantUsesStroke(variant) ? 1.5 : 0;

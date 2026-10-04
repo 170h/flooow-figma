@@ -15,6 +15,7 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
     designFrames,
     loadDesignFrames,
     setNodeOptionState,
+    setFormTextDraft,
     addSizePreset,
     sizePresets,
     applyCurrentNodeState,
@@ -52,16 +53,12 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
   function handleApply() {
     if (!selectedFrame) return;
 
-    // 1. 입력 필드 DOM 값 직접 동기화 (기존 폼 일관성 유지)
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-    if (wEl) wEl.value = String(selectedFrame.width);
-    if (hEl) hEl.value = String(selectedFrame.height);
-    if (rEl) rEl.value = String(selectedFrame.cornerRadius ?? 0);
-
-    const fixedValEl = document.getElementById('size-mode-val-fixed');
-    if (fixedValEl) fixedValEl.textContent = String(selectedFrame.height);
+    // 1. Size controlled input 표시값 동기화 (FormTextDraftState 단일 소유 — DOM 직접 쓰기 금지)
+    setFormTextDraft({
+      sizeW: String(selectedFrame.width),
+      sizeH: String(selectedFrame.height),
+      sizeR: String(selectedFrame.cornerRadius ?? 0),
+    });
 
     // 2. 상태 업데이트
     const updatePayload: Partial<import('../../context/AppContext').NodeOptionState> = {
@@ -74,10 +71,8 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
     if (linkToFrame) {
       updatePayload.singleLinkUrl = `figma://node/${selectedFrame.id}`;
       updatePayload.singleLinkOn = true;
-      const urlInput = document.getElementById('single-screen-url') as HTMLInputElement | null;
-      if (urlInput) {
-        urlInput.value = `figma://node/${selectedFrame.id}`;
-      }
+      // controlled input이므로 텍스트 state로 즉시 반영 (DOM 직접 쓰기 금지)
+      setFormTextDraft({ linkUrl: `figma://node/${selectedFrame.id}` });
     }
 
     setNodeOptionState(updatePayload);
