@@ -1,6 +1,6 @@
 "use strict";
 (() => {
-  // src/types.ts
+  // src/domain/nodeDomain.ts
   var STATUS_CONFIG = {
     draft: {
       label: "Draft",

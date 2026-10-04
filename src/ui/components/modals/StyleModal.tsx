@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { useApp } from "../../context/AppContext";
 import { ColorWheelField } from "../shared/ColorWheelField";
 import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
-import { SCREEN_NODE_CONSTRAINTS, clampStrokeWeight } from "../../../types";
+import { SCREEN_NODE_CONSTRAINTS, clampStrokeWeight } from "../../../domain/nodeDomain";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (

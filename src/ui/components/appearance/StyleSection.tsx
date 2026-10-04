@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useApp, StylePreset } from "../../context/AppContext";
 import { useSelectionSummary } from "../../hooks/useSelectionSummary";
 import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
-import { normalizeNodeType } from "../../../types";
+import { normalizeNodeType } from "../../../domain/nodeDomain";
 
 /**
  * 기본 스타일 프리셋 ID 목록 (첫 번째: 흰색 + 1.5px 블랙 보더, 두 번째: 블랙 + 0px 보더)

@@ -28992,7 +28992,7 @@
     return { autoResizeWindow };
   }
 
-  // src/types.ts
+  // src/domain/nodeDomain.ts
   function normalizeNodeType(type) {
     if (!type) return "Screen";
     const clean = String(type).trim().toLowerCase();
@@ -29778,31 +29778,27 @@
       const originalTitle = (origNode.title || origNode.name || (isScreen ? "Screen" : originalNodeType)).trim();
       if (currentTitle !== originalTitle) return true;
       if (canHaveDescription) {
-        const descToggleEl = document.getElementById("toggle-description");
         const descEl = document.getElementById("node-description-input");
-        const isDescOn = descToggleEl ? descToggleEl.checked : Boolean(nodeOptionStateRef.current.descriptionOn);
+        const isDescOn = Boolean(nodeOptionStateRef.current.descriptionOn);
         const currentDesc = isDescOn ? descEl ? descEl.value.trim() : (origNode.description || "").trim() : "";
         const originalDesc = (origNode.description || "").trim();
         if (currentDesc !== originalDesc) return true;
       }
       if (canHaveStatus) {
-        const statusToggleEl = document.getElementById("toggle-status");
-        const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(nodeOptionStateRef.current.statusOn);
+        const isStatusOn = Boolean(nodeOptionStateRef.current.statusOn);
         const currentStatus = isStatusOn ? nodeOptionStateRef.current.status || "draft" : "";
         const originalStatus = origNode.status || "";
         if (currentStatus !== originalStatus) return true;
       }
       if (canHaveFigmaLink) {
-        const linkToggleEl = document.getElementById("toggle-single-figma-link");
         const linkUrlEl = document.getElementById("single-screen-url");
-        const isLinkOn = linkToggleEl ? linkToggleEl.checked : Boolean(nodeOptionStateRef.current.singleLinkOn);
+        const isLinkOn = Boolean(nodeOptionStateRef.current.singleLinkOn);
         const rawCurrentLink = isLinkOn ? linkUrlEl ? linkUrlEl.value.trim() : (origNode.figmaLink || "").trim() : "";
         const currentLink = rawCurrentLink ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawCurrentLink) ? rawCurrentLink : `https://${rawCurrentLink}` : "";
         const originalLink = (origNode.figmaLink || "").trim();
         if (currentLink !== originalLink) return true;
       }
-      const stepToggleEl = document.getElementById("toggle-step-badges");
-      const isStepOn = stepToggleEl ? stepToggleEl.checked : Boolean(nodeOptionStateRef.current.stepBadgesOn);
+      const isStepOn = Boolean(nodeOptionStateRef.current.stepBadgesOn);
       const originalStepOn = origNode.stepNumber !== void 0;
       if (isStepOn !== originalStepOn) return true;
       if (isStepOn) {
@@ -29820,8 +29816,7 @@
         const originalBadgeColorMode = origNode.badgeColorMode || "Style";
         if (currentBadgeColorMode !== originalBadgeColorMode) return true;
       }
-      const elevToggleEl = document.getElementById("toggle-elevation");
-      const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(nodeOptionStateRef.current.elevationOn);
+      const isElevOn = Boolean(nodeOptionStateRef.current.elevationOn);
       const currentElevation = isElevOn ? nodeOptionStateRef.current.elevation ?? 0 : null;
       const originalElevation = origNode.elevation !== void 0 && origNode.elevation !== null ? origNode.elevation : null;
       if (currentElevation !== originalElevation) return true;

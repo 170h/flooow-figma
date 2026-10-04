@@ -16,7 +16,7 @@ import {
   isDefaultNodeTitle,
   getDefaultNodeTitle,
   supportsOption,
-} from '../../types';
+} from '../../domain/nodeDomain';
 
 // ============================================================
 // 타입 정의
@@ -817,29 +817,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (currentTitle !== originalTitle) return true;
 
     // 3. Description
+    // truth: NodeOptionState.descriptionOn (DOM 토글은 렌더 동기화용, 상태 우선)
     if (canHaveDescription) {
-      const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
       const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
-      const isDescOn = descToggleEl ? descToggleEl.checked : Boolean(nodeOptionStateRef.current.descriptionOn);
+      const isDescOn = Boolean(nodeOptionStateRef.current.descriptionOn);
       const currentDesc = isDescOn ? (descEl ? descEl.value.trim() : (origNode.description || '').trim()) : '';
       const originalDesc = (origNode.description || '').trim();
       if (currentDesc !== originalDesc) return true;
     }
 
     // 4. Status
+    // truth: NodeOptionState.statusOn/status (DOM 토글은 렌더 동기화용)
     if (canHaveStatus) {
-      const statusToggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
-      const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(nodeOptionStateRef.current.statusOn);
+      const isStatusOn = Boolean(nodeOptionStateRef.current.statusOn);
       const currentStatus = isStatusOn ? (nodeOptionStateRef.current.status || 'draft') : '';
       const originalStatus = origNode.status || '';
       if (currentStatus !== originalStatus) return true;
     }
 
     // 5. Figma Link
+    // truth: NodeOptionState.singleLinkOn (URL 텍스트만 DOM에서 읽음)
     if (canHaveFigmaLink) {
-      const linkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
       const linkUrlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
-      const isLinkOn = linkToggleEl ? linkToggleEl.checked : Boolean(nodeOptionStateRef.current.singleLinkOn);
+      const isLinkOn = Boolean(nodeOptionStateRef.current.singleLinkOn);
       const rawCurrentLink = isLinkOn ? (linkUrlEl ? linkUrlEl.value.trim() : (origNode.figmaLink || '').trim()) : '';
       const currentLink = rawCurrentLink ? (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawCurrentLink) ? rawCurrentLink : `https://${rawCurrentLink}`) : '';
       const originalLink = (origNode.figmaLink || '').trim();
@@ -847,8 +847,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 6. Step Badges
-    const stepToggleEl = document.getElementById('toggle-step-badges') as HTMLInputElement | null;
-    const isStepOn = stepToggleEl ? stepToggleEl.checked : Boolean(nodeOptionStateRef.current.stepBadgesOn);
+    // truth: NodeOptionState.stepBadgesOn (번호 텍스트만 DOM 숫자 입력에서 읽음)
+    const isStepOn = Boolean(nodeOptionStateRef.current.stepBadgesOn);
     const originalStepOn = origNode.stepNumber !== undefined;
     if (isStepOn !== originalStepOn) return true;
     if (isStepOn) {
@@ -871,8 +871,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 7. Elevation
-    const elevToggleEl = document.getElementById('toggle-elevation') as HTMLInputElement | null;
-    const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(nodeOptionStateRef.current.elevationOn);
+    // truth: NodeOptionState.elevationOn/elevation (DOM 토글은 렌더 동기화용)
+    const isElevOn = Boolean(nodeOptionStateRef.current.elevationOn);
     const currentElevation = isElevOn ? (nodeOptionStateRef.current.elevation ?? 0) : null;
     const originalElevation = (origNode.elevation !== undefined && origNode.elevation !== null) ? origNode.elevation : null;
     if (currentElevation !== originalElevation) return true;
@@ -922,6 +922,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const revertSingleNodeForm = useCallback((orig: NodeInfo) => {
+    // NOTE(ownership): 옵션 truth는 NodeOptionState이며, 아래 DOM 쓰기는
+    // 비제어 입력(title/desc/link/size 숫자)의 렌더 동기화용이다.
     const isConn = Boolean(orig.isConnector || orig.nodeType === 'CONNECTOR');
     if (isConn) {
       const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
@@ -1180,6 +1182,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isApplyingSingleRef.current = true;
     }
 
+    // NOTE(ownership): title/desc 텍스트는 비제어 입력이므로 DOM에서 읽는다.
+    // 나머지 옵션(토글/색상/배지/elevation/size/mode/link)은 NodeOptionState가 truth다.
     const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
     const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
 

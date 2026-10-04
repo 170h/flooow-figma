@@ -3,11 +3,13 @@ import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { Switch } from '../shared/Switch';
 import {
+  type OptionSwitchState,
+} from '../../../types';
+import {
   supportsOption,
   getMutationTargets,
   computeOptionSwitchState,
-  type OptionSwitchState,
-} from '../../../types';
+} from '../../../domain/nodeDomain';
 
 /**
  * Elevation 섹션 - 토글 스위치 + 5단계 엘리베이션 카드 (토글형)

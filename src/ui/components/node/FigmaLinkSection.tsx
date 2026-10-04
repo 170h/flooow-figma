@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../context/AppContext";
 import { Switch } from "../shared/Switch";
 import {
+  type OptionSwitchState,
+} from "../../../types";
+import {
   normalizeNodeType,
   supportsOption,
   getMutationTargets,
   computeOptionSwitchState,
-  type OptionSwitchState,
-} from "../../../types";
+} from "../../../domain/nodeDomain";
 
 /**
  * 프로토콜(http, https, figma 등)이 누락된 URL에 자동으로 https://를 붙여 유효한 링크로 정규화합니다.

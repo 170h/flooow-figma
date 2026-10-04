@@ -1,6 +1,5 @@
-import {
+import type {
   WorkflowStatus,
-  STATUS_CONFIG,
   FrameStatusItem,
   PluginAction,
   CoreToUIMessage,
@@ -20,6 +19,12 @@ import {
   ConnectorLabelAlign,
   DiagramNodeType,
   BranchVariant,
+  DesignFrameItem,
+  ConnectedConnectorDetail,
+  MultiNodeConnectorDetail,
+} from './types';
+import {
+  STATUS_CONFIG,
   normalizeNodeType,
   normalizeBranchVariant,
   getBranchVariantSpec,
@@ -30,7 +35,6 @@ import {
   isDefaultNodeTitle,
   getDefaultNodeTitle,
   NODE_TYPE_SHAPE_SPECS,
-  DesignFrameItem,
   SCREEN_NODE_CONSTRAINTS,
   clampScreenWidth,
   clampScreenHeight,
@@ -38,9 +42,7 @@ import {
   clampStrokeWeight,
   supportsOption,
   getMutationTargets,
-  ConnectedConnectorDetail,
-  MultiNodeConnectorDetail,
-} from './types';
+} from './domain/nodeDomain';
 import {
   createOrthogonalVectorConnector,
   updateOrthogonalVectorConnector,

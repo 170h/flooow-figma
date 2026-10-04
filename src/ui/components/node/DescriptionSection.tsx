@@ -3,12 +3,14 @@ import { useApp } from '../../context/AppContext';
 import { IcCopy, IcCheckLarge } from '../shared/icons';
 import { Switch } from '../shared/Switch';
 import {
+  type OptionSwitchState,
+} from '../../../types';
+import {
   normalizeNodeType,
   supportsOption,
   getMutationTargets,
   computeOptionSwitchState,
-  type OptionSwitchState,
-} from '../../../types';
+} from '../../../domain/nodeDomain';
 
 /**
  * Description 섹션 - 스위치 토글 + 복사 버튼 + collapsible textarea

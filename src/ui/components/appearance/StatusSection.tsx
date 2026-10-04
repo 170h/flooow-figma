@@ -4,12 +4,14 @@ import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { Switch } from '../shared/Switch';
 import {
   type WorkflowStatus,
+  type OptionSwitchState,
+} from '../../../types';
+import {
   supportsOption,
   getMutationTargets,
   computeOptionSwitchState,
-  type OptionSwitchState,
   getOptionCapability,
-} from '../../../types';
+} from '../../../domain/nodeDomain';
 
 const STATUSES = [
   { id: 'draft', label: 'Draft', color: '#9CA3AF' },

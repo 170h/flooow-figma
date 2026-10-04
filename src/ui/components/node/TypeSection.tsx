@@ -3,9 +3,11 @@ import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import {
   DiagramNodeType,
+  BranchVariant,
+} from '../../../types';
+import {
   normalizeNodeType,
   NODE_TYPE_SHAPE_SPECS,
-  BranchVariant,
   BRANCH_VARIANT_ORDER,
   BRANCH_VARIANT_LABELS,
   normalizeBranchVariant,
@@ -13,7 +15,7 @@ import {
   getBranchVariantDefaultFill,
   branchVariantUsesStroke,
   branchVariantHasTitle,
-} from '../../../types';
+} from '../../../domain/nodeDomain';
 
 /**
  * 1. Screen 아이콘 (1027415-4991 공식 규격: 위 11, 왼쪽 7, 아래 13, 오른쪽 9 간격)

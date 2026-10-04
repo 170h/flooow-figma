@@ -7,11 +7,13 @@ import { Switch } from "../shared/Switch";
 import {
   type BadgePosition,
   type BadgeShape,
+  type OptionSwitchState,
+} from "../../../types";
+import {
   supportsOption,
   getMutationTargets,
   computeOptionSwitchState,
-  type OptionSwitchState,
-} from "../../../types";
+} from "../../../domain/nodeDomain";
 
 type BadgeColorMode = "White" | "Black" | "Style";
 

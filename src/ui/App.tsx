@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { labelFillIsDefault, labelStrokeFollowsConnector, useApp } from './context/AppContext';
-import { getDefaultNodeTitle } from '../types';
+import { getDefaultNodeTitle } from '../domain/nodeDomain';
 import { useFigmaMessage } from './hooks/useFigmaMessage';
 import { useAutoResize } from './hooks/useAutoResize';
 import { useSelectionSummary } from './hooks/useSelectionSummary';

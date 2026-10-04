@@ -1,5 +1,6 @@
 import { NodeInfo } from '../context/AppContext';
-import { DiagramNodeType, normalizeNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition, ConnectorLabelAlign, ConnectorLabelBoxStyle, PluginOption, supportsOption } from '../../types';
+import { DiagramNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition, ConnectorLabelAlign, ConnectorLabelBoxStyle, PluginOption } from '../../types';
+import { normalizeNodeType, supportsOption } from '../../domain/nodeDomain';
 
 export interface PropertySummary<T> {
   value: T | undefined;

@@ -11,7 +11,7 @@ import {
   clampScreenWidth,
   clampScreenHeight,
   clampScreenCornerRadius,
-} from '../../../types';
+} from '../../../domain/nodeDomain';
 
 const FIXED_SVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">

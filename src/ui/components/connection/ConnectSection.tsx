@@ -4,10 +4,12 @@ import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import {
   ConnectorTerminalType,
   MagnetPosition,
+} from '../../../types';
+import {
   BRANCH_VARIANT_LABELS,
   normalizeBranchVariant,
   normalizeNodeType,
-} from '../../../types';
+} from '../../../domain/nodeDomain';
 import { IcPalette, COLOR_MIXED_ICON } from '../shared/icons';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 import { computeGizmoMagnets } from '../../utils/gizmoState';

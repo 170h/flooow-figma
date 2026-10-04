@@ -4,7 +4,7 @@ import {
   clampScreenWidth,
   clampScreenHeight,
   clampScreenCornerRadius,
-} from '../../../types';
+} from '../../../domain/nodeDomain';
 
 // ============================================================
 // Props 정의 — useApp() 의존성 없이 완전 독립 컴포넌트
