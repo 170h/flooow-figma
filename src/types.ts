@@ -366,7 +366,6 @@ export type PluginAction =
       };
     }
   | { type: 'SET_CONNECTOR_LINE_TYPE'; connectorId?: string; lineType: 'ELBOWED' | 'STRAIGHT' }
-  | { type: 'CONVERT_ALL_CONNECTORS_TO_ELBOWED' }
   | { type: 'EXTRACT_UI3_VARIABLES' }
   | { type: 'SAVE_SETTINGS'; token: string; fileUrl: string }
   | { type: 'LOAD_SETTINGS' }

@@ -1971,7 +1971,7 @@
     if (!node) return null;
     let curr = node;
     while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
-      if (curr.type === "CONNECTOR" || safeGetPluginData2(curr, "is_custom_connector") === "true" || safeGetPluginData2(curr, "is_flow_connector") === "true") {
+      if (safeGetPluginData2(curr, "is_custom_connector") === "true" || safeGetPluginData2(curr, "is_flow_connector") === "true") {
         let topConnector = curr;
         let parentScan = curr.parent;
         while (parentScan && parentScan.type !== "PAGE" && parentScan.type !== "DOCUMENT") {
@@ -2545,12 +2545,6 @@
     const connectors = figma.currentPage.findAll((n) => {
       try {
         if (!n) return false;
-        if (n.type === "CONNECTOR") {
-          const conn = n;
-          const sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
-          const tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
-          return Boolean(sId && tId && nodeIdSet.has(sId) && nodeIdSet.has(tId) && sId !== tId);
-        }
         if (n.type === "GROUP" || n.type === "VECTOR") {
           const isCustom = safeGetPluginData2(n, "is_custom_connector") === "true" || safeGetPluginData2(n, "is_flow_connector") === "true";
           if (!isCustom) return false;
@@ -2574,19 +2568,13 @@
     for (const rawConn of connectors) {
       let sId;
       let tId;
-      if (rawConn.type === "CONNECTOR") {
-        const conn = rawConn;
-        sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
-        tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
-      } else {
-        sId = safeGetPluginData2(rawConn, "source_node_id");
-        tId = safeGetPluginData2(rawConn, "target_node_id");
-        if ((!sId || !tId) && rawConn.type === "GROUP") {
-          const vChild = rawConn.findOne((child) => child.type === "VECTOR");
-          if (vChild) {
-            sId = sId || safeGetPluginData2(vChild, "source_node_id");
-            tId = tId || safeGetPluginData2(vChild, "target_node_id");
-          }
+      sId = safeGetPluginData2(rawConn, "source_node_id");
+      tId = safeGetPluginData2(rawConn, "target_node_id");
+      if ((!sId || !tId) && rawConn.type === "GROUP") {
+        const vChild = rawConn.findOne((child) => child.type === "VECTOR");
+        if (vChild) {
+          sId = sId || safeGetPluginData2(vChild, "source_node_id");
+          tId = tId || safeGetPluginData2(vChild, "target_node_id");
         }
       }
       if (sId && tId && nodeIdSet.has(sId) && nodeIdSet.has(tId) && sId !== tId) {
@@ -2652,27 +2640,15 @@
     if (connectorCount > 0 && flowNodeCount === 0) {
       const endpointNodeMap = /* @__PURE__ */ new Map();
       for (const c of connNodes) {
-        if (c.type === "CONNECTOR") {
-          const conn = c;
-          if (conn.connectorStart && "endpointNodeId" in conn.connectorStart && conn.connectorStart.endpointNodeId) {
-            const srcNode = figma.getNodeById(conn.connectorStart.endpointNodeId);
-            if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
-          }
-          if (conn.connectorEnd && "endpointNodeId" in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
-            const tgtNode = figma.getNodeById(conn.connectorEnd.endpointNodeId);
-            if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
-          }
-        } else {
-          const srcId = safeGetPluginData2(c, "source_node_id");
-          const tgtId = safeGetPluginData2(c, "target_node_id");
-          if (srcId) {
-            const srcNode = figma.getNodeById(srcId);
-            if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
-          }
-          if (tgtId) {
-            const tgtNode = figma.getNodeById(tgtId);
-            if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
-          }
+        const srcId = safeGetPluginData2(c, "source_node_id");
+        const tgtId = safeGetPluginData2(c, "target_node_id");
+        if (srcId) {
+          const srcNode = figma.getNodeById(srcId);
+          if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
+        }
+        if (tgtId) {
+          const tgtNode = figma.getNodeById(tgtId);
+          if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
         }
       }
       const endpointNodes = Array.from(endpointNodeMap.values());
@@ -2710,105 +2686,83 @@
       let connectorTargetMagnet;
       let connectorIsReversed = false;
       const isCustomConnector = node.getPluginData("is_custom_connector") === "true" || node.getPluginData("is_flow_connector") === "true";
-      const isFigmaConnector = node.type === "CONNECTOR";
-      const isConnector = isFigmaConnector || isCustomConnector;
+      const isConnector = isCustomConnector;
       if (isConnector) {
-        if (isFigmaConnector) {
-          const conn = node;
-          connectorLabel = conn.text ? conn.text.characters : "";
-          const rawNativeLabelOn = node.getPluginData("connector_label_on");
-          connectorLabelOn = rawNativeLabelOn !== "" ? rawNativeLabelOn === "true" : Boolean(conn.text && conn.text.characters);
-          connectorLineType = conn.connectorLineType;
-          connectorRoutingType = conn.connectorLineType === "STRAIGHT" ? "STRAIGHT" : "ORTHOGONAL";
-          connectorStrokeWeight = typeof conn.strokeWeight === "number" ? conn.strokeWeight : 1.5;
-          if (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === "SOLID") {
-            connectorColorHex = rgbToHexColor(conn.strokes[0].color);
-          }
-          if (Array.isArray(conn.dashPattern) && conn.dashPattern.length > 0) {
-            connectorStrokePattern = conn.dashPattern[0] <= 2 ? "DOTTED" : "DASHED";
-          } else {
-            connectorStrokePattern = "SOLID";
-          }
-          const mapCapToTerm = (cap) => {
-            const upper = String(cap || "").toUpperCase();
-            if (upper.includes("REVERSED_TRIANGLE")) return "REVERSED_TRIANGLE_ARROW";
-            if (upper.includes("TRIANGLE") || upper.includes("ARROW") || upper.includes("EQUILATERAL")) return "ARROW";
-            if (upper.includes("DIAMOND")) return "DIAMOND";
-            if (upper.includes("CIRCLE") || upper.includes("ROUND")) return "CIRCLE";
-            return "NONE";
-          };
-          const savedStartTerm = node.getPluginData("start_terminal");
-          const savedEndTerm = node.getPluginData("end_terminal");
-          connectorStartTerminal = normalizeConnectorTerminal(savedStartTerm, mapCapToTerm(String(conn.connectorStartStrokeCap || "NONE")));
-          connectorEndTerminal = normalizeConnectorTerminal(savedEndTerm, mapCapToTerm(String(conn.connectorEndStrokeCap || "ARROW")));
-          const rawStartOff = node.getPluginData("start_offset");
-          const rawEndOff = node.getPluginData("end_offset");
-          connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
-          connectorEndOffset = rawEndOff ? parseFloat(rawEndOff) : 0;
-          let sourceEndpointNode = null;
-          let targetEndpointNode = null;
-          if (conn.connectorStart && "endpointNodeId" in conn.connectorStart && conn.connectorStart.endpointNodeId) {
-            sourceEndpointNode = figma.getNodeById(conn.connectorStart.endpointNodeId);
-            if (sourceEndpointNode) {
-              connectorSourceNodeName = sourceEndpointNode.name;
-              connectorSourceNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
-            }
-            if ("magnet" in conn.connectorStart) {
-              connectorSourceMagnet = conn.connectorStart.magnet;
-            }
-          }
-          if (conn.connectorEnd && "endpointNodeId" in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
-            targetEndpointNode = figma.getNodeById(conn.connectorEnd.endpointNodeId);
-            if (targetEndpointNode) {
-              connectorTargetNodeName = targetEndpointNode.name;
-              connectorTargetNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
-            }
-            if ("magnet" in conn.connectorEnd) {
-              connectorTargetMagnet = conn.connectorEnd.magnet;
-            }
-          }
-          let startPos = null;
-          let endPos = null;
+        connectorLabel = node.getPluginData("connector_label") || "";
+        const rawCustomLabelOn = node.getPluginData("connector_label_on");
+        connectorLabelOn = rawCustomLabelOn !== "" ? rawCustomLabelOn === "true" : Boolean(connectorLabel);
+        connectorLabelBoxStyle = node.getPluginData("connector_label_box_style") || "BOX";
+        connectorLabelAlign = node.getPluginData("connector_label_align") || "CENTER";
+        connectorLineType = "ELBOWED";
+        connectorRoutingType = node.getPluginData("connector_routing") || "ORTHOGONAL";
+        connectorColorHex = node.getPluginData("connector_color");
+        const labelColorFallback = connectorColorHex || "#000000";
+        connectorLabelFillColor = node.getPluginData("connector_label_fill_color") || "#FFFFFF";
+        connectorLabelStrokeColor = node.getPluginData("connector_label_stroke_color") || labelColorFallback;
+        const savedWeight = node.getPluginData("connector_weight");
+        connectorStrokeWeight = savedWeight ? parseFloat(savedWeight) : void 0;
+        connectorStrokePattern = node.getPluginData("connector_pattern") || "SOLID";
+        connectorStartTerminal = normalizeConnectorTerminal(node.getPluginData("start_terminal"), "NONE");
+        connectorEndTerminal = normalizeConnectorTerminal(node.getPluginData("end_terminal"), "ARROW");
+        const rawStartOff = node.getPluginData("start_offset");
+        const rawEndOff = node.getPluginData("end_offset");
+        connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
+        connectorEndOffset = rawEndOff ? parseFloat(rawEndOff) : 0;
+        const srcId = node.getPluginData("source_node_id");
+        const tgtId = node.getPluginData("target_node_id");
+        let sourceEndpointNode = null;
+        let targetEndpointNode = null;
+        if (srcId) {
+          sourceEndpointNode = figma.getNodeById(srcId);
           if (sourceEndpointNode) {
-            startPos = getNodeCenter(sourceEndpointNode);
-          } else if (conn.connectorStart && "position" in conn.connectorStart && conn.connectorStart.position) {
-            startPos = conn.connectorStart.position;
+            connectorSourceNodeName = sourceEndpointNode.name;
+            connectorSourceNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
           }
+        }
+        if (tgtId) {
+          targetEndpointNode = figma.getNodeById(tgtId);
           if (targetEndpointNode) {
-            endPos = getNodeCenter(targetEndpointNode);
-          } else if (conn.connectorEnd && "position" in conn.connectorEnd && conn.connectorEnd.position) {
-            endPos = conn.connectorEnd.position;
+            connectorTargetNodeName = targetEndpointNode.name;
+            connectorTargetNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
           }
-          let shouldReverse = false;
-          if (sourceEndpointNode && targetEndpointNode) {
-            const sorted = sortNodesBySpatialPosition([sourceEndpointNode, targetEndpointNode]);
-            if (sorted[0].id === targetEndpointNode.id) {
-              shouldReverse = true;
-            }
-          } else if (startPos && endPos) {
-            const dx = Math.abs(startPos.x - endPos.x);
-            const dy = Math.abs(startPos.y - endPos.y);
-            if (dx >= dy) {
-              if (endPos.x < startPos.x) shouldReverse = true;
-            } else {
-              if (endPos.y < startPos.y) shouldReverse = true;
-            }
+        }
+        connectorSourceMagnet = node.getPluginData("source_magnet") || "RIGHT";
+        connectorTargetMagnet = node.getPluginData("target_magnet") || "LEFT";
+        let vectorChild = null;
+        if (node.type === "VECTOR") {
+          vectorChild = node;
+        } else if ("findOne" in node) {
+          vectorChild = node.findOne((n) => n.type === "VECTOR");
+        }
+        if (vectorChild) {
+          if (!connectorColorHex && Array.isArray(vectorChild.strokes) && vectorChild.strokes.length > 0) {
+            const first = vectorChild.strokes[0];
+            if (first.type === "SOLID") connectorColorHex = rgbToHexColor(first.color);
           }
-          if (shouldReverse) {
+          if (connectorStrokeWeight === void 0 && typeof vectorChild.strokeWeight === "number") {
+            connectorStrokeWeight = vectorChild.strokeWeight;
+          }
+          if (!connectorSourceMagnet) {
+            connectorSourceMagnet = vectorChild.getPluginData("source_magnet") || "RIGHT";
+          }
+          if (!connectorTargetMagnet) {
+            connectorTargetMagnet = vectorChild.getPluginData("target_magnet") || "LEFT";
+          }
+          if (connectorStartOffset === 0 && vectorChild.getPluginData("start_offset")) {
+            connectorStartOffset = parseFloat(vectorChild.getPluginData("start_offset")) || 0;
+          }
+          if (connectorEndOffset === 0 && vectorChild.getPluginData("end_offset")) {
+            connectorEndOffset = parseFloat(vectorChild.getPluginData("end_offset")) || 0;
+          }
+        }
+        if (sourceEndpointNode && targetEndpointNode) {
+          const sorted = sortNodesBySpatialPosition([sourceEndpointNode, targetEndpointNode]);
+          if (sorted[0].id === targetEndpointNode.id) {
             connectorIsReversed = true;
-            if (sourceEndpointNode && targetEndpointNode) {
-              connectorSourceNodeName = targetEndpointNode.name;
-              connectorTargetNodeName = sourceEndpointNode.name;
-              connectorSourceNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
-              connectorTargetNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
-            } else {
-              const tempName = connectorSourceNodeName;
-              connectorSourceNodeName = connectorTargetNodeName;
-              connectorTargetNodeName = tempName;
-              const tempType = connectorSourceNodeType;
-              connectorSourceNodeType = connectorTargetNodeType;
-              connectorTargetNodeType = tempType;
-            }
+            connectorSourceNodeName = targetEndpointNode.name;
+            connectorTargetNodeName = sourceEndpointNode.name;
+            connectorSourceNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
+            connectorTargetNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
             const tempMagnet = connectorSourceMagnet;
             connectorSourceMagnet = connectorTargetMagnet;
             connectorTargetMagnet = tempMagnet;
@@ -2818,93 +2772,6 @@
             const tempOffset = connectorStartOffset;
             connectorStartOffset = connectorEndOffset;
             connectorEndOffset = tempOffset;
-          }
-        } else {
-          connectorLabel = node.getPluginData("connector_label") || "";
-          const rawCustomLabelOn = node.getPluginData("connector_label_on");
-          connectorLabelOn = rawCustomLabelOn !== "" ? rawCustomLabelOn === "true" : Boolean(connectorLabel);
-          connectorLabelBoxStyle = node.getPluginData("connector_label_box_style") || "BOX";
-          connectorLabelAlign = node.getPluginData("connector_label_align") || "CENTER";
-          connectorLineType = "ELBOWED";
-          connectorRoutingType = node.getPluginData("connector_routing") || "ORTHOGONAL";
-          connectorColorHex = node.getPluginData("connector_color");
-          const labelColorFallback = connectorColorHex || "#000000";
-          connectorLabelFillColor = node.getPluginData("connector_label_fill_color") || "#FFFFFF";
-          connectorLabelStrokeColor = node.getPluginData("connector_label_stroke_color") || labelColorFallback;
-          const savedWeight = node.getPluginData("connector_weight");
-          connectorStrokeWeight = savedWeight ? parseFloat(savedWeight) : void 0;
-          connectorStrokePattern = node.getPluginData("connector_pattern") || "SOLID";
-          connectorStartTerminal = normalizeConnectorTerminal(node.getPluginData("start_terminal"), "NONE");
-          connectorEndTerminal = normalizeConnectorTerminal(node.getPluginData("end_terminal"), "ARROW");
-          const rawStartOff = node.getPluginData("start_offset");
-          const rawEndOff = node.getPluginData("end_offset");
-          connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
-          connectorEndOffset = rawEndOff ? parseFloat(rawEndOff) : 0;
-          const srcId = node.getPluginData("source_node_id");
-          const tgtId = node.getPluginData("target_node_id");
-          let sourceEndpointNode = null;
-          let targetEndpointNode = null;
-          if (srcId) {
-            sourceEndpointNode = figma.getNodeById(srcId);
-            if (sourceEndpointNode) {
-              connectorSourceNodeName = sourceEndpointNode.name;
-              connectorSourceNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
-            }
-          }
-          if (tgtId) {
-            targetEndpointNode = figma.getNodeById(tgtId);
-            if (targetEndpointNode) {
-              connectorTargetNodeName = targetEndpointNode.name;
-              connectorTargetNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
-            }
-          }
-          connectorSourceMagnet = node.getPluginData("source_magnet") || "RIGHT";
-          connectorTargetMagnet = node.getPluginData("target_magnet") || "LEFT";
-          let vectorChild = null;
-          if (node.type === "VECTOR") {
-            vectorChild = node;
-          } else if ("findOne" in node) {
-            vectorChild = node.findOne((n) => n.type === "VECTOR");
-          }
-          if (vectorChild) {
-            if (!connectorColorHex && Array.isArray(vectorChild.strokes) && vectorChild.strokes.length > 0) {
-              const first = vectorChild.strokes[0];
-              if (first.type === "SOLID") connectorColorHex = rgbToHexColor(first.color);
-            }
-            if (connectorStrokeWeight === void 0 && typeof vectorChild.strokeWeight === "number") {
-              connectorStrokeWeight = vectorChild.strokeWeight;
-            }
-            if (!connectorSourceMagnet) {
-              connectorSourceMagnet = vectorChild.getPluginData("source_magnet") || "RIGHT";
-            }
-            if (!connectorTargetMagnet) {
-              connectorTargetMagnet = vectorChild.getPluginData("target_magnet") || "LEFT";
-            }
-            if (connectorStartOffset === 0 && vectorChild.getPluginData("start_offset")) {
-              connectorStartOffset = parseFloat(vectorChild.getPluginData("start_offset")) || 0;
-            }
-            if (connectorEndOffset === 0 && vectorChild.getPluginData("end_offset")) {
-              connectorEndOffset = parseFloat(vectorChild.getPluginData("end_offset")) || 0;
-            }
-          }
-          if (sourceEndpointNode && targetEndpointNode) {
-            const sorted = sortNodesBySpatialPosition([sourceEndpointNode, targetEndpointNode]);
-            if (sorted[0].id === targetEndpointNode.id) {
-              connectorIsReversed = true;
-              connectorSourceNodeName = targetEndpointNode.name;
-              connectorTargetNodeName = sourceEndpointNode.name;
-              connectorSourceNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
-              connectorTargetNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
-              const tempMagnet = connectorSourceMagnet;
-              connectorSourceMagnet = connectorTargetMagnet;
-              connectorTargetMagnet = tempMagnet;
-              const tempTerm = connectorStartTerminal;
-              connectorStartTerminal = connectorEndTerminal;
-              connectorEndTerminal = tempTerm;
-              const tempOffset = connectorStartOffset;
-              connectorStartOffset = connectorEndOffset;
-              connectorEndOffset = tempOffset;
-            }
           }
         }
         title = "Connector";
@@ -3070,12 +2937,6 @@
       const foundConnectors = figma.currentPage.findAll((n) => {
         try {
           if (!n) return false;
-          if (n.type === "CONNECTOR") {
-            const conn = n;
-            const sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
-            const tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
-            return sId === sourceId && targetIds.includes(tId || "") || tId === sourceId && targetIds.includes(sId || "");
-          }
           if (n.type === "GROUP" || n.type === "VECTOR") {
             const isCustom = safeGetPluginData2(n, "is_custom_connector") === "true" || safeGetPluginData2(n, "is_flow_connector") === "true";
             if (!isCustom) return false;
@@ -3112,39 +2973,24 @@
           let isForward = true;
           let sMag;
           let tMag;
-          if (c.type === "CONNECTOR") {
-            const conn = c;
-            const sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
-            isForward = sId === sourceId;
-            sMag = conn.connectorStart && "magnet" in conn.connectorStart ? conn.connectorStart.magnet : void 0;
-            tMag = conn.connectorEnd && "magnet" in conn.connectorEnd ? conn.connectorEnd.magnet : void 0;
-            if (isForward) {
-              if (sMag) srcMags.push(sMag);
-              if (tMag) tgtMags.push(tMag);
-            } else {
-              if (tMag) srcMags.push(tMag);
-              if (sMag) tgtMags.push(sMag);
+          let sId = safeGetPluginData2(c, "source_node_id");
+          sMag = safeGetPluginData2(c, "source_magnet") || void 0;
+          tMag = safeGetPluginData2(c, "target_magnet") || void 0;
+          if ((!sMag || !tMag) && c.type === "GROUP") {
+            const vChild = c.findOne((child) => child.type === "VECTOR");
+            if (vChild) {
+              sId = sId || safeGetPluginData2(vChild, "source_node_id");
+              sMag = sMag || safeGetPluginData2(vChild, "source_magnet") || void 0;
+              tMag = tMag || safeGetPluginData2(vChild, "target_magnet") || void 0;
             }
+          }
+          isForward = sId === sourceId;
+          if (isForward) {
+            if (sMag) srcMags.push(sMag);
+            if (tMag) tgtMags.push(tMag);
           } else {
-            let sId = safeGetPluginData2(c, "source_node_id");
-            sMag = safeGetPluginData2(c, "source_magnet") || void 0;
-            tMag = safeGetPluginData2(c, "target_magnet") || void 0;
-            if ((!sMag || !tMag) && c.type === "GROUP") {
-              const vChild = c.findOne((child) => child.type === "VECTOR");
-              if (vChild) {
-                sId = sId || safeGetPluginData2(vChild, "source_node_id");
-                sMag = sMag || safeGetPluginData2(vChild, "source_magnet") || void 0;
-                tMag = tMag || safeGetPluginData2(vChild, "target_magnet") || void 0;
-              }
-            }
-            isForward = sId === sourceId;
-            if (isForward) {
-              if (sMag) srcMags.push(sMag);
-              if (tMag) tgtMags.push(tMag);
-            } else {
-              if (tMag) srcMags.push(tMag);
-              if (sMag) tgtMags.push(sMag);
-            }
+            if (tMag) srcMags.push(tMag);
+            if (sMag) tgtMags.push(sMag);
           }
           connectedConnectors.push({
             id: c.id,
@@ -3199,12 +3045,6 @@
       const foundConnectors = figma.currentPage.findAll((n) => {
         try {
           if (!n) return false;
-          if (n.type === "CONNECTOR") {
-            const conn = n;
-            const sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
-            const tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
-            return Boolean(sId && tId && selectedNodeIdSet.has(sId) && selectedNodeIdSet.has(tId));
-          }
           if (n.type === "GROUP" || n.type === "VECTOR") {
             const isCustom = safeGetPluginData2(n, "is_custom_connector") === "true" || safeGetPluginData2(n, "is_flow_connector") === "true";
             if (!isCustom) return false;
@@ -3237,25 +3077,17 @@
         let tId;
         let sMag;
         let tMag;
-        if (c.type === "CONNECTOR") {
-          const conn = c;
-          sId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
-          tId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
-          sMag = conn.connectorStart && "magnet" in conn.connectorStart ? conn.connectorStart.magnet : void 0;
-          tMag = conn.connectorEnd && "magnet" in conn.connectorEnd ? conn.connectorEnd.magnet : void 0;
-        } else {
-          sId = safeGetPluginData2(c, "source_node_id") || void 0;
-          tId = safeGetPluginData2(c, "target_node_id") || void 0;
-          sMag = safeGetPluginData2(c, "source_magnet") || void 0;
-          tMag = safeGetPluginData2(c, "target_magnet") || void 0;
-          if ((!sMag || !tMag || !sId || !tId) && c.type === "GROUP") {
-            const vChild = c.findOne((child) => child.type === "VECTOR");
-            if (vChild) {
-              sId = sId || safeGetPluginData2(vChild, "source_node_id") || void 0;
-              tId = tId || safeGetPluginData2(vChild, "target_node_id") || void 0;
-              sMag = sMag || safeGetPluginData2(vChild, "source_magnet") || void 0;
-              tMag = tMag || safeGetPluginData2(vChild, "target_magnet") || void 0;
-            }
+        sId = safeGetPluginData2(c, "source_node_id") || void 0;
+        tId = safeGetPluginData2(c, "target_node_id") || void 0;
+        sMag = safeGetPluginData2(c, "source_magnet") || void 0;
+        tMag = safeGetPluginData2(c, "target_magnet") || void 0;
+        if ((!sMag || !tMag || !sId || !tId) && c.type === "GROUP") {
+          const vChild = c.findOne((child) => child.type === "VECTOR");
+          if (vChild) {
+            sId = sId || safeGetPluginData2(vChild, "source_node_id") || void 0;
+            tId = tId || safeGetPluginData2(vChild, "target_node_id") || void 0;
+            sMag = sMag || safeGetPluginData2(vChild, "source_magnet") || void 0;
+            tMag = tMag || safeGetPluginData2(vChild, "target_magnet") || void 0;
           }
         }
         if (sId && tId) {
@@ -3803,24 +3635,6 @@
     if (status) card.setPluginData("workflow_status", status);
     if (stepNumber) card.setPluginData("step_number", `${stepNumber}`);
     parent.appendChild(card);
-    const oldId = shape.id;
-    const connectors = figma.currentPage.findAll((n) => {
-      try {
-        return Boolean(n && n.type === "CONNECTOR");
-      } catch (_) {
-        return false;
-      }
-    });
-    for (const conn of connectors) {
-      if (conn.connectorStart && "endpointNodeId" in conn.connectorStart && conn.connectorStart.endpointNodeId === oldId) {
-        const magnet = "magnet" in conn.connectorStart ? conn.connectorStart.magnet : "AUTO";
-        conn.connectorStart = { endpointNodeId: card.id, magnet };
-      }
-      if (conn.connectorEnd && "endpointNodeId" in conn.connectorEnd && conn.connectorEnd.endpointNodeId === oldId) {
-        const magnet = "magnet" in conn.connectorEnd ? conn.connectorEnd.magnet : "AUTO";
-        conn.connectorEnd = { endpointNodeId: card.id, magnet };
-      }
-    }
     shape.remove();
     return card;
   }
@@ -5230,12 +5044,6 @@
         const matchNode = figma.currentPage.findOne((n) => {
           try {
             if (!n) return false;
-            if (n.type === "CONNECTOR") {
-              const conn = n;
-              const cSrc = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
-              const cTgt = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
-              return (cSrc === targetSourceId || cSrc === payload.sourceNodeId) && (cTgt === targetDestId || cTgt === payload.targetNodeId);
-            }
             if (n.type === "GROUP" || n.type === "VECTOR") {
               const isCustom = safeGetPluginData2(n, "is_custom_connector") === "true" || safeGetPluginData2(n, "is_flow_connector") === "true";
               if (!isCustom) return false;
@@ -5520,29 +5328,14 @@
   }
   async function updateConnectorLabel(connectorId, label) {
     try {
-      let node = figma.getNodeById(connectorId);
-      if (!node || node.type !== "CONNECTOR") {
-        const selection = figma.currentPage.selection;
-        if (selection.length > 0 && selection[0].type === "CONNECTOR") {
-          node = selection[0];
-        }
-      }
-      if (!node || node.type !== "CONNECTOR") {
-        notify("\uC218\uC815\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
-        return;
-      }
-      const conn = node;
-      try {
-        await figma.loadFontAsync({ family: "Inter", style: "Medium" });
-        conn.text.fontName = { family: "Inter", style: "Medium" };
-      } catch {
-        await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-        conn.text.fontName = { family: "Inter", style: "Regular" };
-      }
-      conn.text.characters = label.trim();
-      conn.text.fontSize = 11;
+      const trimmed = label.trim();
+      await updateConnectorProperties({
+        connectorId,
+        label,
+        hasLabel: trimmed !== ""
+      });
       notify(
-        label.trim() ? `\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 "${label.trim()}"(\uC73C)\uB85C \uBC18\uC601\uB418\uC5C8\uC2B5\uB2C8\uB2E4!` : "\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 \uC9C0\uC6CC\uC84C\uC2B5\uB2C8\uB2E4.",
+        trimmed ? `\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 "${trimmed}"(\uC73C)\uB85C \uBC18\uC601\uB418\uC5C8\uC2B5\uB2C8\uB2E4!` : "\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 \uC9C0\uC6CC\uC84C\uC2B5\uB2C8\uB2E4.",
         "success"
       );
       handleSelectionChange();
@@ -5580,336 +5373,222 @@
       const effectiveEndMagnet = payload.isReversed ? payload.sourceMagnet : payload.targetMagnet;
       const effectiveStartOffset = payload.isReversed ? rawEndOffset : rawStartOffset;
       const effectiveEndOffset = payload.isReversed ? rawStartOffset : rawEndOffset;
-      if (connectorRootNode.type === "CONNECTOR") {
-        const conn = connectorRootNode;
-        const nativeSourceId = conn.connectorStart && "endpointNodeId" in conn.connectorStart ? conn.connectorStart.endpointNodeId : void 0;
-        const nativeTargetId = conn.connectorEnd && "endpointNodeId" in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : void 0;
-        const hasOffset = typeof effectiveStartOffset === "number" && effectiveStartOffset > 0 || typeof effectiveEndOffset === "number" && effectiveEndOffset > 0;
-        if (hasOffset && nativeSourceId && nativeTargetId) {
-          const sourceNode = figma.getNodeById(nativeSourceId);
-          const targetNode = figma.getNodeById(nativeTargetId);
-          if (sourceNode && targetNode) {
-            const colorHex = payload.colorHex || (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === "SOLID" ? rgbToHexColor(conn.strokes[0].color) : "#000000");
-            const strokeWeight = typeof payload.strokeWeight === "number" ? payload.strokeWeight : typeof conn.strokeWeight === "number" ? conn.strokeWeight : 1.5;
-            const strokePattern = payload.strokePattern || (Array.isArray(conn.dashPattern) && conn.dashPattern.length > 0 ? conn.dashPattern[0] <= 2 ? "DOTTED" : "DASHED" : "SOLID");
-            const routingType = payload.routingType || (conn.connectorLineType === "STRAIGHT" ? "STRAIGHT" : "ORTHOGONAL");
-            const startTerm = effectiveStartTerm && effectiveStartTerm !== "MIXED" ? effectiveStartTerm : normalizeConnectorTerminal(conn.getPluginData("start_terminal"), "NONE");
-            const endTerm = effectiveEndTerm && effectiveEndTerm !== "MIXED" ? effectiveEndTerm : normalizeConnectorTerminal(conn.getPluginData("end_terminal"), "ARROW");
-            const label = payload.hasLabel && payload.label !== void 0 ? payload.label.trim() : conn.text ? conn.text.characters : "";
-            const sourceMag = effectiveStartMagnet || (conn.connectorStart && "magnet" in conn.connectorStart ? conn.connectorStart.magnet : "RIGHT");
-            const targetMag = effectiveEndMagnet || (conn.connectorEnd && "magnet" in conn.connectorEnd ? conn.connectorEnd.magnet : "LEFT");
-            const customConn = await createSingleConnector(
-              sourceNode,
-              sourceMag,
-              targetNode,
-              targetMag,
-              label,
-              colorHex,
-              strokeWeight,
-              routingType,
-              startTerm,
-              endTerm,
-              strokePattern,
-              effectiveStartOffset,
-              effectiveEndOffset
-            );
-            conn.remove();
-            figma.currentPage.selection = [customConn];
-            notify("\uC624\uD504\uC14B \uC801\uC6A9\uC744 \uC704\uD574 \uC9C1\uAC01 \uCEE4\uC2A4\uD140 \uCEE4\uB125\uD130\uB85C \uC790\uB3D9 \uBCC0\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
-            handleSelectionChange();
-            return;
-          }
-        }
-        if (typeof effectiveStartOffset === "number") {
-          conn.setPluginData("start_offset", String(effectiveStartOffset));
-        }
-        if (typeof effectiveEndOffset === "number") {
-          conn.setPluginData("end_offset", String(effectiveEndOffset));
-        }
-        if (payload.colorHex) {
-          conn.strokes = [{ type: "SOLID", color: hexToRgbColor(payload.colorHex) }];
+      let vectorNode = null;
+      let termVectorNode = null;
+      if (connectorRootNode.type === "VECTOR") {
+        vectorNode = connectorRootNode;
+      } else if (connectorRootNode.type === "GROUP") {
+        const group = connectorRootNode;
+        const isTerm = (c) => c.type === "VECTOR" && (safeGetPluginData2(c, "connector_role") === "terminal" || c.name === "ConnectorTerminals");
+        vectorNode = group.children.find((c) => c.type === "VECTOR" && !isTerm(c)) || group.children.find((c) => c.type === "VECTOR") || null;
+        termVectorNode = group.children.find(isTerm) || null;
+      }
+      const rgb = payload.colorHex ? hexToRgbColor(payload.colorHex) : void 0;
+      if (vectorNode) {
+        if (rgb) {
+          vectorNode.strokes = [{ type: "SOLID", color: rgb }];
         }
         if (typeof payload.strokeWeight === "number") {
-          conn.strokeWeight = payload.strokeWeight;
-        }
-        if (payload.strokePattern === "DASHED") {
-          conn.dashPattern = [4, 4];
-        } else if (payload.strokePattern === "DOTTED") {
-          conn.dashPattern = [1.5, 3];
-        } else {
-          conn.dashPattern = [];
-        }
-        if (payload.routingType === "STRAIGHT") {
-          conn.connectorLineType = "STRAIGHT";
-        } else {
-          conn.connectorLineType = "ELBOWED";
-        }
-        const mapCap = (term) => {
-          switch (term) {
-            case "ARROW":
-            case "TRIANGLE_ARROW":
-            case "REVERSED_TRIANGLE_ARROW":
-              return "ARROW_LINES";
-            case "DIAMOND":
-              return "DIAMOND_FILLED";
-            case "CIRCLE":
-              return "CIRCLE_FILLED";
-            default:
-              return "NONE";
-          }
-        };
-        if (effectiveStartTerm && effectiveStartTerm !== "MIXED") {
-          conn.connectorStartStrokeCap = mapCap(effectiveStartTerm);
-          conn.setPluginData("start_terminal", effectiveStartTerm);
-        }
-        if (effectiveEndTerm && effectiveEndTerm !== "MIXED") {
-          conn.connectorEndStrokeCap = mapCap(effectiveEndTerm);
-          conn.setPluginData("end_terminal", effectiveEndTerm);
-        }
-        if (payload.hasLabel !== void 0) {
-          conn.setPluginData("connector_label_on", payload.hasLabel ? "true" : "false");
-        }
-        if (payload.hasLabel && payload.label !== void 0) {
-          if (conn.text) {
-            await safeSetCharacters(conn.text, payload.label.trim());
-          }
-        } else if (payload.hasLabel === false && conn.text) {
-          await safeSetCharacters(conn.text, "");
-        }
-        if (effectiveStartMagnet && nativeSourceId) {
-          conn.connectorStart = {
-            endpointNodeId: nativeSourceId,
-            magnet: effectiveStartMagnet
-          };
-          conn.setPluginData("source_magnet", effectiveStartMagnet);
-          conn.setPluginData("is_manual_magnet", "true");
-        }
-        if (effectiveEndMagnet && nativeTargetId) {
-          conn.connectorEnd = {
-            endpointNodeId: nativeTargetId,
-            magnet: effectiveEndMagnet
-          };
-          conn.setPluginData("target_magnet", effectiveEndMagnet);
-          conn.setPluginData("is_manual_magnet", "true");
-        }
-      } else {
-        let vectorNode = null;
-        let termVectorNode = null;
-        if (connectorRootNode.type === "VECTOR") {
-          vectorNode = connectorRootNode;
-        } else if (connectorRootNode.type === "GROUP") {
-          const group = connectorRootNode;
-          const isTerm = (c) => c.type === "VECTOR" && (safeGetPluginData2(c, "connector_role") === "terminal" || c.name === "ConnectorTerminals");
-          vectorNode = group.children.find((c) => c.type === "VECTOR" && !isTerm(c)) || group.children.find((c) => c.type === "VECTOR") || null;
-          termVectorNode = group.children.find(isTerm) || null;
-        }
-        const rgb = payload.colorHex ? hexToRgbColor(payload.colorHex) : void 0;
-        if (vectorNode) {
-          if (rgb) {
-            vectorNode.strokes = [{ type: "SOLID", color: rgb }];
-          }
-          if (typeof payload.strokeWeight === "number") {
-            vectorNode.strokeWeight = payload.strokeWeight;
-          }
-          if (payload.strokePattern) {
-            if (payload.strokePattern === "DASHED") {
-              vectorNode.dashPattern = [4, 4];
-            } else if (payload.strokePattern === "DOTTED") {
-              vectorNode.dashPattern = [1.5, 3];
-            } else {
-              vectorNode.dashPattern = [];
-            }
-          }
-          vectorNode.setPluginData("connector_role", "line");
-        }
-        if (termVectorNode) {
-          try {
-            termVectorNode.remove();
-          } catch (_) {
-          }
-          termVectorNode = null;
-        }
-        if (payload.hasLabel !== void 0) {
-          connectorRootNode.setPluginData("connector_label_on", payload.hasLabel ? "true" : "false");
-          if (vectorNode) vectorNode.setPluginData("connector_label_on", payload.hasLabel ? "true" : "false");
-        }
-        if (payload.labelBoxStyle) {
-          connectorRootNode.setPluginData("connector_label_box_style", payload.labelBoxStyle);
-          if (vectorNode) vectorNode.setPluginData("connector_label_box_style", payload.labelBoxStyle);
-        }
-        if (payload.labelAlign) {
-          connectorRootNode.setPluginData("connector_label_align", payload.labelAlign);
-          if (vectorNode) vectorNode.setPluginData("connector_label_align", payload.labelAlign);
-        }
-        if (payload.labelFillColor) {
-          connectorRootNode.setPluginData("connector_label_fill_color", payload.labelFillColor);
-          if (vectorNode) vectorNode.setPluginData("connector_label_fill_color", payload.labelFillColor);
-        }
-        if (payload.labelStrokeColor) {
-          connectorRootNode.setPluginData("connector_label_stroke_color", payload.labelStrokeColor);
-          if (vectorNode) vectorNode.setPluginData("connector_label_stroke_color", payload.labelStrokeColor);
-        }
-        let labelFrame = null;
-        if (connectorRootNode.type === "GROUP") {
-          labelFrame = connectorRootNode.findOne(
-            (n) => n.name === "ConnectorLabel" || safeGetPluginData2(n, "is_connector_label") === "true"
-          );
-        }
-        if (payload.hasLabel) {
-          const labelText = typeof payload.label === "string" ? payload.label.trim() : "";
-          connectorRootNode.setPluginData("connector_label", labelText);
-          if (vectorNode) vectorNode.setPluginData("connector_label", labelText);
-          connectorRootNode.setPluginData("connector_label_on", "true");
-          if (vectorNode) vectorNode.setPluginData("connector_label_on", "true");
-          const boxStyle = payload.labelBoxStyle || safeGetPluginData2(connectorRootNode, "connector_label_box_style") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_box_style") : "BOX") || "BOX";
-          const align = payload.labelAlign || safeGetPluginData2(connectorRootNode, "connector_label_align") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_align") : "CENTER") || "CENTER";
-          const labelColorFallback = payload.colorHex || safeGetPluginData2(connectorRootNode, "connector_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_color") : "") || "#000000";
-          const fillCol = payload.labelFillColor || safeGetPluginData2(connectorRootNode, "connector_label_fill_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_fill_color") : "") || "#FFFFFF";
-          const strokeCol = payload.labelStrokeColor || safeGetPluginData2(connectorRootNode, "connector_label_stroke_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_stroke_color") : "") || labelColorFallback;
-          const isNewFrame = !labelFrame;
-          if (!labelFrame) {
-            labelFrame = figma.createFrame();
-            labelFrame.name = "ConnectorLabel";
-            labelFrame.setPluginData("is_connector_label", "true");
-            labelFrame.setPluginData("is_custom_connector", "true");
-            const textNode2 = figma.createText();
-            textNode2.name = "LabelText";
-            textNode2.setPluginData("is_custom_connector", "true");
-            labelFrame.appendChild(textNode2);
-          }
-          labelFrame.visible = true;
-          const textNode = labelFrame.findOne((n) => n.type === "TEXT");
-          const srcId = safeGetPluginData2(connectorRootNode, "source_node_id") || (vectorNode ? safeGetPluginData2(vectorNode, "source_node_id") : "");
-          const tgtId = safeGetPluginData2(connectorRootNode, "target_node_id") || (vectorNode ? safeGetPluginData2(vectorNode, "target_node_id") : "");
-          const sourceNode = srcId ? figma.getNodeById(srcId) : null;
-          const targetNode = tgtId ? figma.getNodeById(tgtId) : null;
-          let isVerticalSegment = false;
-          let midPoint = null;
-          if (sourceNode && targetNode) {
-            const srcBox = { x: sourceNode.x, y: sourceNode.y, width: sourceNode.width, height: sourceNode.height };
-            const tgtBox = { x: targetNode.x, y: targetNode.y, width: targetNode.width, height: targetNode.height };
-            const sourceMagnet = effectiveStartMagnet || safeGetPluginData2(connectorRootNode, "source_magnet") || "RIGHT";
-            const targetMagnet = effectiveEndMagnet || safeGetPluginData2(connectorRootNode, "target_magnet") || "LEFT";
-            const routingType = payload.routingType || safeGetPluginData2(connectorRootNode, "connector_routing") || "ORTHOGONAL";
-            const pStart = getMagnetPoint(srcBox, sourceMagnet);
-            const pEnd = getMagnetPoint(tgtBox, targetMagnet);
-            const startOffset = typeof effectiveStartOffset === "number" ? effectiveStartOffset : parseFloat(safeGetPluginData2(connectorRootNode, "start_offset") || "0") || 0;
-            const endOffset = typeof effectiveEndOffset === "number" ? effectiveEndOffset : parseFloat(safeGetPluginData2(connectorRootNode, "end_offset") || "0") || 0;
-            const worldPoints = calculateRoutingPoints(
-              pStart,
-              sourceMagnet,
-              pEnd,
-              targetMagnet,
-              srcBox,
-              tgtBox,
-              routingType,
-              startOffset,
-              endOffset
-            );
-            const placement = getLabelPlacement(
-              worldPoints,
-              routingType,
-              readPrevLabelVertical(labelFrame),
-              getLabelSizeHint(labelFrame, labelText)
-            );
-            midPoint = placement.point;
-            isVerticalSegment = placement.isVertical;
-          } else if (vectorNode) {
-            midPoint = {
-              x: vectorNode.x + vectorNode.width / 2,
-              y: vectorNode.y + vectorNode.height / 2
-            };
-          }
-          if (textNode) {
-            await applyConnectorLabelStyle(labelFrame, textNode, {
-              labelText,
-              boxStyle,
-              textAlign: align,
-              fillColor: fillCol,
-              strokeColor: strokeCol,
-              isVertical: isVerticalSegment,
-              // 라벨 보더 두께는 커넥터 라인 스트로크 두께와 연동 (이번 payload 값 우선, 없으면 현재 벡터 값)
-              connectorStrokeWeight: typeof payload.strokeWeight === "number" ? payload.strokeWeight : vectorNode && typeof vectorNode.strokeWeight === "number" ? vectorNode.strokeWeight : void 0
-            });
-          }
-          if (midPoint) {
-            placeNodeAtWorldCenter(labelFrame, midPoint);
-          }
-          if (isNewFrame) {
-            if (connectorRootNode.type === "GROUP") {
-              connectorRootNode.appendChild(labelFrame);
-            } else if (connectorRootNode.type === "VECTOR") {
-              const parentContainer = connectorRootNode.parent || figma.currentPage;
-              parentContainer.appendChild(labelFrame);
-              const group = figma.group([connectorRootNode, labelFrame], parentContainer);
-              group.name = connectorRootNode.name;
-              copyConnectorData(connectorRootNode, group);
-              group.setPluginData("connector_label_on", "true");
-              registerConnectorInRegistry(group);
-              connectorRootNode = group;
-              if (figma.currentPage.selection[0]?.id !== group.id) {
-                figma.currentPage.selection = [group];
-              }
-            }
-          }
-        } else if (payload.hasLabel === false) {
-          connectorRootNode.setPluginData("connector_label", "");
-          if (vectorNode) vectorNode.setPluginData("connector_label", "");
-          connectorRootNode.setPluginData("connector_label_on", "false");
-          if (vectorNode) vectorNode.setPluginData("connector_label_on", "false");
-          if (labelFrame) {
-            labelFrame.visible = false;
-          }
-        }
-        if (payload.colorHex) {
-          connectorRootNode.setPluginData("connector_color", payload.colorHex);
-          if (vectorNode) vectorNode.setPluginData("connector_color", payload.colorHex);
-        }
-        if (payload.strokeWeight) {
-          connectorRootNode.setPluginData("connector_weight", String(payload.strokeWeight));
-          if (vectorNode) vectorNode.setPluginData("connector_weight", String(payload.strokeWeight));
+          vectorNode.strokeWeight = payload.strokeWeight;
         }
         if (payload.strokePattern) {
-          connectorRootNode.setPluginData("connector_pattern", payload.strokePattern);
-          if (vectorNode) vectorNode.setPluginData("connector_pattern", payload.strokePattern);
+          if (payload.strokePattern === "DASHED") {
+            vectorNode.dashPattern = [4, 4];
+          } else if (payload.strokePattern === "DOTTED") {
+            vectorNode.dashPattern = [1.5, 3];
+          } else {
+            vectorNode.dashPattern = [];
+          }
         }
-        if (payload.routingType) {
-          connectorRootNode.setPluginData("connector_routing", payload.routingType);
-          if (vectorNode) vectorNode.setPluginData("connector_routing", payload.routingType);
+        vectorNode.setPluginData("connector_role", "line");
+      }
+      if (termVectorNode) {
+        try {
+          termVectorNode.remove();
+        } catch (_) {
         }
-        if (effectiveStartTerm && effectiveStartTerm !== "MIXED") {
-          connectorRootNode.setPluginData("start_terminal", effectiveStartTerm);
-          if (vectorNode) vectorNode.setPluginData("start_terminal", effectiveStartTerm);
-        }
-        if (effectiveEndTerm && effectiveEndTerm !== "MIXED") {
-          connectorRootNode.setPluginData("end_terminal", effectiveEndTerm);
-          if (vectorNode) vectorNode.setPluginData("end_terminal", effectiveEndTerm);
-        }
-        if (typeof effectiveStartOffset === "number") {
-          connectorRootNode.setPluginData("start_offset", String(effectiveStartOffset));
-          if (vectorNode) vectorNode.setPluginData("start_offset", String(effectiveStartOffset));
-        }
-        if (typeof effectiveEndOffset === "number") {
-          connectorRootNode.setPluginData("end_offset", String(effectiveEndOffset));
-          if (vectorNode) vectorNode.setPluginData("end_offset", String(effectiveEndOffset));
-        }
-        if (effectiveStartMagnet) {
-          connectorRootNode.setPluginData("source_magnet", effectiveStartMagnet);
-          connectorRootNode.setPluginData("is_manual_magnet", "true");
-        }
-        if (effectiveEndMagnet) {
-          connectorRootNode.setPluginData("target_magnet", effectiveEndMagnet);
-          connectorRootNode.setPluginData("is_manual_magnet", "true");
-        }
-        await updateOrthogonalVectorConnector(
-          connectorRootNode,
-          effectiveStartMagnet,
-          effectiveEndMagnet,
-          false,
-          effectiveStartOffset,
-          effectiveEndOffset
+        termVectorNode = null;
+      }
+      if (payload.hasLabel !== void 0) {
+        connectorRootNode.setPluginData("connector_label_on", payload.hasLabel ? "true" : "false");
+        if (vectorNode) vectorNode.setPluginData("connector_label_on", payload.hasLabel ? "true" : "false");
+      }
+      if (payload.labelBoxStyle) {
+        connectorRootNode.setPluginData("connector_label_box_style", payload.labelBoxStyle);
+        if (vectorNode) vectorNode.setPluginData("connector_label_box_style", payload.labelBoxStyle);
+      }
+      if (payload.labelAlign) {
+        connectorRootNode.setPluginData("connector_label_align", payload.labelAlign);
+        if (vectorNode) vectorNode.setPluginData("connector_label_align", payload.labelAlign);
+      }
+      if (payload.labelFillColor) {
+        connectorRootNode.setPluginData("connector_label_fill_color", payload.labelFillColor);
+        if (vectorNode) vectorNode.setPluginData("connector_label_fill_color", payload.labelFillColor);
+      }
+      if (payload.labelStrokeColor) {
+        connectorRootNode.setPluginData("connector_label_stroke_color", payload.labelStrokeColor);
+        if (vectorNode) vectorNode.setPluginData("connector_label_stroke_color", payload.labelStrokeColor);
+      }
+      let labelFrame = null;
+      if (connectorRootNode.type === "GROUP") {
+        labelFrame = connectorRootNode.findOne(
+          (n) => n.name === "ConnectorLabel" || safeGetPluginData2(n, "is_connector_label") === "true"
         );
       }
+      if (payload.hasLabel) {
+        const labelText = typeof payload.label === "string" ? payload.label.trim() : "";
+        connectorRootNode.setPluginData("connector_label", labelText);
+        if (vectorNode) vectorNode.setPluginData("connector_label", labelText);
+        connectorRootNode.setPluginData("connector_label_on", "true");
+        if (vectorNode) vectorNode.setPluginData("connector_label_on", "true");
+        const boxStyle = payload.labelBoxStyle || safeGetPluginData2(connectorRootNode, "connector_label_box_style") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_box_style") : "BOX") || "BOX";
+        const align = payload.labelAlign || safeGetPluginData2(connectorRootNode, "connector_label_align") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_align") : "CENTER") || "CENTER";
+        const labelColorFallback = payload.colorHex || safeGetPluginData2(connectorRootNode, "connector_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_color") : "") || "#000000";
+        const fillCol = payload.labelFillColor || safeGetPluginData2(connectorRootNode, "connector_label_fill_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_fill_color") : "") || "#FFFFFF";
+        const strokeCol = payload.labelStrokeColor || safeGetPluginData2(connectorRootNode, "connector_label_stroke_color") || (vectorNode ? safeGetPluginData2(vectorNode, "connector_label_stroke_color") : "") || labelColorFallback;
+        const isNewFrame = !labelFrame;
+        if (!labelFrame) {
+          labelFrame = figma.createFrame();
+          labelFrame.name = "ConnectorLabel";
+          labelFrame.setPluginData("is_connector_label", "true");
+          labelFrame.setPluginData("is_custom_connector", "true");
+          const textNode2 = figma.createText();
+          textNode2.name = "LabelText";
+          textNode2.setPluginData("is_custom_connector", "true");
+          labelFrame.appendChild(textNode2);
+        }
+        labelFrame.visible = true;
+        const textNode = labelFrame.findOne((n) => n.type === "TEXT");
+        const srcId = safeGetPluginData2(connectorRootNode, "source_node_id") || (vectorNode ? safeGetPluginData2(vectorNode, "source_node_id") : "");
+        const tgtId = safeGetPluginData2(connectorRootNode, "target_node_id") || (vectorNode ? safeGetPluginData2(vectorNode, "target_node_id") : "");
+        const sourceNode = srcId ? figma.getNodeById(srcId) : null;
+        const targetNode = tgtId ? figma.getNodeById(tgtId) : null;
+        let isVerticalSegment = false;
+        let midPoint = null;
+        if (sourceNode && targetNode) {
+          const srcBox = { x: sourceNode.x, y: sourceNode.y, width: sourceNode.width, height: sourceNode.height };
+          const tgtBox = { x: targetNode.x, y: targetNode.y, width: targetNode.width, height: targetNode.height };
+          const sourceMagnet = effectiveStartMagnet || safeGetPluginData2(connectorRootNode, "source_magnet") || "RIGHT";
+          const targetMagnet = effectiveEndMagnet || safeGetPluginData2(connectorRootNode, "target_magnet") || "LEFT";
+          const routingType = payload.routingType || safeGetPluginData2(connectorRootNode, "connector_routing") || "ORTHOGONAL";
+          const pStart = getMagnetPoint(srcBox, sourceMagnet);
+          const pEnd = getMagnetPoint(tgtBox, targetMagnet);
+          const startOffset = typeof effectiveStartOffset === "number" ? effectiveStartOffset : parseFloat(safeGetPluginData2(connectorRootNode, "start_offset") || "0") || 0;
+          const endOffset = typeof effectiveEndOffset === "number" ? effectiveEndOffset : parseFloat(safeGetPluginData2(connectorRootNode, "end_offset") || "0") || 0;
+          const worldPoints = calculateRoutingPoints(
+            pStart,
+            sourceMagnet,
+            pEnd,
+            targetMagnet,
+            srcBox,
+            tgtBox,
+            routingType,
+            startOffset,
+            endOffset
+          );
+          const placement = getLabelPlacement(
+            worldPoints,
+            routingType,
+            readPrevLabelVertical(labelFrame),
+            getLabelSizeHint(labelFrame, labelText)
+          );
+          midPoint = placement.point;
+          isVerticalSegment = placement.isVertical;
+        } else if (vectorNode) {
+          midPoint = {
+            x: vectorNode.x + vectorNode.width / 2,
+            y: vectorNode.y + vectorNode.height / 2
+          };
+        }
+        if (textNode) {
+          await applyConnectorLabelStyle(labelFrame, textNode, {
+            labelText,
+            boxStyle,
+            textAlign: align,
+            fillColor: fillCol,
+            strokeColor: strokeCol,
+            isVertical: isVerticalSegment,
+            // 라벨 보더 두께는 커넥터 라인 스트로크 두께와 연동 (이번 payload 값 우선, 없으면 현재 벡터 값)
+            connectorStrokeWeight: typeof payload.strokeWeight === "number" ? payload.strokeWeight : vectorNode && typeof vectorNode.strokeWeight === "number" ? vectorNode.strokeWeight : void 0
+          });
+        }
+        if (midPoint) {
+          placeNodeAtWorldCenter(labelFrame, midPoint);
+        }
+        if (isNewFrame) {
+          if (connectorRootNode.type === "GROUP") {
+            connectorRootNode.appendChild(labelFrame);
+          } else if (connectorRootNode.type === "VECTOR") {
+            const parentContainer = connectorRootNode.parent || figma.currentPage;
+            parentContainer.appendChild(labelFrame);
+            const group = figma.group([connectorRootNode, labelFrame], parentContainer);
+            group.name = connectorRootNode.name;
+            copyConnectorData(connectorRootNode, group);
+            group.setPluginData("connector_label_on", "true");
+            registerConnectorInRegistry(group);
+            connectorRootNode = group;
+            if (figma.currentPage.selection[0]?.id !== group.id) {
+              figma.currentPage.selection = [group];
+            }
+          }
+        }
+      } else if (payload.hasLabel === false) {
+        connectorRootNode.setPluginData("connector_label", "");
+        if (vectorNode) vectorNode.setPluginData("connector_label", "");
+        connectorRootNode.setPluginData("connector_label_on", "false");
+        if (vectorNode) vectorNode.setPluginData("connector_label_on", "false");
+        if (labelFrame) {
+          labelFrame.visible = false;
+        }
+      }
+      if (payload.colorHex) {
+        connectorRootNode.setPluginData("connector_color", payload.colorHex);
+        if (vectorNode) vectorNode.setPluginData("connector_color", payload.colorHex);
+      }
+      if (payload.strokeWeight) {
+        connectorRootNode.setPluginData("connector_weight", String(payload.strokeWeight));
+        if (vectorNode) vectorNode.setPluginData("connector_weight", String(payload.strokeWeight));
+      }
+      if (payload.strokePattern) {
+        connectorRootNode.setPluginData("connector_pattern", payload.strokePattern);
+        if (vectorNode) vectorNode.setPluginData("connector_pattern", payload.strokePattern);
+      }
+      if (payload.routingType) {
+        connectorRootNode.setPluginData("connector_routing", payload.routingType);
+        if (vectorNode) vectorNode.setPluginData("connector_routing", payload.routingType);
+      }
+      if (effectiveStartTerm && effectiveStartTerm !== "MIXED") {
+        connectorRootNode.setPluginData("start_terminal", effectiveStartTerm);
+        if (vectorNode) vectorNode.setPluginData("start_terminal", effectiveStartTerm);
+      }
+      if (effectiveEndTerm && effectiveEndTerm !== "MIXED") {
+        connectorRootNode.setPluginData("end_terminal", effectiveEndTerm);
+        if (vectorNode) vectorNode.setPluginData("end_terminal", effectiveEndTerm);
+      }
+      if (typeof effectiveStartOffset === "number") {
+        connectorRootNode.setPluginData("start_offset", String(effectiveStartOffset));
+        if (vectorNode) vectorNode.setPluginData("start_offset", String(effectiveStartOffset));
+      }
+      if (typeof effectiveEndOffset === "number") {
+        connectorRootNode.setPluginData("end_offset", String(effectiveEndOffset));
+        if (vectorNode) vectorNode.setPluginData("end_offset", String(effectiveEndOffset));
+      }
+      if (effectiveStartMagnet) {
+        connectorRootNode.setPluginData("source_magnet", effectiveStartMagnet);
+        connectorRootNode.setPluginData("is_manual_magnet", "true");
+      }
+      if (effectiveEndMagnet) {
+        connectorRootNode.setPluginData("target_magnet", effectiveEndMagnet);
+        connectorRootNode.setPluginData("is_manual_magnet", "true");
+      }
+      await updateOrthogonalVectorConnector(
+        connectorRootNode,
+        effectiveStartMagnet,
+        effectiveEndMagnet,
+        false,
+        effectiveStartOffset,
+        effectiveEndOffset
+      );
       handleSelectionChange();
     } catch (err) {
       console.error("[UPDATE_CONNECTOR_PROPERTIES failed]", err);
@@ -5918,22 +5597,10 @@
   }
   async function setConnectorLineType(connectorId, lineType = "ELBOWED") {
     try {
-      let node = null;
-      if (connectorId) {
-        node = figma.getNodeById(connectorId);
-      }
-      if (!node || node.type !== "CONNECTOR") {
-        const selection = figma.currentPage.selection;
-        if (selection.length > 0 && selection[0].type === "CONNECTOR") {
-          node = selection[0];
-        }
-      }
-      if (!node || node.type !== "CONNECTOR") {
-        notify("\uBCC0\uACBD\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
-        return;
-      }
-      const conn = node;
-      conn.connectorLineType = lineType;
+      await updateConnectorProperties({
+        connectorId: connectorId ?? "",
+        routingType: lineType === "STRAIGHT" ? "STRAIGHT" : "ORTHOGONAL"
+      });
       notify(
         lineType === "ELBOWED" ? "\u{1F4D0} \uC5F0\uACB0\uC120\uC774 [\uC9C1\uAC01(Elbowed)]\uC73C\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4." : "\u{1F4CF} \uC5F0\uACB0\uC120\uC774 [\uC9C1\uC120(Straight)]\uC73C\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
         "success"
@@ -5941,36 +5608,6 @@
       handleSelectionChange();
     } catch (err) {
       notify(`\uC5F0\uACB0\uC120 \uD615\uD0DC \uBCC0\uACBD \uC2E4\uD328: ${String(err)}`, "error");
-    }
-  }
-  async function convertAllConnectorsToElbowed() {
-    try {
-      const connectors = figma.currentPage.findAll((n) => {
-        try {
-          return Boolean(n && n.type === "CONNECTOR");
-        } catch (_) {
-          return false;
-        }
-      });
-      if (connectors.length === 0) {
-        notify("\uCE94\uBC84\uC2A4\uC5D0 \uBCC0\uD658\uD560 \uC5F0\uACB0\uC120\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.", "info");
-        return;
-      }
-      let convertedCount = 0;
-      for (const conn of connectors) {
-        if (conn.connectorLineType !== "ELBOWED") {
-          conn.connectorLineType = "ELBOWED";
-          convertedCount++;
-        }
-      }
-      if (convertedCount > 0) {
-        notify(`\u26A1 \uCD1D ${convertedCount}\uAC1C\uC758 \uC5F0\uACB0\uC120\uC744 \uBAA8\uB450 [\uC9C1\uAC01(Elbowed)]\uC73C\uB85C \uC77C\uAD04 \uBCC0\uD658\uD588\uC2B5\uB2C8\uB2E4!`, "success");
-      } else {
-        notify(`\uC774\uBBF8 \uBAA8\uB4E0 \uC5F0\uACB0\uC120(${connectors.length}\uAC1C)\uC774 [\uC9C1\uAC01(Elbowed)] \uC0C1\uD0DC\uC785\uB2C8\uB2E4.`, "info");
-      }
-      handleSelectionChange();
-    } catch (err) {
-      notify(`\uC5F0\uACB0\uC120 \uC77C\uAD04 \uBCC0\uD658 \uC2E4\uD328: ${String(err)}`, "error");
     }
   }
   async function toggleNodeTheme(nodeId) {
@@ -6729,9 +6366,6 @@
       case "SET_CONNECTOR_LINE_TYPE":
         await setConnectorLineType(msg.connectorId, msg.lineType);
         break;
-      case "CONVERT_ALL_CONNECTORS_TO_ELBOWED":
-        await convertAllConnectorsToElbowed();
-        break;
       case "EXTRACT_UI3_VARIABLES":
         await extractUI3Variables();
         break;
@@ -7151,20 +6785,10 @@
             }
           }
         }
-        if (change.properties.includes("strokes") || change.properties.includes("strokeWeight") || change.properties.includes("dashPattern") || change.properties.includes("connectorLineType")) {
+        if (change.properties.includes("strokes") || change.properties.includes("strokeWeight") || change.properties.includes("dashPattern")) {
           const changedNode = figma.getNodeById(change.id);
           const connNode = findConnectorNode(changedNode);
           if (connNode) {
-            if (connNode.type === "CONNECTOR") {
-              const conn = connNode;
-              if (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === "SOLID") {
-                const hex = rgbToHexColor(conn.strokes[0].color);
-                conn.setPluginData("connector_color", hex);
-              }
-              if (typeof conn.strokeWeight === "number") {
-                conn.setPluginData("connector_weight", String(conn.strokeWeight));
-              }
-            }
             const currentSelection = figma.currentPage.selection;
             if (currentSelection.some((sel) => sel.id === connNode.id || findConnectorNode(sel)?.id === connNode.id)) {
               connectorSelectionChanged = true;

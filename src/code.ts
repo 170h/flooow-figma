@@ -705,14 +705,13 @@ function safeGetPluginData(node: any, key: string): string {
   return '';
 }
 
-// 선택된 요소 또는 조상 중 커넥터(Figma 네이티브 CONNECTOR 또는 커스텀 벡터 직각 커넥터) 탐색
+// 선택된 요소 또는 조상 중 커넥터(커스텀 벡터 직각 커넥터) 탐색
 function findConnectorNode(node: BaseNode | null): SceneNode | null {
   if (!node) return null;
   let curr: BaseNode | null = node;
 
   while (curr && curr.type !== 'PAGE' && curr.type !== 'DOCUMENT') {
     if (
-      curr.type === 'CONNECTOR' ||
       safeGetPluginData(curr, 'is_custom_connector') === 'true' ||
       safeGetPluginData(curr, 'is_flow_connector') === 'true'
     ) {
@@ -1412,12 +1411,6 @@ function buildPairKeySet(nodeIds: string[]): Set<string> {
   const connectors = figma.currentPage.findAll((n) => {
     try {
       if (!n) return false;
-      if (n.type === 'CONNECTOR') {
-        const conn = n as ConnectorNode;
-        const sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
-        const tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
-        return Boolean(sId && tId && nodeIdSet.has(sId) && nodeIdSet.has(tId) && sId !== tId);
-      }
       if (n.type === 'GROUP' || n.type === 'VECTOR') {
         const isCustom = safeGetPluginData(n, 'is_custom_connector') === 'true' || safeGetPluginData(n, 'is_flow_connector') === 'true';
         if (!isCustom) return false;
@@ -1444,19 +1437,13 @@ function buildPairKeySet(nodeIds: string[]): Set<string> {
     let sId: string | undefined;
     let tId: string | undefined;
 
-    if (rawConn.type === 'CONNECTOR') {
-      const conn = rawConn as ConnectorNode;
-      sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
-      tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
-    } else {
-      sId = safeGetPluginData(rawConn, 'source_node_id');
-      tId = safeGetPluginData(rawConn, 'target_node_id');
-      if ((!sId || !tId) && rawConn.type === 'GROUP') {
-        const vChild = (rawConn as GroupNode).findOne((child) => child.type === 'VECTOR');
-        if (vChild) {
-          sId = sId || safeGetPluginData(vChild, 'source_node_id');
-          tId = tId || safeGetPluginData(vChild, 'target_node_id');
-        }
+    sId = safeGetPluginData(rawConn, 'source_node_id');
+    tId = safeGetPluginData(rawConn, 'target_node_id');
+    if ((!sId || !tId) && rawConn.type === 'GROUP') {
+      const vChild = (rawConn as GroupNode).findOne((child) => child.type === 'VECTOR');
+      if (vChild) {
+        sId = sId || safeGetPluginData(vChild, 'source_node_id');
+        tId = tId || safeGetPluginData(vChild, 'target_node_id');
       }
     }
 
@@ -1553,27 +1540,15 @@ async function handleSelectionChange() {
   if (connectorCount > 0 && flowNodeCount === 0) {
     const endpointNodeMap = new Map<string, SceneNode>();
     for (const c of connNodes) {
-      if (c.type === 'CONNECTOR') {
-        const conn = c as ConnectorNode;
-        if (conn.connectorStart && 'endpointNodeId' in conn.connectorStart && conn.connectorStart.endpointNodeId) {
-          const srcNode = figma.getNodeById(conn.connectorStart.endpointNodeId) as SceneNode | null;
-          if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
-        }
-        if (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
-          const tgtNode = figma.getNodeById(conn.connectorEnd.endpointNodeId) as SceneNode | null;
-          if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
-        }
-      } else {
-        const srcId = safeGetPluginData(c, 'source_node_id');
-        const tgtId = safeGetPluginData(c, 'target_node_id');
-        if (srcId) {
-          const srcNode = figma.getNodeById(srcId) as SceneNode | null;
-          if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
-        }
-        if (tgtId) {
-          const tgtNode = figma.getNodeById(tgtId) as SceneNode | null;
-          if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
-        }
+      const srcId = safeGetPluginData(c, 'source_node_id');
+      const tgtId = safeGetPluginData(c, 'target_node_id');
+      if (srcId) {
+        const srcNode = figma.getNodeById(srcId) as SceneNode | null;
+        if (srcNode) endpointNodeMap.set(srcNode.id, srcNode);
+      }
+      if (tgtId) {
+        const tgtNode = figma.getNodeById(tgtId) as SceneNode | null;
+        if (tgtNode) endpointNodeMap.set(tgtNode.id, tgtNode);
       }
     }
     const endpointNodes = Array.from(endpointNodeMap.values());
@@ -1621,134 +1596,9 @@ async function handleSelectionChange() {
     const isCustomConnector =
       node.getPluginData('is_custom_connector') === 'true' ||
       node.getPluginData('is_flow_connector') === 'true';
-    const isFigmaConnector = node.type === 'CONNECTOR';
-    const isConnector = isFigmaConnector || isCustomConnector;
+    const isConnector = isCustomConnector;
 
     if (isConnector) {
-      if (isFigmaConnector) {
-        const conn = node as ConnectorNode;
-        connectorLabel = conn.text ? conn.text.characters : '';
-        const rawNativeLabelOn = node.getPluginData('connector_label_on');
-        connectorLabelOn = rawNativeLabelOn !== '' ? rawNativeLabelOn === 'true' : Boolean(conn.text && conn.text.characters);
-        connectorLineType = conn.connectorLineType;
-        connectorRoutingType = conn.connectorLineType === 'STRAIGHT' ? 'STRAIGHT' : 'ORTHOGONAL';
-        connectorStrokeWeight = typeof conn.strokeWeight === 'number' ? conn.strokeWeight : 1.5;
-
-        if (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === 'SOLID') {
-          connectorColorHex = rgbToHexColor(conn.strokes[0].color);
-        }
-
-        if (Array.isArray(conn.dashPattern) && conn.dashPattern.length > 0) {
-          connectorStrokePattern = conn.dashPattern[0] <= 2 ? 'DOTTED' : 'DASHED';
-        } else {
-          connectorStrokePattern = 'SOLID';
-        }
-
-        const mapCapToTerm = (cap: string): ConnectorTerminalType => {
-          const upper = String(cap || '').toUpperCase();
-          if (upper.includes('REVERSED_TRIANGLE')) return 'REVERSED_TRIANGLE_ARROW';
-          if (upper.includes('TRIANGLE') || upper.includes('ARROW') || upper.includes('EQUILATERAL')) return 'ARROW';
-          if (upper.includes('DIAMOND')) return 'DIAMOND';
-          if (upper.includes('CIRCLE') || upper.includes('ROUND')) return 'CIRCLE';
-          return 'NONE';
-        };
-        const savedStartTerm = node.getPluginData('start_terminal');
-        const savedEndTerm = node.getPluginData('end_terminal');
-        connectorStartTerminal = normalizeConnectorTerminal(savedStartTerm, mapCapToTerm(String(conn.connectorStartStrokeCap || 'NONE')));
-        connectorEndTerminal = normalizeConnectorTerminal(savedEndTerm, mapCapToTerm(String(conn.connectorEndStrokeCap || 'ARROW')));
-
-        const rawStartOff = node.getPluginData('start_offset');
-        const rawEndOff = node.getPluginData('end_offset');
-        connectorStartOffset = rawStartOff ? parseFloat(rawStartOff) : 0;
-        connectorEndOffset = rawEndOff ? parseFloat(rawEndOff) : 0;
-
-        // Figma 네이티브 커넥터의 연결 엔드포인트 노드 정보 확인
-        let sourceEndpointNode: SceneNode | null = null;
-        let targetEndpointNode: SceneNode | null = null;
-        if (conn.connectorStart && 'endpointNodeId' in conn.connectorStart && conn.connectorStart.endpointNodeId) {
-          sourceEndpointNode = figma.getNodeById(conn.connectorStart.endpointNodeId) as SceneNode | null;
-          if (sourceEndpointNode) {
-            connectorSourceNodeName = sourceEndpointNode.name;
-            connectorSourceNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
-          }
-          if ('magnet' in conn.connectorStart) {
-            connectorSourceMagnet = conn.connectorStart.magnet as MagnetPosition;
-          }
-        }
-        if (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
-          targetEndpointNode = figma.getNodeById(conn.connectorEnd.endpointNodeId) as SceneNode | null;
-          if (targetEndpointNode) {
-            connectorTargetNodeName = targetEndpointNode.name;
-            connectorTargetNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
-          }
-          if ('magnet' in conn.connectorEnd) {
-            connectorTargetMagnet = conn.connectorEnd.magnet as MagnetPosition;
-          }
-        }
-
-        // 캔버스 2D 공간 배치(위/왼쪽 우선)로 커넥터의 시작과 끝 방향성을 일치시킴
-        let startPos: { x: number; y: number } | null = null;
-        let endPos: { x: number; y: number } | null = null;
-
-        if (sourceEndpointNode) {
-          startPos = getNodeCenter(sourceEndpointNode);
-        } else if (conn.connectorStart && 'position' in conn.connectorStart && (conn.connectorStart as any).position) {
-          startPos = (conn.connectorStart as any).position;
-        }
-
-        if (targetEndpointNode) {
-          endPos = getNodeCenter(targetEndpointNode);
-        } else if (conn.connectorEnd && 'position' in conn.connectorEnd && (conn.connectorEnd as any).position) {
-          endPos = (conn.connectorEnd as any).position;
-        }
-
-        let shouldReverse = false;
-        if (sourceEndpointNode && targetEndpointNode) {
-          const sorted = sortNodesBySpatialPosition([sourceEndpointNode, targetEndpointNode]);
-          if (sorted[0].id === targetEndpointNode.id) {
-            shouldReverse = true;
-          }
-        } else if (startPos && endPos) {
-          const dx = Math.abs(startPos.x - endPos.x);
-          const dy = Math.abs(startPos.y - endPos.y);
-          if (dx >= dy) {
-            // 주로 가로 흐름: endPos가 startPos보다 왼쪽에 있으면 뒤집힘
-            if (endPos.x < startPos.x) shouldReverse = true;
-          } else {
-            // 주로 세로 흐름: endPos가 startPos보다 위쪽에 있으면 뒤집힘
-            if (endPos.y < startPos.y) shouldReverse = true;
-          }
-        }
-
-        if (shouldReverse) {
-          connectorIsReversed = true;
-          if (sourceEndpointNode && targetEndpointNode) {
-            connectorSourceNodeName = targetEndpointNode.name;
-            connectorTargetNodeName = sourceEndpointNode.name;
-            connectorSourceNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
-            connectorTargetNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
-          } else {
-            const tempName = connectorSourceNodeName;
-            connectorSourceNodeName = connectorTargetNodeName;
-            connectorTargetNodeName = tempName;
-            const tempType = connectorSourceNodeType;
-            connectorSourceNodeType = connectorTargetNodeType;
-            connectorTargetNodeType = tempType;
-          }
-
-          const tempMagnet = connectorSourceMagnet;
-          connectorSourceMagnet = connectorTargetMagnet;
-          connectorTargetMagnet = tempMagnet;
-
-          const tempTerm = connectorStartTerminal;
-          connectorStartTerminal = connectorEndTerminal;
-          connectorEndTerminal = tempTerm;
-
-          const tempOffset = connectorStartOffset;
-          connectorStartOffset = connectorEndOffset;
-          connectorEndOffset = tempOffset;
-        }
-      } else {
         // 커스텀 벡터 직각 커넥터 (그룹 또는 벡터 노드)
         connectorLabel = node.getPluginData('connector_label') || '';
         const rawCustomLabelOn = node.getPluginData('connector_label_on');
@@ -1845,7 +1695,6 @@ async function handleSelectionChange() {
             connectorEndOffset = tempOffset;
           }
         }
-      }
       title = 'Connector';
     } else {
       // 플로우 노드: 실제 FigJam 자식 텍스트 객체로부터 최신 텍스트 추출 (Source of Truth)
@@ -2034,13 +1883,6 @@ async function handleSelectionChange() {
     const foundConnectors = figma.currentPage.findAll((n) => {
       try {
         if (!n) return false;
-        if (n.type === 'CONNECTOR') {
-          const conn = n as ConnectorNode;
-          const sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
-          const tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
-          return (sId === sourceId && targetIds.includes(tId || '')) ||
-                 (tId === sourceId && targetIds.includes(sId || ''));
-        }
         if (n.type === 'GROUP' || n.type === 'VECTOR') {
           const isCustom = safeGetPluginData(n, 'is_custom_connector') === 'true' || safeGetPluginData(n, 'is_flow_connector') === 'true';
           if (!isCustom) return false;
@@ -2085,21 +1927,7 @@ async function handleSelectionChange() {
         let sMag: MagnetPosition | undefined;
         let tMag: MagnetPosition | undefined;
 
-        if (c.type === 'CONNECTOR') {
-          const conn = c as ConnectorNode;
-          const sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
-          isForward = sId === sourceId;
-          sMag = (conn.connectorStart && 'magnet' in conn.connectorStart ? conn.connectorStart.magnet : undefined) as MagnetPosition | undefined;
-          tMag = (conn.connectorEnd && 'magnet' in conn.connectorEnd ? conn.connectorEnd.magnet : undefined) as MagnetPosition | undefined;
-          if (isForward) {
-            if (sMag) srcMags.push(sMag);
-            if (tMag) tgtMags.push(tMag);
-          } else {
-            if (tMag) srcMags.push(tMag);
-            if (sMag) tgtMags.push(sMag);
-          }
-        } else {
-          let sId = safeGetPluginData(c, 'source_node_id');
+        let sId = safeGetPluginData(c, 'source_node_id');
           sMag = (safeGetPluginData(c, 'source_magnet') as MagnetPosition) || undefined;
           tMag = (safeGetPluginData(c, 'target_magnet') as MagnetPosition) || undefined;
           if ((!sMag || !tMag) && c.type === 'GROUP') {
@@ -2118,7 +1946,6 @@ async function handleSelectionChange() {
             if (tMag) srcMags.push(tMag);
             if (sMag) tgtMags.push(sMag);
           }
-        }
 
         connectedConnectors.push({
           id: c.id,
@@ -2183,12 +2010,6 @@ async function handleSelectionChange() {
     const foundConnectors = figma.currentPage.findAll((n) => {
       try {
         if (!n) return false;
-        if (n.type === 'CONNECTOR') {
-          const conn = n as ConnectorNode;
-          const sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
-          const tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
-          return Boolean(sId && tId && selectedNodeIdSet.has(sId) && selectedNodeIdSet.has(tId));
-        }
         if (n.type === 'GROUP' || n.type === 'VECTOR') {
           const isCustom = safeGetPluginData(n, 'is_custom_connector') === 'true' || safeGetPluginData(n, 'is_flow_connector') === 'true';
           if (!isCustom) return false;
@@ -2224,15 +2045,8 @@ async function handleSelectionChange() {
       let sMag: MagnetPosition | undefined;
       let tMag: MagnetPosition | undefined;
 
-      if (c.type === 'CONNECTOR') {
-        const conn = c as ConnectorNode;
-        sId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
-        tId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
-        sMag = (conn.connectorStart && 'magnet' in conn.connectorStart ? conn.connectorStart.magnet : undefined) as MagnetPosition | undefined;
-        tMag = (conn.connectorEnd && 'magnet' in conn.connectorEnd ? conn.connectorEnd.magnet : undefined) as MagnetPosition | undefined;
-      } else {
-        sId = safeGetPluginData(c, 'source_node_id') || undefined;
-        tId = safeGetPluginData(c, 'target_node_id') || undefined;
+      sId = safeGetPluginData(c, 'source_node_id') || undefined;
+      tId = safeGetPluginData(c, 'target_node_id') || undefined;
         sMag = (safeGetPluginData(c, 'source_magnet') as MagnetPosition) || undefined;
         tMag = (safeGetPluginData(c, 'target_magnet') as MagnetPosition) || undefined;
         if ((!sMag || !tMag || !sId || !tId) && c.type === 'GROUP') {
@@ -2244,7 +2058,6 @@ async function handleSelectionChange() {
             tMag = tMag || (safeGetPluginData(vChild, 'target_magnet') as MagnetPosition) || undefined;
           }
         }
-      }
 
       if (sId && tId) {
         multiNodeConnectors.push({
@@ -2878,26 +2691,6 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   if (stepNumber) card.setPluginData('step_number', `${stepNumber}`);
 
   parent.appendChild(card);
-
-  // 커넥터 연결선 안전 인계
-  const oldId = shape.id;
-  const connectors = figma.currentPage.findAll((n) => {
-    try {
-      return Boolean(n && n.type === 'CONNECTOR');
-    } catch (_) {
-      return false;
-    }
-  }) as ConnectorNode[];
-  for (const conn of connectors) {
-    if (conn.connectorStart && 'endpointNodeId' in conn.connectorStart && conn.connectorStart.endpointNodeId === oldId) {
-      const magnet = 'magnet' in conn.connectorStart ? conn.connectorStart.magnet : 'AUTO';
-      conn.connectorStart = { endpointNodeId: card.id, magnet };
-    }
-    if (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd && conn.connectorEnd.endpointNodeId === oldId) {
-      const magnet = 'magnet' in conn.connectorEnd ? conn.connectorEnd.magnet : 'AUTO';
-      conn.connectorEnd = { endpointNodeId: card.id, magnet };
-    }
-  }
 
   shape.remove();
   return card;
@@ -4628,16 +4421,7 @@ async function connectPoints(payload: ConnectPointsPayload) {
         try {
           if (!n) return false;
 
-          // 1. 피그마 네이티브 ConnectorNode 검사
-          if (n.type === 'CONNECTOR') {
-            const conn = n as ConnectorNode;
-            const cSrc = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
-            const cTgt = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
-            return (cSrc === targetSourceId || cSrc === payload.sourceNodeId) &&
-                   (cTgt === targetDestId || cTgt === payload.targetNodeId);
-          }
-
-          // 2. 커스텀 벡터 커넥터 검사 (GROUP 또는 단일 VECTOR)
+          // 커스텀 벡터 커넥터 검사 (GROUP 또는 단일 VECTOR)
           if (n.type === 'GROUP' || n.type === 'VECTOR') {
             const isCustom = safeGetPluginData(n, 'is_custom_connector') === 'true' || safeGetPluginData(n, 'is_flow_connector') === 'true';
             if (!isCustom) return false;
@@ -5010,33 +4794,14 @@ async function connectChain(payload: ConnectChainPayload) {
 // 커넥터(선) 중앙 텍스트 수정 기능
 async function updateConnectorLabel(connectorId: string, label: string) {
   try {
-    let node = figma.getNodeById(connectorId);
-    if (!node || node.type !== 'CONNECTOR') {
-      const selection = figma.currentPage.selection;
-      if (selection.length > 0 && selection[0].type === 'CONNECTOR') {
-        node = selection[0];
-      }
-    }
-
-    if (!node || node.type !== 'CONNECTOR') {
-      notify('수정할 연결선(커넥터)을 캔버스에서 선택해 주세요.', 'warning');
-      return;
-    }
-
-    const conn = node as ConnectorNode;
-    try {
-      await figma.loadFontAsync({ family: 'Inter', style: 'Medium' });
-      conn.text.fontName = { family: 'Inter', style: 'Medium' };
-    } catch {
-      await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
-      conn.text.fontName = { family: 'Inter', style: 'Regular' };
-    }
-
-    conn.text.characters = label.trim();
-    conn.text.fontSize = 11;
-
+    const trimmed = label.trim();
+    await updateConnectorProperties({
+      connectorId,
+      label,
+      hasLabel: trimmed !== '',
+    });
     notify(
-      label.trim() ? `선 중앙 텍스트가 "${label.trim()}"(으)로 반영되었습니다!` : '선 중앙 텍스트가 지워졌습니다.',
+      trimmed ? `선 중앙 텍스트가 "${trimmed}"(으)로 반영되었습니다!` : '선 중앙 텍스트가 지워졌습니다.',
       'success'
     );
     handleSelectionChange();
@@ -5115,148 +4880,7 @@ async function updateConnectorProperties(payload: {
     const effectiveStartOffset = payload.isReversed ? rawEndOffset : rawStartOffset;
     const effectiveEndOffset = payload.isReversed ? rawStartOffset : rawEndOffset;
 
-    if (connectorRootNode.type === 'CONNECTOR') {
-      const conn = connectorRootNode as ConnectorNode;
-
-      const nativeSourceId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
-      const nativeTargetId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
-
-      // Figma 네이티브 커넥터는 API상 오프셋 렌더링을 지원하지 않으므로,
-      // 오프셋이 0보다 큰 경우 동일한 스타일(색상, 두께, 패턴, 단자, 라벨)을 가진 직각 커스텀 벡터 커넥터로 자동 승격 변환합니다.
-      const hasOffset = (typeof effectiveStartOffset === 'number' && effectiveStartOffset > 0) ||
-                        (typeof effectiveEndOffset === 'number' && effectiveEndOffset > 0);
-
-      if (hasOffset && nativeSourceId && nativeTargetId) {
-        const sourceNode = figma.getNodeById(nativeSourceId) as SceneNode | null;
-        const targetNode = figma.getNodeById(nativeTargetId) as SceneNode | null;
-
-        if (sourceNode && targetNode) {
-          const colorHex = payload.colorHex || (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === 'SOLID' ? rgbToHexColor(conn.strokes[0].color) : '#000000');
-          const strokeWeight = typeof payload.strokeWeight === 'number' ? payload.strokeWeight : (typeof conn.strokeWeight === 'number' ? conn.strokeWeight : 1.5);
-          const strokePattern = payload.strokePattern || (Array.isArray(conn.dashPattern) && conn.dashPattern.length > 0 ? (conn.dashPattern[0] <= 2 ? 'DOTTED' : 'DASHED') : 'SOLID');
-          const routingType = payload.routingType || (conn.connectorLineType === 'STRAIGHT' ? 'STRAIGHT' : 'ORTHOGONAL');
-          const startTerm = effectiveStartTerm && effectiveStartTerm !== 'MIXED' ? effectiveStartTerm : normalizeConnectorTerminal(conn.getPluginData('start_terminal'), 'NONE');
-          const endTerm = effectiveEndTerm && effectiveEndTerm !== 'MIXED' ? effectiveEndTerm : normalizeConnectorTerminal(conn.getPluginData('end_terminal'), 'ARROW');
-          const label = payload.hasLabel && payload.label !== undefined ? payload.label.trim() : (conn.text ? conn.text.characters : '');
-
-          const sourceMag = effectiveStartMagnet || (conn.connectorStart && 'magnet' in conn.connectorStart ? conn.connectorStart.magnet as MagnetPosition : 'RIGHT');
-          const targetMag = effectiveEndMagnet || (conn.connectorEnd && 'magnet' in conn.connectorEnd ? conn.connectorEnd.magnet as MagnetPosition : 'LEFT');
-
-          // 새 커스텀 벡터 커넥터 생성
-          const customConn = await createSingleConnector(
-            sourceNode,
-            sourceMag,
-            targetNode,
-            targetMag,
-            label,
-            colorHex,
-            strokeWeight,
-            routingType,
-            startTerm,
-            endTerm,
-            strokePattern,
-            effectiveStartOffset,
-            effectiveEndOffset
-          );
-
-          // 기존 네이티브 커넥터 제거 및 새 커넥터 선택
-          conn.remove();
-          figma.currentPage.selection = [customConn];
-          notify('오프셋 적용을 위해 직각 커스텀 커넥터로 자동 변환되었습니다.', 'success');
-          handleSelectionChange();
-          return;
-        }
-      }
-
-      // 오프셋이 0이거나 변환하지 않는 네이티브 커넥터 일반 옵션 적용
-      if (typeof effectiveStartOffset === 'number') {
-        conn.setPluginData('start_offset', String(effectiveStartOffset));
-      }
-      if (typeof effectiveEndOffset === 'number') {
-        conn.setPluginData('end_offset', String(effectiveEndOffset));
-      }
-
-      // 1. 색상
-      if (payload.colorHex) {
-        conn.strokes = [{ type: 'SOLID', color: hexToRgbColor(payload.colorHex) }];
-      }
-
-      // 2. 두께
-      if (typeof payload.strokeWeight === 'number') {
-        conn.strokeWeight = payload.strokeWeight;
-      }
-
-      // 3. 선 스타일
-      if (payload.strokePattern === 'DASHED') {
-        conn.dashPattern = [4, 4];
-      } else if (payload.strokePattern === 'DOTTED') {
-        conn.dashPattern = [1.5, 3];
-      } else {
-        conn.dashPattern = [];
-      }
-
-      // 4. 라우팅
-      if (payload.routingType === 'STRAIGHT') {
-        conn.connectorLineType = 'STRAIGHT';
-      } else {
-        conn.connectorLineType = 'ELBOWED';
-      }
-
-      // 5. 단자 Cap (Circle, Diamond, Arrow는 FigJam 네이티브 ConnectorStrokeCap 지원)
-      const mapCap = (term?: ConnectorTerminalType): ConnectorStrokeCap => {
-        switch (term) {
-          case 'ARROW':
-          case 'TRIANGLE_ARROW':
-          case 'REVERSED_TRIANGLE_ARROW':
-            return 'ARROW_LINES';
-          case 'DIAMOND':
-            return 'DIAMOND_FILLED';
-          case 'CIRCLE':
-            return 'CIRCLE_FILLED';
-          default:
-            return 'NONE';
-        }
-      };
-      if (effectiveStartTerm && effectiveStartTerm !== 'MIXED') {
-        conn.connectorStartStrokeCap = mapCap(effectiveStartTerm);
-        conn.setPluginData('start_terminal', effectiveStartTerm);
-      }
-      if (effectiveEndTerm && effectiveEndTerm !== 'MIXED') {
-        conn.connectorEndStrokeCap = mapCap(effectiveEndTerm);
-        conn.setPluginData('end_terminal', effectiveEndTerm);
-      }
-
-      // 6. 라벨
-      if (payload.hasLabel !== undefined) {
-        conn.setPluginData('connector_label_on', payload.hasLabel ? 'true' : 'false');
-      }
-      if (payload.hasLabel && payload.label !== undefined) {
-        if (conn.text) {
-          await safeSetCharacters(conn.text, payload.label.trim());
-        }
-      } else if (payload.hasLabel === false && conn.text) {
-        await safeSetCharacters(conn.text, '');
-      }
-
-      // 7. Figma 네이티브 커넥터 마그넷 위치 갱신 (물리적 소스/타겟 엔드포인트 유지)
-      if (effectiveStartMagnet && nativeSourceId) {
-        conn.connectorStart = {
-          endpointNodeId: nativeSourceId,
-          magnet: effectiveStartMagnet,
-        };
-        conn.setPluginData('source_magnet', effectiveStartMagnet);
-        conn.setPluginData('is_manual_magnet', 'true');
-      }
-      if (effectiveEndMagnet && nativeTargetId) {
-        conn.connectorEnd = {
-          endpointNodeId: nativeTargetId,
-          magnet: effectiveEndMagnet,
-        };
-        conn.setPluginData('target_magnet', effectiveEndMagnet);
-        conn.setPluginData('is_manual_magnet', 'true');
-      }
-    } else {
-      // 커스텀 직각 벡터 커넥터 (그룹 또는 벡터)
+    // 커스텀 직각 벡터 커넥터 (그룹 또는 벡터)
       let vectorNode: VectorNode | null = null;
       let termVectorNode: VectorNode | null = null;
 
@@ -5525,7 +5149,6 @@ async function updateConnectorProperties(payload: {
         effectiveStartOffset,
         effectiveEndOffset
       );
-    }
 
     // 성공 토스트는 라벨 입력 중 플러그인 포커스를 뺏으므로 생략한다.
     handleSelectionChange();
@@ -5538,24 +5161,10 @@ async function updateConnectorProperties(payload: {
 // 커넥터 선 형태(직각 ELBOWED / 직선 STRAIGHT) 변경 기능
 async function setConnectorLineType(connectorId?: string, lineType: 'ELBOWED' | 'STRAIGHT' = 'ELBOWED') {
   try {
-    let node: SceneNode | null = null;
-    if (connectorId) {
-      node = figma.getNodeById(connectorId) as SceneNode | null;
-    }
-    if (!node || node.type !== 'CONNECTOR') {
-      const selection = figma.currentPage.selection;
-      if (selection.length > 0 && selection[0].type === 'CONNECTOR') {
-        node = selection[0];
-      }
-    }
-
-    if (!node || node.type !== 'CONNECTOR') {
-      notify('변경할 연결선(커넥터)을 캔버스에서 선택해 주세요.', 'warning');
-      return;
-    }
-
-    const conn = node as ConnectorNode;
-    conn.connectorLineType = lineType;
+    await updateConnectorProperties({
+      connectorId: connectorId ?? '',
+      routingType: lineType === 'STRAIGHT' ? 'STRAIGHT' : 'ORTHOGONAL',
+    });
     notify(
       lineType === 'ELBOWED' ? '📐 연결선이 [직각(Elbowed)]으로 변경되었습니다.' : '📏 연결선이 [직선(Straight)]으로 변경되었습니다.',
       'success'
@@ -5563,40 +5172,6 @@ async function setConnectorLineType(connectorId?: string, lineType: 'ELBOWED' | 
     handleSelectionChange();
   } catch (err) {
     notify(`연결선 형태 변경 실패: ${String(err)}`, 'error');
-  }
-}
-
-// 캔버스 내 모든 연결선을 직각(ELBOWED)으로 일괄 변환하는 기능
-async function convertAllConnectorsToElbowed() {
-  try {
-    const connectors = figma.currentPage.findAll((n) => {
-      try {
-        return Boolean(n && n.type === 'CONNECTOR');
-      } catch (_) {
-        return false;
-      }
-    }) as ConnectorNode[];
-    if (connectors.length === 0) {
-      notify('캔버스에 변환할 연결선이 없습니다.', 'info');
-      return;
-    }
-
-    let convertedCount = 0;
-    for (const conn of connectors) {
-      if (conn.connectorLineType !== 'ELBOWED') {
-        conn.connectorLineType = 'ELBOWED';
-        convertedCount++;
-      }
-    }
-
-    if (convertedCount > 0) {
-      notify(`⚡ 총 ${convertedCount}개의 연결선을 모두 [직각(Elbowed)]으로 일괄 변환했습니다!`, 'success');
-    } else {
-      notify(`이미 모든 연결선(${connectors.length}개)이 [직각(Elbowed)] 상태입니다.`, 'info');
-    }
-    handleSelectionChange();
-  } catch (err) {
-    notify(`연결선 일괄 변환 실패: ${String(err)}`, 'error');
   }
 }
 
@@ -6568,9 +6143,6 @@ figma.ui.onmessage = async (msg: PluginAction) => {
     case 'SET_CONNECTOR_LINE_TYPE':
       await setConnectorLineType(msg.connectorId, msg.lineType);
       break;
-    case 'CONVERT_ALL_CONNECTORS_TO_ELBOWED':
-      await convertAllConnectorsToElbowed();
-      break;
     case 'EXTRACT_UI3_VARIABLES':
       await extractUI3Variables();
       break;
@@ -7127,26 +6699,15 @@ figma.on('documentchange', async (event) => {
         }
       }
 
-      // 5. 커넥터의 피그잼 네이티브 설정값(컬러, 두께, 패턴 등) 변경 감지 ➔ pluginData 최신화 및 선택된 경우 UI 실시간 연동
+      // 5. 커스텀 커넥터 설정값(컬러, 두께, 패턴 등) 변경 감지 ➔ 선택된 경우 UI 실시간 연동
       if (
         change.properties.includes('strokes') ||
         change.properties.includes('strokeWeight') ||
-        change.properties.includes('dashPattern') ||
-        change.properties.includes('connectorLineType')
+        change.properties.includes('dashPattern')
       ) {
         const changedNode = figma.getNodeById(change.id);
         const connNode = findConnectorNode(changedNode);
         if (connNode) {
-          if (connNode.type === 'CONNECTOR') {
-            const conn = connNode as ConnectorNode;
-            if (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === 'SOLID') {
-              const hex = rgbToHexColor(conn.strokes[0].color);
-              conn.setPluginData('connector_color', hex);
-            }
-            if (typeof conn.strokeWeight === 'number') {
-              conn.setPluginData('connector_weight', String(conn.strokeWeight));
-            }
-          }
           // 현재 선택된 노드들 중 이 커넥터가 포함되어 있다면 UI 갱신 플래그 활성화
           const currentSelection = figma.currentPage.selection;
           if (currentSelection.some((sel) => sel.id === connNode.id || findConnectorNode(sel)?.id === connNode.id)) {
