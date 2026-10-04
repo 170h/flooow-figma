@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { labelFillIsDefault, labelStrokeFollowsConnector, useApp } from './context/AppContext';
+import { getDefaultNodeTitle } from '../types';
 import { useFigmaMessage } from './hooks/useFigmaMessage';
 import { useAutoResize } from './hooks/useAutoResize';
 import { useSelectionSummary } from './hooks/useSelectionSummary';
@@ -99,6 +100,9 @@ export function App() {
   const isFigjamSelected = summary.isFigJamObject;
   const isSingleFigjam = isFigjamSelected && nodeCount === 1;
   const isMultiFigjam = isFigjamSelected && nodeCount >= 2;
+  const flooowCount = selectedNodes.filter((n) => n && n.isFlowNode).length;
+  const figjamObjectCount = selectedNodes.filter((n) => n && !n.isFlowNode && !n.isConnector).length;
+  const isMixedNodeAndFigjam = flooowCount > 0 && figjamObjectCount > 0;
 
   // 커넥터 여부 판별
   const allConnectors = nodeCount > 0 && selectedNodes.every(n => n && n.isConnector);
@@ -114,8 +118,8 @@ export function App() {
     if (isSingleFigjam) {
       // 1. 피그잼 단일 오브젝트 선택: 기본 Node 탭 유지
       if (currentTab !== 'node') setCurrentTab('node');
-    } else if (isMultiFigjam) {
-      // 2. 피그잼 오브젝트 2개 이상 복수 선택: Connection 탭 자동 이동
+    } else if (isMixedNodeAndFigjam || isMultiFigjam) {
+      // 2. 피그잼 복수, 또는 노드+피그잼 혼합: Connection 탭 자동 이동
       if (currentTab !== 'connection') setCurrentTab('connection');
     } else if (isConnSel) {
       // 3. 커넥터 선택: Connection 탭 자동 이동
@@ -127,7 +131,7 @@ export function App() {
       // 5. 플로우 노드 단 1개 선택: Connection 탭에 있었으면 Node 탭으로 복귀
       if (currentTab === 'connection') setCurrentTab('node');
     }
-  }, [isSingleFigjam, isMultiFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
+  }, [isSingleFigjam, isMultiFigjam, isMixedNodeAndFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
 
 
   // 탭 전환 후 autoResize
@@ -198,12 +202,12 @@ export function App() {
   // 탭 전환
   function switchTab(tabId: string) {
     if (isSingleFigjam) return;
-    if (isMultiFigjam && tabId !== 'connection') return;
+    if ((isMultiFigjam || isMixedNodeAndFigjam) && tabId !== 'connection') return;
 
     // 노드 1개 이하일 때 Connection 탭 클릭 차단
     if (tabId === 'connection' && !isConnSel && nodeCount < 2) return;
-    if (tabId === 'appearance' && (nodeCount === 0 || isConnSel || isFigjamSelected)) return;
-    if (tabId === 'node' && (isConnSel || isFigjamSelected)) return;
+    if (tabId === 'appearance' && (nodeCount === 0 || isConnSel || isFigjamSelected || isMixedNodeAndFigjam)) return;
+    if (tabId === 'node' && (isConnSel || isFigjamSelected || isMixedNodeAndFigjam)) return;
 
     // disabled 탭은 클릭 차단
     const btn = document.getElementById(`tab-btn-${tabId}`);
@@ -249,6 +253,16 @@ export function App() {
       return (
         <div className="figjam-title-label">
           Figjam object
+        </div>
+      );
+    }
+    // 0-1b. 노드 + 피그잼 오브젝트: Connection 전용 인디케이터
+    if (isMixedNodeAndFigjam) {
+      const nodeLabel = flooowCount === 1 ? '1 Node' : `${flooowCount} Nodes`;
+      const figjamLabel = figjamObjectCount === 1 ? '1 FigJam object' : `${figjamObjectCount} FigJam objects`;
+      return (
+        <div id="multi-selection-indicator" className="multi-selection-indicator" style={{ width: '100%', display: 'flex' }}>
+          <span id="multi-selection-text">{`${nodeLabel} and ${figjamLabel} selected`}</span>
         </div>
       );
     }
@@ -304,7 +318,9 @@ export function App() {
           id="node-title-input"
           className="node-title-input"
           maxLength={32}
-          defaultValue={nodeCount === 1 ? (selectedNodes[0]?.title || selectedNodes[0]?.name || 'Screen') : 'Screen'}
+          defaultValue={nodeCount === 1
+            ? (selectedNodes[0]?.title || selectedNodes[0]?.name || getDefaultNodeTitle(selectedNodes[0]?.flowNodeType || selectedNodes[0]?.nodeType, selectedNodes[0]?.branchVariant))
+            : getDefaultNodeTitle(nodeOptionState.nodeType, nodeOptionState.branchVariant)}
           placeholder="Enter node title"
           onInput={() => {
             if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
@@ -333,10 +349,12 @@ export function App() {
               (!isConnSel && nodeCount < 2);
             const isAppearanceDisabled =
               isFigjamSelected ||
+              isMixedNodeAndFigjam ||
               nodeCount === 0 ||
               isConnSel;
             const isNodeDisabled =
               isFigjamSelected ||
+              isMixedNodeAndFigjam ||
               isConnSel;
             const isDisabled =
               tab.id === 'connection' ? isConnectionDisabled :
@@ -399,7 +417,7 @@ export function App() {
       {/* 4. 푸터: 왼쪽 구독 상태(Free Plan) + 오른쪽 액션 영역 */}
       {(() => {
         const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
-        const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected;
+        const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected && !isMixedNodeAndFigjam;
 
         return (
           <footer className="app-footer">

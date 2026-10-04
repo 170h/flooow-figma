@@ -234,17 +234,28 @@ export function SizeSection() {
         }
       } else {
         const first = validNodes[0];
-        let nodeW = typeof first?.width === 'number' ? first.width : (nodeOptionState.width || 250);
-        let nodeH = typeof first?.height === 'number' ? first.height : (nodeOptionState.height || 90);
-        let nodeR = typeof first?.cornerRadius === 'number' ? first.cornerRadius : (nodeOptionState.cornerRadius ?? 0);
+        const echoedW = typeof first?.width === 'number' ? first.width : (nodeOptionState.width || 250);
+        const echoedH = typeof first?.height === 'number' ? first.height : (nodeOptionState.height || 90);
+        const echoedR = typeof first?.cornerRadius === 'number' ? first.cornerRadius : (nodeOptionState.cornerRadius ?? 0);
+        let nodeW = echoedW;
+        let nodeH = echoedH;
+        let nodeR = echoedR;
+
+        // 같은 노드의 selection 재수신은 NodeOptionState를 표시한다.
+        // 다른 노드를 선택한 경우에만 노드 치수를 입력값으로 가져온다.
+        if (!isDifferentNode) {
+          nodeW = nodeOptionState.width || 250;
+          nodeH = nodeOptionState.height || 90;
+          nodeR = nodeOptionState.cornerRadius ?? 0;
+        }
 
         // 동일 노드 수정 중 pending 요청이 남아있는 경우:
         // Core가 보낸 치수가 최신 요청값과 일치하는지 검증하여 stale 응답 롤백 차단
         if (!isDifferentNode && pendingSizeRef.current && pendingSizeRef.current.nodeId === currentNodeId) {
           const pending = pendingSizeRef.current;
-          const isWMatched = pending.width === undefined || pending.width === nodeW;
-          const isHMatched = pending.height === undefined || pending.height === nodeH;
-          const isRMatched = pending.cornerRadius === undefined || pending.cornerRadius === nodeR;
+          const isWMatched = pending.width === undefined || pending.width === echoedW;
+          const isHMatched = pending.height === undefined || pending.height === echoedH;
+          const isRMatched = pending.cornerRadius === undefined || pending.cornerRadius === echoedR;
 
           if (isWMatched && isHMatched && isRMatched) {
             // Core에 최신 요청이 완전히 반영되었으므로 pending 해제

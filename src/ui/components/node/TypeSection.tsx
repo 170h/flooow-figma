@@ -128,7 +128,7 @@ export function TypeSection() {
   const DEFAULT_TYPE_TITLES = new Set([
     'Screen', 'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
     'Action', 'System', 'Database', 'Square', 'Junction', 'Diamond', 'Pill', 'Capsule',
-    'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Circle',
+    'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Tag', 'Circle',
   ]);
 
   const activeBranchVariant = normalizeBranchVariant(

@@ -1,7 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useApp, StylePreset, NodeInfo } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
-import { ConnectorTerminalType, MagnetPosition } from '../../../types';
+import {
+  ConnectorTerminalType,
+  MagnetPosition,
+  BRANCH_VARIANT_LABELS,
+  normalizeBranchVariant,
+  normalizeNodeType,
+} from '../../../types';
 import { IcPalette, COLOR_MIXED_ICON } from '../shared/icons';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 import { computeGizmoMagnets } from '../../utils/gizmoState';
@@ -722,42 +728,65 @@ export function ConnectSection() {
     );
   }
 
+  const gizmoTypeLabel = (node?: NodeInfo | null): string => {
+    if (!node) return '';
+    if (!node.isFlowNode) return 'FigJam object';
+    const flowType = normalizeNodeType(node.flowNodeType || node.nodeType);
+    if (flowType === 'Branch') {
+      return BRANCH_VARIANT_LABELS[normalizeBranchVariant(node.branchVariant)];
+    }
+    return flowType;
+  };
+
   // 앵커 기즈모 카드 1 및 카드 2에 표시할 노드 이름 산출
   let node1DisplayName = 'Node 1';
   let node2DisplayName = 'Node 2';
+  let node1TypeLabel = '';
+  let node2TypeLabel = '';
 
   if (summary.isSingleConnector) {
     node1DisplayName = selectedNodes[0]?.connectorSourceNodeName || 'Source Node';
     node2DisplayName = selectedNodes[0]?.connectorTargetNodeName || 'Target Node';
+    node1TypeLabel = selectedNodes[0]?.connectorSourceNodeType || '';
+    node2TypeLabel = selectedNodes[0]?.connectorTargetNodeType || '';
   } else if (summary.isMultiConnector) {
     const connNodeNames = Array.from(new Set(selectedNodes.flatMap((n) => n?.connectedNodeNames || [])));
+    const connNodeTypes = selectedNodes[0]?.connectedNodeTypes || [];
     if (connNodeNames.length > 0) {
       node1DisplayName = connNodeNames[0] || 'Node 1';
+      node1TypeLabel = connNodeTypes[0] || '';
       if (connNodeNames.length >= 3) {
         const moreCount = connNodeNames.length - 1;
         node2DisplayName = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
+        node2TypeLabel = 'Mixed';
       } else if (connNodeNames.length === 2) {
         node2DisplayName = connNodeNames[1] || 'Node 2';
+        node2TypeLabel = connNodeTypes[1] || '';
       } else {
         node2DisplayName = 'Node 2';
       }
     } else {
       const uniqueNames: string[] = [];
+      const uniqueTypes: string[] = [];
+      const pushEndpoint = (name?: string, typeLabel?: string) => {
+        if (!name || uniqueNames.includes(name)) return;
+        uniqueNames.push(name);
+        uniqueTypes.push(typeLabel || '');
+      };
       selectedNodes.forEach((n) => {
-        if (n?.connectorSourceNodeName && !uniqueNames.includes(n.connectorSourceNodeName)) {
-          uniqueNames.push(n.connectorSourceNodeName);
-        }
-        if (n?.connectorTargetNodeName && !uniqueNames.includes(n.connectorTargetNodeName)) {
-          uniqueNames.push(n.connectorTargetNodeName);
-        }
+        pushEndpoint(n?.connectorSourceNodeName, n?.connectorSourceNodeType);
+        pushEndpoint(n?.connectorTargetNodeName, n?.connectorTargetNodeType);
       });
       if (uniqueNames.length > 0) {
         node1DisplayName = uniqueNames[0] || 'Node 1';
+        node1TypeLabel = uniqueTypes[0] || '';
         if (uniqueNames.length >= 3) {
           const moreCount = uniqueNames.length - 1;
           node2DisplayName = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
+          node2TypeLabel = 'Mixed';
         } else if (uniqueNames.length === 2) {
           node2DisplayName = uniqueNames[1] || 'Node 2';
+          node2TypeLabel = uniqueTypes[1] || '';
         } else {
           node2DisplayName = 'Node 2';
         }
@@ -765,11 +794,14 @@ export function ConnectSection() {
     }
   } else {
     node1DisplayName = selectedNodes[0]?.title || selectedNodes[0]?.name || 'Node 1';
+    node1TypeLabel = gizmoTypeLabel(selectedNodes[0]);
     if (selectedNodes.length >= 3) {
       const moreCount = selectedNodes.length - 1;
       node2DisplayName = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
+      node2TypeLabel = 'Mixed';
     } else {
       node2DisplayName = selectedNodes[1]?.title || selectedNodes[1]?.name || 'Node 2';
+      node2TypeLabel = gizmoTypeLabel(selectedNodes[1]);
     }
   }
 
@@ -934,8 +966,9 @@ export function ConnectSection() {
                 />
               );
             })}
-            <span id="preview-node-1-text">
-              {node1DisplayName}
+            <span className="node-preview-copy" id="preview-node-1-text">
+              <span className="node-preview-title">{node1DisplayName}</span>
+              {node1TypeLabel ? <span className="node-preview-type">{node1TypeLabel}</span> : null}
             </span>
           </div>
           <div className="node-preview-card" id="preview-node-2">
@@ -954,8 +987,9 @@ export function ConnectSection() {
                 />
               );
             })}
-            <span id="preview-node-2-text">
-              {node2DisplayName}
+            <span className="node-preview-copy" id="preview-node-2-text">
+              <span className="node-preview-title">{node2DisplayName}</span>
+              {node2TypeLabel ? <span className="node-preview-type">{node2TypeLabel}</span> : null}
             </span>
           </div>
         </div>

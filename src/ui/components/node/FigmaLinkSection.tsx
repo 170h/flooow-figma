@@ -163,7 +163,7 @@ export function FigmaLinkSection() {
 
     // 사용자가 현재 입력필드에 포커스하고 입력 중인 경우 외부 동기화로 인한 값 덮어쓰기 방지 (GEMINI §12 가드)
     const isInputFocused = document.activeElement === inputRef.current;
-    if (!isDifferentNode && isInputFocused) {
+    if (!isDifferentNode && (isInputFocused || selectedNodes.length > 0)) {
       return;
     }
 
@@ -177,10 +177,6 @@ export function FigmaLinkSection() {
           const displayLink = activeLink || cachedLink;
           setUrl(displayLink);
           cachedUrlRef.current = displayLink;
-          setNodeOptionState({
-            singleLinkOn: Boolean(activeLink),
-            singleLinkUrl: displayLink,
-          });
         } else if (supported.length > 1) {
           const firstLink = supported[0]?.figmaLink || "";
           const allSame = supported.every((n) => (n.figmaLink || "") === firstLink);
@@ -200,7 +196,7 @@ export function FigmaLinkSection() {
         setUrl("");
       }
     }
-  }, [rawOptionState, selectedNodes, setNodeOptionState, nodeOptionState.singleLinkUrl]);
+  }, [rawOptionState, selectedNodes, nodeOptionState.singleLinkUrl]);
 
   // Mixed URL 여부: 지원 노드가 2개 이상이고 입력된 링크 URL이 서로 다른 경우
   const isLinkValueMixed = useMemo(() => {

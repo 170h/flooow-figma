@@ -160,12 +160,9 @@ export function DescriptionSection() {
         const supported = rawOptionState.supportedNodes;
         if (supported.length === 1) {
           const node = supported[0];
-          const isDescActive = Boolean(node && (node.descriptionOn ?? (node.description && node.description.trim())));
           const hasDescText = Boolean(node && node.description && node.description.trim());
           setHasText(hasDescText);
-          setNodeOptionState({ descriptionOn: isDescActive });
         } else {
-          const onCount = supported.filter((n) => Boolean(n.descriptionOn ?? (n.description && n.description.trim()))).length;
           const hasTextCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
           setHasText(hasTextCount > 0);
         }
@@ -173,7 +170,7 @@ export function DescriptionSection() {
         setHasText(false);
       }
     }
-  }, [rawOptionState, selectedNodes, setNodeOptionState]);
+  }, [rawOptionState, selectedNodes]);
 
   // Mixed 텍스트 여부: 지원 노드가 2개 이상이고 입력된 설명 텍스트가 서로 다른 경우
   const isDescValueMixed = useMemo(() => {

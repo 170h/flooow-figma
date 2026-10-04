@@ -27,6 +27,8 @@ import {
   getBranchVariantDefaultFill,
   branchVariantUsesStroke,
   BRANCH_VARIANT_LABELS,
+  isDefaultNodeTitle,
+  getDefaultNodeTitle,
   NODE_TYPE_SHAPE_SPECS,
   DesignFrameItem,
   SCREEN_NODE_CONSTRAINTS,
@@ -863,13 +865,18 @@ function syncTitleWidthToCard(card: FrameNode, cardWidth: number, nodeType: Diag
     }
   }
 
+  if (nodeType === 'Decision') {
+    bindShapeTitle(titleText, 'decision');
+    return;
+  }
+
   const pl = typeof card.paddingLeft === 'number' ? card.paddingLeft : 0;
   const pr = typeof card.paddingRight === 'number' ? card.paddingRight : 0;
   const strokeExtra = (typeof card.strokeWeight === 'number' && Array.isArray(card.strokes) && card.strokes.length > 0)
     ? card.strokeWeight * 2
     : 0;
   const availW = Math.max(10, Math.round(cardWidth - pl - pr - strokeExtra));
-  const truncate = nodeType === 'Decision';
+  const truncate = false;
 
   try { titleText.maxWidth = null; } catch (_) {}
   if (!truncate) {
@@ -884,6 +891,10 @@ function syncTitleWidthToCard(card: FrameNode, cardWidth: number, nodeType: Diag
   try { titleText.textAutoResize = truncate ? 'TRUNCATE' : 'HEIGHT'; } catch (_) {}
   try { titleText.layoutSizingHorizontal = 'FILL'; } catch (_) {
     try { titleText.layoutAlign = 'STRETCH'; } catch (_) {}
+  }
+  try { titleText.layoutPositioning = 'AUTO'; } catch (_) {}
+  if (safeGetPluginData(card, 'branch_variant') === 'TAG') {
+    titleText.maxLines = 1;
   }
 }
 
@@ -1080,6 +1091,43 @@ async function measureSingleLineTextWidth(
   } finally {
     measureNode.remove();
   }
+}
+
+/** 플러그인 타이틀 입력(maxLength 32)과 같은 글자 수 제한 */
+const TITLE_CHAR_LIMIT = 32;
+const TAG_TITLE_PAD_X = 12;
+
+function clampTitleChars(title: string): string {
+  const chars = Array.from(title);
+  return chars.length > TITLE_CHAR_LIMIT ? chars.slice(0, TITLE_CHAR_LIMIT).join('') : title;
+}
+
+async function resolveTagCardWidth(title: string, minWidth: number): Promise<number> {
+  const textW = await measureSingleLineTextWidth(
+    title || 'Tag',
+    { family: 'Inter', style: 'Bold' },
+    13
+  );
+  return Math.max(minWidth, textW + TAG_TITLE_PAD_X * 2 + 4);
+}
+
+/**
+ * 도형 타이틀을 오토레이아웃 안에 둔다.
+ * Decision에서 TRUNCATE + resize를 하면 텍스트가 마름모 밖으로 빠진다.
+ */
+function bindShapeTitle(titleText: TextNode, kind: 'decision' | 'tag' | 'shape') {
+  try { titleText.layoutPositioning = 'AUTO'; } catch (_) {}
+  titleText.layoutAlign = 'STRETCH';
+  try { titleText.layoutSizingHorizontal = 'FILL'; } catch (_) {}
+  try { titleText.layoutSizingVertical = 'HUG'; } catch (_) {}
+  try { titleText.maxWidth = null; } catch (_) {}
+  try { titleText.maxHeight = null; } catch (_) {}
+  titleText.textAlignHorizontal = 'CENTER';
+  titleText.textAlignVertical = 'CENTER';
+  try { titleText.lineHeight = { value: kind === 'tag' ? 22 : 18, unit: 'PIXELS' }; } catch (_) {}
+  try { titleText.textAutoResize = 'HEIGHT'; } catch (_) {}
+  titleText.textTruncation = 'ENDING';
+  titleText.maxLines = kind === 'tag' ? 1 : 3;
 }
 
 /**
@@ -1419,6 +1467,20 @@ function buildPairKeySet(nodeIds: string[]): Set<string> {
 }
 
 // 선택 영역 변경 감지 시 UI 갱신 (바탕화면 클릭 ➔ 빈 폼 / 노드 클릭 ➔ 상세 수정 폼)
+/** 기즈모 카드에 보여줄 엔드포인트 타입. 플로우 노드가 아니면 FigJam object. */
+function gizmoEndpointTypeLabel(node: SceneNode | null): string {
+  if (!node) return '';
+  const isFlow =
+    safeGetPluginData(node, 'is_flow_node') === 'true' ||
+    Boolean(safeGetPluginData(node, 'node_type'));
+  if (!isFlow) return 'FigJam object';
+  const flowType = normalizeNodeType(safeGetPluginData(node, 'node_type') || 'Screen');
+  if (flowType === 'Branch') {
+    return BRANCH_VARIANT_LABELS[normalizeBranchVariant(safeGetPluginData(node, 'branch_variant'))];
+  }
+  return flowType;
+}
+
 async function handleSelectionChange() {
   await loadRequiredFonts();
   const rawSelection = figma.currentPage.selection;
@@ -1461,11 +1523,14 @@ async function handleSelectionChange() {
   const connectorCount = connNodes.length;
 
   // UI 편집 대상 노드 결정:
-  // - 플로우 노드가 1개 이상이면 플로우 노드만 전달하여 일반 객체의 속성 오염/훼손 방지
+  // - 플로우 노드와 일반 객체가 함께 있으면 둘 다 전달 (Connection 전용, Node/Appearance는 UI에서 비활성)
+  // - 플로우 노드만 있으면 플로우 노드만 전달하여 일반 객체의 속성 오염/훼손 방지
   // - 플로우 노드가 전혀 없고 커넥터만 있으면 커넥터 전달
   // - 플로우 노드와 커넥터가 없고 일반 객체만 있으면 일반 객체 전달
   let uniqueNodes: SceneNode[] = [];
-  if (flowNodeCount > 0) {
+  if (flowNodeCount > 0 && otherObjectCount > 0 && connectorCount === 0) {
+    uniqueNodes = [...flowNodes, ...otherObjects];
+  } else if (flowNodeCount > 0) {
     uniqueNodes = flowNodes;
   } else if (connectorCount > 0 && otherObjectCount === 0) {
     uniqueNodes = connNodes;
@@ -1482,6 +1547,7 @@ async function handleSelectionChange() {
 
   // 커넥터 선택 시 연결된 엔드포인트 노드들을 캔버스 2D 공간 배치(위/왼쪽 우선)로 정렬하여 수집
   let multiConnectorSortedNodeNames: string[] = [];
+  let multiConnectorSortedNodeTypes: string[] = [];
   if (connectorCount > 0 && flowNodeCount === 0) {
     const endpointNodeMap = new Map<string, SceneNode>();
     for (const c of connNodes) {
@@ -1512,6 +1578,7 @@ async function handleSelectionChange() {
     if (endpointNodes.length > 0) {
       const sortedEndpoints = sortNodesBySpatialPosition(endpointNodes);
       multiConnectorSortedNodeNames = sortedEndpoints.map((n) => n.name);
+      multiConnectorSortedNodeTypes = sortedEndpoints.map((n) => gizmoEndpointTypeLabel(n));
     }
   }
 
@@ -1543,6 +1610,8 @@ async function handleSelectionChange() {
 
     let connectorSourceNodeName: string | undefined;
     let connectorTargetNodeName: string | undefined;
+    let connectorSourceNodeType: string | undefined;
+    let connectorTargetNodeType: string | undefined;
     let connectorSourceMagnet: MagnetPosition | undefined;
     let connectorTargetMagnet: MagnetPosition | undefined;
     let connectorIsReversed = false;
@@ -1596,14 +1665,20 @@ async function handleSelectionChange() {
         let targetEndpointNode: SceneNode | null = null;
         if (conn.connectorStart && 'endpointNodeId' in conn.connectorStart && conn.connectorStart.endpointNodeId) {
           sourceEndpointNode = figma.getNodeById(conn.connectorStart.endpointNodeId) as SceneNode | null;
-          if (sourceEndpointNode) connectorSourceNodeName = sourceEndpointNode.name;
+          if (sourceEndpointNode) {
+            connectorSourceNodeName = sourceEndpointNode.name;
+            connectorSourceNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
+          }
           if ('magnet' in conn.connectorStart) {
             connectorSourceMagnet = conn.connectorStart.magnet as MagnetPosition;
           }
         }
         if (conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
           targetEndpointNode = figma.getNodeById(conn.connectorEnd.endpointNodeId) as SceneNode | null;
-          if (targetEndpointNode) connectorTargetNodeName = targetEndpointNode.name;
+          if (targetEndpointNode) {
+            connectorTargetNodeName = targetEndpointNode.name;
+            connectorTargetNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
+          }
           if ('magnet' in conn.connectorEnd) {
             connectorTargetMagnet = conn.connectorEnd.magnet as MagnetPosition;
           }
@@ -1648,10 +1723,15 @@ async function handleSelectionChange() {
           if (sourceEndpointNode && targetEndpointNode) {
             connectorSourceNodeName = targetEndpointNode.name;
             connectorTargetNodeName = sourceEndpointNode.name;
+            connectorSourceNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
+            connectorTargetNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
           } else {
             const tempName = connectorSourceNodeName;
             connectorSourceNodeName = connectorTargetNodeName;
             connectorTargetNodeName = tempName;
+            const tempType = connectorSourceNodeType;
+            connectorSourceNodeType = connectorTargetNodeType;
+            connectorTargetNodeType = tempType;
           }
 
           const tempMagnet = connectorSourceMagnet;
@@ -1696,11 +1776,17 @@ async function handleSelectionChange() {
         let targetEndpointNode: SceneNode | null = null;
         if (srcId) {
           sourceEndpointNode = figma.getNodeById(srcId) as SceneNode | null;
-          if (sourceEndpointNode) connectorSourceNodeName = sourceEndpointNode.name;
+          if (sourceEndpointNode) {
+            connectorSourceNodeName = sourceEndpointNode.name;
+            connectorSourceNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
+          }
         }
         if (tgtId) {
           targetEndpointNode = figma.getNodeById(tgtId) as SceneNode | null;
-          if (targetEndpointNode) connectorTargetNodeName = targetEndpointNode.name;
+          if (targetEndpointNode) {
+            connectorTargetNodeName = targetEndpointNode.name;
+            connectorTargetNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
+          }
         }
         connectorSourceMagnet = (node.getPluginData('source_magnet') as MagnetPosition) || 'RIGHT';
         connectorTargetMagnet = (node.getPluginData('target_magnet') as MagnetPosition) || 'LEFT';
@@ -1741,6 +1827,8 @@ async function handleSelectionChange() {
             connectorIsReversed = true;
             connectorSourceNodeName = targetEndpointNode.name;
             connectorTargetNodeName = sourceEndpointNode.name;
+            connectorSourceNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
+            connectorTargetNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
 
             const tempMagnet = connectorSourceMagnet;
             connectorSourceMagnet = connectorTargetMagnet;
@@ -1893,10 +1981,13 @@ async function handleSelectionChange() {
       connectorEndOffset,
       connectorSourceNodeName,
       connectorTargetNodeName,
+      connectorSourceNodeType,
+      connectorTargetNodeType,
       connectorSourceMagnet,
       connectorTargetMagnet,
       connectorIsReversed,
       connectedNodeNames: multiConnectorSortedNodeNames.length > 0 ? multiConnectorSortedNodeNames : undefined,
+      connectedNodeTypes: multiConnectorSortedNodeTypes.length > 0 ? multiConnectorSortedNodeTypes : undefined,
       width: Math.round(node.width),
       height: Math.round(node.height),
       cornerRadius,
@@ -2504,15 +2595,9 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
       try { textNode.lineHeight = { value: 18, unit: 'PIXELS' }; } catch (_) {}
 
       if (nType === 'Decision') {
-        const pCard = flowNode as FrameNode | undefined;
-        const pl = (pCard && typeof pCard.paddingLeft === 'number') ? pCard.paddingLeft : 24;
-        const pr = (pCard && typeof pCard.paddingRight === 'number') ? pCard.paddingRight : 24;
-        const curW = pCard ? Math.max(50, pCard.width - pl - pr) : Math.max(50, textNode.width);
-        try { textNode.resize(curW, 54); } catch (_) {}
-        try { textNode.maxHeight = 54; } catch (_) {}
-        try { textNode.textAutoResize = 'TRUNCATE'; } catch (_) {}
-        try { textNode.textTruncation = 'ENDING'; } catch (_) {}
-        try { textNode.maxLines = 3; } catch (_) {}
+        bindShapeTitle(textNode, 'decision');
+      } else if (nType === 'Branch' && flowNode && safeGetPluginData(flowNode, 'branch_variant') === 'TAG') {
+        bindShapeTitle(textNode, 'tag');
       } else {
         try { textNode.maxHeight = null; } catch (_) {}
         if (textNode.textAutoResize !== 'HEIGHT') {
@@ -2850,7 +2935,7 @@ function getShapeVectorData(
     if (variant === 'DIAMOND') {
       return `M ${w / 2} 0 L ${w} ${h / 2} L ${w / 2} ${h} L 0 ${h / 2} Z`;
     }
-    if (variant === 'YES' || variant === 'NO' || variant === 'TRUE' || variant === 'FALSE') {
+    if (variant === 'TAG') {
       return getJunctionCapsulePath(w, h);
     }
     return getJunctionEllipsePath(w, h);
@@ -3027,12 +3112,18 @@ async function createFlowNode(payload: FlowNodePayload) {
       : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
     const isShapeNode = !spec.allowDescription;
 
-    const rawTitle = payload.title !== undefined ? payload.title.trim() : (
-      branchVariant ? BRANCH_VARIANT_LABELS[branchVariant] : (nodeType === 'Screen' ? 'Screen' : nodeType)
-    );
-    const title = rawTitle; // 긴 타이틀도 잘리지 않고 온전한 1줄 폭으로 계산되도록 보존
+    const rawTitle = payload.title !== undefined ? payload.title.trim() : '';
+    let title = branchVariant
+      ? (isDefaultNodeTitle(rawTitle) ? BRANCH_VARIANT_LABELS[branchVariant] : rawTitle)
+      : (rawTitle || getDefaultNodeTitle(nodeType));
+    if (branchVariant === 'TAG') {
+      title = clampTitleChars(title);
+    }
     // 도형 노드인 경우 스펙 규격(Process: 120x120, Junction variant, Decision: 140x140, Terminator: 180x90) 최우선 보장
-    const width = isShapeNode ? spec.width : (payload.width ? clampScreenWidth(payload.width) : spec.width);
+    let width = isShapeNode ? spec.width : (payload.width ? clampScreenWidth(payload.width) : spec.width);
+    if (branchVariant === 'TAG') {
+      width = await resolveTagCardWidth(title, spec.width);
+    }
     const height = isShapeNode ? spec.height : (payload.height ? clampScreenHeight(payload.height) : spec.height);
     const defaultRadius = spec.cornerRadius !== undefined ? spec.cornerRadius : 0;
     const cornerRadius = isShapeNode ? defaultRadius : (typeof payload.cornerRadius === 'number' ? clampScreenCornerRadius(payload.cornerRadius) : defaultRadius);
@@ -3105,7 +3196,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       // Process, Junction, Decision, Terminator: 디스크립션 없이 타이틀만 정중앙 정렬
       const showBranchTitle = Boolean(branchVariant && branchVariantHasTitle(branchVariant));
       const hPad = branchVariant
-        ? (showBranchTitle ? 16 : 0)
+        ? (showBranchTitle ? TAG_TITLE_PAD_X : 0)
         : (nodeType === 'Decision' ? 24 : (nodeType === 'Junction' || nodeType === 'Connector' ? 18 : 12));
       card.paddingLeft = hPad;
       card.paddingRight = hPad;
@@ -3134,19 +3225,10 @@ async function createFlowNode(payload: FlowNodePayload) {
       titleText.textAlignVertical = 'CENTER';
       titleText.layoutAlign = 'STRETCH';
       titleText.visible = !branchVariant || showBranchTitle;
-      if (nodeType === 'Decision') {
-        // 마름모는 3줄 높이(54px)로 고정하여 3번째 줄 끝에서 ..(말줄임) 보장
-        const availW = Math.max(10, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
-        titleText.resize(availW, 54);
-        titleText.maxHeight = 54;
-        titleText.textAutoResize = 'TRUNCATE';
-        titleText.textTruncation = 'ENDING';
-        titleText.maxLines = 3;
-      } else {
-        titleText.textAutoResize = 'HEIGHT';
-        titleText.textTruncation = 'ENDING';
-        titleText.maxLines = 3;
-      }
+      bindShapeTitle(
+        titleText,
+        nodeType === 'Decision' ? 'decision' : (showBranchTitle ? 'tag' : 'shape')
+      );
       titleText.setPluginData('node_role', 'title');
       card.appendChild(titleText);
     } else {
@@ -3155,16 +3237,10 @@ async function createFlowNode(payload: FlowNodePayload) {
       const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
       const hasBottomBar = hasStatus || hasLink;
 
-      // 디스크립션 유무에 따른 패딩 및 세로 정렬
-      if (!description && !hasBottomBar) {
-        card.paddingTop = 14;
-        card.paddingBottom = 14;
-        card.primaryAxisAlignItems = 'CENTER';
-      } else {
-        card.paddingTop = 14;
-        card.paddingBottom = hasBottomBar ? 36 : 16;
-        card.primaryAxisAlignItems = 'MIN';
-      }
+      // 스크린 타이틀은 설명 유무와 관계없이 카드 위쪽에 붙인다.
+      card.paddingTop = 14;
+      card.paddingBottom = !description && !hasBottomBar ? 14 : (hasBottomBar ? 36 : 16);
+      card.primaryAxisAlignItems = 'MIN';
       card.paddingLeft = 16;
       card.paddingRight = 16;
       card.itemSpacing = 8;
@@ -3377,6 +3453,14 @@ async function createFlowNode(payload: FlowNodePayload) {
     }
 
     figma.currentPage.appendChild(card);
+    if (nodeType === 'Decision' || branchVariant === 'TAG') {
+      const createdTitle = card.findOne(
+        (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
+      ) as TextNode | null;
+      if (createdTitle) {
+        bindShapeTitle(createdTitle, nodeType === 'Decision' ? 'decision' : 'tag');
+      }
+    }
     figma.currentPage.selection = [card];
     figma.viewport.scrollAndZoomIntoView([card]);
 
@@ -3550,7 +3634,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
   const DEFAULT_SHAPE_NAMES = new Set([
     'Decision', 'Process', 'Connector', 'Terminator', 'Branch',
     'Action', 'System', 'Database', 'Square', 'Junction', 'Diamond', 'Pill', 'Capsule',
-    'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Circle',
+    'Check', 'Cross', 'Yes', 'No', 'True', 'False', 'Tag', 'Circle',
   ]);
   const currentTitle = patch.title !== undefined ? patch.title.trim() : (card.name || safeGetPluginData(card, 'node_title') || '');
   const incomingIsPlaceholder = !currentTitle
@@ -3561,11 +3645,32 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     && nodeType !== 'Branch'
     && Boolean(prevBranchVariant && !branchVariantHasTitle(prevBranchVariant));
 
+  const targetDefaultTitle = getDefaultNodeTitle(nodeType, batchBranchVariant);
+  const branchVariantChanged = Boolean(
+    batchBranchVariant && prevBranchVariant && batchBranchVariant !== prevBranchVariant
+  );
+  const nodeTypeChanged = prevNodeType !== nodeType;
   let effectiveTitle = currentTitle;
   if ((leavingUntitledBranch && incomingIsPlaceholder) || (isChangingToScreen && incomingIsPlaceholder)) {
-    effectiveTitle = nodeType === 'Screen' ? 'Screen' : nodeType;
-  } else if (patch.nodeType !== undefined && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
+    effectiveTitle = targetDefaultTitle;
+  } else if (
+    batchBranchVariant
+    && isDefaultNodeTitle(currentTitle)
+    && (
+      nodeTypeChanged
+      || branchVariantChanged
+      || currentTitle === targetDefaultTitle
+      || currentTitle === 'Branch'
+      || currentTitle === 'Screen'
+    )
+  ) {
+    // 선택한 Check / Cross / Tag 이름을 유지한다. 타입명 "Branch"로 덮지 않는다.
+    effectiveTitle = targetDefaultTitle;
+  } else if (patch.nodeType !== undefined && nodeType !== 'Branch' && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
     effectiveTitle = nodeType;
+  }
+  if (batchBranchVariant === 'TAG') {
+    effectiveTitle = clampTitleChars(effectiveTitle);
   }
   card.name = effectiveTitle;
   card.clipsContent = false;
@@ -3590,6 +3695,9 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     targetW = spec.width;
     targetH = spec.height;
     targetR = spec.cornerRadius ?? 0;
+    if (batchBranchVariant === 'TAG') {
+      targetW = await resolveTagCardWidth(effectiveTitle, spec.width);
+    }
   } else if (isChangingToScreen) {
     targetW = patch.width !== undefined ? clampScreenWidth(patch.width) : (restoredScreenW ? clampScreenWidth(restoredScreenW) : spec.width);
     targetH = patch.height !== undefined ? clampScreenHeight(patch.height) : (restoredScreenH ? clampScreenHeight(restoredScreenH) : spec.height);
@@ -3739,20 +3847,10 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     titleText.textAlignVertical = 'CENTER';
     titleText.lineHeight = { value: showBranchTitle ? 22 : 18, unit: 'PIXELS' };
     titleText.visible = !batchBranchVariant || showBranchTitle;
-
-    if (nodeType === 'Decision') {
-      const availW = Math.max(10, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
-      try { titleText.resize(availW, 54); } catch (_) {}
-      try { titleText.maxHeight = 54; } catch (_) {}
-      try { titleText.textAutoResize = 'TRUNCATE'; } catch (_) {}
-      try { titleText.textTruncation = 'ENDING'; } catch (_) {}
-      try { titleText.maxLines = 3; } catch (_) {}
-    } else {
-      try { titleText.maxHeight = null; } catch (_) {}
-      try { titleText.textAutoResize = 'HEIGHT'; } catch (_) {}
-      try { titleText.textTruncation = 'ENDING'; } catch (_) {}
-      try { titleText.maxLines = 3; } catch (_) {}
-    }
+    bindShapeTitle(
+      titleText,
+      nodeType === 'Decision' ? 'decision' : (showBranchTitle ? 'tag' : 'shape')
+    );
     await safeSetCharacters(titleText, (batchBranchVariant && !showBranchTitle) ? '' : effectiveTitle);
     const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
     if (!hasExistingTitleFill || patch.colorHex) {
@@ -3864,7 +3962,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
   if (isShapeNode) {
     const showBranchTitle = Boolean(batchBranchVariant && branchVariantHasTitle(batchBranchVariant));
     const hPad = batchBranchVariant
-      ? (showBranchTitle ? 16 : 0)
+      ? (showBranchTitle ? TAG_TITLE_PAD_X : 0)
       : (nodeType === 'Decision' ? 24 : 12);
     card.paddingLeft = hPad;
     card.paddingRight = hPad;
@@ -3879,7 +3977,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     card.paddingRight = 16;
     card.paddingTop = 14;
     card.paddingBottom = hasBottomBar ? 36 : (isDescOn ? 16 : 14);
-    card.primaryAxisAlignItems = (!isDescOn && !hasBottomBar) ? 'CENTER' : 'MIN';
+    card.primaryAxisAlignItems = 'MIN';
     card.counterAxisAlignItems = 'MIN';
   }
 
@@ -4351,14 +4449,9 @@ async function resizeNode(nodeId: string, width: number, height: number) {
       try { title.lineHeight = { value: 18, unit: 'PIXELS' }; } catch (_) {}
 
       if (nType === 'Decision') {
-        const pl = typeof frame.paddingLeft === 'number' ? frame.paddingLeft : 24;
-        const pr = typeof frame.paddingRight === 'number' ? frame.paddingRight : 24;
-        const curW = Math.max(50, w - pl - pr);
-        try { title.resize(curW, 54); } catch (_) {}
-        try { title.maxHeight = 54; } catch (_) {}
-        try { title.textAutoResize = 'TRUNCATE'; } catch (_) {}
-        try { title.textTruncation = 'ENDING'; } catch (_) {}
-        try { title.maxLines = 3; } catch (_) {}
+        bindShapeTitle(title, 'decision');
+      } else if (nType === 'Branch' && safeGetPluginData(frame, 'branch_variant') === 'TAG') {
+        bindShapeTitle(title, 'tag');
       } else {
         try { title.maxHeight = null; } catch (_) {}
 
@@ -6043,7 +6136,7 @@ function getStepBadgeCoordinates(
   const branchShape = nodeType === 'Branch' ? (branchVariant || 'CIRCLE') : undefined;
   const treatBranchAsRect = branchShape === 'SQUARE';
   const treatBranchAsDiamond = branchShape === 'DIAMOND';
-  const treatBranchAsCapsule = branchShape === 'YES' || branchShape === 'NO' || branchShape === 'TRUE' || branchShape === 'FALSE';
+  const treatBranchAsCapsule = branchShape === 'TAG';
   const treatBranchAsCircle = Boolean(branchShape) && !treatBranchAsRect && !treatBranchAsDiamond && !treatBranchAsCapsule;
 
   // 기본 직사각형(Screen, Process, Branch Square 등): 코너 꼭짓점 기준 중심(-11px 오프셋)
@@ -6548,6 +6641,54 @@ figma.ui.onmessage = async (msg: PluginAction) => {
 // (해당 노드의 width/height 변경으로 인한 불필요한 handleSelectionChange 재진입 방지용)
 const internalLayoutNodeIds = new Set<string>();
 
+/** 캔버스에서 Tag 타이틀을 고치면 캡슐 너비를 글자 폭에 맞춘다. */
+async function fitTagCapsuleToTitle(card: FrameNode, rawTitle: string): Promise<void> {
+  const title = clampTitleChars((rawTitle || '').trim() || 'Tag');
+  const spec = getBranchVariantSpec('TAG');
+  const nextW = await resolveTagCardWidth(title, spec.width);
+  const nextH = spec.height;
+  card.name = title;
+
+  const shape = card.children.find(
+    (c) => c.name === 'ShapeVector' || c.name === 'DiamondShape'
+  ) as (VectorNode | FrameNode) | undefined;
+  let bg: RGB = { r: 1, g: 1, b: 1 };
+  let stroke: RGB = hexToRgbColor('#1E1E1E');
+  let strokeW = 1.5;
+  if (shape && 'fills' in shape && Array.isArray(shape.fills) && shape.fills[0]?.type === 'SOLID') {
+    bg = shape.fills[0].color;
+  }
+  if (shape && 'strokes' in shape && Array.isArray(shape.strokes) && shape.strokes[0]?.type === 'SOLID') {
+    stroke = shape.strokes[0].color;
+  }
+  if (shape && 'strokeWeight' in shape && typeof shape.strokeWeight === 'number') {
+    strokeW = shape.strokeWeight;
+  }
+
+  const widthChanged = Math.round(card.width) !== nextW || Math.round(card.height) !== nextH;
+  if (widthChanged) {
+    card.minWidth = null;
+    card.maxWidth = null;
+    card.minHeight = null;
+    card.maxHeight = null;
+    internalLayoutNodeIds.add(card.id);
+    card.resize(nextW, nextH);
+    card.primaryAxisSizingMode = 'FIXED';
+    card.counterAxisSizingMode = 'FIXED';
+    card.minWidth = nextW;
+    card.maxWidth = nextW;
+    card.minHeight = nextH;
+    card.maxHeight = nextH;
+    if (shape) shape.remove();
+    attachShapeVectorNode(card, 'Branch', nextW, nextH, bg, stroke, strokeW, true, 'TAG');
+  }
+
+  const titleText = card.findOne(
+    (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
+  ) as TextNode | null;
+  if (titleText) bindShapeTitle(titleText, 'tag');
+}
+
 // 캔버스 변경 감지: 신규 커넥터 직각 포맷팅, 노드 이동 시 커넥터 실시간 추적, 기즈모 조작 차단
 figma.on('documentchange', async (event) => {
   const movedNodeIds = new Set<string>();
@@ -6695,13 +6836,16 @@ figma.on('documentchange', async (event) => {
               const isScreen =
                 flowNode.type === 'FRAME' &&
                 normalizeNodeType(safeGetPluginData(flowNode, 'node_type')) === 'Screen';
+              const isTag =
+                flowNode.type === 'FRAME' &&
+                normalizeNodeType(safeGetPluginData(flowNode, 'node_type')) === 'Branch' &&
+                safeGetPluginData(flowNode, 'branch_variant') === 'TAG';
 
-              // [기능 B] Canvas Screen Title 32자 제한 (UI maxLength={32}와 일치)
-              if (isTitle && isScreen) {
-                const charArray = Array.from(textNode.characters);
-                if (charArray.length > 32) {
-                  const truncatedTitle = charArray.slice(0, 32).join('');
-                  await safeSetCharacters(textNode, truncatedTitle);
+              // 타이틀 32자 제한 (UI maxLength={32}와 일치). Tag도 글자가 들어가므로 같다.
+              if (isTitle && (isScreen || isTag)) {
+                const limited = clampTitleChars(textNode.characters);
+                if (limited !== textNode.characters) {
+                  await safeSetCharacters(textNode, limited);
                 }
               }
 
@@ -6734,6 +6878,9 @@ figma.on('documentchange', async (event) => {
 
                 // 타이틀 텍스트: 블릿, 링크, 볼드, 취소선 등 일체 반영 차단 및 Inter Bold 13px 표준 규격 강제 고정
                 await enforceTitleStandardStyle(textNode, flowNode);
+                if (isTag && flowNode.type === 'FRAME') {
+                  await fitTagCapsuleToTitle(flowNode as FrameNode, textNode.characters);
+                }
               }
               // ※ isDesc인 경우: 타이핑 중 커서 방해 및 입력 필드 깜박임을 방지하기 위해 매 글자마다 TextNode 속성을 쓰지 않음
 

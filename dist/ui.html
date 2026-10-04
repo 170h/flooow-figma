@@ -2207,11 +2207,12 @@
     .node-preview-card {
       width: 116px;
       height: 72px;
-      background: #ffffff;
+      background: var(--color-bg, #ffffff);
       border: 1px solid rgba(0, 0, 0, 0.1);
       border-radius: 0px;
       position: relative;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 8px 12px;
@@ -2219,15 +2220,37 @@
       box-shadow: none;
     }
 
-    .node-preview-card span {
+    .node-preview-copy {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .node-preview-title {
       font-size: 11px;
-      font-weight: 400;
-      color: rgba(0, 0, 0, 0.5);
+      font-weight: 450;
+      color: var(--color-text-primary);
       text-align: center;
       word-break: break-all;
       overflow: hidden;
-      line-height: 1.35;
-      max-height: 54px;
+      line-height: 1.3;
+      max-height: 28px;
+    }
+
+    .node-preview-type {
+      font-size: 9px;
+      font-weight: 450;
+      line-height: 12px;
+      color: rgba(0, 0, 0, 0.5);
+      text-align: center;
+      max-width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     /* 11x11 앵커 마그넷 기즈모 핸들 (호버 시 상하좌우 확대 애니메이션) */
@@ -2301,13 +2324,13 @@
     body.figma-dark .node-preview-card,
     .figma-dark .node-preview-card,
     [data-theme="dark"] .node-preview-card {
-      background: #2c2c2c;
+      background: var(--color-bg, #2c2c2c);
       border-color: rgba(255, 255, 255, 0.12);
     }
 
-    body.figma-dark .node-preview-card span,
-    .figma-dark .node-preview-card span,
-    [data-theme="dark"] .node-preview-card span {
+    body.figma-dark .node-preview-type,
+    .figma-dark .node-preview-type,
+    [data-theme="dark"] .node-preview-type {
       color: rgba(255, 255, 255, 0.6);
     }
 
@@ -5483,7 +5506,7 @@
             var dispatcher = resolveDispatcher();
             return dispatcher.useRef(initialValue);
           }
-          function useEffect18(create, deps) {
+          function useEffect17(create, deps) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useEffect(create, deps);
           }
@@ -6266,7 +6289,7 @@
           exports.useContext = useContext2;
           exports.useDebugValue = useDebugValue;
           exports.useDeferredValue = useDeferredValue;
-          exports.useEffect = useEffect18;
+          exports.useEffect = useEffect17;
           exports.useId = useId2;
           exports.useImperativeHandle = useImperativeHandle;
           exports.useInsertionEffect = useInsertionEffect;
@@ -6770,9 +6793,9 @@
           if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function") {
             __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
           }
-          var React24 = require_react();
+          var React23 = require_react();
           var Scheduler = require_scheduler();
-          var ReactSharedInternals = React24.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React23.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           var suppressWarning = false;
           function setSuppressWarning(newSuppressWarning) {
             {
@@ -8379,7 +8402,7 @@
             {
               if (props.value == null) {
                 if (typeof props.children === "object" && props.children !== null) {
-                  React24.Children.forEach(props.children, function(child) {
+                  React23.Children.forEach(props.children, function(child) {
                     if (child == null) {
                       return;
                     }
@@ -27975,7 +27998,7 @@
       if (true) {
         (function() {
           "use strict";
-          var React24 = require_react();
+          var React23 = require_react();
           var REACT_ELEMENT_TYPE = Symbol.for("react.element");
           var REACT_PORTAL_TYPE = Symbol.for("react.portal");
           var REACT_FRAGMENT_TYPE = Symbol.for("react.fragment");
@@ -28001,7 +28024,7 @@
             }
             return null;
           }
-          var ReactSharedInternals = React24.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React23.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           function error(format) {
             {
               {
@@ -29027,10 +29050,7 @@
   var BRANCH_VARIANT_ORDER = [
     "CHECK",
     "CROSS",
-    "YES",
-    "NO",
-    "TRUE",
-    "FALSE",
+    "TAG",
     "SQUARE",
     "DIAMOND",
     "CIRCLE"
@@ -29038,17 +29058,17 @@
   var BRANCH_VARIANT_LABELS = {
     CHECK: "Check",
     CROSS: "Cross",
-    YES: "Yes",
-    NO: "No",
-    TRUE: "True",
-    FALSE: "False",
+    TAG: "Tag",
     SQUARE: "Square",
     DIAMOND: "Diamond",
     CIRCLE: "Circle"
   };
   function normalizeBranchVariant(value) {
     const key = String(value || "").trim().toUpperCase();
-    if (key === "CHECK" || key === "CROSS" || key === "YES" || key === "NO" || key === "TRUE" || key === "FALSE" || key === "SQUARE" || key === "DIAMOND" || key === "CIRCLE") {
+    if (key === "YES" || key === "NO" || key === "TRUE" || key === "FALSE" || key === "TAG") {
+      return "TAG";
+    }
+    if (key === "CHECK" || key === "CROSS" || key === "SQUARE" || key === "DIAMOND" || key === "CIRCLE") {
       return key;
     }
     const byLabel = String(value || "").trim();
@@ -29061,14 +29081,8 @@
     switch (variant) {
       case "DIAMOND":
         return { width: 40, height: 40, cornerRadius: 0, allowDescription: false, allowFigmaLink: false };
-      case "YES":
-        return { width: 58, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-      case "NO":
-        return { width: 53, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-      case "TRUE":
+      case "TAG":
         return { width: 64, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-      case "FALSE":
-        return { width: 68, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
       case "CHECK":
       case "CROSS":
       case "SQUARE":
@@ -29078,7 +29092,7 @@
     }
   }
   function branchVariantHasTitle(variant) {
-    return variant === "YES" || variant === "NO" || variant === "TRUE" || variant === "FALSE";
+    return variant === "TAG";
   }
   function getBranchVariantDefaultFill(variant) {
     if (variant === "CHECK") return "#14AE5C";
@@ -29087,6 +29101,42 @@
   }
   function branchVariantUsesStroke(variant) {
     return variant !== "CHECK" && variant !== "CROSS";
+  }
+  var DEFAULT_NODE_TITLE_NAMES = /* @__PURE__ */ new Set([
+    "Screen",
+    "Decision",
+    "Process",
+    "Connector",
+    "Terminator",
+    "Branch",
+    "Action",
+    "System",
+    "Database",
+    "Square",
+    "Junction",
+    "Diamond",
+    "Pill",
+    "Capsule",
+    "Check",
+    "Cross",
+    "Yes",
+    "No",
+    "True",
+    "False",
+    "Tag",
+    "Circle",
+    "Untitled"
+  ]);
+  function isDefaultNodeTitle(title) {
+    const value = String(title || "").trim();
+    return value.length === 0 || DEFAULT_NODE_TITLE_NAMES.has(value);
+  }
+  function getDefaultNodeTitle(nodeType, branchVariant) {
+    const type = normalizeNodeType(nodeType || "Screen");
+    if (type === "Branch") {
+      return BRANCH_VARIANT_LABELS[normalizeBranchVariant(branchVariant)];
+    }
+    return type === "Screen" ? "Screen" : type;
   }
   var OPTION_CAPABILITY_MATRIX = {
     Screen: {
@@ -29487,6 +29537,7 @@
       if (isApplyingMultiDraftRef.current) return;
       if (!nodes || nodes.length < 2) return;
       if (!hasMultiDraft) return;
+      if (nodes.some((n) => n && !n.isFlowNode)) return;
       const currentSortedIds = nodes.map((n) => n?.id).filter(Boolean).sort();
       const draftSortedIds = multiDraftSelectionRef.current;
       const isIdSetMatch = currentSortedIds.length === draftSortedIds.length && currentSortedIds.every((id, idx) => id === draftSortedIds[idx]);
@@ -29993,7 +30044,9 @@
       closeAllPopovers();
       setCurrentTabState(tab);
       currentTabRef.current = tab;
-      if (selectedNodesRef.current.length > 0 && !isConnectorSelectedRef.current) {
+      const tabNodes = selectedNodesRef.current;
+      const pureFlowSelection = tabNodes.length > 0 && !isConnectorSelectedRef.current && tabNodes.every((n) => n && n.isFlowNode);
+      if (pureFlowSelection) {
         lastNodeTabRef.current = tab;
       }
       requestAnimationFrame(() => {
@@ -30008,53 +30061,45 @@
       }
       const titleEl = document.getElementById("node-title-input");
       const descEl = document.getElementById("node-description-input");
-      const descToggleEl = document.getElementById("toggle-description");
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
-      const urlEl = document.getElementById("single-screen-url");
-      const singleLinkToggleEl = document.getElementById("toggle-single-figma-link");
-      const sizeModeEl = document.getElementById("select-size-mode");
-      const selectedElevation = nodeOptionStateRef.current.elevation;
+      const opts = nodeOptionStateRef.current;
       const firstNode = nodes[0];
-      const nodeActualType = firstNode?.flowNodeType || (firstNode?.nodeType === "FRAME" ? "Screen" : firstNode?.nodeType);
-      const activeTypeBtn = document.querySelector("#node-type-icons .type-icon-btn.active");
-      const domNodeType = activeTypeBtn?.dataset.type || void 0;
-      const rawNodeType = overrideNodeType || domNodeType || nodeActualType || nodeOptionStateRef.current.nodeType;
-      const effectiveNodeType = normalizeNodeType(rawNodeType);
-      const branchVariant = effectiveNodeType === "Branch" ? normalizeBranchVariant(
-        nodeOptionStateRef.current.branchVariant || firstNode?.branchVariant
-      ) : void 0;
-      const spec = effectiveNodeType === "Branch" && branchVariant ? getBranchVariantSpec(branchVariant) : NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
+      const effectiveNodeType = normalizeNodeType(overrideNodeType || opts.nodeType);
+      const branchVariant = effectiveNodeType === "Branch" ? normalizeBranchVariant(opts.branchVariant) : opts.branchVariant;
       const isScreen = effectiveNodeType === "Screen";
-      const hasFixedShapeSpec = !isScreen && Boolean(spec);
       const currentTitleVal = titleEl?.value.trim();
-      const rawTitle = overrideTitle !== void 0 ? overrideTitle : currentTitleVal || (isScreen ? "Screen" : effectiveNodeType);
+      let rawTitle = overrideTitle !== void 0 ? overrideTitle : currentTitleVal || "";
+      if (effectiveNodeType === "Branch") {
+        const branchLabel = BRANCH_VARIANT_LABELS[normalizeBranchVariant(branchVariant)];
+        if (isDefaultNodeTitle(rawTitle) && (!rawTitle || rawTitle === "Branch" || rawTitle === "Screen" || overrideTitle !== void 0)) {
+          rawTitle = branchLabel;
+          if (titleEl) titleEl.value = rawTitle;
+        }
+      } else if (!rawTitle) {
+        rawTitle = isScreen ? "Screen" : effectiveNodeType;
+      }
       if (rawTitle.length > 32) {
         showToast("\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "warning");
       }
       const title = rawTitle.slice(0, 32);
       const rawDesc = descEl?.value !== void 0 ? descEl.value.trim() : "";
-      const isDescOn = descToggleEl ? descToggleEl.checked : nodeOptionStateRef.current.descriptionOn ?? false;
+      const isDescOn = Boolean(opts.descriptionOn);
       const currentDesc = rawDesc || firstNode?.description || "";
       const desc = isDescOn ? rawDesc : currentDesc;
-      const w = overrideSize?.width !== void 0 ? overrideSize.width : isScreen ? parseInt(wEl?.value || "", 10) || firstNode?.width || nodeOptionStateRef.current.width || 250 : hasFixedShapeSpec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
-      const h = overrideSize?.height !== void 0 ? overrideSize.height : isScreen ? parseInt(hEl?.value || "", 10) || firstNode?.height || nodeOptionStateRef.current.height || 90 : hasFixedShapeSpec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
-      const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : isScreen ? rEl?.value !== void 0 && rEl?.value !== "" && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : firstNode?.cornerRadius ?? (nodeOptionStateRef.current.cornerRadius ?? 0) : hasFixedShapeSpec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
-      const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : nodeOptionStateRef.current.singleLinkOn;
-      const rawFigmaUrl = linkOverrides?.figmaLink !== void 0 ? linkOverrides.figmaLink : urlEl ? urlEl.value.trim() : "";
+      const w = overrideSize?.width !== void 0 ? overrideSize.width : opts.width || 250;
+      const h = overrideSize?.height !== void 0 ? overrideSize.height : opts.height || 90;
+      const radius = overrideSize?.cornerRadius !== void 0 ? overrideSize.cornerRadius : opts.cornerRadius ?? 0;
+      const isLinkOn = Boolean(opts.singleLinkOn);
+      const rawFigmaUrl = linkOverrides?.figmaLink !== void 0 ? linkOverrides.figmaLink : isLinkOn ? opts.singleLinkUrl || "" : "";
       const figmaUrl = rawFigmaUrl ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}` : "";
-      const elevToggleEl = document.getElementById("toggle-elevation");
-      const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(nodeOptionStateRef.current.elevationOn);
-      const finalElevation = isElevOn ? selectedElevation : null;
-      const statusToggleEl = document.getElementById("toggle-status");
-      const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(nodeOptionStateRef.current.statusOn);
-      const finalStatus = isStatusOn ? nodeOptionStateRef.current.status : void 0;
-      const finalColor = styleOverrides?.colorHex ?? nodeOptionStateRef.current.fillColor;
-      const finalStrokeWeight = styleOverrides?.strokeWeight !== void 0 ? styleOverrides.strokeWeight : nodeOptionStateRef.current.strokeWeight !== void 0 ? nodeOptionStateRef.current.strokeWeight : 1.5;
-      const finalStrokeColor = styleOverrides?.strokeColor !== void 0 ? styleOverrides.strokeColor : nodeOptionStateRef.current.strokeColor || "#000000";
-      const sizeMode = overrideSizeMode || sizeModeEl?.value || nodeOptionStateRef.current.sizeMode || "hug";
-      setNodeOptionState({
+      const isElevOn = Boolean(opts.elevationOn);
+      const finalElevation = isElevOn ? opts.elevation : null;
+      const isStatusOn = Boolean(opts.statusOn);
+      const finalStatus = isStatusOn ? opts.status : void 0;
+      const finalColor = styleOverrides?.colorHex ?? opts.fillColor;
+      const finalStrokeWeight = styleOverrides?.strokeWeight !== void 0 ? styleOverrides.strokeWeight : opts.strokeWeight !== void 0 ? opts.strokeWeight : 1.5;
+      const finalStrokeColor = styleOverrides?.strokeColor !== void 0 ? styleOverrides.strokeColor : opts.strokeColor || "#000000";
+      const sizeMode = overrideSizeMode || opts.sizeMode || "hug";
+      const nextNodeOptions = {
         nodeType: effectiveNodeType,
         fillColor: finalColor,
         strokeWeight: finalStrokeWeight,
@@ -30063,15 +30108,17 @@
         height: h,
         cornerRadius: radius,
         elevationOn: isElevOn,
-        elevation: selectedElevation,
+        elevation: opts.elevation,
         statusOn: isStatusOn,
-        status: finalStatus || "",
         singleLinkOn: isLinkOn,
-        singleLinkUrl: figmaUrl,
+        singleLinkUrl: linkOverrides?.figmaLink !== void 0 ? figmaUrl : opts.singleLinkUrl,
         sizeMode,
-        descriptionOn: isDescOn,
-        branchVariant
-      });
+        descriptionOn: isDescOn
+      };
+      if (effectiveNodeType === "Branch") {
+        nextNodeOptions.branchVariant = branchVariant;
+      }
+      setNodeOptionState(nextNodeOptions);
       nodes.forEach((node) => {
         parent.postMessage({
           pluginMessage: {
@@ -30088,7 +30135,7 @@
               figmaLink: figmaUrl,
               clearLinkCache: linkOverrides?.clearLinkCache,
               nodeType: effectiveNodeType,
-              branchVariant,
+              branchVariant: effectiveNodeType === "Branch" ? branchVariant : void 0,
               colorHex: finalColor,
               strokeWeight: finalStrokeWeight !== void 0 ? finalStrokeWeight : node.strokeWeight,
               strokeColor: finalStrokeColor !== void 0 ? finalStrokeColor : node.strokeColorHex,
@@ -30539,105 +30586,62 @@
       }
       const titleEl = document.getElementById("node-title-input");
       const descEl = document.getElementById("node-description-input");
-      const wEl = document.getElementById("input-size-w");
-      const hEl = document.getElementById("input-size-h");
-      const rEl = document.getElementById("input-size-radius");
-      const urlEl = document.getElementById("single-screen-url");
-      const elevToggleEl = document.getElementById("toggle-elevation");
-      const statusToggleEl = document.getElementById("toggle-status");
-      const stepToggleEl = document.getElementById("toggle-step-badges");
-      const stepNumEl = document.getElementById("input-step-number");
-      const singleLinkToggleEl = document.getElementById("toggle-single-figma-link");
-      const {
-        elevation: selectedElevation,
-        status: selectedStatus,
-        badgeCorner: selectedBadgeCorner,
-        badgeShape: selectedBadgeShape,
-        badgeColorMode: selectedBadgeColorMode
-      } = nodeOptionStateRef.current;
-      const activeTypeBtn = document.querySelector("#node-type-icons .type-icon-btn.active");
-      const domNodeType = activeTypeBtn?.dataset.type || void 0;
-      const targetNodeType = domNodeType || nodeOptionStateRef.current.nodeType || "Screen";
-      const createBranchVariant = targetNodeType === "Branch" ? normalizeBranchVariant(nodeOptionStateRef.current.branchVariant) : void 0;
-      const spec = targetNodeType === "Branch" && createBranchVariant ? getBranchVariantSpec(createBranchVariant) : NODE_TYPE_SHAPE_SPECS[targetNodeType];
-      const isScreen = targetNodeType === "Screen";
-      const hasFixedShapeSpec = !isScreen && Boolean(spec);
-      const targetNode = { flowNodeType: targetNodeType, isFlowNode: true };
-      const canHaveDescription = supportsOption(targetNode, "description");
-      const canHaveFigmaLink = supportsOption(targetNode, "figmaLink");
-      const canHaveStatus = supportsOption(targetNode, "status");
-      const descToggleEl = document.getElementById("toggle-description");
-      const defaultTitle = targetNodeType === "Screen" ? "Screen" : createBranchVariant ? BRANCH_VARIANT_LABELS[createBranchVariant] : targetNodeType;
-      const rawTitle = titleEl?.value.trim() || defaultTitle;
+      const opts = nodeOptionStateRef.current;
+      const targetNodeType = normalizeNodeType(opts.nodeType || "Screen");
+      const storedBranchVariant = opts.branchVariant ? normalizeBranchVariant(opts.branchVariant) : void 0;
+      const optionTarget = { flowNodeType: targetNodeType, isFlowNode: true };
+      const canHaveDescription = supportsOption(optionTarget, "description");
+      const canHaveFigmaLink = supportsOption(optionTarget, "figmaLink");
+      const canHaveStatus = supportsOption(optionTarget, "status");
+      const canHaveStep = supportsOption(optionTarget, "stepBadge");
+      const canHaveElevation = supportsOption(optionTarget, "elevation");
+      const defaultTitle = getDefaultNodeTitle(targetNodeType, storedBranchVariant);
+      let rawTitle = titleEl?.value.trim() || "";
+      if (targetNodeType === "Branch" && storedBranchVariant && isDefaultNodeTitle(rawTitle)) {
+        rawTitle = BRANCH_VARIANT_LABELS[storedBranchVariant];
+        if (titleEl) titleEl.value = rawTitle;
+      } else if (!rawTitle) {
+        rawTitle = defaultTitle;
+      }
       if (rawTitle.length > 32) {
         showToast("\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "warning");
       }
       const title = rawTitle.slice(0, 32);
-      const isDescOn = descToggleEl ? descToggleEl.checked : nodeOptionStateRef.current.descriptionOn ?? false;
+      const isDescOn = Boolean(opts.descriptionOn);
       const desc = isDescOn ? descEl?.value.trim() || "" : "";
       const effectiveDesc = canHaveDescription ? desc : "";
-      const w = hasFixedShapeSpec ? spec.width : parseInt(wEl?.value || "250", 10) || 250;
-      const h = hasFixedShapeSpec ? spec.height : parseInt(hEl?.value || "90", 10) || 90;
-      let radius = hasFixedShapeSpec ? spec.cornerRadius ?? 0 : parseInt(rEl?.value || "0", 10) || 0;
+      const w = opts.width || 250;
+      const h = opts.height || 90;
+      let radius = opts.cornerRadius ?? 0;
       if (radius > 999) {
         radius = 999;
-        if (rEl) rEl.value = "999";
         showToast("\uCD5C\uB300\uAC12\uC740 999\uC785\uB2C8\uB2E4.", "warning");
       } else if (radius < 0) {
         radius = 0;
-        if (rEl) rEl.value = "0";
       }
-      const rawFigmaUrl = canHaveFigmaLink && singleLinkToggleEl?.checked && urlEl ? urlEl.value.trim() : "";
+      const isLinkOn = Boolean(opts.singleLinkOn) && canHaveFigmaLink;
+      const rawFigmaUrl = isLinkOn ? (opts.singleLinkUrl || "").trim() : "";
       const figmaUrl = rawFigmaUrl ? /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}` : "";
-      const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(nodeOptionStateRef.current.elevationOn);
-      const finalElevation = isElevOn ? selectedElevation : null;
-      const isStepOn = stepToggleEl ? stepToggleEl.checked : Boolean(nodeOptionStateRef.current.stepBadgesOn);
-      const inputStepVal = stepNumEl ? parseInt(stepNumEl.value, 10) : NaN;
-      const prevStepNum = nodeOptionStateRef.current.stepNumber;
-      let targetStepNum;
-      if (!isNaN(inputStepVal) && inputStepVal > 0) {
-        targetStepNum = inputStepVal;
-      } else if (typeof prevStepNum === "number" && prevStepNum > 0) {
-        targetStepNum = prevStepNum + 1;
-      } else {
-        targetStepNum = 1;
-      }
-      const nextNodeOptions = {
-        nodeType: targetNodeType,
-        width: w,
-        height: h,
-        cornerRadius: radius,
-        sizeMode: nodeOptionStateRef.current.sizeMode || (targetNodeType === "Screen" ? "hug" : "fixed"),
-        elevationOn: isElevOn,
-        elevation: selectedElevation,
-        statusOn: statusToggleEl?.checked || false,
-        status: selectedStatus,
-        stepBadgesOn: isStepOn,
-        stepNumber: isStepOn ? targetStepNum + 1 : targetStepNum,
-        badgeCorner: selectedBadgeCorner,
-        badgeShape: selectedBadgeShape,
-        badgeColorMode: selectedBadgeColorMode,
-        singleLinkOn: canHaveFigmaLink && singleLinkToggleEl?.checked || false,
-        singleLinkUrl: figmaUrl,
-        descriptionOn: canHaveDescription ? isDescOn : false,
-        branchVariant: createBranchVariant
-      };
-      setNodeOptionState(nextNodeOptions);
+      const isElevOn = Boolean(opts.elevationOn) && canHaveElevation;
+      const finalElevation = isElevOn ? opts.elevation : null;
+      const isStatusOn = Boolean(opts.statusOn) && canHaveStatus;
+      const isStepOn = Boolean(opts.stepBadgesOn) && canHaveStep;
+      const targetStepNum = typeof opts.stepNumber === "number" && opts.stepNumber > 0 ? opts.stepNumber : 1;
       if (nodes.length === 1) {
         isApplyingSingleRef.current = true;
-        const targetNode2 = nodes[0];
+        const targetNode = nodes[0];
         const prevSinglePayload = {
-          nodeId: targetNode2.id,
-          title: targetNode2.title || targetNode2.name || "",
-          description: targetNode2.description || "",
-          width: targetNode2.width,
-          height: targetNode2.height,
-          cornerRadius: targetNode2.cornerRadius,
-          theme: targetNode2.theme || "light",
-          figmaLink: targetNode2.figmaLink || "",
-          nodeType: targetNode2.flowNodeType || (targetNode2.nodeType === "FRAME" ? "Screen" : targetNode2.nodeType),
-          colorHex: targetNode2.fillColorHex,
-          elevation: targetNode2.elevation !== void 0 && targetNode2.elevation !== null ? targetNode2.elevation : null
+          nodeId: targetNode.id,
+          title: targetNode.title || targetNode.name || "",
+          description: targetNode.description || "",
+          width: targetNode.width,
+          height: targetNode.height,
+          cornerRadius: targetNode.cornerRadius,
+          theme: targetNode.theme || "light",
+          figmaLink: targetNode.figmaLink || "",
+          nodeType: targetNode.flowNodeType || (targetNode.nodeType === "FRAME" ? "Screen" : targetNode.nodeType),
+          colorHex: targetNode.fillColorHex,
+          elevation: targetNode.elevation !== void 0 && targetNode.elevation !== null ? targetNode.elevation : null
         };
         const newSnapshot = {
           type: "single",
@@ -30654,30 +30658,33 @@
       } else if (nodes.length >= 2) {
         return;
       } else {
+        if (radius !== opts.cornerRadius) {
+          setNodeOptionState({ cornerRadius: radius });
+        }
         parent.postMessage({
           pluginMessage: {
             type: "CREATE_FLOW_NODE",
             payload: {
               title,
               description: effectiveDesc,
-              descriptionOn: isDescOn,
+              descriptionOn: canHaveDescription ? isDescOn : false,
               width: w,
               height: h,
               cornerRadius: radius,
               theme: getCurrentUITheme(),
               figmaLink: figmaUrl,
               nodeType: targetNodeType,
-              branchVariant: targetNodeType === "Branch" ? normalizeBranchVariant(nodeOptionStateRef.current.branchVariant) : void 0,
-              colorHex: nodeOptionStateRef.current.fillColor,
-              strokeWeight: nodeOptionStateRef.current.strokeWeight !== void 0 ? nodeOptionStateRef.current.strokeWeight : 1.5,
-              strokeColor: nodeOptionStateRef.current.strokeColor,
-              sizeMode: nodeOptionStateRef.current.sizeMode || (targetNodeType === "Screen" ? "hug" : "fixed"),
-              elevation: isElevOn ? selectedElevation : void 0,
-              status: !canHaveStatus || !statusToggleEl?.checked ? void 0 : selectedStatus,
+              branchVariant: targetNodeType === "Branch" ? storedBranchVariant : void 0,
+              colorHex: opts.fillColor,
+              strokeWeight: opts.strokeWeight !== void 0 ? opts.strokeWeight : 1.5,
+              strokeColor: opts.strokeColor,
+              sizeMode: opts.sizeMode || (targetNodeType === "Screen" ? "hug" : "fixed"),
+              elevation: isElevOn ? opts.elevation : void 0,
+              status: isStatusOn ? opts.status : void 0,
               badgeNumber: isStepOn ? targetStepNum : void 0,
-              badgePosition: isStepOn ? selectedBadgeCorner : void 0,
-              badgeShape: isStepOn ? selectedBadgeShape : void 0,
-              badgeColorMode: isStepOn ? selectedBadgeColorMode : void 0
+              badgePosition: isStepOn ? opts.badgeCorner : void 0,
+              badgeShape: isStepOn ? opts.badgeShape : void 0,
+              badgeColorMode: isStepOn ? opts.badgeColorMode : void 0
             }
           }
         }, "*");
@@ -30729,6 +30736,9 @@
       const flowNodeCount = typeof meta?.flowNodeCount === "number" ? meta.flowNodeCount : nodes.filter((n) => n && Boolean(n.isFlowNode)).length;
       const otherObjectCount = typeof meta?.otherObjectCount === "number" ? meta.otherObjectCount : Math.max(0, count - flowNodeCount - (meta?.connectorCount || 0));
       const connectorCount = typeof meta?.connectorCount === "number" ? meta.connectorCount : nodes.filter((n) => n && n.isConnector).length;
+      const flooowInSelection = nodes.filter((n) => n && n.isFlowNode).length;
+      const figjamInSelection = nodes.filter((n) => n && !n.isFlowNode && !n.isConnector).length;
+      const isMixedNodeAndFigjam = flooowInSelection > 0 && figjamInSelection > 0 && connectorCount === 0;
       const allConnectors = connectorCount > 0 && flowNodeCount === 0 && otherObjectCount === 0 || count > 0 && nodes.length > 0 && nodes.every((n) => n && n.isConnector);
       const isSingleConn = count === 1 && allConnectors;
       const isMultiConn = count >= 2 && allConnectors;
@@ -30760,70 +30770,62 @@
             targetMagnet: firstConn.connectorTargetMagnet || "LEFT"
           });
         }
+      } else if (isMixedNodeAndFigjam) {
+        setCurrentTab("connection");
       } else if (count === 0) {
         setCurrentTab("node");
       } else {
         const targetTab = lastNodeTabRef.current || "node";
         setCurrentTab(targetTab);
         const flowNodes = nodes.filter((n) => n && Boolean(n.isFlowNode));
-        if (flowNodes.length > 0) {
+        if (isSelectionChanged && nodes.length === 1 && flowNodes.length === 1) {
           const first = flowNodes[0];
-          const eOn = Boolean(first.elevationOn);
-          const eLevel = typeof first.elevation === "number" ? first.elevation : 0;
-          const nodeRadius = typeof first.cornerRadius === "number" ? first.cornerRadius : 0;
-          const nodeTypeVal = first.flowNodeType || (first.nodeType === "FRAME" ? "Screen" : first.nodeType) || "Screen";
-          const hasStatus = Boolean(first.status);
-          const hasDesc = Boolean(first.description && first.description.trim());
-          const linkVal = first.figmaLink || first.cachedFigmaLink || "";
-          const hasLink = Boolean(linkVal);
-          const colorUpdates = {};
-          const hasStep = first.stepNumber !== void 0;
+          const hasElev = typeof first.elevation === "number";
+          const nodeTypeVal = normalizeNodeType(
+            first.flowNodeType || (first.nodeType === "FRAME" ? "Screen" : first.nodeType) || "Screen"
+          );
+          const hasStep = typeof first.stepNumber === "number" && !isNaN(first.stepNumber);
+          const activeLink = (first.figmaLink || "").trim();
+          const cachedLink = (first.cachedFigmaLink || "").trim();
+          const fillColor = first.fillColorHex || "#ffffff";
+          const strokeWeight = first.strokeWeight !== void 0 ? first.strokeWeight : 1.5;
+          const strokeColor = first.strokeColorHex || "#000000";
           const nodeOptionsUpdates = {
             nodeType: nodeTypeVal,
-            width: first.width,
-            height: first.height,
-            cornerRadius: nodeRadius,
+            fillColor,
+            strokeWeight,
+            strokeColor,
+            width: typeof first.width === "number" ? first.width : 250,
+            height: typeof first.height === "number" ? first.height : 90,
+            cornerRadius: typeof first.cornerRadius === "number" ? first.cornerRadius : 0,
             sizeMode: first.sizeMode || "fixed",
-            elevationOn: eOn,
-            elevation: eLevel,
-            statusOn: hasStatus,
-            status: first.status || nodeOptionStateRef.current.status || "draft",
-            descriptionOn: hasDesc,
-            singleLinkOn: hasLink,
-            singleLinkUrl: linkVal,
-            branchVariant: normalizeNodeType(nodeTypeVal) === "Branch" ? normalizeBranchVariant(first.branchVariant) : nodeOptionStateRef.current.branchVariant
+            elevationOn: hasElev || Boolean(first.elevationOn),
+            elevation: hasElev ? first.elevation : 0,
+            statusOn: Boolean(first.status),
+            status: first.status || "draft",
+            badgeCorner: first.badgeCorner || "TOP_LEFT",
+            badgeShape: first.badgeShape || "Square",
+            badgeColorMode: first.badgeColorMode || "Style",
+            stepBadgesOn: hasStep,
+            stepNumber: hasStep && first.stepNumber > 0 ? first.stepNumber : 1,
+            descriptionOn: Boolean(first.descriptionOn ?? (first.description && first.description.trim())),
+            singleLinkOn: Boolean(activeLink),
+            singleLinkUrl: activeLink || cachedLink,
+            branchVariant: nodeTypeVal === "Branch" ? normalizeBranchVariant(first.branchVariant) : nodeOptionStateRef.current.branchVariant
           };
-          if (hasStep && typeof first.stepNumber === "number") {
-            nodeOptionsUpdates.stepBadgesOn = true;
-            nodeOptionsUpdates.stepNumber = first.stepNumber;
-            nodeOptionsUpdates.badgeCorner = first.badgeCorner || nodeOptionStateRef.current.badgeCorner || "TOP_LEFT";
-            nodeOptionsUpdates.badgeShape = first.badgeShape || nodeOptionStateRef.current.badgeShape || "Square";
-            nodeOptionsUpdates.badgeColorMode = first.badgeColorMode || nodeOptionStateRef.current.badgeColorMode || "Style";
-          }
-          if (first.fillColorHex) {
-            nodeOptionsUpdates.fillColor = first.fillColorHex;
-            nodeOptionsUpdates.strokeWeight = first.strokeWeight !== void 0 ? first.strokeWeight : 1.5;
-            nodeOptionsUpdates.strokeColor = first.strokeColorHex || "#000000";
-            const matchedPreset = stylePresets.find((p) => {
-              const matchFill = p.fillColor.toLowerCase() === first.fillColorHex.toLowerCase();
-              if (!matchFill) return false;
-              const currentWeight = first.strokeWeight !== void 0 ? first.strokeWeight : 1.5;
-              if (p.strokeWeight !== currentWeight) return false;
-              if (p.strokeWeight > 0 && first.strokeColorHex) {
-                if (p.strokeColor.toLowerCase() !== first.strokeColorHex.toLowerCase()) return false;
-              }
-              return true;
-            });
-            const matchedId = matchedPreset ? matchedPreset.id : null;
-            colorUpdates.selectedStylePresetId = matchedId;
-            setSelectedStylePresetId(matchedId);
-            if (nodes.length === 1) {
-              setNodeOptionState(nodeOptionsUpdates);
+          setNodeOptionState(nodeOptionsUpdates);
+          const matchedPreset = stylePresets.find((p) => {
+            const matchFill = p.fillColor.toLowerCase() === fillColor.toLowerCase();
+            if (!matchFill) return false;
+            if (p.strokeWeight !== strokeWeight) return false;
+            if (p.strokeWeight > 0 && strokeColor) {
+              if (p.strokeColor.toLowerCase() !== strokeColor.toLowerCase()) return false;
             }
-          } else if (nodes.length === 1) {
-            setNodeOptionState(nodeOptionsUpdates);
-          }
-          setUIState(colorUpdates);
+            return true;
+          });
+          const matchedId = matchedPreset ? matchedPreset.id : null;
+          setSelectedStylePresetId(matchedId);
+          setUIState({ selectedStylePresetId: matchedId });
         }
       }
       const isUserLocked = Date.now() - userActionLockRef.current < 600;
@@ -30923,7 +30925,7 @@
   }
 
   // src/ui/App.tsx
-  var import_react26 = __toESM(require_react());
+  var import_react25 = __toESM(require_react());
 
   // src/ui/hooks/useFigmaMessage.ts
   var import_react3 = __toESM(require_react());
@@ -30932,7 +30934,6 @@
       handleSelectionChange,
       setCurrentTab,
       setUIState,
-      setNodeOptionState,
       setDesignFrames
     } = useApp();
     const handlerRef = (0, import_react3.useRef)(null);
@@ -31006,33 +31007,6 @@
                 multiNodeConnectors: msg.multiNodeConnectors !== void 0 ? msg.multiNodeConnectors : void 0
               });
             }
-            if (nodes && nodes.length === 1) {
-              const node = nodes[0];
-              if (node.isFlowNode) {
-                if (isDifferentNode) {
-                  const hasDesc = Boolean(node.description && node.description.trim());
-                  setNodeOptionState({ descriptionOn: hasDesc });
-                  const currentStatus = node.status || msg.currentStatus;
-                  if (currentStatus) {
-                    setNodeOptionState({ statusOn: true, status: currentStatus });
-                  } else {
-                    setNodeOptionState({ statusOn: false });
-                  }
-                  const nodeTypeVal2 = node.flowNodeType || (node.nodeType === "FRAME" ? "Screen" : node.nodeType);
-                  const isScreen = normalizeNodeType(nodeTypeVal2) === "Screen";
-                  const figmaLink = isScreen && node.figmaLink || "";
-                  if (figmaLink) {
-                    setNodeOptionState({ singleLinkOn: true, singleLinkUrl: figmaLink });
-                  } else {
-                    setNodeOptionState({ singleLinkOn: false, singleLinkUrl: "" });
-                  }
-                }
-                const nodeTypeVal = node.flowNodeType || (node.nodeType === "FRAME" ? "Screen" : node.nodeType);
-                if (nodeTypeVal) {
-                  setNodeOptionState({ nodeType: normalizeNodeType(nodeTypeVal) });
-                }
-              }
-            }
             break;
           }
           case "INIT_DONE":
@@ -31061,7 +31035,7 @@
       return () => {
         window.removeEventListener("message", handler);
       };
-    }, [handleSelectionChange, setCurrentTab, setUIState, setNodeOptionState]);
+    }, [handleSelectionChange, setCurrentTab, setUIState]);
   }
 
   // src/ui/hooks/useSelectionSummary.ts
@@ -31244,6 +31218,7 @@
       "No",
       "True",
       "False",
+      "Tag",
       "Circle"
     ]);
     const activeBranchVariant = normalizeBranchVariant(
@@ -31838,12 +31813,9 @@
           const supported = rawOptionState.supportedNodes;
           if (supported.length === 1) {
             const node = supported[0];
-            const isDescActive = Boolean(node && (node.descriptionOn ?? (node.description && node.description.trim())));
             const hasDescText = Boolean(node && node.description && node.description.trim());
             setHasText(hasDescText);
-            setNodeOptionState({ descriptionOn: isDescActive });
           } else {
-            const onCount = supported.filter((n) => Boolean(n.descriptionOn ?? (n.description && n.description.trim()))).length;
             const hasTextCount = supported.filter((n) => Boolean(n.description && n.description.trim())).length;
             setHasText(hasTextCount > 0);
           }
@@ -31851,7 +31823,7 @@
           setHasText(false);
         }
       }
-    }, [rawOptionState, selectedNodes, setNodeOptionState]);
+    }, [rawOptionState, selectedNodes]);
     const isDescValueMixed = (0, import_react7.useMemo)(() => {
       if (isDescDrafted) return false;
       if (effectiveState.disabled) return false;
@@ -32114,7 +32086,7 @@
         setIsOn(null);
       }
       const isInputFocused = document.activeElement === inputRef.current;
-      if (!isDifferentNode && isInputFocused) {
+      if (!isDifferentNode && (isInputFocused || selectedNodes.length > 0)) {
         return;
       }
       if (!isUserLocked || isDifferentNode) {
@@ -32127,10 +32099,6 @@
             const displayLink = activeLink || cachedLink;
             setUrl(displayLink);
             cachedUrlRef.current = displayLink;
-            setNodeOptionState({
-              singleLinkOn: Boolean(activeLink),
-              singleLinkUrl: displayLink
-            });
           } else if (supported.length > 1) {
             const firstLink = supported[0]?.figmaLink || "";
             const allSame = supported.every((n) => (n.figmaLink || "") === firstLink);
@@ -32149,7 +32117,7 @@
           setUrl("");
         }
       }
-    }, [rawOptionState, selectedNodes, setNodeOptionState, nodeOptionState.singleLinkUrl]);
+    }, [rawOptionState, selectedNodes, nodeOptionState.singleLinkUrl]);
     const isLinkValueMixed = (0, import_react8.useMemo)(() => {
       if (isLinkDrafted) return false;
       if (effectiveState.disabled) return false;
@@ -32450,31 +32418,13 @@
       return computeOptionSwitchState(selectedNodes, "status", (n) => Boolean(n.status));
     }, [selectedNodes, nodeOptionState.nodeType, nodeOptionState.statusOn]);
     import_react9.default.useEffect(() => {
-      const isUserLocked = Date.now() - userActionLockRef.current < 600;
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
       const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
       prevSelectedNodeIdRef.current = currentNodeId;
       if (isDifferentNode) {
         setIsOpen(null);
       }
-      if (!isUserLocked || isDifferentNode) {
-        if (rawOptionState.supportedCount > 0) {
-          const supported = rawOptionState.supportedNodes;
-          if (supported.length === 1) {
-            const node = supported[0];
-            if (node && node.status) {
-              setNodeOptionState({ status: node.status });
-            }
-          } else {
-            const firstStatus = supported.find((n) => n.status)?.status;
-            const allSame = supported.every((n) => n.status === firstStatus);
-            if (allSame && firstStatus) {
-              setNodeOptionState({ status: firstStatus });
-            }
-          }
-        }
-      }
-    }, [rawOptionState, selectedNodes, setNodeOptionState]);
+    }, [selectedNodes]);
     const isTypeDrafted = multiDraft.nodeType !== void 0;
     const isDraftAllowed = isTypeDrafted ? getOptionCapability([{ flowNodeType: multiDraft.nodeType, isFlowNode: true }], "status") !== "UNSUPPORTED" : true;
     const isStatusDrafted = multiDraft.status !== void 0;
@@ -32920,34 +32870,30 @@
     }, [selectedNodes.length, isDraftAllowed, rawOptionState, isBadgeOnDrafted, multiDraft.badgeOn, effectiveIsOpen]);
     const isSectionOpen = effectiveState.isOpen;
     (0, import_react10.useEffect)(() => {
-      const isUserLocked = Date.now() - userActionLockRef.current < 600;
       const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : selectedNodes.length > 1 ? "MULTI" : null;
       const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
       prevSelectedNodeIdRef.current = currentNodeId;
       if (isDifferentNode) {
         setIsOpen(null);
       }
-      if (!isUserLocked || isDifferentNode) {
+      if (selectedNodes.length === 0) {
+        setIsMixed(false);
+        const cachedStep = nodeOptionState.stepNumber;
+        setStepNumText(
+          typeof cachedStep === "number" && cachedStep > 0 && !isNaN(cachedStep) ? String(cachedStep) : "1"
+        );
+      } else if (isDifferentNode) {
         if (rawOptionState.supportedCount > 0) {
           const supported = rawOptionState.supportedNodes;
           if (supported.length === 1) {
             setIsMixed(false);
             const node = supported[0];
-            if (node.stepNumber !== void 0) {
+            if (typeof node.stepNumber === "number" && !isNaN(node.stepNumber)) {
               setStepNumText(String(node.stepNumber));
             } else {
               setStepNumText("1");
             }
-            if (node.badgeCorner) {
-              setNodeOptionState({ badgeCorner: node.badgeCorner });
-            }
-            if (node.badgeShape) {
-              setNodeOptionState({ badgeShape: node.badgeShape });
-            }
-            if (node.badgeColorMode) {
-              setNodeOptionState({ badgeColorMode: node.badgeColorMode });
-            }
-          } else {
+          } else if (supported.length > 1) {
             const validNums = supported.map((n) => n.stepNumber).filter((n) => typeof n === "number" && !isNaN(n) && n > 0);
             if (validNums.length === supported.length && validNums.every((v) => v === validNums[0])) {
               setIsMixed(false);
@@ -32959,43 +32905,15 @@
               setIsMixed(true);
               setStepNumText("");
             }
-            if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
-              setNodeOptionState({ badgeCorner: summary.badgeCorner.value });
-            }
-            if (!summary.badgeShape.isMixed && summary.badgeShape.value) {
-              setNodeOptionState({ badgeShape: summary.badgeShape.value });
-            }
-            if (!summary.badgeColorMode.isMixed && summary.badgeColorMode.value) {
-              setNodeOptionState({
-                badgeColorMode: summary.badgeColorMode.value
-              });
-            }
           }
         } else {
-          if (selectedNodes.length === 0) {
-            setIsMixed(false);
-            const nextStepNum = typeof nodeOptionState.stepNumber === "number" && nodeOptionState.stepNumber > 0 ? nodeOptionState.stepNumber + 1 : 1;
-            setStepNumText(String(nextStepNum));
-          } else {
-            setIsMixed(false);
-          }
+          setIsMixed(false);
         }
       }
     }, [
       rawOptionState,
       selectedNodes,
-      summary.badgeCorner.isMixed,
-      summary.badgeCorner.value,
-      summary.badgeShape.isMixed,
-      summary.badgeShape.value,
-      summary.badgeColorMode.isMixed,
-      summary.badgeColorMode.value,
-      nodeOptionState.stepBadgesOn,
-      nodeOptionState.stepNumber,
-      nodeOptionState.badgeCorner,
-      nodeOptionState.badgeShape,
-      nodeOptionState.badgeColorMode,
-      setNodeOptionState
+      nodeOptionState.stepNumber
     ]);
     (0, import_react10.useEffect)(() => {
       function handleClickOutside(e) {
@@ -33337,6 +33255,12 @@
                                     }
                                   } else {
                                     setIsMixed(false);
+                                    if (clean !== "") {
+                                      const parsed = parseInt(clean, 10);
+                                      if (!isNaN(parsed) && parsed > 0) {
+                                        setNodeOptionState({ stepNumber: parsed });
+                                      }
+                                    }
                                   }
                                 },
                                 onBlur: handleNumberBlurOrEnter,
@@ -33773,14 +33697,22 @@
           }
         } else {
           const first = validNodes[0];
-          let nodeW = typeof first?.width === "number" ? first.width : nodeOptionState.width || 250;
-          let nodeH = typeof first?.height === "number" ? first.height : nodeOptionState.height || 90;
-          let nodeR = typeof first?.cornerRadius === "number" ? first.cornerRadius : nodeOptionState.cornerRadius ?? 0;
+          const echoedW = typeof first?.width === "number" ? first.width : nodeOptionState.width || 250;
+          const echoedH = typeof first?.height === "number" ? first.height : nodeOptionState.height || 90;
+          const echoedR = typeof first?.cornerRadius === "number" ? first.cornerRadius : nodeOptionState.cornerRadius ?? 0;
+          let nodeW = echoedW;
+          let nodeH = echoedH;
+          let nodeR = echoedR;
+          if (!isDifferentNode) {
+            nodeW = nodeOptionState.width || 250;
+            nodeH = nodeOptionState.height || 90;
+            nodeR = nodeOptionState.cornerRadius ?? 0;
+          }
           if (!isDifferentNode && pendingSizeRef.current && pendingSizeRef.current.nodeId === currentNodeId) {
             const pending = pendingSizeRef.current;
-            const isWMatched = pending.width === void 0 || pending.width === nodeW;
-            const isHMatched = pending.height === void 0 || pending.height === nodeH;
-            const isRMatched = pending.cornerRadius === void 0 || pending.cornerRadius === nodeR;
+            const isWMatched = pending.width === void 0 || pending.width === echoedW;
+            const isHMatched = pending.height === void 0 || pending.height === echoedH;
+            const isRMatched = pending.cornerRadius === void 0 || pending.cornerRadius === echoedR;
             if (isWMatched && isHMatched && isRMatched) {
               pendingSizeRef.current = null;
             } else {
@@ -35079,9 +35011,6 @@
     ] });
   }
 
-  // src/ui/components/connection/ConnectionPanel.tsx
-  var import_react16 = __toESM(require_react());
-
   // src/ui/components/connection/ConnectSection.tsx
   var import_react14 = __toESM(require_react());
 
@@ -35890,40 +35819,62 @@
         }
       );
     }
+    const gizmoTypeLabel = (node) => {
+      if (!node) return "";
+      if (!node.isFlowNode) return "FigJam object";
+      const flowType = normalizeNodeType(node.flowNodeType || node.nodeType);
+      if (flowType === "Branch") {
+        return BRANCH_VARIANT_LABELS[normalizeBranchVariant(node.branchVariant)];
+      }
+      return flowType;
+    };
     let node1DisplayName = "Node 1";
     let node2DisplayName = "Node 2";
+    let node1TypeLabel = "";
+    let node2TypeLabel = "";
     if (summary.isSingleConnector) {
       node1DisplayName = selectedNodes[0]?.connectorSourceNodeName || "Source Node";
       node2DisplayName = selectedNodes[0]?.connectorTargetNodeName || "Target Node";
+      node1TypeLabel = selectedNodes[0]?.connectorSourceNodeType || "";
+      node2TypeLabel = selectedNodes[0]?.connectorTargetNodeType || "";
     } else if (summary.isMultiConnector) {
       const connNodeNames = Array.from(new Set(selectedNodes.flatMap((n) => n?.connectedNodeNames || [])));
+      const connNodeTypes = selectedNodes[0]?.connectedNodeTypes || [];
       if (connNodeNames.length > 0) {
         node1DisplayName = connNodeNames[0] || "Node 1";
+        node1TypeLabel = connNodeTypes[0] || "";
         if (connNodeNames.length >= 3) {
           const moreCount = connNodeNames.length - 1;
           node2DisplayName = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
+          node2TypeLabel = "Mixed";
         } else if (connNodeNames.length === 2) {
           node2DisplayName = connNodeNames[1] || "Node 2";
+          node2TypeLabel = connNodeTypes[1] || "";
         } else {
           node2DisplayName = "Node 2";
         }
       } else {
         const uniqueNames = [];
+        const uniqueTypes = [];
+        const pushEndpoint = (name, typeLabel) => {
+          if (!name || uniqueNames.includes(name)) return;
+          uniqueNames.push(name);
+          uniqueTypes.push(typeLabel || "");
+        };
         selectedNodes.forEach((n) => {
-          if (n?.connectorSourceNodeName && !uniqueNames.includes(n.connectorSourceNodeName)) {
-            uniqueNames.push(n.connectorSourceNodeName);
-          }
-          if (n?.connectorTargetNodeName && !uniqueNames.includes(n.connectorTargetNodeName)) {
-            uniqueNames.push(n.connectorTargetNodeName);
-          }
+          pushEndpoint(n?.connectorSourceNodeName, n?.connectorSourceNodeType);
+          pushEndpoint(n?.connectorTargetNodeName, n?.connectorTargetNodeType);
         });
         if (uniqueNames.length > 0) {
           node1DisplayName = uniqueNames[0] || "Node 1";
+          node1TypeLabel = uniqueTypes[0] || "";
           if (uniqueNames.length >= 3) {
             const moreCount = uniqueNames.length - 1;
             node2DisplayName = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
+            node2TypeLabel = "Mixed";
           } else if (uniqueNames.length === 2) {
             node2DisplayName = uniqueNames[1] || "Node 2";
+            node2TypeLabel = uniqueTypes[1] || "";
           } else {
             node2DisplayName = "Node 2";
           }
@@ -35931,11 +35882,14 @@
       }
     } else {
       node1DisplayName = selectedNodes[0]?.title || selectedNodes[0]?.name || "Node 1";
+      node1TypeLabel = gizmoTypeLabel(selectedNodes[0]);
       if (selectedNodes.length >= 3) {
         const moreCount = selectedNodes.length - 1;
         node2DisplayName = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
+        node2TypeLabel = "Mixed";
       } else {
         node2DisplayName = selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2";
+        node2TypeLabel = gizmoTypeLabel(selectedNodes[1]);
       }
     }
     const hasExisting = Boolean(uiState.hasExistingConnection);
@@ -36091,7 +36045,10 @@
                     pos
                   );
                 }),
-                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { id: "preview-node-1-text", children: node1DisplayName })
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: "node-preview-copy", id: "preview-node-1-text", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-title", children: node1DisplayName }),
+                  node1TypeLabel ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-type", children: node1TypeLabel }) : null
+                ] })
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "node-preview-card", id: "preview-node-2", children: [
                 ["TOP", "RIGHT", "BOTTOM", "LEFT"].map((pos) => {
@@ -36110,7 +36067,10 @@
                     pos
                   );
                 }),
-                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { id: "preview-node-2-text", children: node2DisplayName })
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: "node-preview-copy", id: "preview-node-2-text", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-title", children: node2DisplayName }),
+                  node2TypeLabel ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-type", children: node2TypeLabel }) : null
+                ] })
               ] })
             ]
           }
@@ -37105,78 +37065,6 @@
   // src/ui/components/connection/ConnectionPanel.tsx
   var import_jsx_runtime17 = __toESM(require_jsx_runtime());
   function ConnectionPanel(_props) {
-    const { selectedNodes } = useApp();
-    const count = selectedNodes.length;
-    const allConnectors = count > 0 && selectedNodes.every((n) => n && n.isConnector);
-    const isSingleConn = count === 1 && allConnectors;
-    const isMultiConn = count >= 2 && allConnectors;
-    const previewKey = isSingleConn ? `${selectedNodes[0]?.connectorSourceNodeName || ""}->${selectedNodes[0]?.connectorTargetNodeName || ""}` : isMultiConn ? selectedNodes.map((n) => `${n?.id || ""}:${(n?.connectedNodeNames || []).join(",")}:${n?.connectorSourceNodeName || ""}->${n?.connectorTargetNodeName || ""}`).join("|") : `${selectedNodes[0]?.title || selectedNodes[0]?.name || ""}:${selectedNodes[1]?.title || selectedNodes[1]?.name || ""}`;
-    (0, import_react16.useEffect)(() => {
-      const anchorBox = document.getElementById("conn-anchor-preview-box");
-      if (isSingleConn) {
-        if (anchorBox) anchorBox.style.display = "";
-        const node = selectedNodes[0];
-        const node1Text = document.getElementById("preview-node-1-text");
-        const node2Text = document.getElementById("preview-node-2-text");
-        if (node1Text) node1Text.textContent = node?.connectorSourceNodeName || "Source Node";
-        if (node2Text) node2Text.textContent = node?.connectorTargetNodeName || "Target Node";
-      } else if (isMultiConn) {
-        if (anchorBox) anchorBox.style.display = "";
-        const node1Text = document.getElementById("preview-node-1-text");
-        const node2Text = document.getElementById("preview-node-2-text");
-        const connNodeNames = Array.from(new Set(selectedNodes.flatMap((n) => n?.connectedNodeNames || [])));
-        if (connNodeNames.length > 0) {
-          if (node1Text) node1Text.textContent = connNodeNames[0] || "Node 1";
-          if (node2Text) {
-            if (connNodeNames.length >= 3) {
-              const moreCount = connNodeNames.length - 1;
-              node2Text.textContent = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
-            } else if (connNodeNames.length === 2) {
-              node2Text.textContent = connNodeNames[1] || "Node 2";
-            } else {
-              node2Text.textContent = "Node 2";
-            }
-          }
-        } else {
-          const uniqueNames = [];
-          selectedNodes.forEach((n) => {
-            if (n?.connectorSourceNodeName && !uniqueNames.includes(n.connectorSourceNodeName)) {
-              uniqueNames.push(n.connectorSourceNodeName);
-            }
-            if (n?.connectorTargetNodeName && !uniqueNames.includes(n.connectorTargetNodeName)) {
-              uniqueNames.push(n.connectorTargetNodeName);
-            }
-          });
-          if (node1Text) node1Text.textContent = uniqueNames[0] || "Node 1";
-          if (node2Text) {
-            if (uniqueNames.length >= 3) {
-              const moreCount = uniqueNames.length - 1;
-              node2Text.textContent = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
-            } else if (uniqueNames.length === 2) {
-              node2Text.textContent = uniqueNames[1] || "Node 2";
-            } else {
-              node2Text.textContent = "Node 2";
-            }
-          }
-        }
-      } else {
-        if (anchorBox) anchorBox.style.display = "";
-        if (count >= 2) {
-          const node1Text = document.getElementById("preview-node-1-text");
-          const node2Text = document.getElementById("preview-node-2-text");
-          if (node1Text) node1Text.textContent = selectedNodes[0]?.title || selectedNodes[0]?.name || "Node 1";
-          if (node2Text) {
-            const effectiveCount = selectedNodes.length > 0 ? selectedNodes.length : count;
-            if (effectiveCount >= 3) {
-              const moreCount = effectiveCount - 1;
-              node2Text.textContent = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
-            } else {
-              node2Text.textContent = selectedNodes[1]?.title || selectedNodes[1]?.name || "Node 2";
-            }
-          }
-        }
-      }
-    }, [isSingleConn, isMultiConn, count, previewKey]);
     return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("div", { id: "conn-multi-mode", style: { display: "flex", flexDirection: "column" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(ConnectSection, {}),
       /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("hr", { className: "section-divider", id: "conn-link-divider" }),
@@ -37185,13 +37073,13 @@
   }
 
   // src/ui/components/shared/Tooltip.tsx
-  var import_react17 = __toESM(require_react());
+  var import_react16 = __toESM(require_react());
   var import_jsx_runtime18 = __toESM(require_jsx_runtime());
   function FigmaTooltip() {
-    const tooltipRef = (0, import_react17.useRef)(null);
-    const showTimerRef = (0, import_react17.useRef)(null);
-    const currentTargetRef = (0, import_react17.useRef)(null);
-    const hide = (0, import_react17.useCallback)(() => {
+    const tooltipRef = (0, import_react16.useRef)(null);
+    const showTimerRef = (0, import_react16.useRef)(null);
+    const currentTargetRef = (0, import_react16.useRef)(null);
+    const hide = (0, import_react16.useCallback)(() => {
       if (showTimerRef.current) {
         clearTimeout(showTimerRef.current);
         showTimerRef.current = null;
@@ -37203,7 +37091,7 @@
         tooltip.style.display = "none";
       }
     }, []);
-    const show = (0, import_react17.useCallback)((target, text) => {
+    const show = (0, import_react16.useCallback)((target, text) => {
       if (!text || !text.trim()) {
         hide();
         return;
@@ -37238,7 +37126,7 @@
         tooltip.classList.add("visible");
       }, 150);
     }, [hide]);
-    (0, import_react17.useEffect)(() => {
+    (0, import_react16.useEffect)(() => {
       const handleMouseOver = (e) => {
         const targetElement = e.target;
         if (targetElement.matches?.("input, textarea, select")) {
@@ -37360,7 +37248,7 @@
   }
 
   // src/ui/components/modals/SizeModal.tsx
-  var import_react18 = __toESM(require_react());
+  var import_react17 = __toESM(require_react());
   var import_jsx_runtime20 = __toESM(require_jsx_runtime());
   var FIXED_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("path", { d: "M14 6C14.2761 6 14.5 6.22386 14.5 6.5C14.5 6.77614 14.2761 7 14 7H12V16H14C14.2761 16 14.5 16.2239 14.5 16.5C14.5 16.7761 14.2761 17 14 17H9C8.72386 17 8.5 16.7761 8.5 16.5C8.5 16.2239 8.72386 16 9 16H11V7H9C8.72386 7 8.5 6.77614 8.5 6.5C8.5 6.22386 8.72386 6 9 6H14Z", fill: "currentColor" }) });
   var HUG_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("path", { d: "M11.4999 13C11.6325 13 11.7597 13.0527 11.8535 13.1464L14.8535 16.1464C15.0487 16.3417 15.0487 16.6582 14.8535 16.8535C14.6582 17.0487 14.3417 17.0487 14.1464 16.8535L11.4999 14.207L8.85346 16.8535C8.6582 17.0487 8.34169 17.0487 8.14643 16.8535C7.95119 16.6582 7.95119 16.3417 8.14643 16.1464L11.1464 13.1464C11.2402 13.0527 11.3674 13 11.4999 13ZM14.1464 7.14644C14.3417 6.95119 14.6582 6.95118 14.8535 7.14644C15.0487 7.3417 15.0487 7.65821 14.8535 7.85347L11.8535 10.8535C11.7597 10.9472 11.6325 10.9999 11.4999 11C11.3674 10.9999 11.2402 10.9472 11.1464 10.8535L8.14643 7.85347C7.95119 7.65821 7.95119 7.3417 8.14643 7.14644C8.34169 6.9512 8.6582 6.9512 8.85346 7.14644L11.4999 9.79292L14.1464 7.14644Z", fill: "currentColor" }) });
@@ -37377,14 +37265,14 @@
     onSave,
     onClose
   }) {
-    const [name, setName] = (0, import_react18.useState)(initialName);
-    const [w, setW] = (0, import_react18.useState)(initialW);
-    const [h, setH] = (0, import_react18.useState)(initialH);
-    const [radius, setRadius] = (0, import_react18.useState)(initialRadius);
-    const [sizeMode, setSizeMode] = (0, import_react18.useState)(initialSizeMode);
-    const [dropdownOpen, setDropdownOpen] = (0, import_react18.useState)(false);
-    const dropdownRef = (0, import_react18.useRef)(null);
-    (0, import_react18.useEffect)(() => {
+    const [name, setName] = (0, import_react17.useState)(initialName);
+    const [w, setW] = (0, import_react17.useState)(initialW);
+    const [h, setH] = (0, import_react17.useState)(initialH);
+    const [radius, setRadius] = (0, import_react17.useState)(initialRadius);
+    const [sizeMode, setSizeMode] = (0, import_react17.useState)(initialSizeMode);
+    const [dropdownOpen, setDropdownOpen] = (0, import_react17.useState)(false);
+    const dropdownRef = (0, import_react17.useRef)(null);
+    (0, import_react17.useEffect)(() => {
       function handleClickOutside(e) {
         if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
           setDropdownOpen(false);
@@ -37635,7 +37523,7 @@
   }
 
   // src/ui/components/modals/FigmaDesignPickerModal.tsx
-  var import_react19 = __toESM(require_react());
+  var import_react18 = __toESM(require_react());
   var import_jsx_runtime21 = __toESM(require_jsx_runtime());
   function FigmaDesignPickerModal({ onClose }) {
     const {
@@ -37646,24 +37534,24 @@
       sizePresets,
       applyCurrentNodeState
     } = useApp();
-    const [searchQuery, setSearchQuery] = (0, import_react19.useState)("");
-    const [selectedFrameId, setSelectedFrameId] = (0, import_react19.useState)(null);
-    const [saveAsPreset, setSaveAsPreset] = (0, import_react19.useState)(true);
-    const [linkToFrame, setLinkToFrame] = (0, import_react19.useState)(true);
-    (0, import_react19.useEffect)(() => {
+    const [searchQuery, setSearchQuery] = (0, import_react18.useState)("");
+    const [selectedFrameId, setSelectedFrameId] = (0, import_react18.useState)(null);
+    const [saveAsPreset, setSaveAsPreset] = (0, import_react18.useState)(true);
+    const [linkToFrame, setLinkToFrame] = (0, import_react18.useState)(true);
+    (0, import_react18.useEffect)(() => {
       loadDesignFrames();
     }, [loadDesignFrames]);
-    (0, import_react19.useEffect)(() => {
+    (0, import_react18.useEffect)(() => {
       if (designFrames.length > 0 && !selectedFrameId) {
         setSelectedFrameId(designFrames[0].id);
       }
     }, [designFrames, selectedFrameId]);
-    const filteredFrames = (0, import_react19.useMemo)(() => {
+    const filteredFrames = (0, import_react18.useMemo)(() => {
       const q = searchQuery.trim().toLowerCase();
       if (!q) return designFrames;
       return designFrames.filter((f) => f.name.toLowerCase().includes(q));
     }, [designFrames, searchQuery]);
-    const selectedFrame = (0, import_react19.useMemo)(() => {
+    const selectedFrame = (0, import_react18.useMemo)(() => {
       return designFrames.find((f) => f.id === selectedFrameId) || null;
     }, [designFrames, selectedFrameId]);
     function handleApply() {
@@ -38176,10 +38064,10 @@
   }
 
   // src/ui/components/modals/StyleModal.tsx
-  var import_react21 = __toESM(require_react());
+  var import_react20 = __toESM(require_react());
 
   // src/ui/components/shared/ColorWheelField.tsx
-  var import_react20 = __toESM(require_react());
+  var import_react19 = __toESM(require_react());
   var import_jsx_runtime22 = __toESM(require_jsx_runtime());
   function hexToHsv(hex, fallbackHue = 0) {
     let clean = hex.replace("#", "").trim();
@@ -38272,12 +38160,12 @@
     onNoneToggle
   }) {
     const cleanHex = value.replace("#", "").toUpperCase();
-    const [colorHex, setColorHex] = (0, import_react20.useState)(cleanHex);
-    const [colorHsv, setColorHsv] = (0, import_react20.useState)(() => hexToHsv(cleanHex));
-    const [internalOpen, setInternalOpen] = (0, import_react20.useState)(false);
-    const wheelRef = (0, import_react20.useRef)(null);
-    const innerDiscRef = (0, import_react20.useRef)(null);
-    const isInteractingRef = (0, import_react20.useRef)(false);
+    const [colorHex, setColorHex] = (0, import_react19.useState)(cleanHex);
+    const [colorHsv, setColorHsv] = (0, import_react19.useState)(() => hexToHsv(cleanHex));
+    const [internalOpen, setInternalOpen] = (0, import_react19.useState)(false);
+    const wheelRef = (0, import_react19.useRef)(null);
+    const innerDiscRef = (0, import_react19.useRef)(null);
+    const isInteractingRef = (0, import_react19.useRef)(false);
     const isWheelOpen = isOpen !== void 0 ? isOpen : internalOpen;
     const toggleWheel = () => {
       const next = !isWheelOpen;
@@ -38287,7 +38175,7 @@
         setInternalOpen(next);
       }
     };
-    (0, import_react20.useEffect)(() => {
+    (0, import_react19.useEffect)(() => {
       if (isInteractingRef.current) return;
       const nextClean = value.replace("#", "").toUpperCase();
       if (nextClean === colorHex) return;
@@ -38340,11 +38228,11 @@
         onChange(fallback);
       }
     }
-    const colorHsvRef = (0, import_react20.useRef)(colorHsv);
-    (0, import_react20.useEffect)(() => {
+    const colorHsvRef = (0, import_react19.useRef)(colorHsv);
+    (0, import_react19.useEffect)(() => {
       colorHsvRef.current = colorHsv;
     }, [colorHsv]);
-    const updateHueFromPoint = (0, import_react20.useCallback)(
+    const updateHueFromPoint = (0, import_react19.useCallback)(
       (clientX, clientY) => {
         if (!wheelRef.current) return;
         const rect = wheelRef.current.getBoundingClientRect();
@@ -38397,7 +38285,7 @@
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     };
-    const updateSatValFromPoint = (0, import_react20.useCallback)(
+    const updateSatValFromPoint = (0, import_react19.useCallback)(
       (clientX, clientY) => {
         if (!innerDiscRef.current) return;
         const rect = innerDiscRef.current.getBoundingClientRect();
@@ -38616,13 +38504,13 @@
     const initialStrokeWeight = targetPreset ? targetPreset.strokeWeight : firstSelectedNode ? firstSelectedNode.strokeWeight ?? 0 : nodeOptionState.strokeWeight ?? 0;
     const initialStrokeHex = (targetPreset ? targetPreset.strokeColor : firstSelectedNode?.strokeColorHex || nodeOptionState.strokeColor || "#000000").replace("#", "").trim().toUpperCase();
     const validStrokeHex = initialStrokeHex.length === 6 ? initialStrokeHex : "000000";
-    const [fillHex, setFillHex] = (0, import_react21.useState)(isMixed ? "" : validFill);
-    const [isFillNone, setIsFillNone] = (0, import_react21.useState)(isInitialFillNone);
-    const [isFillMixed, setIsFillMixed] = (0, import_react21.useState)(Boolean(isMixed));
-    const [strokeHex, setStrokeHex] = (0, import_react21.useState)(validStrokeHex);
-    const [strokeWeight, setStrokeWeight] = (0, import_react21.useState)(initialStrokeWeight);
-    const lastValidFillRef = (0, import_react21.useRef)(validFill);
-    const [activePicker, setActivePicker] = (0, import_react21.useState)(
+    const [fillHex, setFillHex] = (0, import_react20.useState)(isMixed ? "" : validFill);
+    const [isFillNone, setIsFillNone] = (0, import_react20.useState)(isInitialFillNone);
+    const [isFillMixed, setIsFillMixed] = (0, import_react20.useState)(Boolean(isMixed));
+    const [strokeHex, setStrokeHex] = (0, import_react20.useState)(validStrokeHex);
+    const [strokeWeight, setStrokeWeight] = (0, import_react20.useState)(initialStrokeWeight);
+    const lastValidFillRef = (0, import_react20.useRef)(validFill);
+    const [activePicker, setActivePicker] = (0, import_react20.useState)(
       "fill"
     );
     const handleFillChipClick = () => {
@@ -38935,7 +38823,7 @@
   }
 
   // src/ui/components/modals/ConnectorColorModal.tsx
-  var import_react22 = __toESM(require_react());
+  var import_react21 = __toESM(require_react());
   var import_jsx_runtime24 = __toESM(require_jsx_runtime());
   var CLOSE_SVG2 = /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(
     "path",
@@ -38955,12 +38843,12 @@
     isMixed: initialIsMixed = false
   }) {
     const { stylePresets } = useApp();
-    const [colorHex, setColorHex] = (0, import_react22.useState)(
+    const [colorHex, setColorHex] = (0, import_react21.useState)(
       () => initialIsMixed ? "" : initialColor.replace("#", "").toUpperCase()
     );
-    const [isMixed, setIsMixed] = (0, import_react22.useState)(Boolean(initialIsMixed));
-    const [showWheel, setShowWheel] = (0, import_react22.useState)(false);
-    const uniqueColorPresets = (0, import_react22.useMemo)(() => {
+    const [isMixed, setIsMixed] = (0, import_react21.useState)(Boolean(initialIsMixed));
+    const [showWheel, setShowWheel] = (0, import_react21.useState)(false);
+    const uniqueColorPresets = (0, import_react21.useMemo)(() => {
       const seen = /* @__PURE__ */ new Set();
       const result = [];
       const baseColors = [
@@ -38987,14 +38875,14 @@
     }, [stylePresets]);
     const presetsRow1 = uniqueColorPresets.slice(0, 5);
     const presetsRow2 = uniqueColorPresets.slice(5);
-    (0, import_react22.useEffect)(() => {
+    (0, import_react21.useEffect)(() => {
       if (!initialIsMixed) {
         setColorHex(initialColor.replace("#", "").toUpperCase());
       } else {
         setColorHex("");
       }
     }, [initialColor, initialIsMixed]);
-    (0, import_react22.useEffect)(() => {
+    (0, import_react21.useEffect)(() => {
       setIsMixed(Boolean(initialIsMixed));
     }, [initialIsMixed]);
     function handleSelectPreset(hex) {
@@ -39144,10 +39032,10 @@
   }
 
   // src/ui/components/modals/FillColorModal.tsx
-  var import_react24 = __toESM(require_react());
+  var import_react23 = __toESM(require_react());
 
   // src/ui/components/shared/StylePresetColorGrid.tsx
-  var import_react23 = __toESM(require_react());
+  var import_react22 = __toESM(require_react());
   var import_jsx_runtime25 = __toESM(require_jsx_runtime());
   var BASE_COLORS = [
     { id: "base-white", color: "#FFFFFF" },
@@ -39164,7 +39052,7 @@
     onSelect
   }) {
     const { stylePresets } = useApp();
-    const colors = (0, import_react23.useMemo)(() => {
+    const colors = (0, import_react22.useMemo)(() => {
       const seen = /* @__PURE__ */ new Set();
       const result = [];
       for (const base of BASE_COLORS) {
@@ -39223,11 +39111,11 @@
     const isInitialNone = !isMixed && (rawInit.toLowerCase() === "none" || rawInit.toLowerCase() === "transparent");
     const resolvedColor = (isInitialNone ? "FFFFFF" : rawInit).replace("#", "").trim().toUpperCase();
     const validFill = resolvedColor.length === 6 ? resolvedColor : "FFFFFF";
-    const [fillHex, setFillHex] = (0, import_react24.useState)(isMixed ? "" : validFill);
-    const [isNone, setIsNone] = (0, import_react24.useState)(isInitialNone);
-    const [isFillMixed, setIsFillMixed] = (0, import_react24.useState)(Boolean(isMixed));
-    const [showWheel, setShowWheel] = (0, import_react24.useState)(false);
-    const lastValidFillRef = (0, import_react24.useRef)(validFill);
+    const [fillHex, setFillHex] = (0, import_react23.useState)(isMixed ? "" : validFill);
+    const [isNone, setIsNone] = (0, import_react23.useState)(isInitialNone);
+    const [isFillMixed, setIsFillMixed] = (0, import_react23.useState)(Boolean(isMixed));
+    const [showWheel, setShowWheel] = (0, import_react23.useState)(false);
+    const lastValidFillRef = (0, import_react23.useRef)(validFill);
     const handleColorChange = (hex) => {
       setIsFillMixed(false);
       setFillHex(hex);
@@ -39383,7 +39271,7 @@
   }
 
   // src/ui/components/modals/StrokeColorModal.tsx
-  var import_react25 = __toESM(require_react());
+  var import_react24 = __toESM(require_react());
   var import_jsx_runtime27 = __toESM(require_jsx_runtime());
   var CLOSE_SVG4 = /* @__PURE__ */ (0, import_jsx_runtime27.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
     "path",
@@ -39414,13 +39302,13 @@
     const isInitialNone = !isColorMixed && (initialWeight === 0 || rawInit.toLowerCase() === "none" || rawInit.toLowerCase() === "transparent");
     const resolvedColor = (isInitialNone ? "000000" : rawInit).replace("#", "").trim().toUpperCase();
     const validStroke = resolvedColor.length === 6 ? resolvedColor : "000000";
-    const [strokeHex, setStrokeHex] = (0, import_react25.useState)(isColorMixed ? "" : validStroke);
-    const [strokeWeight, setStrokeWeight] = (0, import_react25.useState)(
+    const [strokeHex, setStrokeHex] = (0, import_react24.useState)(isColorMixed ? "" : validStroke);
+    const [strokeWeight, setStrokeWeight] = (0, import_react24.useState)(
       isWeightMixed ? 0 : initialWeight
     );
-    const [showWheel, setShowWheel] = (0, import_react25.useState)(false);
-    const lastValidColorRef = (0, import_react25.useRef)(validStroke);
-    const lastValidWeightRef = (0, import_react25.useRef)(
+    const [showWheel, setShowWheel] = (0, import_react24.useState)(false);
+    const lastValidColorRef = (0, import_react24.useRef)(validStroke);
+    const lastValidWeightRef = (0, import_react24.useRef)(
       initialWeight > 0 ? initialWeight : 1.5
     );
     const handleColorChange = (hex) => {
@@ -39679,11 +39567,11 @@
       connectorLabelDraft,
       updateConnectorLabelDraft
     } = useApp();
-    const handleAddSizeSave = (0, import_react26.useCallback)((preset) => {
+    const handleAddSizeSave = (0, import_react25.useCallback)((preset) => {
       addSizePreset(preset);
     }, [addSizePreset]);
     const editSizePreset = sizePresets?.find((p) => p.id === selectedSizePresetId) || sizePresets?.[0];
-    const handleEditSizeSave = (0, import_react26.useCallback)((preset) => {
+    const handleEditSizeSave = (0, import_react25.useCallback)((preset) => {
       if (editSizePreset) updateSizePreset(editSizePreset.id, preset);
     }, [editSizePreset, updateSizePreset]);
     const summary = useSelectionSummary();
@@ -39691,15 +39579,18 @@
     const isFigjamSelected = summary.isFigJamObject;
     const isSingleFigjam = isFigjamSelected && nodeCount === 1;
     const isMultiFigjam = isFigjamSelected && nodeCount >= 2;
+    const flooowCount = selectedNodes.filter((n) => n && n.isFlowNode).length;
+    const figjamObjectCount = selectedNodes.filter((n) => n && !n.isFlowNode && !n.isConnector).length;
+    const isMixedNodeAndFigjam = flooowCount > 0 && figjamObjectCount > 0;
     const allConnectors = nodeCount > 0 && selectedNodes.every((n) => n && n.isConnector);
     const isSingleConn = nodeCount === 1 && allConnectors;
     const isMultiConn = nodeCount >= 2 && allConnectors;
     const isConnSel = isSingleConn || isMultiConn;
     const ctaLabel = getCtaLabel(nodeCount);
-    (0, import_react26.useEffect)(() => {
+    (0, import_react25.useEffect)(() => {
       if (isSingleFigjam) {
         if (currentTab !== "node") setCurrentTab("node");
-      } else if (isMultiFigjam) {
+      } else if (isMixedNodeAndFigjam || isMultiFigjam) {
         if (currentTab !== "connection") setCurrentTab("connection");
       } else if (isConnSel) {
         if (currentTab !== "connection") setCurrentTab("connection");
@@ -39708,14 +39599,14 @@
       } else if (nodeCount === 1) {
         if (currentTab === "connection") setCurrentTab("node");
       }
-    }, [isSingleFigjam, isMultiFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
-    (0, import_react26.useEffect)(() => {
+    }, [isSingleFigjam, isMultiFigjam, isMixedNodeAndFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
+    (0, import_react25.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
-    (0, import_react26.useEffect)(() => {
+    (0, import_react25.useEffect)(() => {
       autoResizeWindow();
     }, [isSingleFigjam, isMultiFigjam, autoResizeWindow]);
-    (0, import_react26.useEffect)(() => {
+    (0, import_react25.useEffect)(() => {
       let newlyFocusedInput = null;
       const handleFocusIn = (e) => {
         const target = e.target;
@@ -39752,10 +39643,10 @@
     }, []);
     function switchTab(tabId) {
       if (isSingleFigjam) return;
-      if (isMultiFigjam && tabId !== "connection") return;
+      if ((isMultiFigjam || isMixedNodeAndFigjam) && tabId !== "connection") return;
       if (tabId === "connection" && !isConnSel && nodeCount < 2) return;
-      if (tabId === "appearance" && (nodeCount === 0 || isConnSel || isFigjamSelected)) return;
-      if (tabId === "node" && (isConnSel || isFigjamSelected)) return;
+      if (tabId === "appearance" && (nodeCount === 0 || isConnSel || isFigjamSelected || isMixedNodeAndFigjam)) return;
+      if (tabId === "node" && (isConnSel || isFigjamSelected || isMixedNodeAndFigjam)) return;
       const btn = document.getElementById(`tab-btn-${tabId}`);
       if (btn?.classList.contains("disabled")) return;
       setCurrentTab(tabId);
@@ -39775,8 +39666,8 @@
     function handleContextDelete() {
       setContextMenuOpen(false);
     }
-    const titleDebounceRef = (0, import_react26.useRef)(null);
-    (0, import_react26.useEffect)(() => {
+    const titleDebounceRef = (0, import_react25.useRef)(null);
+    (0, import_react25.useEffect)(() => {
       return () => {
         if (titleDebounceRef.current) {
           clearTimeout(titleDebounceRef.current);
@@ -39786,6 +39677,11 @@
     function renderTitleBanner() {
       if (isSingleFigjam) {
         return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "figjam-title-label", children: "Figjam object" });
+      }
+      if (isMixedNodeAndFigjam) {
+        const nodeLabel = flooowCount === 1 ? "1 Node" : `${flooowCount} Nodes`;
+        const figjamLabel = figjamObjectCount === 1 ? "1 FigJam object" : `${figjamObjectCount} FigJam objects`;
+        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { id: "multi-selection-text", children: `${nodeLabel} and ${figjamLabel} selected` }) });
       }
       if (isMultiFigjam) {
         return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figjam objects selected` }) });
@@ -39825,7 +39721,7 @@
           id: "node-title-input",
           className: "node-title-input",
           maxLength: 32,
-          defaultValue: nodeCount === 1 ? selectedNodes[0]?.title || selectedNodes[0]?.name || "Screen" : "Screen",
+          defaultValue: nodeCount === 1 ? selectedNodes[0]?.title || selectedNodes[0]?.name || getDefaultNodeTitle(selectedNodes[0]?.flowNodeType || selectedNodes[0]?.nodeType, selectedNodes[0]?.branchVariant) : getDefaultNodeTitle(nodeOptionState.nodeType, nodeOptionState.branchVariant),
           placeholder: "Enter node title",
           onInput: () => {
             if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
@@ -39839,8 +39735,8 @@
       /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "title-banner", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }) }),
       /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
         const isConnectionDisabled = isSingleFigjam || !isConnSel && nodeCount < 2;
-        const isAppearanceDisabled = isFigjamSelected || nodeCount === 0 || isConnSel;
-        const isNodeDisabled = isFigjamSelected || isConnSel;
+        const isAppearanceDisabled = isFigjamSelected || isMixedNodeAndFigjam || nodeCount === 0 || isConnSel;
+        const isNodeDisabled = isFigjamSelected || isMixedNodeAndFigjam || isConnSel;
         const isDisabled = tab.id === "connection" ? isConnectionDisabled : tab.id === "appearance" ? isAppearanceDisabled : isNodeDisabled;
         const isActive = !isSingleFigjam && currentTab === tab.id;
         return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
@@ -39888,7 +39784,7 @@
       ] }) }),
       (() => {
         const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
-        const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected;
+        const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected && !isMixedNodeAndFigjam;
         return /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("footer", { className: "app-footer", children: [
           /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "footer-left", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "footer-plan-badge", children: "Free Plan" }) }),
           /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "footer-right", children: isSingleFlow || isSingleFigjam ? (

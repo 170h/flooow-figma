@@ -81,7 +81,6 @@ export function StatusSection() {
 
   // 선택된 노드의 상태와 UI 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   React.useEffect(() => {
-    const isUserLocked = Date.now() - userActionLockRef.current < 600;
     const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : (selectedNodes.length > 1 ? 'MULTI' : null);
     const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
     prevSelectedNodeIdRef.current = currentNodeId;
@@ -89,25 +88,7 @@ export function StatusSection() {
     if (isDifferentNode) {
       setIsOpen(null);
     }
-
-    if (!isUserLocked || isDifferentNode) {
-      if (rawOptionState.supportedCount > 0) {
-        const supported = rawOptionState.supportedNodes;
-        if (supported.length === 1) {
-          const node = supported[0];
-          if (node && node.status) {
-            setNodeOptionState({ status: node.status });
-          }
-        } else {
-          const firstStatus = supported.find((n) => n.status)?.status;
-          const allSame = supported.every((n) => n.status === firstStatus);
-          if (allSame && firstStatus) {
-            setNodeOptionState({ status: firstStatus });
-          }
-        }
-      }
-    }
-  }, [rawOptionState, selectedNodes, setNodeOptionState]);
+  }, [selectedNodes]);
 
   // Multi Draft 상태 반영
   const isTypeDrafted = multiDraft.nodeType !== undefined;

@@ -116,17 +116,17 @@
   var BRANCH_VARIANT_LABELS = {
     CHECK: "Check",
     CROSS: "Cross",
-    YES: "Yes",
-    NO: "No",
-    TRUE: "True",
-    FALSE: "False",
+    TAG: "Tag",
     SQUARE: "Square",
     DIAMOND: "Diamond",
     CIRCLE: "Circle"
   };
   function normalizeBranchVariant(value) {
     const key = String(value || "").trim().toUpperCase();
-    if (key === "CHECK" || key === "CROSS" || key === "YES" || key === "NO" || key === "TRUE" || key === "FALSE" || key === "SQUARE" || key === "DIAMOND" || key === "CIRCLE") {
+    if (key === "YES" || key === "NO" || key === "TRUE" || key === "FALSE" || key === "TAG") {
+      return "TAG";
+    }
+    if (key === "CHECK" || key === "CROSS" || key === "SQUARE" || key === "DIAMOND" || key === "CIRCLE") {
       return key;
     }
     const byLabel = String(value || "").trim();
@@ -139,14 +139,8 @@
     switch (variant) {
       case "DIAMOND":
         return { width: 40, height: 40, cornerRadius: 0, allowDescription: false, allowFigmaLink: false };
-      case "YES":
-        return { width: 58, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-      case "NO":
-        return { width: 53, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-      case "TRUE":
+      case "TAG":
         return { width: 64, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-      case "FALSE":
-        return { width: 68, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
       case "CHECK":
       case "CROSS":
       case "SQUARE":
@@ -156,7 +150,7 @@
     }
   }
   function branchVariantHasTitle(variant) {
-    return variant === "YES" || variant === "NO" || variant === "TRUE" || variant === "FALSE";
+    return variant === "TAG";
   }
   function getBranchVariantDefaultFill(variant) {
     if (variant === "CHECK") return "#14AE5C";
@@ -165,6 +159,42 @@
   }
   function branchVariantUsesStroke(variant) {
     return variant !== "CHECK" && variant !== "CROSS";
+  }
+  var DEFAULT_NODE_TITLE_NAMES = /* @__PURE__ */ new Set([
+    "Screen",
+    "Decision",
+    "Process",
+    "Connector",
+    "Terminator",
+    "Branch",
+    "Action",
+    "System",
+    "Database",
+    "Square",
+    "Junction",
+    "Diamond",
+    "Pill",
+    "Capsule",
+    "Check",
+    "Cross",
+    "Yes",
+    "No",
+    "True",
+    "False",
+    "Tag",
+    "Circle",
+    "Untitled"
+  ]);
+  function isDefaultNodeTitle(title) {
+    const value = String(title || "").trim();
+    return value.length === 0 || DEFAULT_NODE_TITLE_NAMES.has(value);
+  }
+  function getDefaultNodeTitle(nodeType, branchVariant) {
+    const type = normalizeNodeType(nodeType || "Screen");
+    if (type === "Branch") {
+      return BRANCH_VARIANT_LABELS[normalizeBranchVariant(branchVariant)];
+    }
+    return type === "Screen" ? "Screen" : type;
   }
   var OPTION_CAPABILITY_MATRIX = {
     Screen: {
@@ -2072,11 +2102,15 @@
         }
       }
     }
+    if (nodeType === "Decision") {
+      bindShapeTitle(titleText, "decision");
+      return;
+    }
     const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 0;
     const pr = typeof card.paddingRight === "number" ? card.paddingRight : 0;
     const strokeExtra = typeof card.strokeWeight === "number" && Array.isArray(card.strokes) && card.strokes.length > 0 ? card.strokeWeight * 2 : 0;
     const availW = Math.max(10, Math.round(cardWidth - pl - pr - strokeExtra));
-    const truncate = nodeType === "Decision";
+    const truncate = false;
     try {
       titleText.maxWidth = null;
     } catch (_) {
@@ -2106,6 +2140,13 @@
         titleText.layoutAlign = "STRETCH";
       } catch (_2) {
       }
+    }
+    try {
+      titleText.layoutPositioning = "AUTO";
+    } catch (_) {
+    }
+    if (safeGetPluginData2(card, "branch_variant") === "TAG") {
+      titleText.maxLines = 1;
     }
   }
   function calculateCardReadOnlyHugHeight(card) {
@@ -2247,6 +2288,55 @@
     } finally {
       measureNode.remove();
     }
+  }
+  var TITLE_CHAR_LIMIT = 32;
+  var TAG_TITLE_PAD_X = 12;
+  function clampTitleChars(title) {
+    const chars = Array.from(title);
+    return chars.length > TITLE_CHAR_LIMIT ? chars.slice(0, TITLE_CHAR_LIMIT).join("") : title;
+  }
+  async function resolveTagCardWidth(title, minWidth) {
+    const textW = await measureSingleLineTextWidth(
+      title || "Tag",
+      { family: "Inter", style: "Bold" },
+      13
+    );
+    return Math.max(minWidth, textW + TAG_TITLE_PAD_X * 2 + 4);
+  }
+  function bindShapeTitle(titleText, kind) {
+    try {
+      titleText.layoutPositioning = "AUTO";
+    } catch (_) {
+    }
+    titleText.layoutAlign = "STRETCH";
+    try {
+      titleText.layoutSizingHorizontal = "FILL";
+    } catch (_) {
+    }
+    try {
+      titleText.layoutSizingVertical = "HUG";
+    } catch (_) {
+    }
+    try {
+      titleText.maxWidth = null;
+    } catch (_) {
+    }
+    try {
+      titleText.maxHeight = null;
+    } catch (_) {
+    }
+    titleText.textAlignHorizontal = "CENTER";
+    titleText.textAlignVertical = "CENTER";
+    try {
+      titleText.lineHeight = { value: kind === "tag" ? 22 : 18, unit: "PIXELS" };
+    } catch (_) {
+    }
+    try {
+      titleText.textAutoResize = "HEIGHT";
+    } catch (_) {
+    }
+    titleText.textTruncation = "ENDING";
+    titleText.maxLines = kind === "tag" ? 1 : 3;
   }
   async function calculateMinimumInternalContentWidth(status, figmaLink) {
     const hasStatus = Boolean(status && STATUS_CONFIG[status]);
@@ -2505,6 +2595,16 @@
     }
     return pairKeys;
   }
+  function gizmoEndpointTypeLabel(node) {
+    if (!node) return "";
+    const isFlow = safeGetPluginData2(node, "is_flow_node") === "true" || Boolean(safeGetPluginData2(node, "node_type"));
+    if (!isFlow) return "FigJam object";
+    const flowType = normalizeNodeType(safeGetPluginData2(node, "node_type") || "Screen");
+    if (flowType === "Branch") {
+      return BRANCH_VARIANT_LABELS[normalizeBranchVariant(safeGetPluginData2(node, "branch_variant"))];
+    }
+    return flowType;
+  }
   async function handleSelectionChange() {
     await loadRequiredFonts();
     const rawSelection = figma.currentPage.selection;
@@ -2533,7 +2633,9 @@
     const otherObjectCount = otherObjects.length;
     const connectorCount = connNodes.length;
     let uniqueNodes = [];
-    if (flowNodeCount > 0) {
+    if (flowNodeCount > 0 && otherObjectCount > 0 && connectorCount === 0) {
+      uniqueNodes = [...flowNodes, ...otherObjects];
+    } else if (flowNodeCount > 0) {
       uniqueNodes = flowNodes;
     } else if (connectorCount > 0 && otherObjectCount === 0) {
       uniqueNodes = connNodes;
@@ -2546,6 +2648,7 @@
       uniqueNodes = orderNodesForChain(uniqueNodes);
     }
     let multiConnectorSortedNodeNames = [];
+    let multiConnectorSortedNodeTypes = [];
     if (connectorCount > 0 && flowNodeCount === 0) {
       const endpointNodeMap = /* @__PURE__ */ new Map();
       for (const c of connNodes) {
@@ -2576,6 +2679,7 @@
       if (endpointNodes.length > 0) {
         const sortedEndpoints = sortNodesBySpatialPosition(endpointNodes);
         multiConnectorSortedNodeNames = sortedEndpoints.map((n) => n.name);
+        multiConnectorSortedNodeTypes = sortedEndpoints.map((n) => gizmoEndpointTypeLabel(n));
       }
     }
     const nodes = await Promise.all(uniqueNodes.map(async (node) => {
@@ -2600,6 +2704,8 @@
       let connectorEndOffset = 0;
       let connectorSourceNodeName;
       let connectorTargetNodeName;
+      let connectorSourceNodeType;
+      let connectorTargetNodeType;
       let connectorSourceMagnet;
       let connectorTargetMagnet;
       let connectorIsReversed = false;
@@ -2643,14 +2749,20 @@
           let targetEndpointNode = null;
           if (conn.connectorStart && "endpointNodeId" in conn.connectorStart && conn.connectorStart.endpointNodeId) {
             sourceEndpointNode = figma.getNodeById(conn.connectorStart.endpointNodeId);
-            if (sourceEndpointNode) connectorSourceNodeName = sourceEndpointNode.name;
+            if (sourceEndpointNode) {
+              connectorSourceNodeName = sourceEndpointNode.name;
+              connectorSourceNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
+            }
             if ("magnet" in conn.connectorStart) {
               connectorSourceMagnet = conn.connectorStart.magnet;
             }
           }
           if (conn.connectorEnd && "endpointNodeId" in conn.connectorEnd && conn.connectorEnd.endpointNodeId) {
             targetEndpointNode = figma.getNodeById(conn.connectorEnd.endpointNodeId);
-            if (targetEndpointNode) connectorTargetNodeName = targetEndpointNode.name;
+            if (targetEndpointNode) {
+              connectorTargetNodeName = targetEndpointNode.name;
+              connectorTargetNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
+            }
             if ("magnet" in conn.connectorEnd) {
               connectorTargetMagnet = conn.connectorEnd.magnet;
             }
@@ -2687,10 +2799,15 @@
             if (sourceEndpointNode && targetEndpointNode) {
               connectorSourceNodeName = targetEndpointNode.name;
               connectorTargetNodeName = sourceEndpointNode.name;
+              connectorSourceNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
+              connectorTargetNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
             } else {
               const tempName = connectorSourceNodeName;
               connectorSourceNodeName = connectorTargetNodeName;
               connectorTargetNodeName = tempName;
+              const tempType = connectorSourceNodeType;
+              connectorSourceNodeType = connectorTargetNodeType;
+              connectorTargetNodeType = tempType;
             }
             const tempMagnet = connectorSourceMagnet;
             connectorSourceMagnet = connectorTargetMagnet;
@@ -2729,11 +2846,17 @@
           let targetEndpointNode = null;
           if (srcId) {
             sourceEndpointNode = figma.getNodeById(srcId);
-            if (sourceEndpointNode) connectorSourceNodeName = sourceEndpointNode.name;
+            if (sourceEndpointNode) {
+              connectorSourceNodeName = sourceEndpointNode.name;
+              connectorSourceNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
+            }
           }
           if (tgtId) {
             targetEndpointNode = figma.getNodeById(tgtId);
-            if (targetEndpointNode) connectorTargetNodeName = targetEndpointNode.name;
+            if (targetEndpointNode) {
+              connectorTargetNodeName = targetEndpointNode.name;
+              connectorTargetNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
+            }
           }
           connectorSourceMagnet = node.getPluginData("source_magnet") || "RIGHT";
           connectorTargetMagnet = node.getPluginData("target_magnet") || "LEFT";
@@ -2770,6 +2893,8 @@
               connectorIsReversed = true;
               connectorSourceNodeName = targetEndpointNode.name;
               connectorTargetNodeName = sourceEndpointNode.name;
+              connectorSourceNodeType = gizmoEndpointTypeLabel(targetEndpointNode);
+              connectorTargetNodeType = gizmoEndpointTypeLabel(sourceEndpointNode);
               const tempMagnet = connectorSourceMagnet;
               connectorSourceMagnet = connectorTargetMagnet;
               connectorTargetMagnet = tempMagnet;
@@ -2901,10 +3026,13 @@
         connectorEndOffset,
         connectorSourceNodeName,
         connectorTargetNodeName,
+        connectorSourceNodeType,
+        connectorTargetNodeType,
         connectorSourceMagnet,
         connectorTargetMagnet,
         connectorIsReversed,
         connectedNodeNames: multiConnectorSortedNodeNames.length > 0 ? multiConnectorSortedNodeNames : void 0,
+        connectedNodeTypes: multiConnectorSortedNodeTypes.length > 0 ? multiConnectorSortedNodeTypes : void 0,
         width: Math.round(node.width),
         height: Math.round(node.height),
         cornerRadius,
@@ -3409,30 +3537,9 @@
         } catch (_) {
         }
         if (nType === "Decision") {
-          const pCard = flowNode;
-          const pl = pCard && typeof pCard.paddingLeft === "number" ? pCard.paddingLeft : 24;
-          const pr = pCard && typeof pCard.paddingRight === "number" ? pCard.paddingRight : 24;
-          const curW = pCard ? Math.max(50, pCard.width - pl - pr) : Math.max(50, textNode.width);
-          try {
-            textNode.resize(curW, 54);
-          } catch (_) {
-          }
-          try {
-            textNode.maxHeight = 54;
-          } catch (_) {
-          }
-          try {
-            textNode.textAutoResize = "TRUNCATE";
-          } catch (_) {
-          }
-          try {
-            textNode.textTruncation = "ENDING";
-          } catch (_) {
-          }
-          try {
-            textNode.maxLines = 3;
-          } catch (_) {
-          }
+          bindShapeTitle(textNode, "decision");
+        } else if (nType === "Branch" && flowNode && safeGetPluginData2(flowNode, "branch_variant") === "TAG") {
+          bindShapeTitle(textNode, "tag");
         } else {
           try {
             textNode.maxHeight = null;
@@ -3739,7 +3846,7 @@
       if (variant === "DIAMOND") {
         return `M ${w / 2} 0 L ${w} ${h / 2} L ${w / 2} ${h} L 0 ${h / 2} Z`;
       }
-      if (variant === "YES" || variant === "NO" || variant === "TRUE" || variant === "FALSE") {
+      if (variant === "TAG") {
         return getJunctionCapsulePath(w, h);
       }
       return getJunctionEllipsePath(w, h);
@@ -3865,9 +3972,15 @@
       const branchVariant = nodeType === "Branch" ? normalizeBranchVariant(payload.branchVariant) : void 0;
       const spec = (branchVariant ? getBranchVariantSpec(branchVariant) : NODE_TYPE_SHAPE_SPECS[nodeType]) || NODE_TYPE_SHAPE_SPECS.Screen;
       const isShapeNode = !spec.allowDescription;
-      const rawTitle = payload.title !== void 0 ? payload.title.trim() : branchVariant ? BRANCH_VARIANT_LABELS[branchVariant] : nodeType === "Screen" ? "Screen" : nodeType;
-      const title = rawTitle;
-      const width = isShapeNode ? spec.width : payload.width ? clampScreenWidth(payload.width) : spec.width;
+      const rawTitle = payload.title !== void 0 ? payload.title.trim() : "";
+      let title = branchVariant ? isDefaultNodeTitle(rawTitle) ? BRANCH_VARIANT_LABELS[branchVariant] : rawTitle : rawTitle || getDefaultNodeTitle(nodeType);
+      if (branchVariant === "TAG") {
+        title = clampTitleChars(title);
+      }
+      let width = isShapeNode ? spec.width : payload.width ? clampScreenWidth(payload.width) : spec.width;
+      if (branchVariant === "TAG") {
+        width = await resolveTagCardWidth(title, spec.width);
+      }
       const height = isShapeNode ? spec.height : payload.height ? clampScreenHeight(payload.height) : spec.height;
       const defaultRadius = spec.cornerRadius !== void 0 ? spec.cornerRadius : 0;
       const cornerRadius = isShapeNode ? defaultRadius : typeof payload.cornerRadius === "number" ? clampScreenCornerRadius(payload.cornerRadius) : defaultRadius;
@@ -3921,7 +4034,7 @@
       card.maxHeight = height;
       if (isShapeNode) {
         const showBranchTitle = Boolean(branchVariant && branchVariantHasTitle(branchVariant));
-        const hPad = branchVariant ? showBranchTitle ? 16 : 0 : nodeType === "Decision" ? 24 : nodeType === "Junction" || nodeType === "Connector" ? 18 : 12;
+        const hPad = branchVariant ? showBranchTitle ? TAG_TITLE_PAD_X : 0 : nodeType === "Decision" ? 24 : nodeType === "Junction" || nodeType === "Connector" ? 18 : 12;
         card.paddingLeft = hPad;
         card.paddingRight = hPad;
         card.paddingTop = branchVariant ? showBranchTitle ? 5 : 0 : 12;
@@ -3944,33 +4057,19 @@
         titleText.textAlignVertical = "CENTER";
         titleText.layoutAlign = "STRETCH";
         titleText.visible = !branchVariant || showBranchTitle;
-        if (nodeType === "Decision") {
-          const availW = Math.max(10, width - (card.paddingLeft || 24) - (card.paddingRight || 24));
-          titleText.resize(availW, 54);
-          titleText.maxHeight = 54;
-          titleText.textAutoResize = "TRUNCATE";
-          titleText.textTruncation = "ENDING";
-          titleText.maxLines = 3;
-        } else {
-          titleText.textAutoResize = "HEIGHT";
-          titleText.textTruncation = "ENDING";
-          titleText.maxLines = 3;
-        }
+        bindShapeTitle(
+          titleText,
+          nodeType === "Decision" ? "decision" : showBranchTitle ? "tag" : "shape"
+        );
         titleText.setPluginData("node_role", "title");
         card.appendChild(titleText);
       } else {
         const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
         const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
         const hasBottomBar = hasStatus || hasLink;
-        if (!description && !hasBottomBar) {
-          card.paddingTop = 14;
-          card.paddingBottom = 14;
-          card.primaryAxisAlignItems = "CENTER";
-        } else {
-          card.paddingTop = 14;
-          card.paddingBottom = hasBottomBar ? 36 : 16;
-          card.primaryAxisAlignItems = "MIN";
-        }
+        card.paddingTop = 14;
+        card.paddingBottom = !description && !hasBottomBar ? 14 : hasBottomBar ? 36 : 16;
+        card.primaryAxisAlignItems = "MIN";
         card.paddingLeft = 16;
         card.paddingRight = 16;
         card.itemSpacing = 8;
@@ -4158,6 +4257,14 @@
         card.y = center.y - Math.round(height / 2);
       }
       figma.currentPage.appendChild(card);
+      if (nodeType === "Decision" || branchVariant === "TAG") {
+        const createdTitle = card.findOne(
+          (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
+        );
+        if (createdTitle) {
+          bindShapeTitle(createdTitle, nodeType === "Decision" ? "decision" : "tag");
+        }
+      }
       figma.currentPage.selection = [card];
       figma.viewport.scrollAndZoomIntoView([card]);
       handleSelectionChange();
@@ -4282,16 +4389,27 @@
       "No",
       "True",
       "False",
+      "Tag",
       "Circle"
     ]);
     const currentTitle = patch.title !== void 0 ? patch.title.trim() : card.name || safeGetPluginData2(card, "node_title") || "";
     const incomingIsPlaceholder = !currentTitle || currentTitle === "Untitled" || DEFAULT_SHAPE_NAMES.has(currentTitle) || (prevBranchVariant ? currentTitle === BRANCH_VARIANT_LABELS[prevBranchVariant] : false);
     const leavingUntitledBranch = prevNodeType === "Branch" && nodeType !== "Branch" && Boolean(prevBranchVariant && !branchVariantHasTitle(prevBranchVariant));
+    const targetDefaultTitle = getDefaultNodeTitle(nodeType, batchBranchVariant);
+    const branchVariantChanged = Boolean(
+      batchBranchVariant && prevBranchVariant && batchBranchVariant !== prevBranchVariant
+    );
+    const nodeTypeChanged = prevNodeType !== nodeType;
     let effectiveTitle = currentTitle;
     if (leavingUntitledBranch && incomingIsPlaceholder || isChangingToScreen && incomingIsPlaceholder) {
-      effectiveTitle = nodeType === "Screen" ? "Screen" : nodeType;
-    } else if (patch.nodeType !== void 0 && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
+      effectiveTitle = targetDefaultTitle;
+    } else if (batchBranchVariant && isDefaultNodeTitle(currentTitle) && (nodeTypeChanged || branchVariantChanged || currentTitle === targetDefaultTitle || currentTitle === "Branch" || currentTitle === "Screen")) {
+      effectiveTitle = targetDefaultTitle;
+    } else if (patch.nodeType !== void 0 && nodeType !== "Branch" && !isChangingToScreen && DEFAULT_SHAPE_NAMES.has(currentTitle)) {
       effectiveTitle = nodeType;
+    }
+    if (batchBranchVariant === "TAG") {
+      effectiveTitle = clampTitleChars(effectiveTitle);
     }
     card.name = effectiveTitle;
     card.clipsContent = false;
@@ -4311,6 +4429,9 @@
       targetW = spec.width;
       targetH = spec.height;
       targetR = spec.cornerRadius ?? 0;
+      if (batchBranchVariant === "TAG") {
+        targetW = await resolveTagCardWidth(effectiveTitle, spec.width);
+      }
     } else if (isChangingToScreen) {
       targetW = patch.width !== void 0 ? clampScreenWidth(patch.width) : restoredScreenW ? clampScreenWidth(restoredScreenW) : spec.width;
       targetH = patch.height !== void 0 ? clampScreenHeight(patch.height) : restoredScreenH ? clampScreenHeight(restoredScreenH) : spec.height;
@@ -4427,46 +4548,10 @@
       titleText.textAlignVertical = "CENTER";
       titleText.lineHeight = { value: showBranchTitle ? 22 : 18, unit: "PIXELS" };
       titleText.visible = !batchBranchVariant || showBranchTitle;
-      if (nodeType === "Decision") {
-        const availW = Math.max(10, card.width - (card.paddingLeft || 24) - (card.paddingRight || 24));
-        try {
-          titleText.resize(availW, 54);
-        } catch (_) {
-        }
-        try {
-          titleText.maxHeight = 54;
-        } catch (_) {
-        }
-        try {
-          titleText.textAutoResize = "TRUNCATE";
-        } catch (_) {
-        }
-        try {
-          titleText.textTruncation = "ENDING";
-        } catch (_) {
-        }
-        try {
-          titleText.maxLines = 3;
-        } catch (_) {
-        }
-      } else {
-        try {
-          titleText.maxHeight = null;
-        } catch (_) {
-        }
-        try {
-          titleText.textAutoResize = "HEIGHT";
-        } catch (_) {
-        }
-        try {
-          titleText.textTruncation = "ENDING";
-        } catch (_) {
-        }
-        try {
-          titleText.maxLines = 3;
-        } catch (_) {
-        }
-      }
+      bindShapeTitle(
+        titleText,
+        nodeType === "Decision" ? "decision" : showBranchTitle ? "tag" : "shape"
+      );
       await safeSetCharacters(titleText, batchBranchVariant && !showBranchTitle ? "" : effectiveTitle);
       const hasExistingTitleFill = titleText.fills === figma.mixed || Array.isArray(titleText.fills) && titleText.fills.length > 0;
       if (!hasExistingTitleFill || patch.colorHex) {
@@ -4572,7 +4657,7 @@
     const hasBottomBar = !isShapeNode && Boolean(effectiveStatus || effectiveLink);
     if (isShapeNode) {
       const showBranchTitle = Boolean(batchBranchVariant && branchVariantHasTitle(batchBranchVariant));
-      const hPad = batchBranchVariant ? showBranchTitle ? 16 : 0 : nodeType === "Decision" ? 24 : 12;
+      const hPad = batchBranchVariant ? showBranchTitle ? TAG_TITLE_PAD_X : 0 : nodeType === "Decision" ? 24 : 12;
       card.paddingLeft = hPad;
       card.paddingRight = hPad;
       card.paddingTop = batchBranchVariant ? showBranchTitle ? 5 : 0 : 12;
@@ -4586,7 +4671,7 @@
       card.paddingRight = 16;
       card.paddingTop = 14;
       card.paddingBottom = hasBottomBar ? 36 : isDescOn ? 16 : 14;
-      card.primaryAxisAlignItems = !isDescOn && !hasBottomBar ? "CENTER" : "MIN";
+      card.primaryAxisAlignItems = "MIN";
       card.counterAxisAlignItems = "MIN";
     }
     let statusBadge = !isShapeNode ? card.children.find(
@@ -4977,29 +5062,9 @@
         } catch (_) {
         }
         if (nType === "Decision") {
-          const pl = typeof frame.paddingLeft === "number" ? frame.paddingLeft : 24;
-          const pr = typeof frame.paddingRight === "number" ? frame.paddingRight : 24;
-          const curW = Math.max(50, w - pl - pr);
-          try {
-            title.resize(curW, 54);
-          } catch (_) {
-          }
-          try {
-            title.maxHeight = 54;
-          } catch (_) {
-          }
-          try {
-            title.textAutoResize = "TRUNCATE";
-          } catch (_) {
-          }
-          try {
-            title.textTruncation = "ENDING";
-          } catch (_) {
-          }
-          try {
-            title.maxLines = 3;
-          } catch (_) {
-          }
+          bindShapeTitle(title, "decision");
+        } else if (nType === "Branch" && safeGetPluginData2(frame, "branch_variant") === "TAG") {
+          bindShapeTitle(title, "tag");
         } else {
           try {
             title.maxHeight = null;
@@ -6321,7 +6386,7 @@
     const branchShape = nodeType === "Branch" ? branchVariant || "CIRCLE" : void 0;
     const treatBranchAsRect = branchShape === "SQUARE";
     const treatBranchAsDiamond = branchShape === "DIAMOND";
-    const treatBranchAsCapsule = branchShape === "YES" || branchShape === "NO" || branchShape === "TRUE" || branchShape === "FALSE";
+    const treatBranchAsCapsule = branchShape === "TAG";
     const treatBranchAsCircle = Boolean(branchShape) && !treatBranchAsRect && !treatBranchAsDiamond && !treatBranchAsCapsule;
     if (!treatBranchAsCircle && !treatBranchAsDiamond && !treatBranchAsCapsule && nodeType !== "Junction" && nodeType !== "Connector" && nodeType !== "Decision" && nodeType !== "Terminator") {
       const offset = 11;
@@ -6734,6 +6799,49 @@
     }
   };
   var internalLayoutNodeIds = /* @__PURE__ */ new Set();
+  async function fitTagCapsuleToTitle(card, rawTitle) {
+    const title = clampTitleChars((rawTitle || "").trim() || "Tag");
+    const spec = getBranchVariantSpec("TAG");
+    const nextW = await resolveTagCardWidth(title, spec.width);
+    const nextH = spec.height;
+    card.name = title;
+    const shape = card.children.find(
+      (c) => c.name === "ShapeVector" || c.name === "DiamondShape"
+    );
+    let bg = { r: 1, g: 1, b: 1 };
+    let stroke = hexToRgbColor("#1E1E1E");
+    let strokeW = 1.5;
+    if (shape && "fills" in shape && Array.isArray(shape.fills) && shape.fills[0]?.type === "SOLID") {
+      bg = shape.fills[0].color;
+    }
+    if (shape && "strokes" in shape && Array.isArray(shape.strokes) && shape.strokes[0]?.type === "SOLID") {
+      stroke = shape.strokes[0].color;
+    }
+    if (shape && "strokeWeight" in shape && typeof shape.strokeWeight === "number") {
+      strokeW = shape.strokeWeight;
+    }
+    const widthChanged = Math.round(card.width) !== nextW || Math.round(card.height) !== nextH;
+    if (widthChanged) {
+      card.minWidth = null;
+      card.maxWidth = null;
+      card.minHeight = null;
+      card.maxHeight = null;
+      internalLayoutNodeIds.add(card.id);
+      card.resize(nextW, nextH);
+      card.primaryAxisSizingMode = "FIXED";
+      card.counterAxisSizingMode = "FIXED";
+      card.minWidth = nextW;
+      card.maxWidth = nextW;
+      card.minHeight = nextH;
+      card.maxHeight = nextH;
+      if (shape) shape.remove();
+      attachShapeVectorNode(card, "Branch", nextW, nextH, bg, stroke, strokeW, true, "TAG");
+    }
+    const titleText = card.findOne(
+      (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
+    );
+    if (titleText) bindShapeTitle(titleText, "tag");
+  }
   figma.on("documentchange", async (event) => {
     const movedNodeIds = /* @__PURE__ */ new Set();
     let connectorSelectionChanged = false;
@@ -6836,11 +6944,11 @@
               const flowNode = findFlowNode(textNode);
               if (flowNode) {
                 const isScreen = flowNode.type === "FRAME" && normalizeNodeType(safeGetPluginData2(flowNode, "node_type")) === "Screen";
-                if (isTitle && isScreen) {
-                  const charArray = Array.from(textNode.characters);
-                  if (charArray.length > 32) {
-                    const truncatedTitle = charArray.slice(0, 32).join("");
-                    await safeSetCharacters(textNode, truncatedTitle);
+                const isTag = flowNode.type === "FRAME" && normalizeNodeType(safeGetPluginData2(flowNode, "node_type")) === "Branch" && safeGetPluginData2(flowNode, "branch_variant") === "TAG";
+                if (isTitle && (isScreen || isTag)) {
+                  const limited = clampTitleChars(textNode.characters);
+                  if (limited !== textNode.characters) {
+                    await safeSetCharacters(textNode, limited);
                   }
                 }
                 if (isTitle) {
@@ -6865,6 +6973,9 @@
                     }
                   }
                   await enforceTitleStandardStyle(textNode, flowNode);
+                  if (isTag && flowNode.type === "FRAME") {
+                    await fitTagCapsuleToTitle(flowNode, textNode.characters);
+                  }
                 }
                 if (isScreen) {
                   const card = flowNode;

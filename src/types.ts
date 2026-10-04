@@ -15,56 +15,8 @@ export interface StatusMeta {
   hex: string;
 }
 
-export const STATUS_CONFIG: Record<WorkflowStatus, StatusMeta> = {
-  draft: {
-    label: 'Draft',
-    color: { r: 0.612, g: 0.639, b: 0.686 }, // #9CA3AF
-    textColor: { r: 1, g: 1, b: 1 },
-    hex: '#9CA3AF',
-  },
-  wireframe: {
-    label: 'Wireframe',
-    color: { r: 0.42, g: 0.447, b: 0.502 }, // #6B7280
-    textColor: { r: 1, g: 1, b: 1 },
-    hex: '#6B7280',
-  },
-  in_progress: {
-    label: 'In Progress',
-    color: { r: 0.231, g: 0.51, b: 0.965 }, // #3B82F6
-    textColor: { r: 1, g: 1, b: 1 },
-    hex: '#3B82F6',
-  },
-  in_review: {
-    label: 'In Review',
-    color: { r: 1, g: 0.62, b: 0.259 }, // #FF9E42
-    textColor: { r: 1, g: 1, b: 1 },
-    hex: '#FF9E42',
-  },
-  revision: {
-    label: 'Revision',
-    color: { r: 0.949, g: 0.282, b: 0.133 }, // #F24822
-    textColor: { r: 1, g: 1, b: 1 },
-    hex: '#F24822',
-  },
-  approved: {
-    label: 'Approved',
-    color: { r: 0.545, g: 0.361, b: 0.965 }, // #8B5CF6
-    textColor: { r: 1, g: 1, b: 1 },
-    hex: '#8B5CF6',
-  },
-  ready_for_dev: {
-    label: 'Ready for Dev',
-    color: { r: 0.086, g: 0.639, b: 0.29 }, // #16A34A
-    textColor: { r: 1, g: 1, b: 1 },
-    hex: '#16A34A',
-  },
-  done: {
-    label: 'Done',
-    color: { r: 0.216, g: 0.255, b: 0.318 }, // #374151
-    textColor: { r: 1, g: 1, b: 1 },
-    hex: '#374151',
-  },
-};
+// NOTE: 런타임 값(STATUS_CONFIG)은 src/domain/nodeDomain.ts로 이동.
+// 프로토콜 계약(타입)은 이 파일에 유지한다 (INV-07).
 
 export interface FrameStatusItem {
   id: string;
@@ -100,45 +52,6 @@ export type DiagramNodeType =
   | 'Bridge';
 
 /**
- * 다양한 노드 타입 및 레거시 타입을 6종 표준 타입으로 정규화합니다.
- */
-export function normalizeNodeType(type?: string): DiagramNodeType {
-  if (!type) return 'Screen';
-  const clean = String(type).trim().toLowerCase();
-  switch (clean) {
-    case 'screen':
-      return 'Screen';
-    case 'process':
-    case 'square':
-    case 'rectangle':
-    case 'action':
-    case 'error':
-    case 'true':
-    case 'false':
-      return 'Process';
-    case 'junction':
-    case 'connector':
-    case 'system':
-    case 'database':
-      return 'Junction';
-    case 'decision':
-    case 'diamond':
-      return 'Decision';
-    case 'terminator':
-    case 'pill':
-    case 'capsule':
-      return 'Terminator';
-    case 'branch':
-    case 'subflow':
-      return 'Branch';
-    case 'bridge':
-      return 'Branch';
-    default:
-      return (type as DiagramNodeType) || 'Screen';
-  }
-}
-
-/**
  * 노드 타입별 도형 규격 및 디스크립션 허용 여부 명세
  */
 export interface NodeTypeShapeSpec {
@@ -149,103 +62,19 @@ export interface NodeTypeShapeSpec {
   allowFigmaLink: boolean;
 }
 
-export const NODE_TYPE_SHAPE_SPECS: Record<string, NodeTypeShapeSpec> = {
-  Screen: { width: 250, height: 90, cornerRadius: 0, allowDescription: true, allowFigmaLink: true },
-  Process: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  Junction: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-  Decision: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  Terminator: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
-  Branch: { width: 180, height: 90, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  // 레거시 별칭 호환
-  Connector: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-  Square: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  Rectangle: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  Diamond: { width: 140, height: 140, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  Pill: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
-  Action: { width: 120, height: 120, cornerRadius: 0, allowDescription: false, allowFigmaLink: false },
-  System: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-  Database: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-  Capsule: { width: 180, height: 90, cornerRadius: 45, allowDescription: false, allowFigmaLink: false },
-  Bridge: { width: 120, height: 120, cornerRadius: 60, allowDescription: false, allowFigmaLink: false },
-};
+// NOTE: NODE_TYPE_SHAPE_SPECS 값은 src/domain/nodeDomain.ts로 이동.
 
 /** Branch(Type Bridge) 하위 형태 (Type 칩 → 캔버스 노드) */
 export type BranchVariant =
   | 'CHECK'
   | 'CROSS'
-  | 'YES'
-  | 'NO'
-  | 'TRUE'
-  | 'FALSE'
+  | 'TAG'
   | 'SQUARE'
   | 'DIAMOND'
   | 'CIRCLE';
 
-export const BRANCH_VARIANT_ORDER: BranchVariant[] = [
-  'CHECK', 'CROSS', 'YES', 'NO', 'TRUE', 'FALSE', 'SQUARE', 'DIAMOND', 'CIRCLE',
-];
-
-export const BRANCH_VARIANT_LABELS: Record<BranchVariant, string> = {
-  CHECK: 'Check',
-  CROSS: 'Cross',
-  YES: 'Yes',
-  NO: 'No',
-  TRUE: 'True',
-  FALSE: 'False',
-  SQUARE: 'Square',
-  DIAMOND: 'Diamond',
-  CIRCLE: 'Circle',
-};
-
-export function normalizeBranchVariant(value?: string | null): BranchVariant {
-  const key = String(value || '').trim().toUpperCase();
-  if (
-    key === 'CHECK' || key === 'CROSS' || key === 'YES' || key === 'NO' ||
-    key === 'TRUE' || key === 'FALSE' || key === 'SQUARE' || key === 'DIAMOND' || key === 'CIRCLE'
-  ) {
-    return key;
-  }
-  const byLabel = String(value || '').trim();
-  const found = (Object.keys(BRANCH_VARIANT_LABELS) as BranchVariant[]).find(
-    (k) => BRANCH_VARIANT_LABELS[k] === byLabel
-  );
-  return found || 'CIRCLE';
-}
-
-export function getBranchVariantSpec(variant: BranchVariant): NodeTypeShapeSpec {
-  switch (variant) {
-    case 'DIAMOND':
-      return { width: 40, height: 40, cornerRadius: 0, allowDescription: false, allowFigmaLink: false };
-    case 'YES':
-      return { width: 58, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-    case 'NO':
-      return { width: 53, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-    case 'TRUE':
-      return { width: 64, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-    case 'FALSE':
-      return { width: 68, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-    case 'CHECK':
-    case 'CROSS':
-    case 'SQUARE':
-    case 'CIRCLE':
-    default:
-      return { width: 32, height: 32, cornerRadius: 16, allowDescription: false, allowFigmaLink: false };
-  }
-}
-
-export function branchVariantHasTitle(variant: BranchVariant): boolean {
-  return variant === 'YES' || variant === 'NO' || variant === 'TRUE' || variant === 'FALSE';
-}
-
-export function getBranchVariantDefaultFill(variant: BranchVariant): string {
-  if (variant === 'CHECK') return '#14AE5C';
-  if (variant === 'CROSS') return '#F24822';
-  return '#FFFFFF';
-}
-
-export function branchVariantUsesStroke(variant: BranchVariant): boolean {
-  return variant !== 'CHECK' && variant !== 'CROSS';
-}
+// NOTE: BRANCH_VARIANT_* 값과 normalize/get*BranchVariant* 함수는
+// src/domain/nodeDomain.ts로 이동.
 
 /**
  * 노드 분류 4대 범주 (Option Capability Matrix 기준)
@@ -269,119 +98,8 @@ export type PluginOption =
   | 'figmaLink'
   | 'style';
 
-/**
- * Option Capability Matrix
- * 각 노드 범주별 옵션 지원 여부 단일 소스 오브 트루스
- */
-export const OPTION_CAPABILITY_MATRIX: Record<NodeCategory, Record<PluginOption, boolean>> = {
-  Screen: {
-    title: true,
-    description: true,
-    status: true,
-    stepBadge: true,
-    elevation: true,
-    size: true,
-    figmaLink: true,
-    style: true,
-  },
-  Shape: {
-    title: true,
-    description: false,
-    status: false,
-    stepBadge: true,
-    elevation: true,
-    size: false,
-    figmaLink: false,
-    style: true,
-  },
-  Bridge: {
-    title: true,
-    description: false,
-    status: false,
-    stepBadge: false,
-    elevation: false,
-    size: false,
-    figmaLink: false,
-    style: true,
-  },
-  FigmaObject: {
-    title: false,
-    description: false,
-    status: false,
-    stepBadge: false,
-    elevation: false,
-    size: false,
-    figmaLink: false,
-    style: false,
-  },
-};
-
-/**
- * 노드 객체(UI NodeInfo 또는 Core SceneNode)의 최종 타입을 기반으로
- * 4대 범주('Screen' | 'Shape' | 'Bridge' | 'FigmaObject') 중 하나를 판별합니다.
- */
-export function getNodeCategory(node: any): NodeCategory {
-  if (!node) return 'FigmaObject';
-
-  // 피그마 커넥터(연결선)인 경우
-  if (node.isConnector || node.type === 'CONNECTOR') {
-    return 'FigmaObject';
-  }
-
-  // 플로우 노드 여부 검사
-  const hasPluginDataFn = typeof node.getPluginData === 'function';
-  const isFlowNode = Boolean(
-    node.isFlowNode ||
-    (hasPluginDataFn && (node.getPluginData('is_flow_node') === 'true' || Boolean(node.getPluginData('node_type'))))
-  );
-
-  // 플로우 노드가 아니고 구형 쉐이프(SHAPE_WITH_TEXT)도 아닌 경우 일반 Figma 객체
-  if (!isFlowNode && node.type !== 'SHAPE_WITH_TEXT') {
-    return 'FigmaObject';
-  }
-
-  // 현재 최종 노드 타입 추출 및 정규화
-  let rawType: string | undefined = node.flowNodeType;
-  if (!rawType && hasPluginDataFn) {
-    rawType = node.getPluginData('node_type');
-  }
-  if (!rawType && node.nodeType && node.nodeType !== 'FRAME') {
-    rawType = node.nodeType;
-  }
-  const normType = normalizeNodeType(rawType);
-
-  switch (normType) {
-    case 'Screen':
-      return 'Screen';
-    case 'Process':
-    case 'Junction':
-    case 'Connector':
-    case 'Decision':
-    case 'Terminator':
-      return 'Shape';
-    case 'Branch':
-    case 'Bridge':
-      return 'Bridge';
-    default:
-      return 'Shape';
-  }
-}
-
-/**
- * 노드가 특정 옵션(Capability)을 현재 지원하는지 판별합니다.
- */
-export function supportsOption(node: any, option: PluginOption): boolean {
-  const category = getNodeCategory(node);
-  return OPTION_CAPABILITY_MATRIX[category]?.[option] ?? false;
-}
-
-/**
- * 주어진 노드 목록에서 특정 옵션을 지원하는 노드만 필터링합니다. (실제 데이터 변경 대상 추출)
- */
-export function getMutationTargets<T = any>(nodes: T[], option: PluginOption): T[] {
-  if (!Array.isArray(nodes)) return [];
-  return nodes.filter((n) => supportsOption(n, option));
-}
+// NOTE: OPTION_CAPABILITY_MATRIX 값과 getNodeCategory/supportsOption/
+// getMutationTargets 함수는 src/domain/nodeDomain.ts로 이동.
 
 export type OptionCapability =
   | 'SUPPORTED'
@@ -403,28 +121,7 @@ export interface CapabilityNodeTarget {
   [key: string]: any;
 }
 
-/**
- * 선택된 노드 집합 전체에 대한 특정 옵션의 지원 상태(Capability)를 단일하게 산출합니다.
- *
- * - SUPPORTED: 선택된 모든 관련 플로우 노드가 해당 옵션을 지원함
- * - PARTIAL: 선택된 관련 플로우 노드 중 일부만 해당 옵션을 지원함
- * - UNSUPPORTED: 선택된 관련 플로우 노드가 없거나, 어떤 노드도 해당 옵션을 지원하지 않음
- */
-export function getOptionCapability<T extends CapabilityNodeTarget = SelectedNodeInfo>(
-  nodes: (T | null | undefined)[] | null | undefined,
-  option: PluginOption
-): OptionCapability {
-  if (!nodes || nodes.length === 0) return 'UNSUPPORTED';
-
-  const validNodes = nodes.filter((n): n is T => Boolean(n));
-  const relevantNodes = validNodes.filter((n) => getNodeCategory(n) !== 'FigmaObject');
-  if (relevantNodes.length === 0) return 'UNSUPPORTED';
-
-  const supportedCount = relevantNodes.filter((n) => supportsOption(n, option)).length;
-  if (supportedCount === relevantNodes.length) return 'SUPPORTED';
-  if (supportedCount > 0) return 'PARTIAL';
-  return 'UNSUPPORTED';
-}
+// NOTE: getOptionCapability 함수는 src/domain/nodeDomain.ts로 이동.
 
 
 /**
@@ -450,96 +147,7 @@ export interface OptionStateResult {
   capability?: OptionCapability;
 }
 
-/**
- * 선택된 노드 목록 전체를 분석하여 해당 옵션의 스위치 상태를 결정합니다.
- */
-export function computeOptionSwitchState(
-  nodes: any[],
-  option: PluginOption,
-  isNodeOnFn: (node: any) => boolean
-): OptionStateResult {
-  const capability = getOptionCapability(nodes, option);
-
-  const validNodes = (nodes || []).filter(Boolean);
-  const supportedNodes = validNodes.filter((n) => supportsOption(n, option));
-  const unsupportedNodes = validNodes.filter((n) => !supportsOption(n, option));
-
-  if (capability === 'UNSUPPORTED') {
-    return {
-      state: 'OFF',
-      supportedCount: 0,
-      unsupportedCount: unsupportedNodes.length,
-      supportedNodes: [],
-      unsupportedNodes,
-      checked: false,
-      isMixed: false,
-      disabled: true,
-      isOpen: false,
-      capability,
-    };
-  }
-
-  if (capability === 'PARTIAL') {
-    return {
-      state: 'MIXED_DISABLED',
-      supportedCount: supportedNodes.length,
-      unsupportedCount: unsupportedNodes.length,
-      supportedNodes,
-      unsupportedNodes,
-      checked: false,
-      isMixed: true,
-      disabled: true,
-      isOpen: false,
-      capability,
-    };
-  }
-
-  const onCount = supportedNodes.filter((n) => isNodeOnFn(n)).length;
-  const offCount = supportedNodes.length - onCount;
-
-  if (onCount === supportedNodes.length) {
-    return {
-      state: 'ON',
-      supportedCount: supportedNodes.length,
-      unsupportedCount: unsupportedNodes.length,
-      supportedNodes,
-      unsupportedNodes,
-      checked: true,
-      isMixed: false,
-      disabled: false,
-      isOpen: true,
-      capability,
-    };
-  }
-
-  if (offCount === supportedNodes.length) {
-    return {
-      state: 'OFF',
-      supportedCount: supportedNodes.length,
-      unsupportedCount: unsupportedNodes.length,
-      supportedNodes,
-      unsupportedNodes,
-      checked: false,
-      isMixed: false,
-      disabled: false,
-      isOpen: false,
-      capability,
-    };
-  }
-
-  return {
-    state: 'MIXED_ACTIVE',
-    supportedCount: supportedNodes.length,
-    unsupportedCount: unsupportedNodes.length,
-    supportedNodes,
-    unsupportedNodes,
-    checked: true,
-    isMixed: true,
-    disabled: false,
-    isOpen: true,
-    capability,
-  };
-}
+// NOTE: computeOptionSwitchState 함수는 src/domain/nodeDomain.ts로 이동.
 
 /**
  * 스크린(Screen) 노드 치수 및 코너 라운드 제약 상수
@@ -872,10 +480,13 @@ export interface SelectedNodeInfo {
   connectorEndOffset?: number;
   connectorSourceNodeName?: string;
   connectorTargetNodeName?: string;
+  connectorSourceNodeType?: string;
+  connectorTargetNodeType?: string;
   connectorSourceMagnet?: MagnetPosition;
   connectorTargetMagnet?: MagnetPosition;
   connectorIsReversed?: boolean;
   connectedNodeNames?: string[];
+  connectedNodeTypes?: string[];
   width?: number;
   height?: number;
   hugHeight?: number;

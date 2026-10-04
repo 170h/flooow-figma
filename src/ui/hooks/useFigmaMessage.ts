@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useApp, NodeInfo } from '../context/AppContext';
-import { normalizeNodeType } from '../../types';
+import { useApp } from '../context/AppContext';
 
 /**
  * Figma 플러그인 → UI 방향 메시지 처리 훅
@@ -11,7 +10,6 @@ export function useFigmaMessage() {
     handleSelectionChange,
     setCurrentTab,
     setUIState,
-    setNodeOptionState,
     setDesignFrames,
   } = useApp();
 
@@ -97,40 +95,6 @@ export function useFigmaMessage() {
             });
           }
 
-          // 노드 속성 복원 (플러그인으로 생성된 플로우 노드에 대해서만 허용)
-          if (nodes && nodes.length === 1) {
-            const node = nodes[0] as NodeInfo;
-
-            if (node.isFlowNode) {
-              // 노드 선택 대상이 실제로 변경되었을 때만 상태 복원
-              if (isDifferentNode) {
-                const hasDesc = Boolean(node.description && node.description.trim());
-                setNodeOptionState({ descriptionOn: hasDesc });
-
-                // 상태(status) 복원
-                const currentStatus = node.status || msg.currentStatus;
-                if (currentStatus) {
-                  setNodeOptionState({ statusOn: true, status: currentStatus });
-                } else {
-                  setNodeOptionState({ statusOn: false });
-                }
-
-                // Figma Screen Link 복원 (스크린 노드만 허용)
-                const nodeTypeVal = node.flowNodeType || (node.nodeType === 'FRAME' ? 'Screen' : node.nodeType);
-                const isScreen = normalizeNodeType(nodeTypeVal) === 'Screen';
-                const figmaLink = (isScreen && node.figmaLink) || '';
-                if (figmaLink) {
-                  setNodeOptionState({ singleLinkOn: true, singleLinkUrl: figmaLink });
-                } else {
-                  setNodeOptionState({ singleLinkOn: false, singleLinkUrl: '' });
-                }
-              }
-              const nodeTypeVal = node.flowNodeType || (node.nodeType === 'FRAME' ? 'Screen' : node.nodeType);
-              if (nodeTypeVal) {
-                setNodeOptionState({ nodeType: normalizeNodeType(nodeTypeVal) });
-              }
-            }
-          }
           break;
         }
 
@@ -169,5 +133,5 @@ export function useFigmaMessage() {
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, [handleSelectionChange, setCurrentTab, setUIState, setNodeOptionState]);
+  }, [handleSelectionChange, setCurrentTab, setUIState]);
 }

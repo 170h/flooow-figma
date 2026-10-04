@@ -2201,11 +2201,12 @@
     .node-preview-card {
       width: 116px;
       height: 72px;
-      background: #ffffff;
+      background: var(--color-bg, #ffffff);
       border: 1px solid rgba(0, 0, 0, 0.1);
       border-radius: 0px;
       position: relative;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 8px 12px;
@@ -2213,15 +2214,37 @@
       box-shadow: none;
     }
 
-    .node-preview-card span {
+    .node-preview-copy {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .node-preview-title {
       font-size: 11px;
-      font-weight: 400;
-      color: rgba(0, 0, 0, 0.5);
+      font-weight: 450;
+      color: var(--color-text-primary);
       text-align: center;
       word-break: break-all;
       overflow: hidden;
-      line-height: 1.35;
-      max-height: 54px;
+      line-height: 1.3;
+      max-height: 28px;
+    }
+
+    .node-preview-type {
+      font-size: 9px;
+      font-weight: 450;
+      line-height: 12px;
+      color: rgba(0, 0, 0, 0.5);
+      text-align: center;
+      max-width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     /* 11x11 앵커 마그넷 기즈모 핸들 (호버 시 상하좌우 확대 애니메이션) */
@@ -2295,13 +2318,13 @@
     body.figma-dark .node-preview-card,
     .figma-dark .node-preview-card,
     [data-theme="dark"] .node-preview-card {
-      background: #2c2c2c;
+      background: var(--color-bg, #2c2c2c);
       border-color: rgba(255, 255, 255, 0.12);
     }
 
-    body.figma-dark .node-preview-card span,
-    .figma-dark .node-preview-card span,
-    [data-theme="dark"] .node-preview-card span {
+    body.figma-dark .node-preview-type,
+    .figma-dark .node-preview-type,
+    [data-theme="dark"] .node-preview-type {
       color: rgba(255, 255, 255, 0.6);
     }
 

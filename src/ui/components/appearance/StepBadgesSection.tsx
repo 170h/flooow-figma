@@ -257,7 +257,6 @@ export function StepBadgesSection() {
 
   // 선택된 노드의 상태 동기화 (사용자 조작 직후 600ms 동안은 중간 응답 덮어쓰기 방지)
   useEffect(() => {
-    const isUserLocked = Date.now() - userActionLockRef.current < 600;
     const currentNodeId =
       selectedNodes.length === 1
         ? selectedNodes[0]?.id
@@ -271,28 +270,26 @@ export function StepBadgesSection() {
       setIsOpen(null);
     }
 
-    if (!isUserLocked || isDifferentNode) {
+    if (selectedNodes.length === 0) {
+      setIsMixed(false);
+      const cachedStep = nodeOptionState.stepNumber;
+      setStepNumText(
+        typeof cachedStep === "number" && cachedStep > 0 && !isNaN(cachedStep)
+          ? String(cachedStep)
+          : "1"
+      );
+    } else if (isDifferentNode) {
       if (rawOptionState.supportedCount > 0) {
         const supported = rawOptionState.supportedNodes;
         if (supported.length === 1) {
           setIsMixed(false);
           const node = supported[0];
-          if (node.stepNumber !== undefined) {
+          if (typeof node.stepNumber === "number" && !isNaN(node.stepNumber)) {
             setStepNumText(String(node.stepNumber));
           } else {
             setStepNumText("1");
           }
-          if (node.badgeCorner) {
-            setNodeOptionState({ badgeCorner: node.badgeCorner });
-          }
-          if (node.badgeShape) {
-            setNodeOptionState({ badgeShape: node.badgeShape });
-          }
-          if (node.badgeColorMode) {
-            setNodeOptionState({ badgeColorMode: node.badgeColorMode });
-          }
-        } else {
-          // 복수 선택 (지원 노드들만 기준)
+        } else if (supported.length > 1) {
           const validNums = supported
             .map((n) => n.stepNumber)
             .filter((n): n is number => typeof n === "number" && !isNaN(n) && n > 0);
@@ -307,51 +304,15 @@ export function StepBadgesSection() {
             setIsMixed(true);
             setStepNumText("");
           }
-
-          if (!summary.badgeCorner.isMixed && summary.badgeCorner.value) {
-            setNodeOptionState({ badgeCorner: summary.badgeCorner.value });
-          }
-          if (!summary.badgeShape.isMixed && summary.badgeShape.value) {
-            setNodeOptionState({ badgeShape: summary.badgeShape.value });
-          }
-          if (!summary.badgeColorMode.isMixed && summary.badgeColorMode.value) {
-            setNodeOptionState({
-              badgeColorMode: summary.badgeColorMode
-                .value as BadgeColorMode,
-            });
-          }
         }
       } else {
-        if (selectedNodes.length === 0) {
-          // 선택된 노드가 없는 경우 (새 노드 생성 모드): 이전 상태 캐시 복원
-          setIsMixed(false);
-          const nextStepNum =
-            typeof nodeOptionState.stepNumber === "number" &&
-            nodeOptionState.stepNumber > 0
-              ? nodeOptionState.stepNumber + 1
-              : 1;
-          setStepNumText(String(nextStepNum));
-        } else {
-          // 미지원 노드만 선택된 경우: 접힘
-          setIsMixed(false);
-        }
+        setIsMixed(false);
       }
     }
   }, [
     rawOptionState,
     selectedNodes,
-    summary.badgeCorner.isMixed,
-    summary.badgeCorner.value,
-    summary.badgeShape.isMixed,
-    summary.badgeShape.value,
-    summary.badgeColorMode.isMixed,
-    summary.badgeColorMode.value,
-    nodeOptionState.stepBadgesOn,
     nodeOptionState.stepNumber,
-    nodeOptionState.badgeCorner,
-    nodeOptionState.badgeShape,
-    nodeOptionState.badgeColorMode,
-    setNodeOptionState,
   ]);
 
   // 드롭다운 외부 클릭 닫기
@@ -719,6 +680,12 @@ export function StepBadgesSection() {
                     }
                   } else {
                     setIsMixed(false);
+                    if (clean !== "") {
+                      const parsed = parseInt(clean, 10);
+                      if (!isNaN(parsed) && parsed > 0) {
+                        setNodeOptionState({ stepNumber: parsed });
+                      }
+                    }
                   }
                 }}
                 onBlur={handleNumberBlurOrEnter}

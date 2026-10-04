@@ -12,8 +12,9 @@ import {
   NODE_TYPE_SHAPE_SPECS,
   normalizeNodeType,
   normalizeBranchVariant,
-  getBranchVariantSpec,
   BRANCH_VARIANT_LABELS,
+  isDefaultNodeTitle,
+  getDefaultNodeTitle,
   supportsOption,
 } from '../../types';
 
@@ -85,6 +86,7 @@ export interface NodeInfo {
   title?: string;
   name?: string;
   description?: string;
+  descriptionOn?: boolean;
   width?: number;
   height?: number;
   cornerRadius?: number;
@@ -111,6 +113,8 @@ export interface NodeInfo {
   connectorLabelStrokeColor?: string;
   connectorSourceNodeName?: string;
   connectorTargetNodeName?: string;
+  connectorSourceNodeType?: string;
+  connectorTargetNodeType?: string;
   connectorSourceMagnet?: string;
   connectorTargetMagnet?: string;
   stepNumber?: number;
@@ -128,6 +132,7 @@ export interface NodeInfo {
   cachedFigmaLink?: string;
   connectorIsReversed?: boolean;
   connectedNodeNames?: string[];
+  connectedNodeTypes?: string[];
   x?: number;
   y?: number;
 }
@@ -540,6 +545,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isApplyingMultiDraftRef.current) return;
     if (!nodes || nodes.length < 2) return;
     if (!hasMultiDraft) return;
+    // 노드와 FigJam 오브젝트가 섞인 선택은 Connection 전용이다
+    if (nodes.some((n) => n && !n.isFlowNode)) return;
 
     // 현재 선택 노드 집합과 Draft 대상 노드 집합 일치 검증
     const currentSortedIds = nodes.map(n => n?.id).filter(Boolean).sort();
@@ -1131,8 +1138,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     closeAllPopovers();
     setCurrentTabState(tab);
     currentTabRef.current = tab;
-    // 일반 노드가 선택된 상태에서 탭을 변경한 경우 마지막 탭으로 기억
-    if (selectedNodesRef.current.length > 0 && !isConnectorSelectedRef.current) {
+    // 플로우 노드만 선택된 상태에서 탭을 변경한 경우 마지막 탭으로 기억
+    // (노드+FigJam 혼합, FigJam 전용 선택은 Connection 고정이라 기억하지 않음)
+    const tabNodes = selectedNodesRef.current;
+    const pureFlowSelection = tabNodes.length > 0
+      && !isConnectorSelectedRef.current
+      && tabNodes.every((n) => n && n.isFlowNode);
+    if (pureFlowSelection) {
       lastNodeTabRef.current = tab;
     }
     requestAnimationFrame(() => {
@@ -1170,85 +1182,68 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
     const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
-    const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-    const urlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
-    const singleLinkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
-    const sizeModeEl = document.getElementById('select-size-mode') as HTMLInputElement | null;
 
-    const selectedElevation = nodeOptionStateRef.current.elevation;
+    const opts = nodeOptionStateRef.current;
     const firstNode = nodes[0];
-    const nodeActualType = firstNode?.flowNodeType || (firstNode?.nodeType === 'FRAME' ? 'Screen' : firstNode?.nodeType);
-    const activeTypeBtn = document.querySelector('#node-type-icons .type-icon-btn.active') as HTMLElement | null;
-    const domNodeType = (activeTypeBtn?.dataset.type as DiagramNodeType) || undefined;
-    const rawNodeType = overrideNodeType || domNodeType || nodeActualType || nodeOptionStateRef.current.nodeType;
-    const effectiveNodeType = normalizeNodeType(rawNodeType);
+    const effectiveNodeType = normalizeNodeType(overrideNodeType || opts.nodeType);
     const branchVariant = effectiveNodeType === 'Branch'
-      ? normalizeBranchVariant(
-          nodeOptionStateRef.current.branchVariant || firstNode?.branchVariant
-        )
-      : undefined;
-    const spec = effectiveNodeType === 'Branch' && branchVariant
-      ? getBranchVariantSpec(branchVariant)
-      : NODE_TYPE_SHAPE_SPECS[effectiveNodeType];
+      ? normalizeBranchVariant(opts.branchVariant)
+      : opts.branchVariant;
     const isScreen = effectiveNodeType === 'Screen';
-    const hasFixedShapeSpec = !isScreen && Boolean(spec);
 
     const currentTitleVal = titleEl?.value.trim();
-    const rawTitle = overrideTitle !== undefined
+    let rawTitle = overrideTitle !== undefined
       ? overrideTitle
-      : (currentTitleVal || (isScreen ? 'Screen' : effectiveNodeType));
+      : (currentTitleVal || '');
+    if (effectiveNodeType === 'Branch') {
+      const branchLabel = BRANCH_VARIANT_LABELS[normalizeBranchVariant(branchVariant)];
+      if (
+        isDefaultNodeTitle(rawTitle)
+        && (!rawTitle || rawTitle === 'Branch' || rawTitle === 'Screen' || overrideTitle !== undefined)
+      ) {
+        rawTitle = branchLabel;
+        if (titleEl) titleEl.value = rawTitle;
+      }
+    } else if (!rawTitle) {
+      rawTitle = isScreen ? 'Screen' : effectiveNodeType;
+    }
     if (rawTitle.length > 32) {
       showToast('제목은 최대 32자까지 입력할 수 있습니다.', 'warning');
     }
     const title = rawTitle.slice(0, 32);
     const rawDesc = descEl?.value !== undefined ? descEl.value.trim() : '';
-    const isDescOn = descToggleEl ? descToggleEl.checked : (nodeOptionStateRef.current.descriptionOn ?? false);
+    const isDescOn = Boolean(opts.descriptionOn);
     // 비활성화(숨김) 시에도 기존 description 데이터를 보존하여 전달 (스위치가 꺼져도 데이터 자체는 유지)
     const currentDesc = rawDesc || firstNode?.description || '';
     const desc = isDescOn ? rawDesc : currentDesc;
-    const w = overrideSize?.width !== undefined
-      ? overrideSize.width
-      : (isScreen
-          ? (parseInt(wEl?.value || '', 10) || firstNode?.width || nodeOptionStateRef.current.width || 250)
-          : (hasFixedShapeSpec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250)));
-    const h = overrideSize?.height !== undefined
-      ? overrideSize.height
-      : (isScreen
-          ? (parseInt(hEl?.value || '', 10) || firstNode?.height || nodeOptionStateRef.current.height || 90)
-          : (hasFixedShapeSpec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90)));
+    const w = overrideSize?.width !== undefined ? overrideSize.width : (opts.width || 250);
+    const h = overrideSize?.height !== undefined ? overrideSize.height : (opts.height || 90);
     const radius = overrideSize?.cornerRadius !== undefined
       ? overrideSize.cornerRadius
-      : (isScreen
-          ? (rEl?.value !== undefined && rEl?.value !== '' && !isNaN(parseInt(rEl.value, 10)) ? Math.max(0, parseInt(rEl.value, 10)) : (firstNode?.cornerRadius ?? (nodeOptionStateRef.current.cornerRadius ?? 0)))
-          : (hasFixedShapeSpec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0)));
-    const isLinkOn = singleLinkToggleEl ? singleLinkToggleEl.checked : nodeOptionStateRef.current.singleLinkOn;
+      : (opts.cornerRadius ?? 0);
+    const isLinkOn = Boolean(opts.singleLinkOn);
     const rawFigmaUrl = linkOverrides?.figmaLink !== undefined
       ? linkOverrides.figmaLink
-      : (urlEl ? urlEl.value.trim() : '');
+      : (isLinkOn ? (opts.singleLinkUrl || '') : '');
     const figmaUrl = rawFigmaUrl ? (
       /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}`
     ) : '';
 
-    const elevToggleEl = document.getElementById('toggle-elevation') as HTMLInputElement | null;
-    const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(nodeOptionStateRef.current.elevationOn);
-    const finalElevation = isElevOn ? selectedElevation : null;
-    const statusToggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
-    const isStatusOn = statusToggleEl ? statusToggleEl.checked : Boolean(nodeOptionStateRef.current.statusOn);
-    const finalStatus = isStatusOn ? (nodeOptionStateRef.current.status as WorkflowStatus) : undefined;
-    const finalColor = styleOverrides?.colorHex ?? nodeOptionStateRef.current.fillColor;
+    const isElevOn = Boolean(opts.elevationOn);
+    const finalElevation = isElevOn ? opts.elevation : null;
+    const isStatusOn = Boolean(opts.statusOn);
+    const finalStatus = isStatusOn ? (opts.status as WorkflowStatus) : undefined;
+    const finalColor = styleOverrides?.colorHex ?? opts.fillColor;
     const finalStrokeWeight = styleOverrides?.strokeWeight !== undefined
       ? styleOverrides.strokeWeight
-      : (nodeOptionStateRef.current.strokeWeight !== undefined ? nodeOptionStateRef.current.strokeWeight : 1.5);
+      : (opts.strokeWeight !== undefined ? opts.strokeWeight : 1.5);
     const finalStrokeColor = styleOverrides?.strokeColor !== undefined
       ? styleOverrides.strokeColor
-      : (nodeOptionStateRef.current.strokeColor || '#000000');
+      : (opts.strokeColor || '#000000');
 
-    const sizeMode = overrideSizeMode || sizeModeEl?.value || nodeOptionStateRef.current.sizeMode || 'hug';
+    const sizeMode = overrideSizeMode || opts.sizeMode || 'hug';
 
-    setNodeOptionState({
+    const nextNodeOptions: Partial<NodeOptionState> = {
       nodeType: effectiveNodeType,
       fillColor: finalColor,
       strokeWeight: finalStrokeWeight,
@@ -1257,15 +1252,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       height: h,
       cornerRadius: radius,
       elevationOn: isElevOn,
-      elevation: selectedElevation,
+      elevation: opts.elevation,
       statusOn: isStatusOn,
-      status: finalStatus || '',
       singleLinkOn: isLinkOn,
-      singleLinkUrl: figmaUrl,
+      singleLinkUrl: linkOverrides?.figmaLink !== undefined ? figmaUrl : opts.singleLinkUrl,
       sizeMode,
       descriptionOn: isDescOn,
-      branchVariant,
-    });
+    };
+    if (effectiveNodeType === 'Branch') {
+      nextNodeOptions.branchVariant = branchVariant;
+    }
+    setNodeOptionState(nextNodeOptions);
 
     nodes.forEach(node => {
       parent.postMessage({
@@ -1281,7 +1278,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             figmaLink: figmaUrl,
             clearLinkCache: linkOverrides?.clearLinkCache,
             nodeType: effectiveNodeType,
-            branchVariant,
+            branchVariant: effectiveNodeType === 'Branch' ? branchVariant : undefined,
             colorHex: finalColor,
             strokeWeight: finalStrokeWeight !== undefined ? finalStrokeWeight : node.strokeWeight,
             strokeColor: finalStrokeColor !== undefined ? finalStrokeColor : node.strokeColorHex,
@@ -1794,105 +1791,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const titleEl = document.getElementById('node-title-input') as HTMLInputElement | null;
     const descEl = document.getElementById('node-description-input') as HTMLTextAreaElement | null;
-    const wEl = document.getElementById('input-size-w') as HTMLInputElement | null;
-    const hEl = document.getElementById('input-size-h') as HTMLInputElement | null;
-    const rEl = document.getElementById('input-size-radius') as HTMLInputElement | null;
-    const urlEl = document.getElementById('single-screen-url') as HTMLInputElement | null;
-    const elevToggleEl = document.getElementById('toggle-elevation') as HTMLInputElement | null;
-    const statusToggleEl = document.getElementById('toggle-status') as HTMLInputElement | null;
-    const stepToggleEl = document.getElementById('toggle-step-badges') as HTMLInputElement | null;
-    const stepNumEl = document.getElementById('input-step-number') as HTMLInputElement | null;
-    const singleLinkToggleEl = document.getElementById('toggle-single-figma-link') as HTMLInputElement | null;
 
-    const {
-      elevation: selectedElevation,
-      status: selectedStatus,
-      badgeCorner: selectedBadgeCorner,
-      badgeShape: selectedBadgeShape,
-      badgeColorMode: selectedBadgeColorMode,
-    } = nodeOptionStateRef.current;
-    const activeTypeBtn = document.querySelector('#node-type-icons .type-icon-btn.active') as HTMLElement | null;
-    const domNodeType = (activeTypeBtn?.dataset.type as DiagramNodeType) || undefined;
-    const targetNodeType = domNodeType || nodeOptionStateRef.current.nodeType || 'Screen';
-    const createBranchVariant = targetNodeType === 'Branch'
-      ? normalizeBranchVariant(nodeOptionStateRef.current.branchVariant)
+    const opts = nodeOptionStateRef.current;
+    const targetNodeType = normalizeNodeType(opts.nodeType || 'Screen');
+    const storedBranchVariant = opts.branchVariant
+      ? normalizeBranchVariant(opts.branchVariant)
       : undefined;
-    const spec = targetNodeType === 'Branch' && createBranchVariant
-      ? getBranchVariantSpec(createBranchVariant)
-      : NODE_TYPE_SHAPE_SPECS[targetNodeType];
-    const isScreen = targetNodeType === 'Screen';
-    const hasFixedShapeSpec = !isScreen && Boolean(spec);
-    const targetNode = { flowNodeType: targetNodeType, isFlowNode: true };
-    const canHaveDescription = supportsOption(targetNode, 'description');
-    const canHaveFigmaLink = supportsOption(targetNode, 'figmaLink');
-    const canHaveStatus = supportsOption(targetNode, 'status');
+    const optionTarget = { flowNodeType: targetNodeType, isFlowNode: true };
+    const canHaveDescription = supportsOption(optionTarget, 'description');
+    const canHaveFigmaLink = supportsOption(optionTarget, 'figmaLink');
+    const canHaveStatus = supportsOption(optionTarget, 'status');
+    const canHaveStep = supportsOption(optionTarget, 'stepBadge');
+    const canHaveElevation = supportsOption(optionTarget, 'elevation');
 
-    const descToggleEl = document.getElementById('toggle-description') as HTMLInputElement | null;
-    const defaultTitle = targetNodeType === 'Screen'
-      ? 'Screen'
-      : (createBranchVariant ? BRANCH_VARIANT_LABELS[createBranchVariant] : targetNodeType);
-    const rawTitle = titleEl?.value.trim() || defaultTitle;
+    const defaultTitle = getDefaultNodeTitle(targetNodeType, storedBranchVariant);
+    let rawTitle = titleEl?.value.trim() || '';
+    if (targetNodeType === 'Branch' && storedBranchVariant && isDefaultNodeTitle(rawTitle)) {
+      rawTitle = BRANCH_VARIANT_LABELS[storedBranchVariant];
+      if (titleEl) titleEl.value = rawTitle;
+    } else if (!rawTitle) {
+      rawTitle = defaultTitle;
+    }
     if (rawTitle.length > 32) {
       showToast('제목은 최대 32자까지 입력할 수 있습니다.', 'warning');
     }
-    const title = rawTitle.slice(0, 32); // 타이틀 글자 수 제한 (입력필드 너비 최적화)
-    const isDescOn = descToggleEl ? descToggleEl.checked : (nodeOptionStateRef.current.descriptionOn ?? false);
+    const title = rawTitle.slice(0, 32);
+    const isDescOn = Boolean(opts.descriptionOn);
     const desc = isDescOn ? (descEl?.value.trim() || '') : '';
     const effectiveDesc = canHaveDescription ? desc : '';
 
-    const w = hasFixedShapeSpec ? spec.width : (parseInt(wEl?.value || '250', 10) || 250);
-    const h = hasFixedShapeSpec ? spec.height : (parseInt(hEl?.value || '90', 10) || 90);
-    let radius = hasFixedShapeSpec ? (spec.cornerRadius ?? 0) : (parseInt(rEl?.value || '0', 10) || 0);
+    const w = opts.width || 250;
+    const h = opts.height || 90;
+    let radius = opts.cornerRadius ?? 0;
     if (radius > 999) {
       radius = 999;
-      if (rEl) rEl.value = '999';
       showToast('최대값은 999입니다.', 'warning');
     } else if (radius < 0) {
       radius = 0;
-      if (rEl) rEl.value = '0';
     }
 
-    const rawFigmaUrl = (canHaveFigmaLink && singleLinkToggleEl?.checked && urlEl) ? urlEl.value.trim() : '';
+    const isLinkOn = Boolean(opts.singleLinkOn) && canHaveFigmaLink;
+    const rawFigmaUrl = isLinkOn ? (opts.singleLinkUrl || '').trim() : '';
     const figmaUrl = rawFigmaUrl ? (
       /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawFigmaUrl) ? rawFigmaUrl : `https://${rawFigmaUrl}`
     ) : '';
 
-    const isElevOn = elevToggleEl ? elevToggleEl.checked : Boolean(nodeOptionStateRef.current.elevationOn);
-    const finalElevation = isElevOn ? selectedElevation : null;
-
-    const isStepOn = stepToggleEl ? stepToggleEl.checked : Boolean(nodeOptionStateRef.current.stepBadgesOn);
-    const inputStepVal = stepNumEl ? parseInt(stepNumEl.value, 10) : NaN;
-    const prevStepNum = nodeOptionStateRef.current.stepNumber;
-    let targetStepNum: number;
-    if (!isNaN(inputStepVal) && inputStepVal > 0) {
-      targetStepNum = inputStepVal;
-    } else if (typeof prevStepNum === 'number' && prevStepNum > 0) {
-      targetStepNum = prevStepNum + 1;
-    } else {
-      targetStepNum = 1;
-    }
-
-    const nextNodeOptions: Partial<NodeOptionState> = {
-      nodeType: targetNodeType,
-      width: w,
-      height: h,
-      cornerRadius: radius,
-      sizeMode: nodeOptionStateRef.current.sizeMode || (targetNodeType === 'Screen' ? 'hug' : 'fixed'),
-      elevationOn: isElevOn,
-      elevation: selectedElevation,
-      statusOn: statusToggleEl?.checked || false,
-      status: selectedStatus,
-      stepBadgesOn: isStepOn,
-      stepNumber: isStepOn ? targetStepNum + 1 : targetStepNum,
-      badgeCorner: selectedBadgeCorner,
-      badgeShape: selectedBadgeShape,
-      badgeColorMode: selectedBadgeColorMode,
-      singleLinkOn: (canHaveFigmaLink && singleLinkToggleEl?.checked) || false,
-      singleLinkUrl: figmaUrl,
-      descriptionOn: canHaveDescription ? isDescOn : false,
-      branchVariant: createBranchVariant,
-    };
-    setNodeOptionState(nextNodeOptions);
+    const isElevOn = Boolean(opts.elevationOn) && canHaveElevation;
+    const finalElevation = isElevOn ? opts.elevation : null;
+    const isStatusOn = Boolean(opts.statusOn) && canHaveStatus;
+    const isStepOn = Boolean(opts.stepBadgesOn) && canHaveStep;
+    const targetStepNum = typeof opts.stepNumber === 'number' && opts.stepNumber > 0
+      ? opts.stepNumber
+      : 1;
 
     if (nodes.length === 1) {
       isApplyingSingleRef.current = true;
@@ -1927,32 +1877,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Step 2: 다중 선택 시 기존의 전체 덮어쓰기 loop를 차단 (Apply 실행은 Step 3에서 구현)
       return;
     } else {
+      if (radius !== opts.cornerRadius) {
+        setNodeOptionState({ cornerRadius: radius });
+      }
       parent.postMessage({
         pluginMessage: {
           type: 'CREATE_FLOW_NODE',
           payload: {
             title,
             description: effectiveDesc,
-            descriptionOn: isDescOn,
+            descriptionOn: canHaveDescription ? isDescOn : false,
             width: w,
             height: h,
             cornerRadius: radius,
             theme: getCurrentUITheme(),
             figmaLink: figmaUrl,
             nodeType: targetNodeType,
-            branchVariant: targetNodeType === 'Branch'
-              ? normalizeBranchVariant(nodeOptionStateRef.current.branchVariant)
-              : undefined,
-            colorHex: nodeOptionStateRef.current.fillColor,
-            strokeWeight: nodeOptionStateRef.current.strokeWeight !== undefined ? nodeOptionStateRef.current.strokeWeight : 1.5,
-            strokeColor: nodeOptionStateRef.current.strokeColor,
-            sizeMode: (nodeOptionStateRef.current.sizeMode as ('fixed' | 'hug' | 'fit')) || (targetNodeType === 'Screen' ? 'hug' : 'fixed'),
-            elevation: isElevOn ? selectedElevation : undefined,
-            status: (!canHaveStatus || !statusToggleEl?.checked) ? undefined : selectedStatus,
+            branchVariant: targetNodeType === 'Branch' ? storedBranchVariant : undefined,
+            colorHex: opts.fillColor,
+            strokeWeight: opts.strokeWeight !== undefined ? opts.strokeWeight : 1.5,
+            strokeColor: opts.strokeColor,
+            sizeMode: (opts.sizeMode as ('fixed' | 'hug' | 'fit')) || (targetNodeType === 'Screen' ? 'hug' : 'fixed'),
+            elevation: isElevOn ? opts.elevation : undefined,
+            status: isStatusOn ? (opts.status as WorkflowStatus) : undefined,
             badgeNumber: isStepOn ? targetStepNum : undefined,
-            badgePosition: isStepOn ? (selectedBadgeCorner as BadgePosition) : undefined,
-            badgeShape: isStepOn ? (selectedBadgeShape as BadgeShape) : undefined,
-            badgeColorMode: isStepOn ? selectedBadgeColorMode : undefined,
+            badgePosition: isStepOn ? (opts.badgeCorner as BadgePosition) : undefined,
+            badgeShape: isStepOn ? (opts.badgeShape as BadgeShape) : undefined,
+            badgeColorMode: isStepOn ? opts.badgeColorMode : undefined,
           }
         }
       }, '*');
@@ -2033,6 +1984,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ? meta.connectorCount
       : nodes.filter(n => n && n.isConnector).length;
 
+    const flooowInSelection = nodes.filter((n) => n && n.isFlowNode).length;
+    const figjamInSelection = nodes.filter((n) => n && !n.isFlowNode && !n.isConnector).length;
+    const isMixedNodeAndFigjam = flooowInSelection > 0 && figjamInSelection > 0 && connectorCount === 0;
+
     const allConnectors = (connectorCount > 0 && flowNodeCount === 0 && otherObjectCount === 0) ||
       (count > 0 && nodes.length > 0 && nodes.every(n => n && n.isConnector));
     const isSingleConn = count === 1 && allConnectors;
@@ -2076,6 +2031,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           targetMagnet: (firstConn.connectorTargetMagnet as MagnetPosition) || 'LEFT',
         });
       }
+    } else if (isMixedNodeAndFigjam) {
+      // 노드 + FigJam 오브젝트: Connection만 사용
+      setCurrentTab('connection');
     } else if (count === 0) {
       // 바탕화면 클릭 (신규 생성 모드): Screen / Hug / White / Elevation off
       setCurrentTab('node');
@@ -2084,76 +2042,61 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const targetTab = lastNodeTabRef.current || 'node';
       setCurrentTab(targetTab);
 
-      // 플러그인으로 생성된 플로우 노드(isFlowNode === true)에 대해 스타일 및 속성 캐시 동기화
+      // 다른 단일 플로우 노드를 선택한 경우에만 NodeOptionState를 노드 값으로 로드한다.
+      // 같은 노드의 SELECTION_CHANGED 재수신은 편집 중인 옵션을 덮지 않는다.
       const flowNodes = nodes.filter(n => n && Boolean(n.isFlowNode));
-      if (flowNodes.length > 0) {
+      if (isSelectionChanged && nodes.length === 1 && flowNodes.length === 1) {
         const first = flowNodes[0];
-        const eOn = Boolean(first.elevationOn);
-        const eLevel = typeof first.elevation === 'number' ? first.elevation : 0;
-        const nodeRadius = typeof first.cornerRadius === 'number' ? first.cornerRadius : 0;
+        const hasElev = typeof first.elevation === 'number';
+        const nodeTypeVal = normalizeNodeType(
+          first.flowNodeType || (first.nodeType === 'FRAME' ? 'Screen' : first.nodeType) || 'Screen'
+        );
+        const hasStep = typeof first.stepNumber === 'number' && !isNaN(first.stepNumber);
+        const activeLink = (first.figmaLink || '').trim();
+        const cachedLink = (first.cachedFigmaLink || '').trim();
+        const fillColor = first.fillColorHex || '#ffffff';
+        const strokeWeight = first.strokeWeight !== undefined ? first.strokeWeight : 1.5;
+        const strokeColor = first.strokeColorHex || '#000000';
 
-        const nodeTypeVal = first.flowNodeType || (first.nodeType === 'FRAME' ? 'Screen' : first.nodeType) || 'Screen';
-        const hasStatus = Boolean(first.status);
-        const hasDesc = Boolean(first.description && first.description.trim());
-        const linkVal = first.figmaLink || first.cachedFigmaLink || '';
-        const hasLink = Boolean(linkVal);
-
-        const colorUpdates: Partial<UIState> = {};
-
-        const hasStep = first.stepNumber !== undefined;
         const nodeOptionsUpdates: Partial<NodeOptionState> = {
           nodeType: nodeTypeVal,
-          width: first.width,
-          height: first.height,
-          cornerRadius: nodeRadius,
+          fillColor,
+          strokeWeight,
+          strokeColor,
+          width: typeof first.width === 'number' ? first.width : 250,
+          height: typeof first.height === 'number' ? first.height : 90,
+          cornerRadius: typeof first.cornerRadius === 'number' ? first.cornerRadius : 0,
           sizeMode: first.sizeMode || 'fixed',
-          elevationOn: eOn,
-          elevation: eLevel,
-          statusOn: hasStatus,
-          status: first.status || nodeOptionStateRef.current.status || 'draft',
-          descriptionOn: hasDesc,
-          singleLinkOn: hasLink,
-          singleLinkUrl: linkVal,
-          branchVariant: normalizeNodeType(nodeTypeVal) === 'Branch'
+          elevationOn: hasElev || Boolean(first.elevationOn),
+          elevation: hasElev ? first.elevation : 0,
+          statusOn: Boolean(first.status),
+          status: first.status || 'draft',
+          badgeCorner: first.badgeCorner || 'TOP_LEFT',
+          badgeShape: first.badgeShape || 'Square',
+          badgeColorMode: first.badgeColorMode || 'Style',
+          stepBadgesOn: hasStep,
+          stepNumber: hasStep && (first.stepNumber as number) > 0 ? (first.stepNumber as number) : 1,
+          descriptionOn: Boolean(first.descriptionOn ?? (first.description && first.description.trim())),
+          singleLinkOn: Boolean(activeLink),
+          singleLinkUrl: activeLink || cachedLink,
+          branchVariant: nodeTypeVal === 'Branch'
             ? normalizeBranchVariant(first.branchVariant)
             : nodeOptionStateRef.current.branchVariant,
         };
+        setNodeOptionState(nodeOptionsUpdates);
 
-        if (hasStep && typeof first.stepNumber === 'number') {
-          nodeOptionsUpdates.stepBadgesOn = true;
-          nodeOptionsUpdates.stepNumber = first.stepNumber;
-          nodeOptionsUpdates.badgeCorner = first.badgeCorner || nodeOptionStateRef.current.badgeCorner || 'TOP_LEFT';
-          nodeOptionsUpdates.badgeShape = first.badgeShape || nodeOptionStateRef.current.badgeShape || 'Square';
-          nodeOptionsUpdates.badgeColorMode = first.badgeColorMode || nodeOptionStateRef.current.badgeColorMode || 'Style';
-        }
-
-        if (first.fillColorHex) {
-          nodeOptionsUpdates.fillColor = first.fillColorHex;
-          nodeOptionsUpdates.strokeWeight = first.strokeWeight !== undefined ? first.strokeWeight : 1.5;
-          nodeOptionsUpdates.strokeColor = first.strokeColorHex || '#000000';
-
-          // 등록된 스타일 프리셋 중 정확히 일치하는 것이 있는지 탐색
-          const matchedPreset = stylePresets.find((p) => {
-            const matchFill = p.fillColor.toLowerCase() === first.fillColorHex!.toLowerCase();
-            if (!matchFill) return false;
-            const currentWeight = first.strokeWeight !== undefined ? first.strokeWeight : 1.5;
-            if (p.strokeWeight !== currentWeight) return false;
-            if (p.strokeWeight > 0 && first.strokeColorHex) {
-              if (p.strokeColor.toLowerCase() !== first.strokeColorHex.toLowerCase()) return false;
-            }
-            return true;
-          });
-          const matchedId = matchedPreset ? matchedPreset.id : null;
-          colorUpdates.selectedStylePresetId = matchedId;
-          setSelectedStylePresetId(matchedId);
-
-          if (nodes.length === 1) {
-            setNodeOptionState(nodeOptionsUpdates);
+        const matchedPreset = stylePresets.find((p) => {
+          const matchFill = p.fillColor.toLowerCase() === fillColor.toLowerCase();
+          if (!matchFill) return false;
+          if (p.strokeWeight !== strokeWeight) return false;
+          if (p.strokeWeight > 0 && strokeColor) {
+            if (p.strokeColor.toLowerCase() !== strokeColor.toLowerCase()) return false;
           }
-        } else if (nodes.length === 1) {
-          setNodeOptionState(nodeOptionsUpdates);
-        }
-        setUIState(colorUpdates);
+          return true;
+        });
+        const matchedId = matchedPreset ? matchedPreset.id : null;
+        setSelectedStylePresetId(matchedId);
+        setUIState({ selectedStylePresetId: matchedId });
       }
     }
 
