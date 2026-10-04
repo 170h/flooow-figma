@@ -4,7 +4,7 @@
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "dist/ui.html",
-  "editorType": ["figjam"],
+  "editorType": ["figjam", "figma"],
   "networkAccess": {
     "allowedDomains": ["https://api.figma.com"],
     "reasoning": "연동할 피그마 디자인 파일의 페이지 및 프레임 정보를 조회하기 위해 Figma REST API를 사용합니다."
