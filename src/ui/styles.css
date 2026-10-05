@@ -31,6 +31,13 @@
       --color-text-ondark: #ffffff;
       --color-text-ondark-muted: rgba(255, 255, 255, 0.65);
 
+      /* 플랜 & 사용량 액센트 (Plan & Usage 모달 전용) */
+      --color-plan-pink: #FC9CE0;
+      --color-plan-red: #E03E1A;
+      --color-plan-lavender: #C5B2DC;
+      --color-plan-violet: #8A38F5;
+      --color-plan-stat-bg: #2C2C2C;
+
       /* 보더 및 구분선 */
       --color-border: var(--figma-color-border, rgba(0, 0, 0, 0.08));
       --color-border-subtle: var(--figma-color-border-subtle, rgba(0, 0, 0, 0.05));
@@ -2936,7 +2943,7 @@
     /* 하단 고정 푸터 액션 바                                        */
     /* ============================================================ */
     .app-footer {
-      padding: 10px 16px;
+      padding: 8px 16px 16px;
       background: var(--color-bg);
       border-top: 1px solid var(--color-border);
       flex-shrink: 0;
@@ -2954,6 +2961,10 @@
       min-width: 0;
     }
 
+    .footer-left.footer-clickable {
+      cursor: pointer;
+    }
+
     .footer-plan-badge {
       font-size: 11px;
       font-weight: var(--font-weight-default, 450);
@@ -2962,16 +2973,87 @@
       white-space: nowrap;
     }
 
+    /* Modal footer 디자인 기준 플랜 블록 (타이틀행 + 사용량) */
+    .footer-plan-block {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    .footer-plan-row {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .footer-plan-title {
+      font-size: 13px;
+      font-weight: var(--font-weight-medium, 450);
+      color: var(--color-text-secondary);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .footer-plan-title.paid {
+      color: var(--color-brand);
+    }
+
+    .footer-plan-chevron {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+    }
+
+    .footer-plan-chevron.paid {
+      color: var(--color-brand);
+    }
+
     .footer-usage-meter {
-      font-size: 11px;
+      font-size: 9px;
       font-weight: var(--font-weight-default, 450);
-      color: var(--color-text-tertiary);
+      color: var(--color-text-secondary);
       user-select: none;
       white-space: nowrap;
     }
 
     .footer-usage-meter.limit-reached {
       color: var(--color-text-primary);
+    }
+
+    /* Ghost 버튼 (Modal footer Undo 기준: 투명 배경·보더 없음) */
+    .btn-ghost {
+      height: 32px;
+      padding: 4px 12px;
+      background: transparent;
+      color: var(--color-text-primary);
+      border: none;
+      border-radius: var(--radius-sm, 5px);
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--color-bg-hover);
+    }
+
+    .btn-ghost:disabled {
+      cursor: default;
+      pointer-events: none;
+      background: transparent;
+      color: var(--color-text-tertiary);
+      opacity: 1;
     }
 
     .footer-right {
@@ -4511,4 +4593,206 @@
     .conn-label-style-btn.active {
       background-color: var(--color-brand, #8c4cf6);
       color: #ffffff;
+    }
+    /* ============================================================ */
+    /* Plan & Usage 모달 (Figma UI3 Modal footer 디자인 기준)        */
+    /* ============================================================ */
+    .subscription-modal-card {
+      width: 200px;
+      background: #1E1E1E;
+      color: #FFFFFF;
+      border-radius: 13px;
+      box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.15), 0 10px 24px 0 rgba(0, 0, 0, 0.18), 0 0 0.5px 0 rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease-out;
+    }
+
+    .subscription-modal-header {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      border-bottom: 1px solid #444444;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    .subscription-modal-title {
+      font-size: 11px;
+      font-weight: var(--font-weight-strong, 550);
+      color: rgba(255, 255, 255, 0.9);
+      line-height: 16px;
+    }
+
+    .subscription-modal-close-btn {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .subscription-modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+
+    .subscription-modal-body {
+      padding: 0 16px 12px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    .subscription-plan-section {
+      display: flex;
+      flex-direction: column;
+      padding: 0 0 12px;
+    }
+
+    .subscription-section-label {
+      font-size: 11px;
+      font-weight: var(--font-weight-strong, 550);
+      color: #FFFFFF;
+      line-height: 16px;
+    }
+
+    .subscription-plan-name {
+      font-size: 24px;
+      line-height: 32px;
+      color: #FFFFFF;
+      font-weight: var(--font-weight-default, 450);
+    }
+
+    .subscription-plan-desc {
+      font-size: 9px;
+      font-weight: var(--font-weight-default, 450);
+      line-height: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .subscription-usage-section {
+      display: flex;
+      flex-direction: column;
+      padding: 0 0 12px;
+      border-top: 1px solid #444444;
+    }
+
+    .subscription-usage-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+    }
+
+    .subscription-usage-state {
+      font-size: 11px;
+      font-weight: var(--font-weight-strong, 550);
+      line-height: 16px;
+      color: var(--color-plan-pink);
+    }
+
+    .subscription-usage-state.unlimited {
+      color: var(--color-plan-lavender);
+    }
+
+    .subscription-usage-state.reached {
+      color: var(--color-plan-red);
+    }
+
+    .subscription-stat-box {
+      display: flex;
+      align-items: stretch;
+      background: var(--color-plan-stat-bg);
+      border-radius: 5px;
+      padding: 8px 4px;
+      box-sizing: border-box;
+    }
+
+    .subscription-stat {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      padding: 0 8px 0 4px;
+    }
+
+    .subscription-stat.total {
+      align-items: flex-end;
+      padding: 0 4px 0 8px;
+      margin-left: auto;
+    }
+
+    .subscription-stat-value {
+      font-size: 13px;
+      font-weight: var(--font-weight-default, 450);
+      line-height: 22px;
+      color: #FFFFFF;
+    }
+
+    .subscription-stat-label {
+      font-size: 9px;
+      font-weight: var(--font-weight-default, 450);
+      line-height: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .subscription-upgrade-box {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      width: 168px;
+      background: var(--color-plan-violet);
+      border-radius: 5px;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+
+    .subscription-divider {
+      height: 1px;
+      background: #444444;
+      margin: 12px 0 4px;
+    }
+
+    .subscription-upgrade-title {
+      font-size: 13px;
+      font-weight: var(--font-weight-strong, 550);
+      line-height: 22px;
+      color: #FFFFFF;
+    }
+
+    .subscription-upgrade-desc {
+      font-size: 9px;
+      font-weight: var(--font-weight-default, 450);
+      line-height: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .subscription-modal-footer {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 4px 8px 4px 0;
+      border-top: 1px solid #444444;
+      box-sizing: border-box;
+    }
+
+    .subscription-modal-footer .btn-cta-primary {
+      height: 24px;
+      padding: 4px 8px;
+      font-size: 11px;
     }

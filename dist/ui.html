@@ -37,6 +37,13 @@
       --color-text-ondark: #ffffff;
       --color-text-ondark-muted: rgba(255, 255, 255, 0.65);
 
+      /* 플랜 & 사용량 액센트 (Plan & Usage 모달 전용) */
+      --color-plan-pink: #FC9CE0;
+      --color-plan-red: #E03E1A;
+      --color-plan-lavender: #C5B2DC;
+      --color-plan-violet: #8A38F5;
+      --color-plan-stat-bg: #2C2C2C;
+
       /* 보더 및 구분선 */
       --color-border: var(--figma-color-border, rgba(0, 0, 0, 0.08));
       --color-border-subtle: var(--figma-color-border-subtle, rgba(0, 0, 0, 0.05));
@@ -2942,7 +2949,7 @@
     /* 하단 고정 푸터 액션 바                                        */
     /* ============================================================ */
     .app-footer {
-      padding: 10px 16px;
+      padding: 8px 16px 16px;
       background: var(--color-bg);
       border-top: 1px solid var(--color-border);
       flex-shrink: 0;
@@ -2960,6 +2967,10 @@
       min-width: 0;
     }
 
+    .footer-left.footer-clickable {
+      cursor: pointer;
+    }
+
     .footer-plan-badge {
       font-size: 11px;
       font-weight: var(--font-weight-default, 450);
@@ -2968,16 +2979,87 @@
       white-space: nowrap;
     }
 
+    /* Modal footer 디자인 기준 플랜 블록 (타이틀행 + 사용량) */
+    .footer-plan-block {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    .footer-plan-row {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .footer-plan-title {
+      font-size: 13px;
+      font-weight: var(--font-weight-medium, 450);
+      color: var(--color-text-secondary);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .footer-plan-title.paid {
+      color: var(--color-brand);
+    }
+
+    .footer-plan-chevron {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+    }
+
+    .footer-plan-chevron.paid {
+      color: var(--color-brand);
+    }
+
     .footer-usage-meter {
-      font-size: 11px;
+      font-size: 9px;
       font-weight: var(--font-weight-default, 450);
-      color: var(--color-text-tertiary);
+      color: var(--color-text-secondary);
       user-select: none;
       white-space: nowrap;
     }
 
     .footer-usage-meter.limit-reached {
       color: var(--color-text-primary);
+    }
+
+    /* Ghost 버튼 (Modal footer Undo 기준: 투명 배경·보더 없음) */
+    .btn-ghost {
+      height: 32px;
+      padding: 4px 12px;
+      background: transparent;
+      color: var(--color-text-primary);
+      border: none;
+      border-radius: var(--radius-sm, 5px);
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--color-bg-hover);
+    }
+
+    .btn-ghost:disabled {
+      cursor: default;
+      pointer-events: none;
+      background: transparent;
+      color: var(--color-text-tertiary);
+      opacity: 1;
     }
 
     .footer-right {
@@ -4518,6 +4600,209 @@
       background-color: var(--color-brand, #8c4cf6);
       color: #ffffff;
     }
+    /* ============================================================ */
+    /* Plan & Usage 모달 (Figma UI3 Modal footer 디자인 기준)        */
+    /* ============================================================ */
+    .subscription-modal-card {
+      width: 200px;
+      background: #1E1E1E;
+      color: #FFFFFF;
+      border-radius: 13px;
+      box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.15), 0 10px 24px 0 rgba(0, 0, 0, 0.18), 0 0 0.5px 0 rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease-out;
+    }
+
+    .subscription-modal-header {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      border-bottom: 1px solid #444444;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    .subscription-modal-title {
+      font-size: 11px;
+      font-weight: var(--font-weight-strong, 550);
+      color: rgba(255, 255, 255, 0.9);
+      line-height: 16px;
+    }
+
+    .subscription-modal-close-btn {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .subscription-modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+
+    .subscription-modal-body {
+      padding: 0 16px 12px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    .subscription-plan-section {
+      display: flex;
+      flex-direction: column;
+      padding: 0 0 12px;
+    }
+
+    .subscription-section-label {
+      font-size: 11px;
+      font-weight: var(--font-weight-strong, 550);
+      color: #FFFFFF;
+      line-height: 16px;
+    }
+
+    .subscription-plan-name {
+      font-size: 24px;
+      line-height: 32px;
+      color: #FFFFFF;
+      font-weight: var(--font-weight-default, 450);
+    }
+
+    .subscription-plan-desc {
+      font-size: 9px;
+      font-weight: var(--font-weight-default, 450);
+      line-height: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .subscription-usage-section {
+      display: flex;
+      flex-direction: column;
+      padding: 0 0 12px;
+      border-top: 1px solid #444444;
+    }
+
+    .subscription-usage-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+    }
+
+    .subscription-usage-state {
+      font-size: 11px;
+      font-weight: var(--font-weight-strong, 550);
+      line-height: 16px;
+      color: var(--color-plan-pink);
+    }
+
+    .subscription-usage-state.unlimited {
+      color: var(--color-plan-lavender);
+    }
+
+    .subscription-usage-state.reached {
+      color: var(--color-plan-red);
+    }
+
+    .subscription-stat-box {
+      display: flex;
+      align-items: stretch;
+      background: var(--color-plan-stat-bg);
+      border-radius: 5px;
+      padding: 8px 4px;
+      box-sizing: border-box;
+    }
+
+    .subscription-stat {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      padding: 0 8px 0 4px;
+    }
+
+    .subscription-stat.total {
+      align-items: flex-end;
+      padding: 0 4px 0 8px;
+      margin-left: auto;
+    }
+
+    .subscription-stat-value {
+      font-size: 13px;
+      font-weight: var(--font-weight-default, 450);
+      line-height: 22px;
+      color: #FFFFFF;
+    }
+
+    .subscription-stat-label {
+      font-size: 9px;
+      font-weight: var(--font-weight-default, 450);
+      line-height: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .subscription-upgrade-box {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      width: 168px;
+      background: var(--color-plan-violet);
+      border-radius: 5px;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+
+    .subscription-divider {
+      height: 1px;
+      background: #444444;
+      margin: 12px 0 4px;
+    }
+
+    .subscription-upgrade-title {
+      font-size: 13px;
+      font-weight: var(--font-weight-strong, 550);
+      line-height: 22px;
+      color: #FFFFFF;
+    }
+
+    .subscription-upgrade-desc {
+      font-size: 9px;
+      font-weight: var(--font-weight-default, 450);
+      line-height: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .subscription-modal-footer {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 4px 8px 4px 0;
+      border-top: 1px solid #444444;
+      box-sizing: border-box;
+    }
+
+    .subscription-modal-footer .btn-cta-primary {
+      height: 24px;
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
   </style>
 </head>
 <body>
@@ -6960,7 +7245,7 @@
           var HostPortal = 4;
           var HostComponent = 5;
           var HostText = 6;
-          var Fragment5 = 7;
+          var Fragment6 = 7;
           var Mode = 8;
           var ContextConsumer = 9;
           var ContextProvider = 10;
@@ -8117,7 +8402,7 @@
                 return "DehydratedFragment";
               case ForwardRef:
                 return getWrappedName$1(type, type.render, "ForwardRef");
-              case Fragment5:
+              case Fragment6:
                 return "Fragment";
               case HostComponent:
                 return type;
@@ -16546,7 +16831,7 @@
               }
             }
             function updateFragment2(returnFiber, current2, fragment, lanes, key) {
-              if (current2 === null || current2.tag !== Fragment5) {
+              if (current2 === null || current2.tag !== Fragment6) {
                 var created = createFiberFromFragment(fragment, returnFiber.mode, lanes, key);
                 created.return = returnFiber;
                 return created;
@@ -16949,7 +17234,7 @@
                 if (child.key === key) {
                   var elementType = element.type;
                   if (elementType === REACT_FRAGMENT_TYPE) {
-                    if (child.tag === Fragment5) {
+                    if (child.tag === Fragment6) {
                       deleteRemainingChildren(returnFiber, child.sibling);
                       var existing = useFiber(child, element.props.children);
                       existing.return = returnFiber;
@@ -22425,7 +22710,7 @@
                 var _resolvedProps2 = workInProgress2.elementType === type ? _unresolvedProps2 : resolveDefaultProps(type, _unresolvedProps2);
                 return updateForwardRef(current2, workInProgress2, type, _resolvedProps2, renderLanes2);
               }
-              case Fragment5:
+              case Fragment6:
                 return updateFragment(current2, workInProgress2, renderLanes2);
               case Mode:
                 return updateMode(current2, workInProgress2, renderLanes2);
@@ -22697,7 +22982,7 @@
               case SimpleMemoComponent:
               case FunctionComponent:
               case ForwardRef:
-              case Fragment5:
+              case Fragment6:
               case Mode:
               case Profiler:
               case ContextConsumer:
@@ -26958,7 +27243,7 @@
             return fiber;
           }
           function createFiberFromFragment(elements, mode, lanes, key) {
-            var fiber = createFiber(Fragment5, elements, key, mode);
+            var fiber = createFiber(Fragment6, elements, key, mode);
             fiber.lanes = lanes;
             return fiber;
           }
@@ -28990,11 +29275,11 @@
               return jsxWithValidation(type, props, key, false);
             }
           }
-          var jsx30 = jsxWithValidationDynamic;
-          var jsxs26 = jsxWithValidationStatic;
+          var jsx31 = jsxWithValidationDynamic;
+          var jsxs27 = jsxWithValidationStatic;
           exports.Fragment = REACT_FRAGMENT_TYPE;
-          exports.jsx = jsx30;
-          exports.jsxs = jsxs26;
+          exports.jsx = jsx31;
+          exports.jsxs = jsxs27;
         })();
       }
     }
@@ -31525,6 +31810,7 @@
   // src/ui/components/shared/icons.tsx
   var import_react5 = __toESM(require_react());
   var import_jsx_runtime3 = __toESM(require_jsx_runtime());
+  var IcChevronRight = () => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M6.76777 5.52511C6.96303 5.32985 7.27954 5.32985 7.4748 5.52511L9.94941 7.99972L7.4748 10.4753C7.2796 10.6702 6.96297 10.6702 6.76777 10.4753C6.57251 10.28 6.57251 9.96256 6.76777 9.7673L8.53535 7.99972L6.76777 6.23214C6.57251 6.03688 6.57251 5.72037 6.76777 5.52511Z", fill: "currentColor" }) });
   var IcCopy = () => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M13.5 6C14.3284 6 15 6.67157 15 7.5V9H16.5C17.3284 9 18 9.67157 18 10.5V16.5C18 17.3284 17.3284 18 16.5 18H10.5C9.67157 18 9 17.3284 9 16.5V15H7.5C6.67157 15 6 14.3284 6 13.5V7.5C6 6.67157 6.67157 6 7.5 6H13.5ZM15 13.5C15 14.3284 14.3284 15 13.5 15H10V16.5C10 16.7761 10.2239 17 10.5 17H16.5C16.7761 17 17 16.7761 17 16.5V10.5C17 10.2239 16.7761 10 16.5 10H15V13.5ZM7.5 7C7.22386 7 7 7.22386 7 7.5V13.5C7 13.7761 7.22386 14 7.5 14H13.5C13.7761 14 14 13.7761 14 13.5V7.5C14 7.22386 13.7761 7 13.5 7H7.5Z", fill: "currentColor" }) });
   var IcCheckLarge = () => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M6 12.5L10 16.5L18 8", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }) });
   var COLOR_MIXED_ICON = /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
@@ -39640,8 +39926,114 @@
     );
   }
 
-  // src/ui/App.tsx
+  // src/ui/components/modals/SubscriptionModal.tsx
   var import_jsx_runtime28 = __toESM(require_jsx_runtime());
+  var CLOSE_SVG5 = /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+    "path",
+    {
+      d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
+      fill: "currentColor"
+    }
+  ) });
+  function SubscriptionModal({ usage, onClose }) {
+    const isPaid = usage !== null && usage.entitlement === "PAID_ACTIVE";
+    const total = usage?.total ?? 0;
+    const nodes = usage?.nodes ?? 0;
+    const connectors = usage?.connectors ?? 0;
+    const limit = usage?.limit ?? 20;
+    const remaining = Math.max(0, limit - total);
+    const limitReached = usage !== null && !usage.canCreate;
+    return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      "div",
+      {
+        id: "modal-subscription-backdrop",
+        className: "popover-backdrop active",
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        },
+        onClick: (e) => {
+          if (e.target === e.currentTarget) onClose();
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(
+          "div",
+          {
+            id: "modal-subscription",
+            className: "subscription-modal-card",
+            onClick: (e) => e.stopPropagation(),
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "subscription-modal-title", children: "Plan & Usage" }),
+                /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "subscription-modal-close-btn",
+                    onClick: onClose,
+                    title: "Close",
+                    children: CLOSE_SVG5
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-modal-body", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-plan-section", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-section-label", children: "Current Plan" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: `subscription-plan-name${isPaid ? " paid" : ""}`, children: isPaid ? "Pro" : "Free" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-plan-desc", children: isPaid ? "Unlimited elements, every project" : "Create up to 20 elements per project" })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-usage-section", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-usage-label-row", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "subscription-section-label", children: "Usage" }),
+                    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+                      "span",
+                      {
+                        className: `subscription-usage-state${isPaid ? " unlimited" : limitReached ? " reached" : ""}`,
+                        children: isPaid ? "Unlimited" : limitReached ? "Limit reached" : `${remaining} remaining`
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-stat-box", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-stat", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "subscription-stat-value", children: nodes }),
+                      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "subscription-stat-label", children: "Node" })
+                    ] }),
+                    /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-stat", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "subscription-stat-value", children: connectors }),
+                      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "subscription-stat-label", children: "Connector" })
+                    ] }),
+                    /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-stat total", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "subscription-stat-value", children: total }),
+                      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "subscription-stat-label", children: "Total" })
+                    ] })
+                  ] })
+                ] }),
+                !isPaid && /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(import_jsx_runtime28.Fragment, { children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-divider" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-upgrade-box", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-upgrade-title", children: "Upgrade to Pro" }),
+                    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-upgrade-desc", children: "Unlimited elements, every project" })
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-modal-footer", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "btn-cta-primary",
+                  onClick: onClose,
+                  children: "OK"
+                }
+              ) })
+            ]
+          }
+        )
+      }
+    );
+  }
+
+  // src/ui/App.tsx
+  var import_jsx_runtime29 = __toESM(require_jsx_runtime());
   var TABS = [
     { id: "node", label: "Node" },
     { id: "appearance", label: "Appearance" },
@@ -39806,18 +40198,18 @@
     }, []);
     function renderTitleBanner() {
       if (isSingleFigjam) {
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "figjam-title-label", children: "Figjam object" });
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "figjam-title-label", children: "Figjam object" });
       }
       if (isMixedNodeAndFigjam) {
         const nodeLabel = flooowCount === 1 ? "1 Node" : `${flooowCount} Nodes`;
         const figjamLabel = figjamObjectCount === 1 ? "1 FigJam object" : `${figjamObjectCount} FigJam objects`;
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { id: "multi-selection-text", children: `${nodeLabel} and ${figjamLabel} selected` }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { id: "multi-selection-text", children: `${nodeLabel} and ${figjamLabel} selected` }) });
       }
       if (isMultiFigjam) {
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figjam objects selected` }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figjam objects selected` }) });
       }
       if (isSingleConn) {
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
           "input",
           {
             type: "text",
@@ -39841,10 +40233,10 @@
         } else {
           selText = `${nodeCount} objects selected`;
         }
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { id: "multi-selection-text", children: selText }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { id: "multi-selection-text", children: selText }) });
       }
       const activeNodeId = nodeCount === 1 ? selectedNodes[0]?.id || "single" : "none";
-      return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
         "input",
         {
           type: "text",
@@ -39861,15 +40253,15 @@
         activeNodeId
       ) });
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, onInput: triggerFormChange, onChange: triggerFormChange, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "title-banner", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
+    return /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, onInput: triggerFormChange, onChange: triggerFormChange, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "title-banner", children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
         const isConnectionDisabled = isSingleFigjam || !isConnSel && nodeCount < 2;
         const isAppearanceDisabled = isFigjamSelected || isMixedNodeAndFigjam || nodeCount === 0 || isConnSel;
         const isNodeDisabled = isFigjamSelected || isMixedNodeAndFigjam || isConnSel;
         const isDisabled = tab.id === "connection" ? isConnectionDisabled : tab.id === "appearance" ? isAppearanceDisabled : isNodeDisabled;
         const isActive = !isSingleFigjam && currentTab === tab.id;
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
           "button",
           {
             id: `tab-btn-${tab.id}`,
@@ -39882,33 +40274,33 @@
           tab.id
         );
       }) }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("hr", { className: "section-divider" }),
-      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("main", { className: "tab-panels", children: isSingleFigjam ? /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "figjam-empty-card", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { children: "Select a Flooow node" }) }) : /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(import_jsx_runtime28.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("hr", { className: "section-divider" }),
+      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("main", { className: "tab-panels", children: isSingleFigjam ? /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "figjam-empty-card", children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { children: "Select a Flooow node" }) }) : /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)(import_jsx_runtime29.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
           "section",
           {
             id: "panel-node",
             className: "tab-panel",
             style: { display: currentTab === "node" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(NodePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(NodePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
           "section",
           {
             id: "panel-appearance",
             className: "tab-panel",
             style: { display: currentTab === "appearance" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(AppearancePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(AppearancePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
           "section",
           {
             id: "panel-connection",
             className: "tab-panel",
             style: { display: currentTab === "connection" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(ConnectionPanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(ConnectionPanel, {})
           }
         )
       ] }) }),
@@ -39916,23 +40308,34 @@
         const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
         const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected && !isMixedNodeAndFigjam;
         const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
-        const planBadgeText = flooowUsage === null ? "\u2026" : flooowUsage.entitlement === "PAID_ACTIVE" ? "Paid Plan" : "Free Plan";
-        const meterText = flooowUsage === null ? "Loading\u2026" : flooowUsage.entitlement === "PAID_ACTIVE" ? "Unlimited" : `${flooowUsage.total} / ${flooowUsage.limit}`;
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("footer", { className: "app-footer", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "footer-left", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "footer-plan-badge", children: planBadgeText }),
-            /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
-              "span",
-              {
-                className: `footer-usage-meter${usageBlocked ? " limit-reached" : ""}`,
-                title: usageBlocked ? `Free limit reached (${flooowUsage?.total ?? 20} elements). Upgrade to create more.` : meterText,
-                children: meterText
-              }
-            )
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "footer-right", children: isSingleFlow || isSingleFigjam ? (
+        const planBadgeText = flooowUsage === null ? "\u2026" : flooowUsage.entitlement === "PAID_ACTIVE" ? "Pro Plan" : "Free Plan";
+        const meterText = flooowUsage === null ? "Loading\u2026" : flooowUsage.entitlement === "PAID_ACTIVE" ? "Unlimited elements" : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("footer", { className: "app-footer", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
+            "div",
+            {
+              className: "footer-left footer-clickable",
+              onClick: () => setActiveModal("subscription"),
+              title: "Plan & Usage",
+              children: /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "footer-plan-block", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "footer-plan-row", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: `footer-plan-title${flooowUsage?.entitlement === "PAID_ACTIVE" ? " paid" : ""}`, children: planBadgeText }),
+                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: `footer-plan-chevron${flooowUsage?.entitlement === "PAID_ACTIVE" ? " paid" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(IcChevronRight, {}) })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
+                  "span",
+                  {
+                    className: `footer-usage-meter${usageBlocked ? " limit-reached" : ""}`,
+                    title: usageBlocked ? `Free limit reached (${flooowUsage?.total ?? 20} elements). Upgrade to create more.` : meterText,
+                    children: meterText
+                  }
+                )
+              ] })
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "footer-right", children: isSingleFlow || isSingleFigjam ? (
             /* 단일 선택: Undo / Apply 미렌더링, Upgrade 버튼 표시 */
-            /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
               "button",
               {
                 id: "btn-upgrade",
@@ -39945,19 +40348,19 @@
             )
           ) : isMultiFlow || isMultiConn ? (
             /* 노드 복수 선택·커넥터만 복수 선택: Undo(초안 취소) + Apply to All */
-            /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(import_jsx_runtime28.Fragment, { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)(import_jsx_runtime29.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
                 "button",
                 {
                   id: "btn-undo",
-                  className: "btn-cta-secondary",
+                  className: "btn-ghost",
                   type: "button",
                   disabled: isMultiConn ? !hasConnectorLabelDraft && !canUndo : !hasMultiDraft && !canUndo,
                   onClick: handleUndo,
                   children: "Undo"
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
                 "button",
                 {
                   id: "btn-main-cta",
@@ -39971,18 +40374,18 @@
             ] })
           ) : (
             /* 기타 상태 (0개 선택 생성 모드, 커넥터 선택 등) */
-            /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(import_jsx_runtime28.Fragment, { children: [
-              isConnSel && canUndo && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)(import_jsx_runtime29.Fragment, { children: [
+              isConnSel && canUndo && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
                 "button",
                 {
                   id: "btn-undo",
-                  className: "btn-cta-secondary",
+                  className: "btn-ghost",
                   type: "button",
                   onClick: handleUndo,
                   children: "Undo"
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
                 "button",
                 {
                   id: "btn-main-cta",
@@ -39998,8 +40401,8 @@
           ) })
         ] });
       })(),
-      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
-      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
+      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
         SizeModal,
         {
           mode: "add",
@@ -40011,7 +40414,7 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
         SizeModal,
         {
           mode: "edit",
@@ -40024,13 +40427,13 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "figma-design-picker" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      activeModal === "figma-design-picker" && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
         FigmaDesignPickerModal,
         {
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "add-style" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      activeModal === "add-style" && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
         StyleModal,
         {
           mode: "add",
@@ -40039,7 +40442,7 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "edit-style" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      activeModal === "edit-style" && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
         StyleModal,
         {
           mode: "edit",
@@ -40051,7 +40454,7 @@
       ),
       activeModal === "connector-color" && (() => {
         const isConnectorColorMixed = summary.isMultiConnector ? summary.connectorColor.isMixed : false;
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
           ConnectorColorModal,
           {
             initialColor: isConnectorColorMixed ? "" : uiState.selectedConnectorColor || "#000000",
@@ -40094,7 +40497,7 @@
       activeModal === "fill-color" && (() => {
         const isFillMixed = summary.isMultiFlowNode ? multiDraft.colorHex !== void 0 ? false : summary.color.isMixed : false;
         const currentFill = multiDraft.colorHex !== void 0 ? multiDraft.colorHex : (summary.isMultiFlowNode ? summary.color.value : summary.isSingleFlowNode ? summary.color.value : nodeOptionState.fillColor) || nodeOptionState.fillColor || "#FFFFFF";
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
           FillColorModal,
           {
             initialColor: currentFill,
@@ -40117,7 +40520,7 @@
         const currentStrokeColor = multiDraft.strokeColor !== void 0 ? multiDraft.strokeColor : (summary.isMultiFlowNode ? summary.strokeColor.value : summary.isSingleFlowNode ? summary.strokeColor.value : nodeOptionState.strokeColor) || nodeOptionState.strokeColor || "#000000";
         const rawWeight = summary.isMultiFlowNode ? summary.strokeWeight.value : summary.isSingleFlowNode ? summary.strokeWeight.value : nodeOptionState.strokeWeight;
         const currentStrokeWeight = multiDraft.strokeWeight !== void 0 ? multiDraft.strokeWeight : typeof rawWeight === "number" ? rawWeight : typeof nodeOptionState.strokeWeight === "number" ? nodeOptionState.strokeWeight : 1.5;
-        return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
           StrokeColorModal,
           {
             initialColor: currentStrokeColor,
@@ -40136,7 +40539,7 @@
           }
         );
       })(),
-      activeModal === "label-fill-color" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      activeModal === "label-fill-color" && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
         FillColorModal,
         {
           title: "Label Fill",
@@ -40155,7 +40558,7 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "label-stroke-color" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+      activeModal === "label-stroke-color" && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
         StrokeColorModal,
         {
           title: "Label Stroke",
@@ -40177,17 +40580,24 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(FigmaTooltip, {})
+      activeModal === "subscription" && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
+        SubscriptionModal,
+        {
+          usage: flooowUsage,
+          onClose: () => setActiveModal("none")
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(FigmaTooltip, {})
     ] });
   }
 
   // src/ui/index.tsx
-  var import_jsx_runtime29 = __toESM(require_jsx_runtime());
+  var import_jsx_runtime30 = __toESM(require_jsx_runtime());
   var container = document.getElementById("root");
   if (!container) throw new Error("#root not found");
   var root = (0, import_client.createRoot)(container);
   root.render(
-    /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(App, {}) })
+    /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(App, {}) })
   );
 })();
 /*! Bundled license information:

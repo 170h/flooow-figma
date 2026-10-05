@@ -225,7 +225,7 @@ function normalizeTerminal(term?: string, fallback: string = 'NONE'): string {
 }
 
 // 모달 타입
-export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color' | 'label-fill-color' | 'label-stroke-color';
+export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color' | 'label-fill-color' | 'label-stroke-color' | 'subscription';
 
 // 어피어런스 탭 상호 배타적 토글 섹션 ('stepBadges' | 'status' | 'elevation' | null)
 export type ExclusiveAppearanceSection = 'stepBadges' | 'status' | 'elevation' | null;

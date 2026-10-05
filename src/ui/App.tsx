@@ -17,6 +17,7 @@ import { StyleModal } from './components/modals/StyleModal';
 import { ConnectorColorModal } from './components/modals/ConnectorColorModal';
 import { FillColorModal } from './components/modals/FillColorModal';
 import { StrokeColorModal } from './components/modals/StrokeColorModal';
+import { SubscriptionModal } from './components/modals/SubscriptionModal';
 
 // ============================================================
 // 탭 버튼 목록
@@ -435,8 +436,12 @@ export function App() {
 
         return (
           <footer className="app-footer">
-            {/* 왼쪽: 플랜 타이틀 + 사용량 (Modal footer 디자인 기준) */}
-            <div className="footer-left">
+            {/* 왼쪽: 플랜 타이틀 + 사용량 (클릭 시 Plan & Usage 모달) */}
+            <div
+              className="footer-left footer-clickable"
+              onClick={() => setActiveModal('subscription')}
+              title="Plan & Usage"
+            >
               <div className="footer-plan-block">
                 <div className="footer-plan-row">
                   <span className={`footer-plan-title${flooowUsage?.entitlement === 'PAID_ACTIVE' ? ' paid' : ''}`}>{planBadgeText}</span>
@@ -470,7 +475,7 @@ export function App() {
                 <>
                   <button
                     id="btn-undo"
-                    className="btn-cta-secondary"
+                    className="btn-ghost"
                     type="button"
                     disabled={isMultiConn ? (!hasConnectorLabelDraft && !canUndo) : (!hasMultiDraft && !canUndo)}
                     onClick={handleUndo}
@@ -493,7 +498,7 @@ export function App() {
                   {(isConnSel && canUndo) && (
                     <button
                       id="btn-undo"
-                      className="btn-cta-secondary"
+                      className="btn-ghost"
                       type="button"
                       onClick={handleUndo}
                     >
@@ -730,6 +735,12 @@ export function App() {
               markConnectorDirty();
             }
           }}
+          onClose={() => setActiveModal('none')}
+        />
+      )}
+      {activeModal === 'subscription' && (
+        <SubscriptionModal
+          usage={flooowUsage}
           onClose={() => setActiveModal('none')}
         />
       )}
