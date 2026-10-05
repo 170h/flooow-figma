@@ -148,23 +148,24 @@ Figma 플러그인 표준 구조. UI(iframe)와 Core(Figma API)가 `postMessage`
 | 메시지         | `postToUI` (code.ts:520), `notify` (code.ts:525)                                                                                                                                                                                                                                       |
 | 디스패처       | `figma.ui.onmessage` (code.ts:4709)                                                                                                                                                                                                                                                    |
 
-### 5.2 `src/customConnector.ts` (1,419줄) — 직각 벡터 커넥터 엔진
+### 5.2 `src/customConnector.ts` (2,096줄) — 직각 벡터 커넥터 엔진
 
 피그잼 네이티브 커넥터의 라운딩 강제 문제를 우회, 100% 순수 직각 Miter 선 생성.
 
-| 영역            | 함수 (위치)                                                                                                                                                                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 타입/인터페이스 | `Point`, `Box`, `ConnectorOptions` (customConnector.ts:13)                                                                                                                                                                                                        |
-| 헬퍼            | `safeGetPluginData` (customConnector.ts:40), `terminalToStrokeCap` (customConnector.ts:52), `getMagnetDirectionVector` (customConnector.ts:70)                                                                                                                    |
-| 라우팅 계산     | `calculateCurvedPoints` (customConnector.ts:80), `calculateStraightPoints` (customConnector.ts:123), `calculateRoutingPoints` (customConnector.ts:128), `calculateOrthogonalPoints` (customConnector.ts:471), `simplifyOrthogonalPoints` (customConnector.ts:440) |
-| 지오메트리      | `buildVectorNetwork` (customConnector.ts:164) — 단자별 버텍스·세그먼트, `buildVectorVertices` (customConnector.ts:380, 하위호환 래퍼)                                                                                                                             |
-| 좌표            | `getMagnetPoint` (customConnector.ts:426), `getLabelCenterPoint` (customConnector.ts:390)                                                                                                                                                                         |
-| 충돌 검사       | `lineSegmentIntersectsBox` (customConnector.ts:630), `doesPathCrossBoxes` (customConnector.ts:671)                                                                                                                                                                |
-| 렌더링          | `createOrthogonalVectorConnector` (customConnector.ts:686), `updateOrthogonalVectorConnector` (customConnector.ts:1097)                                                                                                                                           |
-| 레지스트리      | `registerConnectorInRegistry` (customConnector.ts:896), `refreshConnectorRegistry` (customConnector.ts:958), `cleanupGhostTerminalMarkers` (customConnector.ts:929)                                                                                               |
-| 최적화          | `getOptimalMagnetPair` (customConnector.ts:984), `optimizeNativeConnector` (customConnector.ts:1058)                                                                                                                                                              |
-| 동기화          | `syncConnectorsForMovedNodes` (customConnector.ts:1353) — 노드 이동 시 커넥터 자동 재연결                                                                                                                                                                         |
-| 메타            | `copyConnectorData` (customConnector.ts:1324)                                                                                                                                                                                                                     |
+| 영역            | 함수 (위치) |
+| --------------- | ----------- |
+| 타입/인터페이스 | `Point`, `Box`, `ConnectorOptions` (customConnector.ts:15) |
+| 헬퍼            | `safeGetPluginData` (customConnector.ts:236), `terminalToStrokeCap` (customConnector.ts:248), `getMagnetDirectionVector` (customConnector.ts:265) |
+| 라우팅 계산     | `calculateCurvedPoints` (customConnector.ts:275), `calculateStraightPoints` (customConnector.ts:318), `calculateRoutingPoints` (customConnector.ts:323), `calculateOrthogonalPoints` (customConnector.ts:613), `simplifyOrthogonalPoints` (customConnector.ts:582) |
+| 지오메트리      | `buildVectorNetwork` (customConnector.ts:359) — 단자별 버텍스·세그먼트, `buildVectorVertices` (customConnector.ts:429, 하위호환 래퍼) |
+| 좌표            | `getMagnetPoint` (customConnector.ts:568), `getLabelCenterPoint` (customConnector.ts:563) |
+| 충돌 검사       | `lineSegmentIntersectsBox` (customConnector.ts:796), `doesPathCrossBoxes` (customConnector.ts:837) |
+| 렌더링          | `createOrthogonalVectorConnector` (customConnector.ts:852), `updateOrthogonalVectorConnector` (customConnector.ts:1644) — 벡터 재사용(resize·네트워크만 갱신) + 동일 입력 틱 early-return |
+| 레지스트리      | `registerConnectorInRegistry` (customConnector.ts:1057), `refreshConnectorRegistry` (customConnector.ts:1090) |
+| 최적화          | `getOptimalMagnetPair` (customConnector.ts:1116), `resolveMagnetPair` (customConnector.ts:1435) — 자동 4조건(관통·방향반전·주축·포트겹침) 유지, 수동은 앵커 이동량·완화 임계로 유지, `optimizeNativeConnector` (customConnector.ts:1546) |
+| 수동 앵커       | `isManualDirectionReversed` (customConnector.ts:1360), `getManualBaseDelta` (customConnector.ts:1384), `manualDisplacement` (customConnector.ts:1389), pluginData `is_manual_magnet`·`manual_base_dx/dy` |
+| 동기화          | `syncConnectorsForMovedNodes` (customConnector.ts:2031) — 노드 이동 시 커넥터 자동 재연결 |
+| 메타            | `copyConnectorData` (customConnector.ts:1992, 수동키 포함) |
 
 ### 5.3 `src/types.ts` (419줄) — 공유 도메인 모델
 

@@ -33,6 +33,7 @@
       --color-text-primary: #000000;
       --color-text-secondary: rgba(0, 0, 0, 0.6);
       --color-text-tertiary: rgba(0, 0, 0, 0.4);
+      --color-text-danger: var(--figma-color-text-danger, #e03e3e);
       --color-text-onbrand: #ffffff;
       --color-text-ondark: #ffffff;
       --color-text-ondark-muted: rgba(255, 255, 255, 0.65);
@@ -40,6 +41,7 @@
       /* 플랜 & 사용량 액센트 (Plan & Usage 모달 전용) */
       --color-plan-pink: #FC9CE0;
       --color-plan-red: #E03E1A;
+      --color-plan-success: #79D297;
       --color-plan-warning: #F7D15F;
       --color-plan-danger: #FCA397;
       --color-plan-lavender: #C5B2DC;
@@ -2348,19 +2350,28 @@
       align-items: center;
       justify-content: center;
       gap: 2px;
+      width: 100%;
       max-width: 100%;
       min-width: 0;
+      overflow: hidden;
     }
 
     .node-preview-title {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      width: 100%;
+      max-width: 100%;
       font-size: 11px;
       font-weight: 450;
       color: var(--color-text-primary);
       text-align: center;
-      word-break: break-all;
-      overflow: hidden;
-      line-height: 1.3;
+      line-height: 14px;
       max-height: 28px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-word;
+      white-space: normal;
     }
 
     .node-preview-type {
@@ -3038,6 +3049,10 @@
       color: var(--color-text-secondary);
       user-select: none;
       white-space: nowrap;
+    }
+
+    .footer-usage-meter.limit-reached {
+      color: var(--color-text-danger);
     }
 
     .app-footer .btn-ghost,
@@ -4709,11 +4724,52 @@
       line-height: 16px;
     }
 
+    .subscription-plan-name-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
     .subscription-plan-name {
       font-size: 24px;
       line-height: 32px;
       color: #FFFFFF;
       font-weight: var(--font-weight-default, 450);
+    }
+
+    .subscription-plan-cycle {
+      font-size: 11px;
+      line-height: 25px;
+      font-weight: var(--font-weight-strong, 550);
+      color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
+    }
+
+    .subscription-plan-status {
+      padding: 4px 0;
+      font-size: 11px;
+      line-height: 16px;
+      font-weight: var(--font-weight-default, 450);
+      color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
+    }
+
+    .subscription-plan-status.is-neutral {
+      color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
+    }
+
+    .subscription-plan-status.is-success {
+      color: var(--color-plan-success, #79d297);
+    }
+
+    .subscription-plan-status.is-warning {
+      color: var(--color-plan-warning, #f7d15f);
+    }
+
+    .subscription-plan-status.is-danger {
+      color: var(--color-plan-danger, #fca397);
+    }
+
+    .subscription-plan-status.is-critical {
+      color: var(--color-plan-red, #e03e1a);
     }
 
     .subscription-plan-desc {
@@ -29802,6 +29858,389 @@
     return Math.min(SCREEN_NODE_CONSTRAINTS.MAX_STROKE_WEIGHT, Math.max(SCREEN_NODE_CONSTRAINTS.MIN_STROKE_WEIGHT, sw));
   }
 
+  // src/ui/utils/gizmoState.ts
+  var ALL_MAGNETS = ["TOP", "RIGHT", "BOTTOM", "LEFT"];
+  function blankMagnetStates() {
+    return { TOP: "default", RIGHT: "default", BOTTOM: "default", LEFT: "default" };
+  }
+  function showDraftOnly(magnetStates, draft) {
+    if (!draft) return false;
+    for (const mag of ALL_MAGNETS) {
+      magnetStates[mag] = mag === draft ? "active" : "default";
+    }
+    return true;
+  }
+  function isEndpointMagnetDraftDirty(currents, draft) {
+    if (!draft) return false;
+    if (currents.length === 0) return false;
+    return currents.some((mag) => mag !== draft);
+  }
+  function computeGizmoMagnets(input) {
+    const {
+      isMultiConnector,
+      isSingleConnector,
+      connectorNodes,
+      hasExistingConnection,
+      connectedConnectors,
+      userPendingSourceMagnet,
+      userPendingTargetMagnet,
+      is3PlusNodes,
+      startNodeId,
+      multiNodeConnectors
+    } = input;
+    function resolveSideStates(magnets, userPending) {
+      const magnetStates = {
+        TOP: "default",
+        RIGHT: "default",
+        BOTTOM: "default",
+        LEFT: "default"
+      };
+      const total = magnets.length;
+      const uniqueUsed = Array.from(new Set(magnets));
+      const magnetCounts = {
+        TOP: 0,
+        RIGHT: 0,
+        BOTTOM: 0,
+        LEFT: 0
+      };
+      magnets.forEach((mag) => {
+        magnetCounts[mag] = (magnetCounts[mag] || 0) + 1;
+      });
+      ALL_MAGNETS.forEach((mag) => {
+        const count = magnetCounts[mag];
+        if (count >= 2) {
+          magnetStates[mag] = "mixed";
+        } else if (count === 1) {
+          magnetStates[mag] = "active";
+        } else {
+          magnetStates[mag] = "default";
+        }
+      });
+      const drafted = showDraftOnly(magnetStates, userPending);
+      return {
+        magnetStates,
+        usedMagnets: drafted && userPending ? [userPending] : uniqueUsed,
+        totalConnections: total
+      };
+    }
+    function resolveMoreSideStates(incomingMags, outgoingMags, userPending) {
+      const magnetStates = blankMagnetStates();
+      const outgoingCounts = {
+        TOP: 0,
+        RIGHT: 0,
+        BOTTOM: 0,
+        LEFT: 0
+      };
+      outgoingMags.forEach((mag) => {
+        outgoingCounts[mag] = (outgoingCounts[mag] || 0) + 1;
+      });
+      const incomingSet = new Set(incomingMags);
+      ALL_MAGNETS.forEach((mag) => {
+        const outCount = outgoingCounts[mag];
+        const hasIn = incomingSet.has(mag);
+        if (outCount >= 2 || outCount >= 1 && hasIn) {
+          magnetStates[mag] = "mixed";
+        } else if (outCount === 1) {
+          magnetStates[mag] = "active";
+        } else if (hasIn) {
+          magnetStates[mag] = "mixed";
+        } else {
+          magnetStates[mag] = "default";
+        }
+      });
+      const drafted = showDraftOnly(magnetStates, userPending);
+      const allUsed = Array.from(/* @__PURE__ */ new Set([...incomingMags, ...outgoingMags]));
+      return {
+        magnetStates,
+        usedMagnets: drafted && userPending ? [userPending] : allUsed,
+        totalConnections: incomingMags.length + outgoingMags.length
+      };
+    }
+    if (is3PlusNodes) {
+      let resolve3PlusGroupStates2 = function(magnets, userPending) {
+        const magnetStates = blankMagnetStates();
+        const total = magnets.length;
+        const uniqueUsed = Array.from(new Set(magnets));
+        if (uniqueUsed.length === 1) {
+          const onlyMag = uniqueUsed[0];
+          if (onlyMag) {
+            magnetStates[onlyMag] = "active";
+          }
+        } else if (uniqueUsed.length >= 2) {
+          uniqueUsed.forEach((mag) => {
+            magnetStates[mag] = "mixed";
+          });
+        }
+        const drafted = showDraftOnly(magnetStates, userPending);
+        return {
+          magnetStates,
+          usedMagnets: drafted && userPending ? [userPending] : uniqueUsed,
+          totalConnections: total
+        };
+      };
+      var resolve3PlusGroupStates = resolve3PlusGroupStates2;
+      const startMags2 = [];
+      const endMags2 = [];
+      const conns = multiNodeConnectors || [];
+      if (startNodeId) {
+        const startSourceConns = conns.filter((c) => c.sourceId === startNodeId && c.sourceMagnet);
+        const startTargetConns = conns.filter((c) => c.targetId === startNodeId && c.targetMagnet);
+        if (startSourceConns.length > 0) {
+          startSourceConns.forEach((c) => {
+            if (c.sourceMagnet) startMags2.push(c.sourceMagnet);
+          });
+        } else if (startTargetConns.length > 0) {
+          startTargetConns.forEach((c) => {
+            if (c.targetMagnet) startMags2.push(c.targetMagnet);
+          });
+        }
+        conns.forEach((conn) => {
+          if (conn.targetId !== startNodeId && conn.targetMagnet) {
+            endMags2.push(conn.targetMagnet);
+          }
+          if (conn.sourceId !== startNodeId && conn.sourceMagnet) {
+            endMags2.push(conn.sourceMagnet);
+          }
+        });
+      } else {
+        conns.forEach((conn) => {
+          if (conn.sourceMagnet) startMags2.push(conn.sourceMagnet);
+          if (conn.targetMagnet) endMags2.push(conn.targetMagnet);
+        });
+      }
+      return {
+        start: resolve3PlusGroupStates2(startMags2, userPendingSourceMagnet),
+        end: resolve3PlusGroupStates2(endMags2, userPendingTargetMagnet)
+      };
+    }
+    function resolveMultiConnectorStates(magnets, userPending) {
+      const magnetStates = blankMagnetStates();
+      const total = magnets.length;
+      const uniqueUsed = Array.from(new Set(magnets));
+      if (uniqueUsed.length === 1) {
+        const singleMag = uniqueUsed[0];
+        if (singleMag) {
+          magnetStates[singleMag] = "active";
+        }
+      } else if (uniqueUsed.length >= 2) {
+        uniqueUsed.forEach((mag) => {
+          magnetStates[mag] = "mixed";
+        });
+      }
+      const drafted = showDraftOnly(magnetStates, userPending);
+      return {
+        magnetStates,
+        usedMagnets: drafted && userPending ? [userPending] : uniqueUsed,
+        totalConnections: total
+      };
+    }
+    let startMags = [];
+    let endMags = [];
+    if (isMultiConnector || isSingleConnector) {
+      const conns = (connectorNodes || []).filter((n) => n && n.isConnector);
+      conns.forEach((c) => {
+        if (c.connectorSourceMagnet) startMags.push(c.connectorSourceMagnet);
+        if (c.connectorTargetMagnet) endMags.push(c.connectorTargetMagnet);
+      });
+      return {
+        start: resolveMultiConnectorStates(startMags, userPendingSourceMagnet),
+        end: resolveMultiConnectorStates(endMags, userPendingTargetMagnet)
+      };
+    } else if (hasExistingConnection && connectedConnectors && connectedConnectors.length > 0) {
+      connectedConnectors.forEach((conn) => {
+        const isRev = Boolean(conn.isReversed);
+        const uiStart = isRev ? conn.targetMagnet : conn.sourceMagnet;
+        const uiEnd = isRev ? conn.sourceMagnet : conn.targetMagnet;
+        if (uiStart) startMags.push(uiStart);
+        if (uiEnd) endMags.push(uiEnd);
+      });
+    }
+    return {
+      start: resolveSideStates(startMags, userPendingSourceMagnet),
+      end: resolveSideStates(endMags, userPendingTargetMagnet)
+    };
+  }
+  function collectGizmoSideMagnets(input) {
+    const {
+      isMultiConnector,
+      isSingleConnector,
+      connectorNodes,
+      hasExistingConnection,
+      connectedConnectors,
+      is3PlusNodes,
+      startNodeId,
+      multiNodeConnectors
+    } = input;
+    const start = [];
+    const end = [];
+    if (is3PlusNodes) {
+      const conns = multiNodeConnectors || [];
+      if (startNodeId) {
+        const startSourceConns = conns.filter((c) => c.sourceId === startNodeId && c.sourceMagnet);
+        const startTargetConns = conns.filter((c) => c.targetId === startNodeId && c.targetMagnet);
+        if (startSourceConns.length > 0) {
+          startSourceConns.forEach((c) => {
+            if (c.sourceMagnet) start.push(c.sourceMagnet);
+          });
+        } else {
+          startTargetConns.forEach((c) => {
+            if (c.targetMagnet) start.push(c.targetMagnet);
+          });
+        }
+        conns.forEach((conn) => {
+          if (conn.targetId !== startNodeId && conn.targetMagnet) end.push(conn.targetMagnet);
+          if (conn.sourceId !== startNodeId && conn.sourceMagnet) end.push(conn.sourceMagnet);
+        });
+      } else {
+        conns.forEach((conn) => {
+          if (conn.sourceMagnet) start.push(conn.sourceMagnet);
+          if (conn.targetMagnet) end.push(conn.targetMagnet);
+        });
+      }
+      return { start, end };
+    }
+    if (isMultiConnector || isSingleConnector) {
+      (connectorNodes || []).filter((n) => n && n.isConnector).forEach((c) => {
+        if (c.connectorSourceMagnet) start.push(c.connectorSourceMagnet);
+        if (c.connectorTargetMagnet) end.push(c.connectorTargetMagnet);
+      });
+      return { start, end };
+    }
+    if (hasExistingConnection && connectedConnectors && connectedConnectors.length > 0) {
+      connectedConnectors.forEach((conn) => {
+        const isRev = Boolean(conn.isReversed);
+        const uiStart = isRev ? conn.targetMagnet : conn.sourceMagnet;
+        const uiEnd = isRev ? conn.sourceMagnet : conn.targetMagnet;
+        if (uiStart) start.push(uiStart);
+        if (uiEnd) end.push(uiEnd);
+      });
+    }
+    return { start, end };
+  }
+  function isGizmoDraftDirty(input) {
+    const sides = collectGizmoSideMagnets(input);
+    return isEndpointMagnetDraftDirty(sides.start, input.userPendingSourceMagnet) || isEndpointMagnetDraftDirty(sides.end, input.userPendingTargetMagnet);
+  }
+  function buildEndpointMagnetPatches(input) {
+    const sourceDraft = input.userPendingSourceMagnet || void 0;
+    const targetDraft = input.userPendingTargetMagnet || void 0;
+    const sides = collectGizmoSideMagnets(input);
+    const writeSource = Boolean(sourceDraft && isEndpointMagnetDraftDirty(sides.start, sourceDraft));
+    const writeTarget = Boolean(targetDraft && isEndpointMagnetDraftDirty(sides.end, targetDraft));
+    if (!writeSource && !writeTarget) return [];
+    if (input.isSingleConnector || input.isMultiConnector) {
+      return (input.connectorNodes || []).filter((n) => n && n.isConnector && n.id).map((n) => {
+        const patch = {
+          id: n.id,
+          isReversed: Boolean(n.connectorIsReversed)
+        };
+        if (writeSource && sourceDraft) patch.sourceMagnet = sourceDraft;
+        if (writeTarget && targetDraft) patch.targetMagnet = targetDraft;
+        return patch;
+      });
+    }
+    if (!input.is3PlusNodes && input.hasExistingConnection && input.connectedConnectors) {
+      return input.connectedConnectors.filter((conn) => conn.id).map((conn) => {
+        const patch = {
+          id: conn.id,
+          isReversed: Boolean(conn.isReversed)
+        };
+        if (writeSource && sourceDraft) patch.sourceMagnet = sourceDraft;
+        if (writeTarget && targetDraft) patch.targetMagnet = targetDraft;
+        return patch;
+      });
+    }
+    if (input.is3PlusNodes) {
+      const conns = input.multiNodeConnectors || [];
+      const startNodeId = input.startNodeId;
+      const byId = /* @__PURE__ */ new Map();
+      const touch = (id) => {
+        let patch = byId.get(id);
+        if (!patch) {
+          patch = { id };
+          byId.set(id, patch);
+        }
+        return patch;
+      };
+      if (startNodeId) {
+        const startSourceConns = conns.filter((c) => c.sourceId === startNodeId && c.sourceMagnet && c.id);
+        const startTargetConns = conns.filter((c) => c.targetId === startNodeId && c.targetMagnet && c.id);
+        const startIsTargetSide = startSourceConns.length === 0 && startTargetConns.length > 0;
+        if (writeSource && sourceDraft) {
+          const group = startIsTargetSide ? startTargetConns : startSourceConns;
+          group.forEach((conn) => {
+            const patch = touch(conn.id);
+            if (startIsTargetSide) patch.targetMagnet = sourceDraft;
+            else patch.sourceMagnet = sourceDraft;
+          });
+        }
+        if (writeTarget && targetDraft) {
+          conns.forEach((conn) => {
+            if (!conn.id) return;
+            if (conn.targetId !== startNodeId && conn.targetMagnet) {
+              touch(conn.id).targetMagnet = targetDraft;
+            }
+            if (conn.sourceId !== startNodeId && conn.sourceMagnet) {
+              touch(conn.id).sourceMagnet = targetDraft;
+            }
+          });
+        }
+      }
+      return Array.from(byId.values());
+    }
+    return [];
+  }
+
+  // src/chainOrder.ts
+  var ROW_OVERLAP_THRESHOLD = 0.5;
+  function orderNodesForChain(nodes) {
+    if (nodes.length <= 1) return nodes;
+    const sorted = [...nodes].sort((a, b) => {
+      if (a.y !== b.y) return a.y - b.y;
+      if (a.x !== b.x) return a.x - b.x;
+      return a.id.localeCompare(b.id);
+    });
+    const rows = [];
+    for (const node of sorted) {
+      if (rows.length === 0) {
+        rows.push({
+          anchor: node,
+          nodes: [node]
+        });
+        continue;
+      }
+      const lastRow = rows[rows.length - 1];
+      const anchor = lastRow.anchor;
+      const topA = anchor.y;
+      const bottomA = anchor.y + anchor.height;
+      const topB = node.y;
+      const bottomB = node.y + node.height;
+      const overlap = Math.max(0, Math.min(bottomA, bottomB) - Math.max(topA, topB));
+      const referenceHeight = Math.min(anchor.height, node.height);
+      if (overlap >= referenceHeight * ROW_OVERLAP_THRESHOLD) {
+        lastRow.nodes.push(node);
+      } else {
+        rows.push({
+          anchor: node,
+          nodes: [node]
+        });
+      }
+    }
+    const result = [];
+    for (const row of rows) {
+      row.nodes.sort((a, b) => {
+        if (a.x !== b.x) return a.x - b.x;
+        if (a.y !== b.y) return a.y - b.y;
+        return a.id.localeCompare(b.id);
+      });
+      result.push(...row.nodes);
+    }
+    return result;
+  }
+  function orderFlowNodesForChain(nodes) {
+    return orderNodesForChain(nodes.filter((node) => node.isFlowNode === true));
+  }
+
   // src/ui/context/AppContext.tsx
   var import_jsx_runtime = __toESM(require_jsx_runtime());
   var DEFAULT_SIZE_PRESETS = [
@@ -29818,6 +30257,21 @@
   function normalizeTerminal(term, fallback = "NONE") {
     if (!term || term === "BAR" || term === "SQUARE") return fallback;
     return term;
+  }
+  function buildSelectionGizmoInput(nodes, ui, draft) {
+    const allConnectors = nodes.length > 0 && nodes.every((n) => n && n.isConnector);
+    return {
+      isSingleConnector: allConnectors && nodes.length === 1,
+      isMultiConnector: allConnectors && nodes.length >= 2,
+      connectorNodes: nodes,
+      hasExistingConnection: Boolean(ui.hasExistingConnection),
+      connectedConnectors: ui.connectedConnectors,
+      is3PlusNodes: nodes.length >= 3 && !allConnectors,
+      startNodeId: nodes[0]?.id,
+      multiNodeConnectors: ui.multiNodeConnectors,
+      userPendingSourceMagnet: draft.sourceMagnet ?? null,
+      userPendingTargetMagnet: draft.targetMagnet ?? null
+    };
   }
   var DEFAULT_NODE_OPTION_STATE = {
     nodeType: "Screen",
@@ -29970,6 +30424,19 @@
       setConnectorLabelDraftRaw({});
     }, []);
     const hasConnectorLabelDraft = Object.keys(connectorLabelDraft).length > 0;
+    const [endpointDraft, setEndpointDraftRaw] = (0, import_react2.useState)({});
+    const endpointDraftRef = (0, import_react2.useRef)({});
+    const setEndpointMagnetDraft = (0, import_react2.useCallback)((side, magnet) => {
+      setEndpointDraftRaw((prev) => {
+        const next = side === "source" ? { ...prev, sourceMagnet: magnet } : { ...prev, targetMagnet: magnet };
+        endpointDraftRef.current = next;
+        return next;
+      });
+    }, []);
+    const clearEndpointMagnetDraft = (0, import_react2.useCallback)(() => {
+      endpointDraftRef.current = {};
+      setEndpointDraftRaw({});
+    }, []);
     const [isApplyingMultiDraft, setIsApplyingMultiDraft] = (0, import_react2.useState)(false);
     const isApplyingMultiDraftRef = (0, import_react2.useRef)(false);
     const applyTimeoutRef = (0, import_react2.useRef)(null);
@@ -29997,7 +30464,8 @@
     }, []);
     const [lastAppliedSnapshot, setLastAppliedSnapshot] = (0, import_react2.useState)(null);
     const lastAppliedSnapshotRef = (0, import_react2.useRef)(null);
-    const canUndo = Boolean(lastAppliedSnapshot) || selectedNodes.length >= 2 && (hasMultiDraft || hasConnectorLabelDraft);
+    const endpointDirty = isGizmoDraftDirty(buildSelectionGizmoInput(selectedNodes, uiState, endpointDraft));
+    const canUndo = Boolean(lastAppliedSnapshot) || selectedNodes.length >= 2 && (hasMultiDraft || hasConnectorLabelDraft) || endpointDirty;
     const applyMultiDraft = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       if (isApplyingMultiDraftRef.current) return;
@@ -30433,6 +30901,11 @@
         showToast("\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
         return;
       }
+      if (isGizmoDraftDirty(buildSelectionGizmoInput(selectedNodesRef.current, uiStateRef.current, endpointDraftRef.current))) {
+        clearEndpointMagnetDraft();
+        showToast("\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
+        return;
+      }
       const snapshot = lastAppliedSnapshotRef.current;
       if (snapshot) {
         if (snapshot.type === "single" && snapshot.singlePayload) {
@@ -30480,7 +30953,7 @@
         revertSingleNodeForm(originalSelectedNodeRef.current);
         showToast("\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "info");
       }
-    }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft]);
+    }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft]);
     const lastResizeHeightRef = (0, import_react2.useRef)(0);
     const resizeTimerRef = (0, import_react2.useRef)(null);
     const autoResizeWindow = (0, import_react2.useCallback)(() => {
@@ -30735,7 +31208,7 @@
         }
       }, "*");
     }, []);
-    const applyCurrentConnectorState = (0, import_react2.useCallback)((customStartOffset, customEndOffset) => {
+    const applyCurrentConnectorState = (0, import_react2.useCallback)((customStartOffset, customEndOffset, includeMagnets = true) => {
       const nodes = selectedNodesRef.current;
       if (!isConnectorSelectedRef.current || !nodes || nodes.length === 0) return;
       const connNodes = nodes.filter((n) => n && n.isConnector);
@@ -30795,6 +31268,12 @@
       const endOffStr = endOffEl?.value;
       const endOffset = typeof customEndOffset === "number" ? customEndOffset : endOffStr !== void 0 && endOffStr !== null && endOffStr.trim() !== "" ? parseFloat(endOffStr) : void 0;
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+      const endpointDraftNow = includeMagnets ? endpointDraftRef.current : {};
+      const magnetPatches = includeMagnets ? buildEndpointMagnetPatches(
+        buildSelectionGizmoInput(nodes, uiStateRef.current, endpointDraftNow)
+      ) : [];
+      const magnetPatchById = new Map(magnetPatches.map((patch) => [patch.id, patch]));
+      const hasEndpointDraft = Boolean(endpointDraftNow.sourceMagnet || endpointDraftNow.targetMagnet);
       const labelDraft = connectorLabelDraftRef.current;
       const isMultiConnector = connNodes.length > 1;
       const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || "BOX";
@@ -30802,6 +31281,7 @@
       const labelFillColor = lastConnectorConfigRef.current.labelFillColor || DEFAULT_LABEL_FILL;
       const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
       connNodes.forEach((node) => {
+        const magnetPatch = magnetPatchById.get(node.id);
         const labelPatch = isMultiConnector ? {
           ...labelDraft.labelOn !== void 0 ? { hasLabel: labelDraft.labelOn } : {},
           ...labelDraft.labelText !== void 0 ? { label: labelDraft.labelText, hasLabel: labelDraft.labelOn !== false } : {},
@@ -30831,8 +31311,8 @@
               endTerminal: endTerm,
               startOffset,
               endOffset,
-              sourceMagnet: sourceMagnet || void 0,
-              targetMagnet: targetMagnet || void 0,
+              sourceMagnet: includeMagnets ? magnetPatch?.sourceMagnet ?? (hasEndpointDraft ? void 0 : sourceMagnet || void 0) : void 0,
+              targetMagnet: includeMagnets ? magnetPatch?.targetMagnet ?? (hasEndpointDraft ? void 0 : targetMagnet || void 0) : void 0,
               ...labelPatch,
               isReversed: node?.connectorIsReversed || false
             }
@@ -30840,11 +31320,19 @@
         }, "*");
       });
       if (isMultiConnector) clearConnectorLabelDraft();
+      if (includeMagnets) clearEndpointMagnetDraft();
       setConnectorDirty(false);
-    }, [clearConnectorLabelDraft]);
-    const applyExistingConnectionState = (0, import_react2.useCallback)((customStartOffset, customEndOffset) => {
+    }, [clearConnectorLabelDraft, clearEndpointMagnetDraft]);
+    const applyExistingConnectionState = (0, import_react2.useCallback)((customStartOffset, customEndOffset, includeMagnets = true) => {
       const conns = uiStateRef.current.connectedConnectors || [];
       if (conns.length === 0) return;
+      const nodes = selectedNodesRef.current;
+      const endpointDraftNow = includeMagnets ? endpointDraftRef.current : {};
+      const magnetPatches = includeMagnets ? buildEndpointMagnetPatches(
+        buildSelectionGizmoInput(nodes, uiStateRef.current, endpointDraftNow)
+      ) : [];
+      const magnetPatchById = new Map(magnetPatches.map((patch) => [patch.id, patch]));
+      const hasEndpointDraft = Boolean(includeMagnets && (endpointDraftNow.sourceMagnet || endpointDraftNow.targetMagnet));
       const labelToggleEl = document.getElementById("toggle-conn-label");
       const labelInputEl = document.getElementById("input-conn-label");
       const colorEl = document.getElementById("conn-line-color");
@@ -30869,6 +31357,7 @@
       const endOffset = typeof customEndOffset === "number" ? customEndOffset : endOffStr && endOffStr.trim() !== "" ? parseFloat(endOffStr) : void 0;
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
       conns.forEach((conn) => {
+        const magnetPatch = magnetPatchById.get(conn.id);
         parent.postMessage({
           pluginMessage: {
             type: "UPDATE_CONNECTOR_PROPERTIES",
@@ -30883,8 +31372,8 @@
               endTerminal: endTerm,
               startOffset,
               endOffset,
-              sourceMagnet: sourceMagnet || void 0,
-              targetMagnet: targetMagnet || void 0,
+              sourceMagnet: includeMagnets ? magnetPatch?.sourceMagnet ?? (hasEndpointDraft ? void 0 : sourceMagnet || void 0) : void 0,
+              targetMagnet: includeMagnets ? magnetPatch?.targetMagnet ?? (hasEndpointDraft ? void 0 : targetMagnet || void 0) : void 0,
               label,
               hasLabel,
               labelBoxStyle: lastConnectorConfigRef.current.labelBoxStyle || "BOX",
@@ -30895,17 +31384,18 @@
           }
         }, "*");
       });
+      if (includeMagnets) clearEndpointMagnetDraft();
       setConnectorDirty(false);
-    }, []);
+    }, [clearEndpointMagnetDraft]);
     (0, import_react2.useEffect)(() => {
       liveApplyConnectorRef.current = (customStartOffset, customEndOffset) => {
         const nodes = selectedNodesRef.current;
         if (nodes.length === 1 && nodes[0]?.isConnector) {
-          applyCurrentConnectorState(customStartOffset, customEndOffset);
+          applyCurrentConnectorState(customStartOffset, customEndOffset, false);
           return;
         }
         if (nodes.length === 2 && nodes.every((n) => n && !n.isConnector) && uiStateRef.current.hasExistingConnection) {
-          applyExistingConnectionState(customStartOffset, customEndOffset);
+          applyExistingConnectionState(customStartOffset, customEndOffset, false);
         }
       };
     }, [applyCurrentConnectorState, applyExistingConnectionState]);
@@ -30941,6 +31431,7 @@
       const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : lastConnectorConfigRef.current.linkUrl || "";
       const figmaLink = isLinkOn ? rawLinkUrl : "";
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+      const createDraft = endpointDraftRef.current;
       const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || "BOX";
       const labelAlign = lastConnectorConfigRef.current.labelAlign || "CENTER";
       const labelFillColor = lastConnectorConfigRef.current.labelFillColor || DEFAULT_LABEL_FILL;
@@ -30955,9 +31446,9 @@
             type: "CONNECT_POINTS",
             payload: {
               sourceNodeId: nodes[0].id,
-              sourceMagnet: sourceMagnet || void 0,
+              sourceMagnet: createDraft.sourceMagnet ?? sourceMagnet ?? void 0,
               targetNodeId: nodes[1].id,
-              targetMagnet: targetMagnet || void 0,
+              targetMagnet: createDraft.targetMagnet ?? targetMagnet ?? void 0,
               label,
               colorHex: color,
               strokeWeight: weight,
@@ -30976,12 +31467,23 @@
           }
         }, "*");
       } else {
-        const orderedIds = uiStateRef.current.orderedNodeIds && uiStateRef.current.orderedNodeIds.length === nodes.length ? uiStateRef.current.orderedNodeIds : nodes.map((n) => n.id);
+        const flowNodes = nodes.filter((n) => n && n.isFlowNode);
+        const selectionIsFlowOnly = flowNodes.length === nodes.length;
+        const orderedIds = selectionIsFlowOnly && uiStateRef.current.orderedNodeIds && uiStateRef.current.orderedNodeIds.length === nodes.length ? uiStateRef.current.orderedNodeIds : selectionIsFlowOnly ? nodes.map((n) => n.id) : orderFlowNodesForChain(flowNodes.map((n) => ({
+          id: n.id,
+          x: n.x ?? 0,
+          y: n.y ?? 0,
+          width: n.width ?? 0,
+          height: n.height ?? 0,
+          isFlowNode: true
+        }))).map((n) => n.id);
         parent.postMessage({
           pluginMessage: {
             type: "CONNECT_CHAIN",
             payload: {
               orderedNodeIds: orderedIds,
+              sourceMagnet: createDraft.sourceMagnet ?? sourceMagnet ?? void 0,
+              targetMagnet: createDraft.targetMagnet ?? targetMagnet ?? void 0,
               label,
               colorHex: color,
               strokeWeight: weight,
@@ -31000,7 +31502,8 @@
           }
         }, "*");
       }
-    }, [applyCurrentConnectorState, applyExistingConnectionState, showToast]);
+      clearEndpointMagnetDraft();
+    }, [applyCurrentConnectorState, applyExistingConnectionState, showToast, clearEndpointMagnetDraft]);
     const updateConnectedConnectorMagnets = (0, import_react2.useCallback)((sourceMagnet, targetMagnet) => {
       const connectedConnectors = uiStateRef.current.connectedConnectors || [];
       const connIds = uiStateRef.current.connectedConnectorIds || [];
@@ -31035,6 +31538,72 @@
         });
       }
     }, []);
+    const applyEndpointMagnetDraft = (0, import_react2.useCallback)(() => {
+      const nodes = selectedNodesRef.current;
+      const draft = endpointDraftRef.current;
+      const input = buildSelectionGizmoInput(nodes, uiStateRef.current, draft);
+      const patches = buildEndpointMagnetPatches(input);
+      if (patches.length === 0) return;
+      const previousById = /* @__PURE__ */ new Map();
+      if (input.isSingleConnector || input.isMultiConnector) {
+        nodes.forEach((node) => {
+          if (!node?.isConnector) return;
+          previousById.set(node.id, {
+            sourceMagnet: node.connectorSourceMagnet,
+            targetMagnet: node.connectorTargetMagnet,
+            isReversed: Boolean(node.connectorIsReversed)
+          });
+        });
+      } else if (input.is3PlusNodes) {
+        (uiStateRef.current.multiNodeConnectors || []).forEach((conn) => {
+          previousById.set(conn.id, {
+            sourceMagnet: conn.sourceMagnet,
+            targetMagnet: conn.targetMagnet
+          });
+        });
+      } else {
+        (uiStateRef.current.connectedConnectors || []).forEach((conn) => {
+          const uiStart = conn.isReversed ? conn.targetMagnet : conn.sourceMagnet;
+          const uiEnd = conn.isReversed ? conn.sourceMagnet : conn.targetMagnet;
+          previousById.set(conn.id, {
+            sourceMagnet: uiStart,
+            targetMagnet: uiEnd,
+            isReversed: Boolean(conn.isReversed)
+          });
+        });
+      }
+      const snapshot = {
+        type: "connector",
+        connectorItems: patches.map((patch) => {
+          const previous = previousById.get(patch.id);
+          return {
+            connectorId: patch.id,
+            payload: {
+              connectorId: patch.id,
+              sourceMagnet: previous?.sourceMagnet,
+              targetMagnet: previous?.targetMagnet,
+              isReversed: previous?.isReversed || false
+            }
+          };
+        })
+      };
+      setLastAppliedSnapshot(snapshot);
+      lastAppliedSnapshotRef.current = snapshot;
+      patches.forEach((patch) => {
+        parent.postMessage({
+          pluginMessage: {
+            type: "UPDATE_CONNECTOR_PROPERTIES",
+            payload: {
+              connectorId: patch.id,
+              sourceMagnet: patch.sourceMagnet,
+              targetMagnet: patch.targetMagnet,
+              isReversed: patch.isReversed || false
+            }
+          }
+        }, "*");
+      });
+      clearEndpointMagnetDraft();
+    }, [clearEndpointMagnetDraft]);
     const handleMainAction = (0, import_react2.useCallback)(() => {
       const nodes = selectedNodesRef.current;
       const isConn = isConnectorSelectedRef.current || nodes.length > 0 && nodes.every((n) => n && n.isConnector);
@@ -31043,6 +31612,9 @@
         return;
       }
       if (nodes.length >= 2) {
+        if (isGizmoDraftDirty(buildSelectionGizmoInput(nodes, uiStateRef.current, endpointDraftRef.current))) {
+          applyEndpointMagnetDraft();
+        }
         applyMultiDraft();
         return;
       }
@@ -31151,7 +31723,7 @@
           }
         }, "*");
       }
-    }, [applyCurrentConnectorState, applyMultiDraft, setNodeOptionState, showToast]);
+    }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, setNodeOptionState, showToast]);
     const handleSelectionChange = (0, import_react2.useCallback)((count, nodes, meta) => {
       if (isApplyingMultiDraftRef.current) {
         if (applyTimeoutRef.current !== null) {
@@ -31174,6 +31746,7 @@
       if (isDraftSelectionChanged) {
         clearMultiDraft();
         clearConnectorLabelDraft();
+        clearEndpointMagnetDraft();
         multiDraftSelectionRef.current = sortedNewIds;
       }
       const prevSelectionKey = selectedNodesRef.current.map((n) => n.id).sort().join(",");
@@ -31314,7 +31887,7 @@
           }
         }
       }
-    }, [closeAllPopovers, setCurrentTab, setNodeOptionState, setUIState, clearMultiDraft, clearConnectorLabelDraft]);
+    }, [closeAllPopovers, setCurrentTab, setNodeOptionState, setUIState, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft]);
     const value = {
       selectedNodes,
       setSelectedNodes,
@@ -31386,7 +31959,11 @@
       handleUndo,
       connectorLabelDraft,
       hasConnectorLabelDraft,
-      updateConnectorLabelDraft
+      updateConnectorLabelDraft,
+      endpointDraft,
+      endpointDirty,
+      setEndpointMagnetDraft,
+      clearEndpointMagnetDraft
     };
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppContext.Provider, { value, children });
   }
@@ -32722,7 +33299,7 @@
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "section-header toggle-row", children: [
             /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: `section-title${effectiveState.disabled ? " disabled" : ""}`, children: [
-              "Figma Screen Link",
+              "Reference Link",
               !effectiveState.disabled && isLinkValueMixed && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "section-mixed-label", children: "(Mixed)" })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
@@ -32732,7 +33309,7 @@
                 checked: effectiveState.checked,
                 isMixed: effectiveState.isMixed,
                 disabled: effectiveState.disabled,
-                "data-tooltip": effectiveState.disabled ? "Figma Screen Link is disabled for this shape" : void 0,
+                "data-tooltip": effectiveState.disabled ? "Reference Link is disabled for this shape" : void 0,
                 onChange: handleToggle
               }
             )
@@ -32760,7 +33337,7 @@
                         id: "single-screen-url",
                         className: "form-input",
                         style: { width: "100%", paddingRight: displayUrl ? "28px" : "10px" },
-                        placeholder: isLinkValueMixed ? "Mixed" : "Add a Figma Screen URL",
+                        placeholder: isLinkValueMixed ? "Mixed" : "Add a Figma or external URL",
                         value: displayUrl,
                         onChange: (e) => handleUrlChange(e.target.value),
                         onKeyDown: handleKeyDown,
@@ -35493,219 +36070,6 @@
 
   // src/ui/components/connection/ConnectSection.tsx
   var import_react14 = __toESM(require_react());
-
-  // src/ui/utils/gizmoState.ts
-  var ALL_MAGNETS = ["TOP", "RIGHT", "BOTTOM", "LEFT"];
-  function computeGizmoMagnets(input) {
-    const {
-      isMultiConnector,
-      isSingleConnector,
-      connectorNodes,
-      hasExistingConnection,
-      connectedConnectors,
-      userPendingSourceMagnet,
-      userPendingTargetMagnet,
-      is3PlusNodes,
-      startNodeId,
-      multiNodeConnectors
-    } = input;
-    function resolveSideStates(magnets, userPending) {
-      const magnetStates = {
-        TOP: "default",
-        RIGHT: "default",
-        BOTTOM: "default",
-        LEFT: "default"
-      };
-      const total = magnets.length;
-      const uniqueUsed = Array.from(new Set(magnets));
-      const magnetCounts = {
-        TOP: 0,
-        RIGHT: 0,
-        BOTTOM: 0,
-        LEFT: 0
-      };
-      magnets.forEach((mag) => {
-        magnetCounts[mag] = (magnetCounts[mag] || 0) + 1;
-      });
-      ALL_MAGNETS.forEach((mag) => {
-        const count = magnetCounts[mag];
-        if (count >= 2) {
-          magnetStates[mag] = "mixed";
-        } else if (count === 1) {
-          magnetStates[mag] = "active";
-        } else {
-          magnetStates[mag] = "default";
-        }
-      });
-      if (userPending) {
-        magnetStates[userPending] = "active";
-      }
-      return {
-        magnetStates,
-        usedMagnets: userPending ? Array.from(/* @__PURE__ */ new Set([...uniqueUsed, userPending])) : uniqueUsed,
-        totalConnections: total
-      };
-    }
-    function resolveMoreSideStates(incomingMags, outgoingMags, userPending) {
-      const magnetStates = {
-        TOP: "default",
-        RIGHT: "default",
-        BOTTOM: "default",
-        LEFT: "default"
-      };
-      const outgoingCounts = {
-        TOP: 0,
-        RIGHT: 0,
-        BOTTOM: 0,
-        LEFT: 0
-      };
-      outgoingMags.forEach((mag) => {
-        outgoingCounts[mag] = (outgoingCounts[mag] || 0) + 1;
-      });
-      const incomingSet = new Set(incomingMags);
-      ALL_MAGNETS.forEach((mag) => {
-        const outCount = outgoingCounts[mag];
-        const hasIn = incomingSet.has(mag);
-        if (outCount >= 2 || outCount >= 1 && hasIn) {
-          magnetStates[mag] = "mixed";
-        } else if (outCount === 1) {
-          magnetStates[mag] = "active";
-        } else if (hasIn) {
-          magnetStates[mag] = "mixed";
-        } else {
-          magnetStates[mag] = "default";
-        }
-      });
-      if (userPending) {
-        magnetStates[userPending] = "active";
-      }
-      const allUsed = Array.from(/* @__PURE__ */ new Set([...incomingMags, ...outgoingMags]));
-      return {
-        magnetStates,
-        usedMagnets: userPending ? Array.from(/* @__PURE__ */ new Set([...allUsed, userPending])) : allUsed,
-        totalConnections: incomingMags.length + outgoingMags.length
-      };
-    }
-    if (is3PlusNodes) {
-      let resolve3PlusGroupStates2 = function(magnets, userPending) {
-        const magnetStates = {
-          TOP: "default",
-          RIGHT: "default",
-          BOTTOM: "default",
-          LEFT: "default"
-        };
-        const total = magnets.length;
-        const uniqueUsed = Array.from(new Set(magnets));
-        if (uniqueUsed.length === 1) {
-          const onlyMag = uniqueUsed[0];
-          if (onlyMag) {
-            magnetStates[onlyMag] = "active";
-          }
-        } else if (uniqueUsed.length >= 2) {
-          uniqueUsed.forEach((mag) => {
-            magnetStates[mag] = "mixed";
-          });
-        }
-        if (userPending) {
-          magnetStates[userPending] = "active";
-        }
-        return {
-          magnetStates,
-          usedMagnets: userPending ? Array.from(/* @__PURE__ */ new Set([...uniqueUsed, userPending])) : uniqueUsed,
-          totalConnections: total
-        };
-      };
-      var resolve3PlusGroupStates = resolve3PlusGroupStates2;
-      const startMags2 = [];
-      const endMags2 = [];
-      const conns = multiNodeConnectors || [];
-      if (startNodeId) {
-        const startSourceConns = conns.filter((c) => c.sourceId === startNodeId && c.sourceMagnet);
-        const startTargetConns = conns.filter((c) => c.targetId === startNodeId && c.targetMagnet);
-        if (startSourceConns.length > 0) {
-          startSourceConns.forEach((c) => {
-            if (c.sourceMagnet) startMags2.push(c.sourceMagnet);
-          });
-        } else if (startTargetConns.length > 0) {
-          startTargetConns.forEach((c) => {
-            if (c.targetMagnet) startMags2.push(c.targetMagnet);
-          });
-        }
-        conns.forEach((conn) => {
-          if (conn.targetId !== startNodeId && conn.targetMagnet) {
-            endMags2.push(conn.targetMagnet);
-          }
-          if (conn.sourceId !== startNodeId && conn.sourceMagnet) {
-            endMags2.push(conn.sourceMagnet);
-          }
-        });
-      } else {
-        conns.forEach((conn) => {
-          if (conn.sourceMagnet) startMags2.push(conn.sourceMagnet);
-          if (conn.targetMagnet) endMags2.push(conn.targetMagnet);
-        });
-      }
-      return {
-        start: resolve3PlusGroupStates2(startMags2, userPendingSourceMagnet),
-        end: resolve3PlusGroupStates2(endMags2, userPendingTargetMagnet)
-      };
-    }
-    function resolveMultiConnectorStates(magnets, userPending) {
-      const magnetStates = {
-        TOP: "default",
-        RIGHT: "default",
-        BOTTOM: "default",
-        LEFT: "default"
-      };
-      const total = magnets.length;
-      const uniqueUsed = Array.from(new Set(magnets));
-      if (uniqueUsed.length === 1) {
-        const singleMag = uniqueUsed[0];
-        if (singleMag) {
-          magnetStates[singleMag] = "active";
-        }
-      } else if (uniqueUsed.length >= 2) {
-        uniqueUsed.forEach((mag) => {
-          magnetStates[mag] = "mixed";
-        });
-      }
-      if (userPending) {
-        magnetStates[userPending] = "active";
-      }
-      return {
-        magnetStates,
-        usedMagnets: userPending ? Array.from(/* @__PURE__ */ new Set([...uniqueUsed, userPending])) : uniqueUsed,
-        totalConnections: total
-      };
-    }
-    let startMags = [];
-    let endMags = [];
-    if (isMultiConnector || isSingleConnector) {
-      const conns = (connectorNodes || []).filter((n) => n && n.isConnector);
-      conns.forEach((c) => {
-        if (c.connectorSourceMagnet) startMags.push(c.connectorSourceMagnet);
-        if (c.connectorTargetMagnet) endMags.push(c.connectorTargetMagnet);
-      });
-      return {
-        start: resolveMultiConnectorStates(startMags, userPendingSourceMagnet),
-        end: resolveMultiConnectorStates(endMags, userPendingTargetMagnet)
-      };
-    } else if (hasExistingConnection && connectedConnectors && connectedConnectors.length > 0) {
-      connectedConnectors.forEach((conn) => {
-        const isRev = Boolean(conn.isReversed);
-        const uiStart = isRev ? conn.targetMagnet : conn.sourceMagnet;
-        const uiEnd = isRev ? conn.sourceMagnet : conn.targetMagnet;
-        if (uiStart) startMags.push(uiStart);
-        if (uiEnd) endMags.push(uiEnd);
-      });
-    }
-    return {
-      start: resolveSideStates(startMags, userPendingSourceMagnet),
-      end: resolveSideStates(endMags, userPendingTargetMagnet)
-    };
-  }
-
-  // src/ui/components/connection/ConnectSection.tsx
   var import_jsx_runtime15 = __toESM(require_jsx_runtime());
   var TERMINAL_OPTIONS = [
     "NONE",
@@ -35769,7 +36133,9 @@
       selectedStylePresetId,
       setSelectedStylePresetId,
       nodeOptionState,
-      flooowUsage
+      flooowUsage,
+      endpointDraft,
+      setEndpointMagnetDraft
     } = useApp();
     const summary = useSelectionSummary();
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
@@ -35796,8 +36162,6 @@
     const [endOffsetInput, setEndOffsetInput] = (0, import_react14.useState)("0");
     const [isStartOffsetMixed, setIsStartOffsetMixed] = (0, import_react14.useState)(false);
     const [isEndOffsetMixed, setIsEndOffsetMixed] = (0, import_react14.useState)(false);
-    const [userPendingSourceMagnet, setUserPendingSourceMagnet] = (0, import_react14.useState)(null);
-    const [userPendingTargetMagnet, setUserPendingTargetMagnet] = (0, import_react14.useState)(null);
     const userActionTimestampRef = (0, import_react14.useRef)(0);
     const prevSelectionKeyRef = (0, import_react14.useRef)("");
     const lastSyncedSelectionColorRef = (0, import_react14.useRef)(null);
@@ -35874,8 +36238,6 @@
       const isDifferentSelection = currentSelectionKey !== prevSelectionKeyRef.current;
       if (isDifferentSelection) {
         prevSelectionKeyRef.current = currentSelectionKey;
-        setUserPendingSourceMagnet(null);
-        setUserPendingTargetMagnet(null);
         const firstConn = selectedNodes.find((n) => n && n.isConnector);
         lastSyncedSelectionColorRef.current = firstConn?.connectorColorHex ? firstConn.connectorColorHex.toUpperCase() : null;
       }
@@ -36129,38 +36491,25 @@
     }
     function selectAnchor(nodeIndex, pos) {
       userActionTimestampRef.current = Date.now();
-      const isConn = summary.isSingleConnector || summary.isMultiConnector;
-      const hasExisting2 = Boolean(uiState.hasExistingConnection && uiState.connectedConnectorIds && uiState.connectedConnectorIds.length > 0);
+      const hasEditableEndpoints = summary.isSingleConnector || summary.isMultiConnector || uiState.connectedConnectors && uiState.connectedConnectors.length > 0 || uiState.multiNodeConnectors && uiState.multiNodeConnectors.length > 0;
+      if (hasEditableEndpoints) {
+        setEndpointMagnetDraft(nodeIndex === 1 ? "source" : "target", pos);
+        return;
+      }
       if (nodeIndex === 1) {
-        setUserPendingSourceMagnet(pos);
-        if (isConn) {
-          setUIState({ sourceMagnet: pos });
-          markConnectorDirty();
-        } else if (hasExisting2) {
-          setUIState({ sourceMagnet: pos });
-          markConnectorDirty();
-        } else {
-          const autoTarget = !userPendingTargetMagnet && !uiState.targetMagnet ? pos : userPendingTargetMagnet ?? uiState.targetMagnet;
-          if (!userPendingTargetMagnet && !uiState.targetMagnet) {
-            setUserPendingTargetMagnet(pos);
-          }
-          setUIState({ sourceMagnet: pos, targetMagnet: autoTarget ?? null });
+        const autoTarget = !endpointDraft.targetMagnet && !uiState.targetMagnet ? pos : endpointDraft.targetMagnet ?? uiState.targetMagnet;
+        if (!endpointDraft.targetMagnet && !uiState.targetMagnet) {
+          setEndpointMagnetDraft("target", pos);
         }
+        setEndpointMagnetDraft("source", pos);
+        setUIState({ sourceMagnet: pos, targetMagnet: autoTarget ?? null });
       } else {
-        setUserPendingTargetMagnet(pos);
-        if (isConn) {
-          setUIState({ targetMagnet: pos });
-          markConnectorDirty();
-        } else if (hasExisting2) {
-          setUIState({ targetMagnet: pos });
-          markConnectorDirty();
-        } else {
-          const autoSource = !userPendingSourceMagnet && !uiState.sourceMagnet ? pos : userPendingSourceMagnet ?? uiState.sourceMagnet;
-          if (!userPendingSourceMagnet && !uiState.sourceMagnet) {
-            setUserPendingSourceMagnet(pos);
-          }
-          setUIState({ targetMagnet: pos, sourceMagnet: autoSource ?? null });
+        const autoSource = !endpointDraft.sourceMagnet && !uiState.sourceMagnet ? pos : endpointDraft.sourceMagnet ?? uiState.sourceMagnet;
+        if (!endpointDraft.sourceMagnet && !uiState.sourceMagnet) {
+          setEndpointMagnetDraft("source", pos);
         }
+        setEndpointMagnetDraft("target", pos);
+        setUIState({ targetMagnet: pos, sourceMagnet: autoSource ?? null });
       }
     }
     function selectTerminal(side, value) {
@@ -36381,8 +36730,8 @@
       connectorNodes: selectedNodes,
       hasExistingConnection: hasExisting,
       connectedConnectors: uiState.connectedConnectors,
-      userPendingSourceMagnet,
-      userPendingTargetMagnet,
+      userPendingSourceMagnet: endpointDraft.sourceMagnet ?? null,
+      userPendingTargetMagnet: endpointDraft.targetMagnet ?? null,
       is3PlusNodes,
       startNodeId: selectedNodes[0]?.id,
       multiNodeConnectors: uiState.multiNodeConnectors
@@ -36395,7 +36744,7 @@
     ];
     return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: "section-title", children: [
-        "Connect",
+        "Connector",
         summary.isMultiConnector && (isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed) && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
       ] }) }),
       /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "section-body", children: [
@@ -36527,7 +36876,7 @@
                   );
                 }),
                 /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: "node-preview-copy", id: "preview-node-1-text", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-title", children: node1DisplayName }),
+                  /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-title", title: node1DisplayName, children: node1DisplayName }),
                   node1TypeLabel ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-type", children: node1TypeLabel }) : null
                 ] })
               ] }),
@@ -36549,7 +36898,7 @@
                   );
                 }),
                 /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: "node-preview-copy", id: "preview-node-2-text", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-title", children: node2DisplayName }),
+                  /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-title", title: node2DisplayName, children: node2DisplayName }),
                   node2TypeLabel ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: "node-preview-type", children: node2TypeLabel }) : null
                 ] })
               ] })
@@ -36973,8 +37322,8 @@
         (() => {
           const isAllConnectors = selectedNodes.length > 0 && selectedNodes.every((n) => n && n.isConnector);
           const hasExisting2 = Boolean(uiState.hasExistingConnection);
-          const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
-          const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
+          const effectiveSource = endpointDraft.sourceMagnet ?? sourceMagnet;
+          const effectiveTarget = endpointDraft.targetMagnet ?? targetMagnet;
           const twoNodesConnected = selectedNodes.length === 2 && hasExisting2 && !isAllConnectors;
           if (isAllConnectors || twoNodesConnected) return null;
           const showUpdate = isAllConnectors || hasExisting2;
@@ -37727,6 +38076,16 @@
         ]
       }
     );
+  }
+
+  // src/entitlementGate.ts
+  function isUnlimitedEntitlement(entitlement) {
+    return entitlement === "PAID_ACTIVE" || entitlement === "DEV_ACTIVE";
+  }
+  function planShortName(entitlement) {
+    if (entitlement === "DEV_ACTIVE") return "Dev";
+    if (entitlement === "PAID_ACTIVE") return "Pro";
+    return "Free";
   }
 
   // src/ui/components/modals/SizeModal.tsx
@@ -39998,6 +40357,57 @@
     return "calm";
   }
 
+  // src/subscriptionStatus.ts
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function startOfLocalDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  }
+  function calendarDaysUntil(periodEnd, now) {
+    const msPerDay = 24 * 60 * 60 * 1e3;
+    return Math.round((startOfLocalDay(periodEnd) - startOfLocalDay(now)) / msPerDay);
+  }
+  function formatMonthDay(date) {
+    return `${MONTHS[date.getMonth()]} ${date.getDate()}`;
+  }
+  function formatMonthDayYear(date) {
+    return `${formatMonthDay(date)}, ${date.getFullYear()}`;
+  }
+  function formatSubscriptionStatus(input) {
+    const now = input.now ?? /* @__PURE__ */ new Date();
+    const days = calendarDaysUntil(input.periodEnd, now);
+    const verb = input.autoRenew ? "Renews" : "Expires";
+    if (days < 0) {
+      return { text: "", tone: "neutral", expired: !input.autoRenew };
+    }
+    if (days === 0) {
+      return {
+        text: `${verb} today`,
+        tone: input.autoRenew ? "success" : "critical",
+        expired: false
+      };
+    }
+    if (days === 1) {
+      return {
+        text: `${verb} tomorrow \xB7 ${formatMonthDay(input.periodEnd)}`,
+        tone: input.autoRenew ? "neutral" : "danger",
+        expired: false
+      };
+    }
+    if (days <= 7) {
+      const expireTone = days <= 3 ? "danger" : "warning";
+      return {
+        text: `${verb} in ${days} days \xB7 ${formatMonthDay(input.periodEnd)}`,
+        tone: input.autoRenew ? "neutral" : expireTone,
+        expired: false
+      };
+    }
+    return {
+      text: `${verb} ${formatMonthDayYear(input.periodEnd)}`,
+      tone: "neutral",
+      expired: false
+    };
+  }
+
   // src/ui/components/modals/SubscriptionModal.tsx
   var import_jsx_runtime28 = __toESM(require_jsx_runtime());
   var CLOSE_SVG5 = /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
@@ -40008,7 +40418,13 @@
     }
   ) });
   function SubscriptionModal({ usage, onClose }) {
-    const isPaid = usage !== null && usage.entitlement === "PAID_ACTIVE";
+    const paidByEntitlement = isUnlimitedEntitlement(usage?.entitlement);
+    const subscriptionStatus = paidByEntitlement && typeof usage?.periodEndsAt === "number" && typeof usage.autoRenew === "boolean" ? formatSubscriptionStatus({
+      autoRenew: usage.autoRenew,
+      periodEnd: new Date(usage.periodEndsAt)
+    }) : null;
+    const isPaid = paidByEntitlement && subscriptionStatus?.expired !== true;
+    const cycleLabel = isPaid && usage?.billingPeriod === "annual" ? "Annual" : isPaid && usage?.billingPeriod === "monthly" ? "Monthly" : null;
     const total = usage?.total ?? 0;
     const nodes = usage?.nodes ?? 0;
     const connectors = usage?.connectors ?? 0;
@@ -40052,8 +40468,12 @@
               /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-modal-body", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-plan-section", children: [
                   /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-plan-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-section-label", children: "Current Plan" }) }),
-                  /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-plan-name", children: isPaid ? "Pro" : "Free" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: `subscription-plan-desc${isPaid ? " is-pro" : ""}`, children: isPaid ? "Unlimited elements, every project" : "Create up to 20 elements per project" })
+                  /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-plan-name-row", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-plan-name", children: planShortName(isPaid ? usage?.entitlement : "FREE") }),
+                    cycleLabel && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "subscription-plan-cycle", children: cycleLabel })
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: `subscription-plan-desc${isPaid ? " is-pro" : ""}`, children: isPaid ? "Unlimited elements, every project" : "Create up to 20 elements per project" }),
+                  isPaid && subscriptionStatus && subscriptionStatus.text !== "" && /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: `subscription-plan-status is-${subscriptionStatus.tone}`, children: subscriptionStatus.text })
                 ] }),
                 /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: `subscription-usage-section${isPaid ? " is-pro" : ""}`, children: [
                   /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "subscription-usage-label-row", children: [
@@ -40149,6 +40569,7 @@
       handleUndo,
       hasConnectorLabelDraft,
       connectorDirty,
+      endpointDirty,
       connectorLabelDraft,
       updateConnectorLabelDraft,
       flooowUsage
@@ -40372,8 +40793,10 @@
         const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
         const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected && !isMixedNodeAndFigjam;
         const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
-        const planBadgeText = flooowUsage === null ? "\u2026" : flooowUsage.entitlement === "PAID_ACTIVE" ? "Pro Plan" : "Free Plan";
-        const meterText = flooowUsage === null ? "Loading\u2026" : flooowUsage.entitlement === "PAID_ACTIVE" ? "Unlimited elements" : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
+        const unlimited = isUnlimitedEntitlement(flooowUsage?.entitlement);
+        const planBadgeText = flooowUsage === null ? "\u2026" : `${planShortName(flooowUsage.entitlement)} Plan`;
+        const limitReached = usageBlocked && !unlimited;
+        const meterText = flooowUsage === null ? "Loading\u2026" : unlimited ? "Unlimited elements" : limitReached ? "Limit reached in this project" : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
         return /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("footer", { className: "app-footer", children: [
           /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
             "div",
@@ -40383,14 +40806,14 @@
               title: "Plan & Usage",
               children: /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "footer-plan-block", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "footer-plan-row", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: `footer-plan-title${flooowUsage?.entitlement === "PAID_ACTIVE" ? " paid" : ""}`, children: planBadgeText }),
-                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: `footer-plan-chevron${flooowUsage?.entitlement === "PAID_ACTIVE" ? " paid" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(IcChevronRight, {}) })
+                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: `footer-plan-title${unlimited ? " paid" : ""}`, children: planBadgeText }),
+                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: `footer-plan-chevron${unlimited ? " paid" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(IcChevronRight, {}) })
                 ] }),
                 /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
                   "span",
                   {
-                    className: "footer-usage-meter",
-                    title: usageBlocked ? `Free limit reached (${flooowUsage?.total ?? 20} elements). Upgrade to create more.` : meterText,
+                    className: `footer-usage-meter${limitReached ? " limit-reached" : ""}`,
+                    title: meterText,
                     children: meterText
                   }
                 )
@@ -40419,7 +40842,7 @@
                   id: "btn-undo",
                   className: "btn-ghost",
                   type: "button",
-                  disabled: isMultiConn ? !hasConnectorLabelDraft && !canUndo : !hasMultiDraft && !canUndo,
+                  disabled: isMultiConn ? !hasConnectorLabelDraft && !canUndo && !endpointDirty : !hasMultiDraft && !canUndo && !endpointDirty,
                   onClick: handleUndo,
                   children: "Undo"
                 }
@@ -40428,9 +40851,9 @@
                 "button",
                 {
                   id: "btn-main-cta",
-                  className: `btn-cta-primary${(isMultiConn ? !hasConnectorLabelDraft && !connectorDirty : !hasMultiDraft) || isApplyingMultiDraft ? " disabled" : ""}`,
+                  className: `btn-cta-primary${(isMultiConn ? !hasConnectorLabelDraft && !connectorDirty && !endpointDirty : !hasMultiDraft && !endpointDirty) || isApplyingMultiDraft ? " disabled" : ""}`,
                   type: "button",
-                  disabled: (isMultiConn ? !hasConnectorLabelDraft && !connectorDirty : !hasMultiDraft) || isApplyingMultiDraft,
+                  disabled: (isMultiConn ? !hasConnectorLabelDraft && !connectorDirty && !endpointDirty : !hasMultiDraft && !endpointDirty) || isApplyingMultiDraft,
                   onClick: handleMainAction,
                   children: "Apply to All"
                 }

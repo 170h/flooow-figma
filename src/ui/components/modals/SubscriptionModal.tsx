@@ -1,6 +1,8 @@
 import React from "react";
 import type { FlooowUsageState } from "../../../types";
+import { isUnlimitedEntitlement, planShortName } from "../../../entitlementGate";
 import { usageRemainingTone } from "../../../planUsageTone";
+import { formatSubscriptionStatus } from "../../../subscriptionStatus";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘 ( FillColorModal 템플릿과 동일 )
 const CLOSE_SVG = (
@@ -22,10 +24,27 @@ export interface SubscriptionModalProps {
  * - Free: Current Plan 행 + Free + 제한 안내 + Usage 색(잔여 수량) + 실측 + Upgrade to Pro
  * - Pro: Current Plan 행 + Pro + 안내(tertiary) + Usage Unlimited + 실측
  * - 남은 수량 색: 6+ secondary, 4–5 warning, 2–3 danger, 1 pink, 0 red
- * - 갱신일/과금 주기/Adjust Plan은 Payments API에 값이 없어 표시하지 않는다.
+ * - 구독 일정(periodEndsAt, autoRenew)이 있을 때만 갱신/만료 문구를 만든다.
+ *   7일 이하는 연도를 붙이지 않는다. 자동갱신 꺼짐 + 기간 종료는 Free로 보여 준다.
  */
 export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
-  const isPaid = usage !== null && usage.entitlement === "PAID_ACTIVE";
+  const paidByEntitlement = isUnlimitedEntitlement(usage?.entitlement);
+  const subscriptionStatus =
+    paidByEntitlement &&
+    typeof usage?.periodEndsAt === "number" &&
+    typeof usage.autoRenew === "boolean"
+      ? formatSubscriptionStatus({
+          autoRenew: usage.autoRenew,
+          periodEnd: new Date(usage.periodEndsAt),
+        })
+      : null;
+  const isPaid = paidByEntitlement && subscriptionStatus?.expired !== true;
+  const cycleLabel =
+    isPaid && usage?.billingPeriod === "annual"
+      ? "Annual"
+      : isPaid && usage?.billingPeriod === "monthly"
+        ? "Monthly"
+        : null;
   const total = usage?.total ?? 0;
   const nodes = usage?.nodes ?? 0;
   const connectors = usage?.connectors ?? 0;
@@ -72,14 +91,24 @@ export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
             <div className="subscription-plan-label-row">
               <div className="subscription-section-label">Current Plan</div>
             </div>
-            <div className="subscription-plan-name">
-              {isPaid ? "Pro" : "Free"}
+            <div className="subscription-plan-name-row">
+              <div className="subscription-plan-name">
+                {planShortName(isPaid ? usage?.entitlement : "FREE")}
+              </div>
+              {cycleLabel && (
+                <div className="subscription-plan-cycle">{cycleLabel}</div>
+              )}
             </div>
             <div className={`subscription-plan-desc${isPaid ? " is-pro" : ""}`}>
               {isPaid
                 ? "Unlimited elements, every project"
                 : "Create up to 20 elements per project"}
             </div>
+            {isPaid && subscriptionStatus && subscriptionStatus.text !== "" && (
+              <div className={`subscription-plan-status is-${subscriptionStatus.tone}`}>
+                {subscriptionStatus.text}
+              </div>
+            )}
           </div>
 
           {/* Usage 섹션 */}

@@ -10,6 +10,7 @@ import { AppearancePanel } from './components/appearance/AppearancePanel';
 import { ConnectionPanel } from './components/connection/ConnectionPanel';
 import { FigmaTooltip } from './components/shared/Tooltip';
 import { ContextMenu } from './components/popovers/ContextMenu';
+import { isUnlimitedEntitlement, planShortName } from '../entitlementGate';
 import { IcChevronRight } from './components/shared/icons';
 import { SizeModal } from './components/modals/SizeModal';
 import { FigmaDesignPickerModal } from './components/modals/FigmaDesignPickerModal';
@@ -79,6 +80,7 @@ export function App() {
     handleUndo,
     hasConnectorLabelDraft,
     connectorDirty,
+    endpointDirty,
     connectorLabelDraft,
     updateConnectorLabelDraft,
     flooowUsage,
@@ -425,14 +427,18 @@ export function App() {
         // Quota UI는 Core FLOOOW_USAGE만 사용 (UI 자체 계산 금지).
         // usage 미수신(null) 상태에서는 어떤 수치도 가정하지 않는다.
         const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
+        const unlimited = isUnlimitedEntitlement(flooowUsage?.entitlement);
         const planBadgeText = flooowUsage === null
           ? '…'
-          : flooowUsage.entitlement === 'PAID_ACTIVE' ? 'Pro Plan' : 'Free Plan';
+          : `${planShortName(flooowUsage.entitlement)} Plan`;
+        const limitReached = usageBlocked && !unlimited;
         const meterText = flooowUsage === null
           ? 'Loading…'
-          : flooowUsage.entitlement === 'PAID_ACTIVE'
+          : unlimited
             ? 'Unlimited elements'
-            : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
+            : limitReached
+              ? 'Limit reached in this project'
+              : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
 
         return (
           <footer className="app-footer">
@@ -444,14 +450,14 @@ export function App() {
             >
               <div className="footer-plan-block">
                 <div className="footer-plan-row">
-                  <span className={`footer-plan-title${flooowUsage?.entitlement === 'PAID_ACTIVE' ? ' paid' : ''}`}>{planBadgeText}</span>
-                  <span className={`footer-plan-chevron${flooowUsage?.entitlement === 'PAID_ACTIVE' ? ' paid' : ''}`}>
+                  <span className={`footer-plan-title${unlimited ? ' paid' : ''}`}>{planBadgeText}</span>
+                  <span className={`footer-plan-chevron${unlimited ? ' paid' : ''}`}>
                     <IcChevronRight />
                   </span>
                 </div>
                 <span
-                  className="footer-usage-meter"
-                  title={usageBlocked ? `Free limit reached (${flooowUsage?.total ?? 20} elements). Upgrade to create more.` : meterText}
+                  className={`footer-usage-meter${limitReached ? ' limit-reached' : ''}`}
+                  title={meterText}
                 >
                   {meterText}
                 </span>
@@ -477,16 +483,16 @@ export function App() {
                     id="btn-undo"
                     className="btn-ghost"
                     type="button"
-                    disabled={isMultiConn ? (!hasConnectorLabelDraft && !canUndo) : (!hasMultiDraft && !canUndo)}
+                    disabled={isMultiConn ? (!hasConnectorLabelDraft && !canUndo && !endpointDirty) : (!hasMultiDraft && !canUndo && !endpointDirty)}
                     onClick={handleUndo}
                   >
                     Undo
                   </button>
                   <button
                     id="btn-main-cta"
-                    className={`btn-cta-primary${(isMultiConn ? (!hasConnectorLabelDraft && !connectorDirty) : !hasMultiDraft) || isApplyingMultiDraft ? ' disabled' : ''}`}
+                    className={`btn-cta-primary${(isMultiConn ? (!hasConnectorLabelDraft && !connectorDirty && !endpointDirty) : (!hasMultiDraft && !endpointDirty)) || isApplyingMultiDraft ? ' disabled' : ''}`}
                     type="button"
-                    disabled={(isMultiConn ? (!hasConnectorLabelDraft && !connectorDirty) : !hasMultiDraft) || isApplyingMultiDraft}
+                    disabled={(isMultiConn ? (!hasConnectorLabelDraft && !connectorDirty && !endpointDirty) : (!hasMultiDraft && !endpointDirty)) || isApplyingMultiDraft}
                     onClick={handleMainAction}
                   >
                     Apply to All

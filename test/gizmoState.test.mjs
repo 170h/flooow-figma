@@ -6,7 +6,12 @@
  */
 
 import assert from 'node:assert/strict';
-import { computeGizmoMagnets } from '../src/ui/utils/gizmoState.ts';
+import {
+  buildEndpointMagnetPatches,
+  computeGizmoMagnets,
+  isEndpointMagnetDraftDirty,
+  isGizmoDraftDirty,
+} from '../src/ui/utils/gizmoState.ts';
 
 console.log('=== gizmoState.test.mjs — Gizmo State (0=default, 1=active, 2+=mixed) Regression Test ===');
 
@@ -251,6 +256,11 @@ runTest('Test 11 — 사용자가 기즈모를 명시적으로 클릭한 경우 
   });
 
   assert.equal(result.start.magnetStates.BOTTOM, 'active');
+  assert.equal(result.start.magnetStates.RIGHT, 'default');
+  assert.equal(result.start.magnetStates.TOP, 'default');
+  assert.equal(result.start.magnetStates.LEFT, 'default');
+  assert.equal(result.end.magnetStates.LEFT, 'active');
+  assert.equal(result.end.magnetStates.BOTTOM, 'default');
 });
 
 // ---------------------------------------------------------------------------
@@ -410,7 +420,13 @@ runTest('Test 18 — 3+ Node 선택 시 userPending 우선 반영', () => {
   });
 
   assert.equal(result.start.magnetStates.TOP, 'active');
+  assert.equal(result.start.magnetStates.RIGHT, 'default');
+  assert.equal(result.start.magnetStates.BOTTOM, 'default');
+  assert.equal(result.start.magnetStates.LEFT, 'default');
   assert.equal(result.end.magnetStates.BOTTOM, 'active');
+  assert.equal(result.end.magnetStates.LEFT, 'default');
+  assert.equal(result.end.magnetStates.RIGHT, 'default');
+  assert.equal(result.end.magnetStates.TOP, 'default');
 });
 
 // ---------------------------------------------------------------------------
@@ -666,6 +682,99 @@ runTest('Connector Multi Test E — Connector 3개 이상: 각 그룹에서 사�
   assert.equal(result.end.magnetStates.BOTTOM, 'mixed');
   assert.equal(result.end.magnetStates.RIGHT, 'default');
   assert.equal(Object.values(result.end.magnetStates).includes('active'), false);
+});
+
+runTest('Draft — Mixed Current에서 RIGHT를 고르면 RIGHT만 active이고 BOTTOM은 inactive', () => {
+  const result = computeGizmoMagnets({
+    isMultiConnector: true,
+    connectorNodes: [
+      { isConnector: true, connectorSourceMagnet: 'BOTTOM', connectorTargetMagnet: 'LEFT' },
+      { isConnector: true, connectorSourceMagnet: 'BOTTOM', connectorTargetMagnet: 'LEFT' },
+      { isConnector: true, connectorSourceMagnet: 'RIGHT', connectorTargetMagnet: 'TOP' },
+    ],
+    userPendingSourceMagnet: 'RIGHT',
+  });
+
+  assert.equal(result.start.magnetStates.RIGHT, 'active');
+  assert.equal(result.start.magnetStates.BOTTOM, 'default');
+  assert.equal(result.start.magnetStates.TOP, 'default');
+  assert.equal(result.start.magnetStates.LEFT, 'default');
+  assert.equal(result.end.magnetStates.LEFT, 'mixed');
+  assert.equal(result.end.magnetStates.TOP, 'mixed');
+});
+
+runTest('Draft — 같은 방향이면 dirty가 아니고, 다른 방향이면 dirty', () => {
+  assert.equal(isEndpointMagnetDraftDirty(['BOTTOM', 'BOTTOM'], 'BOTTOM'), false);
+  assert.equal(isEndpointMagnetDraftDirty(['BOTTOM', 'RIGHT'], 'RIGHT'), true);
+  assert.equal(isEndpointMagnetDraftDirty(['BOTTOM'], 'RIGHT'), true);
+  assert.equal(isEndpointMagnetDraftDirty([], 'RIGHT'), false);
+  assert.equal(isEndpointMagnetDraftDirty(['BOTTOM'], null), false);
+});
+
+runTest('Draft — 단일/복수 커넥터 패치는 Draft가 다른 endpoint만 바꾸고 Apply 전 값과 분리된다', () => {
+  const base = {
+    isMultiConnector: true,
+    connectorNodes: [
+      { id: 'a', isConnector: true, connectorSourceMagnet: 'BOTTOM', connectorTargetMagnet: 'LEFT', connectorIsReversed: false },
+      { id: 'b', isConnector: true, connectorSourceMagnet: 'BOTTOM', connectorTargetMagnet: 'LEFT', connectorIsReversed: false },
+      { id: 'c', isConnector: true, connectorSourceMagnet: 'RIGHT', connectorTargetMagnet: 'TOP', connectorIsReversed: true },
+    ],
+  };
+  assert.equal(isGizmoDraftDirty({
+    isSingleConnector: true,
+    connectorNodes: [
+      { id: 'only', isConnector: true, connectorSourceMagnet: 'BOTTOM', connectorTargetMagnet: 'LEFT' },
+    ],
+    userPendingSourceMagnet: 'BOTTOM',
+  }), false);
+  assert.deepEqual(buildEndpointMagnetPatches({
+    isSingleConnector: true,
+    connectorNodes: [
+      { id: 'only', isConnector: true, connectorSourceMagnet: 'BOTTOM', connectorTargetMagnet: 'LEFT' },
+    ],
+    userPendingSourceMagnet: 'BOTTOM',
+  }), []);
+
+  const patches = buildEndpointMagnetPatches({ ...base, userPendingSourceMagnet: 'RIGHT' });
+  assert.equal(patches.length, 3);
+  assert.deepEqual(patches.map((p) => p.sourceMagnet), ['RIGHT', 'RIGHT', 'RIGHT']);
+  assert.equal(patches.every((p) => p.targetMagnet === undefined), true);
+  assert.equal(patches[2].isReversed, true);
+});
+
+runTest('Draft — 2노드 기존 연결은 시작 Draft만 보내고 끝 endpoint는 유지', () => {
+  const patches = buildEndpointMagnetPatches({
+    hasExistingConnection: true,
+    connectedConnectors: [
+      { id: 'ab', sourceMagnet: 'BOTTOM', targetMagnet: 'TOP', isReversed: false },
+    ],
+    userPendingSourceMagnet: 'RIGHT',
+  });
+  assert.deepEqual(patches, [{ id: 'ab', isReversed: false, sourceMagnet: 'RIGHT' }]);
+});
+
+runTest('Draft — 3+ 시작 Draft는 시작 노드 endpoint만 바꾸고 다른 노드를 active로 만들지 않는다', () => {
+  const input = {
+    is3PlusNodes: true,
+    startNodeId: 'A',
+    multiNodeConnectors: [
+      { id: 'ab', sourceId: 'A', targetId: 'B', sourceMagnet: 'BOTTOM', targetMagnet: 'LEFT' },
+      { id: 'ac', sourceId: 'A', targetId: 'C', sourceMagnet: 'RIGHT', targetMagnet: 'TOP' },
+    ],
+    userPendingSourceMagnet: 'RIGHT',
+  };
+  const visual = computeGizmoMagnets(input);
+  assert.equal(visual.start.magnetStates.RIGHT, 'active');
+  assert.equal(visual.start.magnetStates.BOTTOM, 'default');
+  assert.equal(visual.end.magnetStates.LEFT, 'mixed');
+  assert.equal(visual.end.magnetStates.TOP, 'mixed');
+  assert.equal(visual.end.magnetStates.RIGHT, 'default');
+
+  const patches = buildEndpointMagnetPatches(input);
+  assert.deepEqual(patches, [
+    { id: 'ab', sourceMagnet: 'RIGHT' },
+    { id: 'ac', sourceMagnet: 'RIGHT' },
+  ]);
 });
 
 console.log(`\nResult: ${passCount} passed, ${failCount} failed.`);

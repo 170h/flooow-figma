@@ -98,3 +98,38 @@ export function orderNodesForChain<T extends ChainNodePosition>(nodes: T[]): T[]
 export function makePairKey(idA: string, idB: string): string {
   return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
 }
+
+/**
+ * CONNECT_CHAIN 대상은 Flooow Flow Node만이다.
+ * 필터 후 공간 정렬하므로 Figma Object는 순서와 pair에 들어가지 않는다.
+ */
+export function orderFlowNodesForChain<T extends ChainNodePosition & { isFlowNode?: boolean }>(nodes: T[]): T[] {
+  return orderNodesForChain(nodes.filter((node) => node.isFlowNode === true));
+}
+
+/**
+ * 신규 pair의 magnet.
+ * createdIndex는 pairsToCreate 생성 순서이며, 전체 chain의 인접 index가 아니다.
+ * - 0: source = sourceDraft, target = targetDraft
+ * - 1+: source = targetDraft, target = targetDraft
+ * Draft가 없으면 해당 자리는 optimal을 유지한다.
+ */
+export function resolveCreatedPairMagnets<T>(
+  createdIndex: number,
+  sourceDraft: T | undefined,
+  targetDraft: T | undefined,
+  optimalSource: T,
+  optimalTarget: T,
+): { sourceMagnet: T; targetMagnet: T } {
+  let sourceMagnet = optimalSource;
+  let targetMagnet = optimalTarget;
+  if (createdIndex === 0 && sourceDraft) {
+    sourceMagnet = sourceDraft;
+  } else if (createdIndex !== 0 && targetDraft) {
+    sourceMagnet = targetDraft;
+  }
+  if (targetDraft) {
+    targetMagnet = targetDraft;
+  }
+  return { sourceMagnet, targetMagnet };
+}

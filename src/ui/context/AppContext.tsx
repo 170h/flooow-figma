@@ -17,6 +17,12 @@ import {
   getDefaultNodeTitle,
   supportsOption,
 } from '../../domain/nodeDomain';
+import {
+  buildEndpointMagnetPatches,
+  isGizmoDraftDirty,
+  type ComputeGizmoMagnetsInput,
+} from '../utils/gizmoState';
+import { orderFlowNodesForChain } from '../../chainOrder';
 
 // ============================================================
 // 타입 정의
@@ -346,6 +352,35 @@ export interface AppContextValue {
   connectorLabelDraft: ConnectorLabelDraft;
   hasConnectorLabelDraft: boolean;
   updateConnectorLabelDraft: (partial: Partial<ConnectorLabelDraft>) => void;
+  endpointDraft: EndpointMagnetDraft;
+  endpointDirty: boolean;
+  setEndpointMagnetDraft: (side: 'source' | 'target', magnet: MagnetPosition) => void;
+  clearEndpointMagnetDraft: () => void;
+}
+
+export interface EndpointMagnetDraft {
+  sourceMagnet?: MagnetPosition;
+  targetMagnet?: MagnetPosition;
+}
+
+export function buildSelectionGizmoInput(
+  nodes: NodeInfo[],
+  ui: UIState,
+  draft: EndpointMagnetDraft
+): ComputeGizmoMagnetsInput {
+  const allConnectors = nodes.length > 0 && nodes.every((n) => n && n.isConnector);
+  return {
+    isSingleConnector: allConnectors && nodes.length === 1,
+    isMultiConnector: allConnectors && nodes.length >= 2,
+    connectorNodes: nodes,
+    hasExistingConnection: Boolean(ui.hasExistingConnection),
+    connectedConnectors: ui.connectedConnectors,
+    is3PlusNodes: nodes.length >= 3 && !allConnectors,
+    startNodeId: nodes[0]?.id,
+    multiNodeConnectors: ui.multiNodeConnectors,
+    userPendingSourceMagnet: draft.sourceMagnet ?? null,
+    userPendingTargetMagnet: draft.targetMagnet ?? null,
+  };
 }
 
 // ============================================================
@@ -536,6 +571,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const hasConnectorLabelDraft = Object.keys(connectorLabelDraft).length > 0;
 
+  const [endpointDraft, setEndpointDraftRaw] = useState<EndpointMagnetDraft>({});
+  const endpointDraftRef = useRef<EndpointMagnetDraft>({});
+  const setEndpointMagnetDraft = useCallback((side: 'source' | 'target', magnet: MagnetPosition) => {
+    setEndpointDraftRaw((prev) => {
+      const next = side === 'source'
+        ? { ...prev, sourceMagnet: magnet }
+        : { ...prev, targetMagnet: magnet };
+      endpointDraftRef.current = next;
+      return next;
+    });
+  }, []);
+  const clearEndpointMagnetDraft = useCallback(() => {
+    endpointDraftRef.current = {};
+    setEndpointDraftRaw({});
+  }, []);
+
   // 다중 노드 일괄 부분 적용(Apply to All) 진행 상태
   const [isApplyingMultiDraft, setIsApplyingMultiDraft] = useState(false);
   const isApplyingMultiDraftRef = useRef(false);
@@ -571,8 +622,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // 1회성 Undo 스냅샷 상태 관리 (가장 최근의 Apply 또는 Apply to All 1회만 되돌림)
   const [lastAppliedSnapshot, setLastAppliedSnapshot] = useState<UndoSnapshot | null>(null);
   const lastAppliedSnapshotRef = useRef<UndoSnapshot | null>(null);
+  const endpointDirty = isGizmoDraftDirty(buildSelectionGizmoInput(selectedNodes, uiState, endpointDraft));
   const canUndo = Boolean(lastAppliedSnapshot)
-    || (selectedNodes.length >= 2 && (hasMultiDraft || hasConnectorLabelDraft));
+    || (selectedNodes.length >= 2 && (hasMultiDraft || hasConnectorLabelDraft))
+    || endpointDirty;
 
 
   const applyMultiDraft = useCallback(() => {
@@ -1103,6 +1156,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       showToast('변경사항이 취소되었습니다.', 'info');
       return;
     }
+    if (isGizmoDraftDirty(buildSelectionGizmoInput(selectedNodesRef.current, uiStateRef.current, endpointDraftRef.current))) {
+      clearEndpointMagnetDraft();
+      showToast('변경사항이 취소되었습니다.', 'info');
+      return;
+    }
     const snapshot = lastAppliedSnapshotRef.current;
     if (snapshot) {
       if (snapshot.type === 'single' && snapshot.singlePayload) {
@@ -1150,7 +1208,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       revertSingleNodeForm(originalSelectedNodeRef.current);
       showToast('변경사항이 취소되었습니다.', 'info');
     }
-  }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft]);
+  }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft]);
 
   const lastResizeHeightRef = useRef(0);
   const resizeTimerRef = useRef<number | null>(null);
@@ -1475,7 +1533,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, '*');
   }, []);
 
-  const applyCurrentConnectorState = useCallback((customStartOffset?: number, customEndOffset?: number) => {
+  const applyCurrentConnectorState = useCallback((customStartOffset?: number, customEndOffset?: number, includeMagnets: boolean = true) => {
     const nodes = selectedNodesRef.current;
     if (!isConnectorSelectedRef.current || !nodes || nodes.length === 0) return;
 
@@ -1547,6 +1605,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       : (endOffStr !== undefined && endOffStr !== null && endOffStr.trim() !== '' ? parseFloat(endOffStr) : undefined);
 
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+    // BUG-1: liveApply(즉시 적용) 경로에서는 endpointDraft magnet을 전송하지 않는다.
+    // Gizmo magnet mutation은 footer Apply(handleMainAction) 경로(includeMagnets=true)에서만 수행한다.
+    const endpointDraftNow = includeMagnets ? endpointDraftRef.current : {};
+    const magnetPatches = includeMagnets ? buildEndpointMagnetPatches(
+      buildSelectionGizmoInput(nodes, uiStateRef.current, endpointDraftNow)
+    ) : [];
+    const magnetPatchById = new Map(magnetPatches.map((patch) => [patch.id, patch]));
+    const hasEndpointDraft = Boolean(endpointDraftNow.sourceMagnet || endpointDraftNow.targetMagnet);
     const labelDraft = connectorLabelDraftRef.current;
     const isMultiConnector = connNodes.length > 1;
     const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || 'BOX';
@@ -1555,6 +1621,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
 
     connNodes.forEach(node => {
+      const magnetPatch = magnetPatchById.get(node.id);
       const labelPatch = isMultiConnector
         ? {
             ...(labelDraft.labelOn !== undefined ? { hasLabel: labelDraft.labelOn } : {}),
@@ -1586,8 +1653,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             endTerminal: endTerm,
             startOffset,
             endOffset,
-            sourceMagnet: sourceMagnet || undefined,
-            targetMagnet: targetMagnet || undefined,
+            sourceMagnet: includeMagnets ? (magnetPatch?.sourceMagnet ?? (hasEndpointDraft ? undefined : (sourceMagnet || undefined))) : undefined,
+            targetMagnet: includeMagnets ? (magnetPatch?.targetMagnet ?? (hasEndpointDraft ? undefined : (targetMagnet || undefined))) : undefined,
             ...labelPatch,
             isReversed: node?.connectorIsReversed || false,
           }
@@ -1595,12 +1662,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }, '*');
     });
     if (isMultiConnector) clearConnectorLabelDraft();
+    if (includeMagnets) clearEndpointMagnetDraft();
     setConnectorDirty(false);
-  }, [clearConnectorLabelDraft]);
+  }, [clearConnectorLabelDraft, clearEndpointMagnetDraft]);
 
-  const applyExistingConnectionState = useCallback((customStartOffset?: number, customEndOffset?: number) => {
+  const applyExistingConnectionState = useCallback((customStartOffset?: number, customEndOffset?: number, includeMagnets: boolean = true) => {
     const conns = uiStateRef.current.connectedConnectors || [];
     if (conns.length === 0) return;
+
+    // BUG-2: Draft가 있으면 stale uiState magnet으로 덮어쓰지 않는다.
+    // Draft가 있는 endpoint만 buildEndpointMagnetPatches() 결과를 사용하고,
+    // Draft가 없는 endpoint는 undefined(기존값 유지)로 전송한다.
+    // liveApply(즉시 적용) 경로(includeMagnets=false)에서는 magnet을 전송하지 않고 Draft를 보존한다.
+    const nodes = selectedNodesRef.current;
+    const endpointDraftNow = includeMagnets ? endpointDraftRef.current : {};
+    const magnetPatches = includeMagnets ? buildEndpointMagnetPatches(
+      buildSelectionGizmoInput(nodes, uiStateRef.current, endpointDraftNow)
+    ) : [];
+    const magnetPatchById = new Map(magnetPatches.map((patch) => [patch.id, patch]));
+    const hasEndpointDraft = Boolean(includeMagnets && (endpointDraftNow.sourceMagnet || endpointDraftNow.targetMagnet));
 
     const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
     const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
@@ -1632,6 +1712,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
 
     conns.forEach((conn) => {
+      const magnetPatch = magnetPatchById.get(conn.id);
       parent.postMessage({
         pluginMessage: {
           type: 'UPDATE_CONNECTOR_PROPERTIES',
@@ -1646,8 +1727,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             endTerminal: endTerm,
             startOffset,
             endOffset,
-            sourceMagnet: sourceMagnet || undefined,
-            targetMagnet: targetMagnet || undefined,
+            sourceMagnet: includeMagnets ? (magnetPatch?.sourceMagnet ?? (hasEndpointDraft ? undefined : (sourceMagnet || undefined))) : undefined,
+            targetMagnet: includeMagnets ? (magnetPatch?.targetMagnet ?? (hasEndpointDraft ? undefined : (targetMagnet || undefined))) : undefined,
             label,
             hasLabel,
             labelBoxStyle: lastConnectorConfigRef.current.labelBoxStyle || 'BOX',
@@ -1658,14 +1739,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     });
+    if (includeMagnets) clearEndpointMagnetDraft();
     setConnectorDirty(false);
-  }, []);
+  }, [clearEndpointMagnetDraft]);
 
   useEffect(() => {
     liveApplyConnectorRef.current = (customStartOffset?: number, customEndOffset?: number) => {
       const nodes = selectedNodesRef.current;
       if (nodes.length === 1 && nodes[0]?.isConnector) {
-        applyCurrentConnectorState(customStartOffset, customEndOffset);
+        // BUG-1/BUG-2: 즉시 적용 경로에서는 magnet을 전송하지 않고 Draft를 보존한다.
+        applyCurrentConnectorState(customStartOffset, customEndOffset, false);
         return;
       }
       if (
@@ -1673,7 +1756,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         && nodes.every((n) => n && !n.isConnector)
         && uiStateRef.current.hasExistingConnection
       ) {
-        applyExistingConnectionState(customStartOffset, customEndOffset);
+        applyExistingConnectionState(customStartOffset, customEndOffset, false);
       }
     };
   }, [applyCurrentConnectorState, applyExistingConnectionState]);
@@ -1714,6 +1797,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : (lastConnectorConfigRef.current.linkUrl || '');
     const figmaLink = isLinkOn ? rawLinkUrl : '';
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
+    // BUG-3: 신규 생성 시 endpointDraft를 신규 connector magnet으로 사용한다 (Draft 우선, 없으면 uiState).
+    const createDraft = endpointDraftRef.current;
     // 라벨 스타일 설정값 (lastConnectorConfigRef에서 일관되게 읽음)
     const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || 'BOX';
     const labelAlign = lastConnectorConfigRef.current.labelAlign || 'CENTER';
@@ -1732,9 +1817,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           type: 'CONNECT_POINTS',
           payload: {
             sourceNodeId: nodes[0].id,
-            sourceMagnet: sourceMagnet || undefined,
+            sourceMagnet: createDraft.sourceMagnet ?? sourceMagnet ?? undefined,
             targetNodeId: nodes[1].id,
-            targetMagnet: targetMagnet || undefined,
+            targetMagnet: createDraft.targetMagnet ?? targetMagnet ?? undefined,
             label,
             colorHex: color,
             strokeWeight: weight,
@@ -1753,16 +1838,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     } else {
-      // 3개 이상 다중 노드 선택: Core의 orderedNodeIds 기준 단일 CONNECT_CHAIN 메시지 전송
-      const orderedIds = uiStateRef.current.orderedNodeIds && uiStateRef.current.orderedNodeIds.length === nodes.length
+      // 3개 이상: CONNECT_CHAIN 대상은 Flow Node만. 필터 후 공간 정렬한다.
+      // Flow Node만 선택된 경우는 Core가 이미 정렬한 orderedNodeIds를 그대로 쓴다.
+      const flowNodes = nodes.filter((n) => n && n.isFlowNode);
+      const selectionIsFlowOnly = flowNodes.length === nodes.length;
+      const orderedIds = selectionIsFlowOnly && uiStateRef.current.orderedNodeIds && uiStateRef.current.orderedNodeIds.length === nodes.length
         ? uiStateRef.current.orderedNodeIds
-        : nodes.map((n) => n.id);
+        : selectionIsFlowOnly
+          ? nodes.map((n) => n.id)
+          : orderFlowNodesForChain(flowNodes.map((n) => ({
+              id: n.id,
+              x: n.x ?? 0,
+              y: n.y ?? 0,
+              width: n.width ?? 0,
+              height: n.height ?? 0,
+              isFlowNode: true,
+            }))).map((n) => n.id);
 
       parent.postMessage({
         pluginMessage: {
           type: 'CONNECT_CHAIN',
           payload: {
             orderedNodeIds: orderedIds,
+            sourceMagnet: createDraft.sourceMagnet ?? sourceMagnet ?? undefined,
+            targetMagnet: createDraft.targetMagnet ?? targetMagnet ?? undefined,
             label,
             colorHex: color,
             strokeWeight: weight,
@@ -1781,7 +1880,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     }
-  }, [applyCurrentConnectorState, applyExistingConnectionState, showToast]);
+    // BUG-3: Draft를 payload에 담은 뒤 clear — 동일 selection 재push 시 stale Draft로 dirty가 true가 되지 않는다.
+    clearEndpointMagnetDraft();
+  }, [applyCurrentConnectorState, applyExistingConnectionState, showToast, clearEndpointMagnetDraft]);
 
   const updateConnectedConnectorMagnets = useCallback((sourceMagnet?: MagnetPosition, targetMagnet?: MagnetPosition) => {
     const connectedConnectors = uiStateRef.current.connectedConnectors || [];
@@ -1821,6 +1922,76 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const applyEndpointMagnetDraft = useCallback(() => {
+    const nodes = selectedNodesRef.current;
+    const draft = endpointDraftRef.current;
+    const input = buildSelectionGizmoInput(nodes, uiStateRef.current, draft);
+    const patches = buildEndpointMagnetPatches(input);
+    if (patches.length === 0) return;
+
+    const previousById = new Map<string, { sourceMagnet?: MagnetPosition; targetMagnet?: MagnetPosition; isReversed?: boolean }>();
+    if (input.isSingleConnector || input.isMultiConnector) {
+      nodes.forEach((node) => {
+        if (!node?.isConnector) return;
+        previousById.set(node.id, {
+          sourceMagnet: node.connectorSourceMagnet as MagnetPosition | undefined,
+          targetMagnet: node.connectorTargetMagnet as MagnetPosition | undefined,
+          isReversed: Boolean(node.connectorIsReversed),
+        });
+      });
+    } else if (input.is3PlusNodes) {
+      (uiStateRef.current.multiNodeConnectors || []).forEach((conn) => {
+        previousById.set(conn.id, {
+          sourceMagnet: conn.sourceMagnet,
+          targetMagnet: conn.targetMagnet,
+        });
+      });
+    } else {
+      (uiStateRef.current.connectedConnectors || []).forEach((conn) => {
+        const uiStart = conn.isReversed ? conn.targetMagnet : conn.sourceMagnet;
+        const uiEnd = conn.isReversed ? conn.sourceMagnet : conn.targetMagnet;
+        previousById.set(conn.id, {
+          sourceMagnet: uiStart,
+          targetMagnet: uiEnd,
+          isReversed: Boolean(conn.isReversed),
+        });
+      });
+    }
+
+    const snapshot: UndoSnapshot = {
+      type: 'connector',
+      connectorItems: patches.map((patch) => {
+        const previous = previousById.get(patch.id);
+        return {
+          connectorId: patch.id,
+          payload: {
+            connectorId: patch.id,
+            sourceMagnet: previous?.sourceMagnet,
+            targetMagnet: previous?.targetMagnet,
+            isReversed: previous?.isReversed || false,
+          },
+        };
+      }),
+    };
+    setLastAppliedSnapshot(snapshot);
+    lastAppliedSnapshotRef.current = snapshot;
+
+    patches.forEach((patch) => {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'UPDATE_CONNECTOR_PROPERTIES',
+          payload: {
+            connectorId: patch.id,
+            sourceMagnet: patch.sourceMagnet,
+            targetMagnet: patch.targetMagnet,
+            isReversed: patch.isReversed || false,
+          },
+        },
+      }, '*');
+    });
+    clearEndpointMagnetDraft();
+  }, [clearEndpointMagnetDraft]);
+
   const handleMainAction = useCallback(() => {
     const nodes = selectedNodesRef.current;
     const isConn = isConnectorSelectedRef.current || (nodes.length > 0 && nodes.every(n => n && n.isConnector));
@@ -1830,8 +2001,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // 다중 플로우 노드 선택 시: Apply to All 실행 (DOM 전체를 읽거나 Creation Cache를 수정하지 않고 오직 multiDraft만 사용하여 Batch 전송)
+    // 다중 플로우 노드 선택 시: endpoint Draft와 노드 multiDraft를 각각 반영한다.
     if (nodes.length >= 2) {
+      if (isGizmoDraftDirty(buildSelectionGizmoInput(nodes, uiStateRef.current, endpointDraftRef.current))) {
+        applyEndpointMagnetDraft();
+      }
       applyMultiDraft();
       return;
     }
@@ -1955,7 +2129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     }
-  }, [applyCurrentConnectorState, applyMultiDraft, setNodeOptionState, showToast]);
+  }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, setNodeOptionState, showToast]);
 
   const handleSelectionChange = useCallback((
     count: number,
@@ -1996,6 +2170,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isDraftSelectionChanged) {
       clearMultiDraft();
       clearConnectorLabelDraft();
+      clearEndpointMagnetDraft();
       multiDraftSelectionRef.current = sortedNewIds;
     }
 
@@ -2176,7 +2351,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [closeAllPopovers, setCurrentTab, setNodeOptionState, setUIState, clearMultiDraft, clearConnectorLabelDraft]);
+  }, [closeAllPopovers, setCurrentTab, setNodeOptionState, setUIState, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft]);
 
   const value: AppContextValue = {
     selectedNodes,
@@ -2250,6 +2425,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     connectorLabelDraft,
     hasConnectorLabelDraft,
     updateConnectorLabelDraft,
+    endpointDraft,
+    endpointDirty,
+    setEndpointMagnetDraft,
+    clearEndpointMagnetDraft,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

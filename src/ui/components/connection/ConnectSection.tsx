@@ -86,7 +86,7 @@ const CHEVRON_SVG = (
 
 
 /**
- * Connect 섹션 - 피그마 UI3 키트 공식 디자인 완벽 반영
+ * Connector 섹션 - 피그마 UI3 키트 공식 디자인 완벽 반영
  * (Figma 1027261:5984, 6029, 6009, 6054)
  * - 드롭다운 메뉴: -short 아이콘 사용
  * - 드롭다운 버튼: -short가 빠진 기본(52x16) 아이콘 사용
@@ -106,6 +106,8 @@ export function ConnectSection() {
     setSelectedStylePresetId,
     nodeOptionState,
     flooowUsage,
+    endpointDraft,
+    setEndpointMagnetDraft,
   } = useApp();
   const summary = useSelectionSummary();
   const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
@@ -143,9 +145,6 @@ export function ConnectSection() {
   const [isStartOffsetMixed, setIsStartOffsetMixed] = useState(false);
   const [isEndOffsetMixed, setIsEndOffsetMixed] = useState(false);
 
-  // 사용자가 기즈모에서 명시적으로 선택한 pending 마그넷 (상태 C)
-  const [userPendingSourceMagnet, setUserPendingSourceMagnet] = useState<MagnetPosition | null>(null);
-  const [userPendingTargetMagnet, setUserPendingTargetMagnet] = useState<MagnetPosition | null>(null);
   const userActionTimestampRef = useRef<number>(0);
   const prevSelectionKeyRef = useRef<string>('');
   const lastSyncedSelectionColorRef = useRef<string | null>(null);
@@ -240,8 +239,6 @@ export function ConnectSection() {
     const isDifferentSelection = currentSelectionKey !== prevSelectionKeyRef.current;
     if (isDifferentSelection) {
       prevSelectionKeyRef.current = currentSelectionKey;
-      setUserPendingSourceMagnet(null);
-      setUserPendingTargetMagnet(null);
       // 선택 변경에 의해 동기화되는 노드의 색상을 기록하여, 선택만 했을 때 applyCurrentConnectorState가 자동 격발되는 것을 방지
       const firstConn = selectedNodes.find(n => n && n.isConnector);
       lastSyncedSelectionColorRef.current = firstConn?.connectorColorHex ? firstConn.connectorColorHex.toUpperCase() : null;
@@ -538,41 +535,31 @@ export function ConnectSection() {
 
   function selectAnchor(nodeIndex: 1 | 2, pos: MagnetPosition) {
     userActionTimestampRef.current = Date.now();
-    const isConn = summary.isSingleConnector || summary.isMultiConnector;
-    const hasExisting = Boolean(uiState.hasExistingConnection && uiState.connectedConnectorIds && uiState.connectedConnectorIds.length > 0);
+    const hasEditableEndpoints = summary.isSingleConnector
+      || summary.isMultiConnector
+      || (uiState.connectedConnectors && uiState.connectedConnectors.length > 0)
+      || (uiState.multiNodeConnectors && uiState.multiNodeConnectors.length > 0);
+
+    // 기존 endpoint가 있으면 그 사이드의 Draft만 바꾼다. Apply 전까지 connector는 수정하지 않는다.
+    if (hasEditableEndpoints) {
+      setEndpointMagnetDraft(nodeIndex === 1 ? 'source' : 'target', pos);
+      return;
+    }
 
     if (nodeIndex === 1) {
-      setUserPendingSourceMagnet(pos);
-      if (isConn) {
-        setUIState({ sourceMagnet: pos });
-        markConnectorDirty();
-      } else if (hasExisting) {
-        setUIState({ sourceMagnet: pos });
-        markConnectorDirty();
-      } else {
-        // 신규 연결: Node 2(End)가 미선택 상태이면 동일 방향(pos)으로 자동 대응 (문제 B 해결)
-        const autoTarget = (!userPendingTargetMagnet && !uiState.targetMagnet) ? pos : (userPendingTargetMagnet ?? uiState.targetMagnet);
-        if (!userPendingTargetMagnet && !uiState.targetMagnet) {
-          setUserPendingTargetMagnet(pos);
-        }
-        setUIState({ sourceMagnet: pos, targetMagnet: autoTarget ?? null });
+      const autoTarget = (!endpointDraft.targetMagnet && !uiState.targetMagnet) ? pos : (endpointDraft.targetMagnet ?? uiState.targetMagnet);
+      if (!endpointDraft.targetMagnet && !uiState.targetMagnet) {
+        setEndpointMagnetDraft('target', pos);
       }
+      setEndpointMagnetDraft('source', pos);
+      setUIState({ sourceMagnet: pos, targetMagnet: autoTarget ?? null });
     } else {
-      setUserPendingTargetMagnet(pos);
-      if (isConn) {
-        setUIState({ targetMagnet: pos });
-        markConnectorDirty();
-      } else if (hasExisting) {
-        setUIState({ targetMagnet: pos });
-        markConnectorDirty();
-      } else {
-        // 신규 연결: Node 1(Start)이 미선택 상태이면 동일 방향(pos)으로 자동 대응
-        const autoSource = (!userPendingSourceMagnet && !uiState.sourceMagnet) ? pos : (userPendingSourceMagnet ?? uiState.sourceMagnet);
-        if (!userPendingSourceMagnet && !uiState.sourceMagnet) {
-          setUserPendingSourceMagnet(pos);
-        }
-        setUIState({ targetMagnet: pos, sourceMagnet: autoSource ?? null });
+      const autoSource = (!endpointDraft.sourceMagnet && !uiState.sourceMagnet) ? pos : (endpointDraft.sourceMagnet ?? uiState.sourceMagnet);
+      if (!endpointDraft.sourceMagnet && !uiState.sourceMagnet) {
+        setEndpointMagnetDraft('source', pos);
       }
+      setEndpointMagnetDraft('target', pos);
+      setUIState({ targetMagnet: pos, sourceMagnet: autoSource ?? null });
     }
   }
 
@@ -818,8 +805,8 @@ export function ConnectSection() {
     connectorNodes: selectedNodes,
     hasExistingConnection: hasExisting,
     connectedConnectors: uiState.connectedConnectors,
-    userPendingSourceMagnet,
-    userPendingTargetMagnet,
+    userPendingSourceMagnet: endpointDraft.sourceMagnet ?? null,
+    userPendingTargetMagnet: endpointDraft.targetMagnet ?? null,
     is3PlusNodes,
     startNodeId: selectedNodes[0]?.id,
     multiNodeConnectors: uiState.multiNodeConnectors,
@@ -836,7 +823,7 @@ export function ConnectSection() {
     <div className="section-block">
       <div className="section-header">
         <span className="section-title">
-          Connect
+          Connector
           {summary.isMultiConnector && (
             isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed
           ) && (
@@ -970,7 +957,7 @@ export function ConnectSection() {
               );
             })}
             <span className="node-preview-copy" id="preview-node-1-text">
-              <span className="node-preview-title">{node1DisplayName}</span>
+              <span className="node-preview-title" title={node1DisplayName}>{node1DisplayName}</span>
               {node1TypeLabel ? <span className="node-preview-type">{node1TypeLabel}</span> : null}
             </span>
           </div>
@@ -991,7 +978,7 @@ export function ConnectSection() {
               );
             })}
             <span className="node-preview-copy" id="preview-node-2-text">
-              <span className="node-preview-title">{node2DisplayName}</span>
+              <span className="node-preview-title" title={node2DisplayName}>{node2DisplayName}</span>
               {node2TypeLabel ? <span className="node-preview-type">{node2TypeLabel}</span> : null}
             </span>
           </div>
@@ -1432,8 +1419,8 @@ export function ConnectSection() {
         {(() => {
           const isAllConnectors = selectedNodes.length > 0 && selectedNodes.every(n => n && n.isConnector);
           const hasExisting = Boolean(uiState.hasExistingConnection);
-          const effectiveSource = userPendingSourceMagnet ?? sourceMagnet;
-          const effectiveTarget = userPendingTargetMagnet ?? targetMagnet;
+          const effectiveSource = endpointDraft.sourceMagnet ?? sourceMagnet;
+          const effectiveTarget = endpointDraft.targetMagnet ?? targetMagnet;
 
           // 커넥터만 선택한 경우와 이미 연결된 노드 2개는 섹션 버튼을 두지 않는다.
           // 커넥터 1개는 즉시 반영되고, 커넥터 복수는 푸터 Undo / Apply to All을 쓴다.

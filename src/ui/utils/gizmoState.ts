@@ -3,15 +3,18 @@ export type MagnetPosition = 'TOP' | 'BOTTOM' | 'LEFT' | 'RIGHT';
 export type GizmoMagnetVisualState = 'default' | 'active' | 'mixed';
 
 export interface ConnectedConnectorLike {
+  id?: string;
   sourceMagnet?: MagnetPosition;
   targetMagnet?: MagnetPosition;
   isReversed?: boolean;
 }
 
 export interface ConnectorNodeLike {
+  id?: string;
   isConnector?: boolean;
   connectorSourceMagnet?: MagnetPosition | string;
   connectorTargetMagnet?: MagnetPosition | string;
+  connectorIsReversed?: boolean;
 }
 
 export interface MultiNodeConnectorLike {
@@ -50,6 +53,35 @@ export interface ComputeGizmoMagnetsOutput {
 
 const ALL_MAGNETS: MagnetPosition[] = ['TOP', 'RIGHT', 'BOTTOM', 'LEFT'];
 
+function blankMagnetStates(): Record<MagnetPosition, GizmoMagnetVisualState> {
+  return { TOP: 'default', RIGHT: 'default', BOTTOM: 'default', LEFT: 'default' };
+}
+
+/** Draft가 있으면 Current ACTIVE/MIXED를 지우고 그 방향만 ACTIVE로 보여 준다. */
+function showDraftOnly(
+  magnetStates: Record<MagnetPosition, GizmoMagnetVisualState>,
+  draft: MagnetPosition | null | undefined
+): boolean {
+  if (!draft) return false;
+  for (const mag of ALL_MAGNETS) {
+    magnetStates[mag] = mag === draft ? 'active' : 'default';
+  }
+  return true;
+}
+
+/**
+ * 편집 대상 endpoint의 Current magnet과 Draft가 다르면 true.
+ * Draft가 없거나, 연결 endpoint가 없거나, 모든 Current가 Draft와 같으면 false.
+ */
+export function isEndpointMagnetDraftDirty(
+  currents: MagnetPosition[],
+  draft: MagnetPosition | null | undefined
+): boolean {
+  if (!draft) return false;
+  if (currents.length === 0) return false;
+  return currents.some((mag) => mag !== draft);
+}
+
 /**
  * 선택된 두 노드 사이의 커넥터 및 선택된 커넥터의 엔드포인트를 기준으로
  * Start/End Gizmo의 각 마그넷 상태를 계산하는 순수 함수
@@ -64,7 +96,7 @@ const ALL_MAGNETS: MagnetPosition[] = ['TOP', 'RIGHT', 'BOTTOM', 'LEFT'];
  * - End/More 카드: 연결이 1개 이상 존재하는 방향은 무조건 mixed로 표시
  *
  * fallback에 의한 active 강제 할당은 배제되며(연결 0개이면 default),
- * 사용자가 명시적으로 클릭한 userPending 마그넷이 있는 경우 해당 위치는 active로 표시된다.
+ * Draft(userPending)가 있으면 그 사이드는 Current를 덮어쓰지 않고 Draft 방향만 active로 표시한다.
  */
 export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGizmoMagnetsOutput {
   const {
@@ -117,14 +149,11 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
       }
     });
 
-    // 2. 사용자가 기즈모를 명시적으로 클릭한 경우 (userPending)
-    if (userPending) {
-      magnetStates[userPending] = 'active';
-    }
+    const drafted = showDraftOnly(magnetStates, userPending);
 
     return {
       magnetStates,
-      usedMagnets: userPending ? Array.from(new Set([...uniqueUsed, userPending])) : uniqueUsed,
+      usedMagnets: drafted && userPending ? [userPending] : uniqueUsed,
       totalConnections: total,
     };
   }
@@ -134,12 +163,7 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
     outgoingMags: MagnetPosition[],
     userPending: MagnetPosition | null | undefined
   ): GizmoSideResult {
-    const magnetStates: Record<MagnetPosition, GizmoMagnetVisualState> = {
-      TOP: 'default',
-      RIGHT: 'default',
-      BOTTOM: 'default',
-      LEFT: 'default',
-    };
+    const magnetStates = blankMagnetStates();
 
     const outgoingCounts: Record<MagnetPosition, number> = {
       TOP: 0,
@@ -171,16 +195,12 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
       }
     });
 
-    // 사용자가 기즈모를 명시적으로 클릭한 경우 (userPending)
-    if (userPending) {
-      magnetStates[userPending] = 'active';
-    }
-
+    const drafted = showDraftOnly(magnetStates, userPending);
     const allUsed = Array.from(new Set([...incomingMags, ...outgoingMags]));
 
     return {
       magnetStates,
-      usedMagnets: userPending ? Array.from(new Set([...allUsed, userPending])) : allUsed,
+      usedMagnets: drafted && userPending ? [userPending] : allUsed,
       totalConnections: incomingMags.length + outgoingMags.length,
     };
   }
@@ -234,12 +254,7 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
       magnets: MagnetPosition[],
       userPending: MagnetPosition | null | undefined
     ): GizmoSideResult {
-      const magnetStates: Record<MagnetPosition, GizmoMagnetVisualState> = {
-        TOP: 'default',
-        RIGHT: 'default',
-        BOTTOM: 'default',
-        LEFT: 'default',
-      };
+      const magnetStates = blankMagnetStates();
 
       const total = magnets.length;
       const uniqueUsed = Array.from(new Set(magnets));
@@ -257,14 +272,11 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
         });
       }
 
-      // 사용자가 기즈모를 명시적으로 클릭한 경우 (userPending) 우선 반영
-      if (userPending) {
-        magnetStates[userPending] = 'active';
-      }
+      const drafted = showDraftOnly(magnetStates, userPending);
 
       return {
         magnetStates,
-        usedMagnets: userPending ? Array.from(new Set([...uniqueUsed, userPending])) : uniqueUsed,
+        usedMagnets: drafted && userPending ? [userPending] : uniqueUsed,
         totalConnections: total,
       };
     }
@@ -285,12 +297,7 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
     magnets: MagnetPosition[],
     userPending: MagnetPosition | null | undefined
   ): GizmoSideResult {
-    const magnetStates: Record<MagnetPosition, GizmoMagnetVisualState> = {
-      TOP: 'default',
-      RIGHT: 'default',
-      BOTTOM: 'default',
-      LEFT: 'default',
-    };
+    const magnetStates = blankMagnetStates();
 
     const total = magnets.length;
     const uniqueUsed = Array.from(new Set(magnets));
@@ -308,13 +315,11 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
       });
     }
 
-    if (userPending) {
-      magnetStates[userPending] = 'active';
-    }
+    const drafted = showDraftOnly(magnetStates, userPending);
 
     return {
       magnetStates,
-      usedMagnets: userPending ? Array.from(new Set([...uniqueUsed, userPending])) : uniqueUsed,
+      usedMagnets: drafted && userPending ? [userPending] : uniqueUsed,
       totalConnections: total,
     };
   }
@@ -349,4 +354,170 @@ export function computeGizmoMagnets(input: ComputeGizmoMagnetsInput): ComputeGiz
     start: resolveSideStates(startMags, userPendingSourceMagnet),
     end: resolveSideStates(endMags, userPendingTargetMagnet),
   };
+}
+
+export interface GizmoSideMagnets {
+  start: MagnetPosition[];
+  end: MagnetPosition[];
+}
+
+/** computeGizmoMagnets와 같은 endpoint 그룹의 Current magnet 목록. */
+export function collectGizmoSideMagnets(input: ComputeGizmoMagnetsInput): GizmoSideMagnets {
+  const {
+    isMultiConnector,
+    isSingleConnector,
+    connectorNodes,
+    hasExistingConnection,
+    connectedConnectors,
+    is3PlusNodes,
+    startNodeId,
+    multiNodeConnectors,
+  } = input;
+
+  const start: MagnetPosition[] = [];
+  const end: MagnetPosition[] = [];
+
+  if (is3PlusNodes) {
+    const conns = multiNodeConnectors || [];
+    if (startNodeId) {
+      const startSourceConns = conns.filter((c) => c.sourceId === startNodeId && c.sourceMagnet);
+      const startTargetConns = conns.filter((c) => c.targetId === startNodeId && c.targetMagnet);
+      if (startSourceConns.length > 0) {
+        startSourceConns.forEach((c) => {
+          if (c.sourceMagnet) start.push(c.sourceMagnet);
+        });
+      } else {
+        startTargetConns.forEach((c) => {
+          if (c.targetMagnet) start.push(c.targetMagnet);
+        });
+      }
+      conns.forEach((conn) => {
+        if (conn.targetId !== startNodeId && conn.targetMagnet) end.push(conn.targetMagnet);
+        if (conn.sourceId !== startNodeId && conn.sourceMagnet) end.push(conn.sourceMagnet);
+      });
+    } else {
+      conns.forEach((conn) => {
+        if (conn.sourceMagnet) start.push(conn.sourceMagnet);
+        if (conn.targetMagnet) end.push(conn.targetMagnet);
+      });
+    }
+    return { start, end };
+  }
+
+  if (isMultiConnector || isSingleConnector) {
+    (connectorNodes || []).filter((n) => n && n.isConnector).forEach((c) => {
+      if (c.connectorSourceMagnet) start.push(c.connectorSourceMagnet as MagnetPosition);
+      if (c.connectorTargetMagnet) end.push(c.connectorTargetMagnet as MagnetPosition);
+    });
+    return { start, end };
+  }
+
+  if (hasExistingConnection && connectedConnectors && connectedConnectors.length > 0) {
+    connectedConnectors.forEach((conn) => {
+      const isRev = Boolean(conn.isReversed);
+      const uiStart = isRev ? conn.targetMagnet : conn.sourceMagnet;
+      const uiEnd = isRev ? conn.sourceMagnet : conn.targetMagnet;
+      if (uiStart) start.push(uiStart);
+      if (uiEnd) end.push(uiEnd);
+    });
+  }
+
+  return { start, end };
+}
+
+export function isGizmoDraftDirty(input: ComputeGizmoMagnetsInput): boolean {
+  const sides = collectGizmoSideMagnets(input);
+  return isEndpointMagnetDraftDirty(sides.start, input.userPendingSourceMagnet)
+    || isEndpointMagnetDraftDirty(sides.end, input.userPendingTargetMagnet);
+}
+
+export interface EndpointMagnetPatch {
+  id: string;
+  sourceMagnet?: MagnetPosition;
+  targetMagnet?: MagnetPosition;
+  isReversed?: boolean;
+}
+
+/**
+ * Draft가 Current와 다른 endpoint만 갱신 패치로 만든다.
+ * 2노드/커넥터 선택은 UI 마그넷 + isReversed, 3+ 노드는 물리 source/target이다.
+ */
+export function buildEndpointMagnetPatches(input: ComputeGizmoMagnetsInput): EndpointMagnetPatch[] {
+  const sourceDraft = input.userPendingSourceMagnet || undefined;
+  const targetDraft = input.userPendingTargetMagnet || undefined;
+  const sides = collectGizmoSideMagnets(input);
+  const writeSource = Boolean(sourceDraft && isEndpointMagnetDraftDirty(sides.start, sourceDraft));
+  const writeTarget = Boolean(targetDraft && isEndpointMagnetDraftDirty(sides.end, targetDraft));
+  if (!writeSource && !writeTarget) return [];
+
+  if (input.isSingleConnector || input.isMultiConnector) {
+    return (input.connectorNodes || [])
+      .filter((n) => n && n.isConnector && n.id)
+      .map((n) => {
+        const patch: EndpointMagnetPatch = {
+          id: n.id as string,
+          isReversed: Boolean(n.connectorIsReversed),
+        };
+        if (writeSource && sourceDraft) patch.sourceMagnet = sourceDraft;
+        if (writeTarget && targetDraft) patch.targetMagnet = targetDraft;
+        return patch;
+      });
+  }
+
+  if (!input.is3PlusNodes && input.hasExistingConnection && input.connectedConnectors) {
+    return input.connectedConnectors
+      .filter((conn) => conn.id)
+      .map((conn) => {
+        const patch: EndpointMagnetPatch = {
+          id: conn.id as string,
+          isReversed: Boolean(conn.isReversed),
+        };
+        if (writeSource && sourceDraft) patch.sourceMagnet = sourceDraft;
+        if (writeTarget && targetDraft) patch.targetMagnet = targetDraft;
+        return patch;
+      });
+  }
+
+  if (input.is3PlusNodes) {
+    const conns = input.multiNodeConnectors || [];
+    const startNodeId = input.startNodeId;
+    const byId = new Map<string, EndpointMagnetPatch>();
+    const touch = (id: string) => {
+      let patch = byId.get(id);
+      if (!patch) {
+        patch = { id };
+        byId.set(id, patch);
+      }
+      return patch;
+    };
+
+    if (startNodeId) {
+      const startSourceConns = conns.filter((c) => c.sourceId === startNodeId && c.sourceMagnet && c.id);
+      const startTargetConns = conns.filter((c) => c.targetId === startNodeId && c.targetMagnet && c.id);
+      const startIsTargetSide = startSourceConns.length === 0 && startTargetConns.length > 0;
+      if (writeSource && sourceDraft) {
+        const group = startIsTargetSide ? startTargetConns : startSourceConns;
+        group.forEach((conn) => {
+          const patch = touch(conn.id as string);
+          if (startIsTargetSide) patch.targetMagnet = sourceDraft;
+          else patch.sourceMagnet = sourceDraft;
+        });
+      }
+      if (writeTarget && targetDraft) {
+        conns.forEach((conn) => {
+          if (!conn.id) return;
+          if (conn.targetId !== startNodeId && conn.targetMagnet) {
+            touch(conn.id).targetMagnet = targetDraft;
+          }
+          if (conn.sourceId !== startNodeId && conn.sourceMagnet) {
+            touch(conn.id).sourceMagnet = targetDraft;
+          }
+        });
+      }
+    }
+
+    return Array.from(byId.values());
+  }
+
+  return [];
 }

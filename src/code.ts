@@ -51,7 +51,6 @@ import {
   refreshConnectorRegistry,
   syncConnectorsForMovedNodes,
   getOptimalMagnetPair,
-  cleanupGhostTerminalMarkers,
   copyConnectorData,
   getLabelPlacement,
   readPrevLabelVertical,
@@ -62,7 +61,7 @@ import {
   placeNodeAtWorldCenter,
   Box,
 } from './customConnector';
-import { orderNodesForChain, makePairKey } from './chainOrder';
+import { orderNodesForChain, makePairKey, resolveCreatedPairMagnets } from './chainOrder';
 import { countFlooowElements, type FlooowElementCount } from './elementCount';
 import {
   canCreateFlooowElements,
@@ -803,17 +802,40 @@ function postFlooowUsage(): void {
   });
 }
 
+// 개발 빌드 판별. setPaymentStatusInDevelopment는 개발 모드에서만 성공한다.
+// 현재 status를 그대로 다시 기록해 결제 상태를 바꾸지 않고, 결과는 한 번만 캐시한다.
+let figmaPluginDevelopment: boolean | null = null;
+function isFigmaPluginDevelopment(): boolean {
+  if (figmaPluginDevelopment !== null) return figmaPluginDevelopment;
+  try {
+    const payments = figma.payments;
+    const type = payments?.status?.type;
+    if (!payments || (type !== 'PAID' && type !== 'UNPAID' && type !== 'NOT_SUPPORTED')) {
+      figmaPluginDevelopment = false;
+      return false;
+    }
+    payments.setPaymentStatusInDevelopment({ type });
+    figmaPluginDevelopment = true;
+  } catch (_) {
+    figmaPluginDevelopment = false;
+  }
+  return figmaPluginDevelopment;
+}
+
 // Create Gate entitlement (Step 4): Figma Plugin Payments 실측.
-// - 동기 읽기(figma.payments.status). 별도 cache 없음 (읽기 비용이 없는 속성 접근).
-// - PAID → PAID_ACTIVE, 그 외(UNPAID/NOT_SUPPORTED/권한 미선언) → FREE.
+// - 개발 런타임 → DEV_ACTIVE (Pro와 동일 권한, 표시 이름 Dev). 배포본에서는 이 분기가 열리지 않는다.
+// - 배포본: PAID → PAID_ACTIVE, 그 외 → FREE.
 // - clientStorage/pluginData/UI 값은 절대 사용하지 않는다 (위조 불가 구조).
 function getCreateEntitlement(): CreateEntitlement {
   try {
+    if (isFigmaPluginDevelopment()) return 'DEV_ACTIVE';
     return normalizePaymentStatus(figma.payments?.status?.type);
   } catch (_) {
     return 'FREE';
   }
 }
+
+
 
 // CREATE 직렬화 mutex: recount → approve → actual create를 하나의
 // critical section에서 수행하여 동시 CREATE race를 방지한다.
@@ -4557,6 +4579,7 @@ async function connectPoints(payload: ConnectPointsPayload) {
 
     let sourceMagnet = payload.sourceMagnet;
     let targetMagnet = payload.targetMagnet;
+    const hasExplicitMagnets = Boolean(sourceMagnet && targetMagnet);
     if (!sourceMagnet || !targetMagnet) {
       const optimal = getOptimalMagnetPair(
         {
@@ -4595,6 +4618,19 @@ async function connectPoints(payload: ConnectPointsPayload) {
       payload.labelFillColor,
       payload.labelStrokeColor
     );
+
+    // 기즈모 수동 지정으로 생성되면 수동 고정 + 앵커를 기록한다. 자동 생성은 기록하지 않는다.
+    if (hasExplicitMagnets) {
+      try {
+        const baseDx =
+          targetNode.x + targetNode.width / 2 - (sourceNode.x + sourceNode.width / 2);
+        const baseDy =
+          targetNode.y + targetNode.height / 2 - (sourceNode.y + sourceNode.height / 2);
+        connector.setPluginData('is_manual_magnet', 'true');
+        connector.setPluginData('manual_base_dx', String(baseDx));
+        connector.setPluginData('manual_base_dy', String(baseDy));
+      } catch (_) {}
+    }
 
     figma.currentPage.selection = [connector];
     handleSelectionChange();
@@ -4688,33 +4724,17 @@ async function autoConnectSelected(label?: string) {
     await loadRequiredFonts();
 
     // 1. 2개 선택인 경우: 정렬된 순서(출발: 위/왼쪽 -> 도착: 아래/오른쪽)로 최단 방향 직각 연결
+    // 자동 연결이므로 getOptimalMagnetPair로 최단 쌍을 고른다 (수동 고정 없음).
     if (nodes.length === 2) {
       const sourceNode = nodes[0];
       const targetNode = nodes[1];
 
-      const dx = targetNode.x - sourceNode.x;
-      const dy = targetNode.y - sourceNode.y;
-
-      let sourceMagnet: MagnetPosition = 'RIGHT';
-      let targetMagnet: MagnetPosition = 'LEFT';
-
-      if (Math.abs(dx) >= Math.abs(dy)) {
-        if (dx >= 0) {
-          sourceMagnet = 'RIGHT';
-          targetMagnet = 'LEFT';
-        } else {
-          sourceMagnet = 'LEFT';
-          targetMagnet = 'RIGHT';
-        }
-      } else {
-        if (dy >= 0) {
-          sourceMagnet = 'BOTTOM';
-          targetMagnet = 'TOP';
-        } else {
-          sourceMagnet = 'TOP';
-          targetMagnet = 'BOTTOM';
-        }
-      }
+      const optimal = getOptimalMagnetPair(
+        { x: sourceNode.x, y: sourceNode.y, width: sourceNode.width, height: sourceNode.height },
+        { x: targetNode.x, y: targetNode.y, width: targetNode.width, height: targetNode.height }
+      );
+      const sourceMagnet = optimal.sourceMagnet;
+      const targetMagnet = optimal.targetMagnet;
 
       const conn = await createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label);
       figma.currentPage.selection = [conn];
@@ -4730,29 +4750,13 @@ async function autoConnectSelected(label?: string) {
       const src = nodes[i];
       const tgt = nodes[i + 1];
 
-      const dx = tgt.x - src.x;
-      const dy = tgt.y - src.y;
-
-      let srcMagnet: MagnetPosition = 'RIGHT';
-      let tgtMagnet: MagnetPosition = 'LEFT';
-
-      if (Math.abs(dx) >= Math.abs(dy)) {
-        if (dx >= 0) {
-          srcMagnet = 'RIGHT';
-          tgtMagnet = 'LEFT';
-        } else {
-          srcMagnet = 'LEFT';
-          tgtMagnet = 'RIGHT';
-        }
-      } else {
-        if (dy >= 0) {
-          srcMagnet = 'BOTTOM';
-          tgtMagnet = 'TOP';
-        } else {
-          srcMagnet = 'TOP';
-          tgtMagnet = 'BOTTOM';
-        }
-      }
+      // 자동 체인이므로 getOptimalMagnetPair로 최단 쌍을 고른다 (수동 고정 없음).
+      const optimal = getOptimalMagnetPair(
+        { x: src.x, y: src.y, width: src.width, height: src.height },
+        { x: tgt.x, y: tgt.y, width: tgt.width, height: tgt.height }
+      );
+      const srcMagnet = optimal.sourceMagnet;
+      const tgtMagnet = optimal.targetMagnet;
 
       // 라벨이 입력된 경우 첫 번째 연결선에 표시
       const lineLabel = (i === 0 && label) ? label : undefined;
@@ -4838,8 +4842,16 @@ async function connectChain(payload: ConnectChainPayload) {
 
     let createdCount = 0;
 
+    // BUG-3: Gizmo Draft가 있으면 신규 pair에 반영한다.
+    // - pairsToCreate의 첫 신규 pair: source = Start Draft, target = End Draft
+    // - 그 다음 신규 pair: source/target = End Draft
+    // - 기존 pair는 skip하므로 기존 connector를 절대 수정하지 않는다
+    const chainSourceDraft = payload.sourceMagnet;
+    const chainTargetDraft = payload.targetMagnet;
+
     // 5. 확정된 신규 Pair만 순서대로 생성
-    for (const pair of pairsToCreate) {
+    for (let createdIndex = 0; createdIndex < pairsToCreate.length; createdIndex++) {
+      const pair = pairsToCreate[createdIndex];
       const srcNode = pair.srcNode;
       const tgtNode = pair.tgtNode;
       const i = pair.pairIndex;
@@ -4860,6 +4872,15 @@ async function connectChain(payload: ConnectChainPayload) {
         height: tgtNode.height,
       };
       const optimal = getOptimalMagnetPair(srcBox, tgtBox);
+      const createdMagnets = resolveCreatedPairMagnets(
+        createdIndex,
+        chainSourceDraft,
+        chainTargetDraft,
+        optimal.sourceMagnet,
+        optimal.targetMagnet,
+      );
+      const chainSourceMagnet = createdMagnets.sourceMagnet;
+      const chainTargetMagnet = createdMagnets.targetMagnet;
 
       // Terminal / Label 규칙:
       // 첫 번째 커넥터(i === 0): 전달된 startTerminal, 전달된 endTerminal, 전달된 label
@@ -4871,9 +4892,9 @@ async function connectChain(payload: ConnectChainPayload) {
 
       await createSingleConnector(
         srcNode,
-        optimal.sourceMagnet,
+        chainSourceMagnet,
         tgtNode,
-        optimal.targetMagnet,
+        chainTargetMagnet,
         label,
         payload.colorHex,
         payload.strokeWeight,

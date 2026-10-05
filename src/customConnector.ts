@@ -1086,35 +1086,6 @@ export function registerConnectorInRegistry(connectorNode: SceneNode) {
   }
 }
 
-// 캔버스 내 고스트 마커(기존 버그로 인해 잔상처럼 남겨진 사각형 노드들) 일괄 자동 청소
-export function cleanupGhostTerminalMarkers(): number {
-  let count = 0;
-  try {
-    const ghosts = figma.currentPage.findAll((n) => {
-      try {
-        if (!n || n.type !== 'RECTANGLE') return false;
-        const name = n.name;
-        if (name === 'ConnectorStartTerminal' || name === 'ConnectorEndTerminal') return true;
-        const isTerm = safeGetPluginData(n, 'is_terminal_marker');
-        if (isTerm === 'start' || isTerm === 'end') return true;
-        return false;
-      } catch (_) {
-        return false;
-      }
-    });
-    for (const g of ghosts) {
-      g.remove();
-      count++;
-    }
-    if (count > 0) {
-      console.log(`[Flow] 잔상 고스트 마커 ${count}개를 깨끗하게 청소했습니다.`);
-    }
-  } catch (err) {
-    console.error('고스트 마커 정리 중 에러:', err);
-  }
-  return count;
-}
-
 // 캔버스 내 모든 커넥터(커스텀 및 네이티브) 스캔 및 레지스트리 초기화
 export function refreshConnectorRegistry() {
   nodeToConnectorsMap.clear();
@@ -1215,7 +1186,363 @@ export function getOptimalMagnetPair(
   };
 }
 
-// 피그마 네이티브 ConnectorNode의 최적 마그넷 자동 최적화
+export function isFixedMagnetPosition(value: unknown): value is MagnetPosition {
+  return value === 'TOP' || value === 'BOTTOM' || value === 'LEFT' || value === 'RIGHT';
+}
+
+// 중심 간격이 작은 쪽 변의 이 비율 안이면 방향이 확정되지 않은 것으로 본다.
+const RELATIVE_DIRECTION_DEAD_ZONE_RATIO = 0.5;
+
+// 다른 축이 이 배 이상이면 현재 magnet 축이 주축이 아니라고 본다.
+const MAGNET_AXIS_DOMINANCE_RATIO = 1.2;
+
+// 맞붙은 포트가 이 간격보다 가까우면 정방향 엘보가 아니라 바깥 우회가 된다.
+const FACING_PORT_CLEARANCE = 10;
+
+// 수동(manual) magnet용 완화 임계. 자동과 같은 잣대로 깨지면 수기 고정이 무의미해진다.
+export const MANUAL_DEAD_ZONE_RATIO = 1.0;
+export const MANUAL_MOVE_THRESHOLD = 120;
+export const MANUAL_LENGTH_RATIO = 2.5;
+
+// 수동 magnet 표시 및 앵커 pluginData 키
+export const MANUAL_MAGNET_FLAG_KEY = 'is_manual_magnet';
+export const MANUAL_BASE_DX_KEY = 'manual_base_dx';
+export const MANUAL_BASE_DY_KEY = 'manual_base_dy';
+
+function magnetLayoutAxis(magnet: MagnetPosition): 'x' | 'y' {
+  return magnet === 'LEFT' || magnet === 'RIGHT' ? 'x' : 'y';
+}
+
+function magnetExpectedDeltaSign(
+  magnet: MagnetPosition,
+  role: 'source' | 'target'
+): { axis: 'x' | 'y'; sign: 1 | -1 } {
+  if (role === 'source') {
+    if (magnet === 'RIGHT') return { axis: 'x', sign: 1 };
+    if (magnet === 'LEFT') return { axis: 'x', sign: -1 };
+    if (magnet === 'BOTTOM') return { axis: 'y', sign: 1 };
+    return { axis: 'y', sign: -1 };
+  }
+  if (magnet === 'LEFT') return { axis: 'x', sign: 1 };
+  if (magnet === 'RIGHT') return { axis: 'x', sign: -1 };
+  if (magnet === 'TOP') return { axis: 'y', sign: 1 };
+  return { axis: 'y', sign: -1 };
+}
+
+// 저장된 magnet이 기대한 상대 방향과 반대이고, 그 차이가 dead zone보다 크면 true.
+export function isRelativeDirectionReversed(
+  srcBox: Box,
+  tgtBox: Box,
+  sourceMagnet: MagnetPosition,
+  targetMagnet: MagnetPosition
+): boolean {
+  const dx = (tgtBox.x + tgtBox.width / 2) - (srcBox.x + srcBox.width / 2);
+  const dy = (tgtBox.y + tgtBox.height / 2) - (srcBox.y + srcBox.height / 2);
+  const deadX = Math.min(srcBox.width, tgtBox.width) * RELATIVE_DIRECTION_DEAD_ZONE_RATIO;
+  const deadY = Math.min(srcBox.height, tgtBox.height) * RELATIVE_DIRECTION_DEAD_ZONE_RATIO;
+  const checks = [
+    magnetExpectedDeltaSign(sourceMagnet, 'source'),
+    magnetExpectedDeltaSign(targetMagnet, 'target'),
+  ];
+  for (const check of checks) {
+    const delta = check.axis === 'x' ? dx : dy;
+    const dead = check.axis === 'x' ? deadX : deadY;
+    if (Math.abs(delta) <= dead) continue;
+    if (Math.sign(delta) !== check.sign) return true;
+  }
+  return false;
+}
+
+function relativeCenterDelta(srcBox: Box, tgtBox: Box): { dx: number; dy: number } {
+  return {
+    dx: (tgtBox.x + tgtBox.width / 2) - (srcBox.x + srcBox.width / 2),
+    dy: (tgtBox.y + tgtBox.height / 2) - (srcBox.y + srcBox.height / 2),
+  };
+}
+
+// source 또는 target 중 하나라도 자기 축이 주축이 아니면 pair 전체를 다시 평가한다.
+export function isRelativeAxisMismatched(
+  srcBox: Box,
+  tgtBox: Box,
+  sourceMagnet: MagnetPosition,
+  targetMagnet: MagnetPosition
+): boolean {
+  const { dx, dy } = relativeCenterDelta(srcBox, tgtBox);
+  const ax = Math.abs(dx);
+  const ay = Math.abs(dy);
+  for (const magnet of [sourceMagnet, targetMagnet]) {
+    if (magnetLayoutAxis(magnet) === 'x') {
+      if (ay >= ax * MAGNET_AXIS_DOMINANCE_RATIO) return true;
+    } else if (ax >= ay * MAGNET_AXIS_DOMINANCE_RATIO) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// 맞붙은 포트의 실제 좌표가 진행 방향과 반대면, 라우터는 노드 바깥을 크게 우회한다.
+export function isFacingPortReversed(
+  srcBox: Box,
+  tgtBox: Box,
+  sourceMagnet: MagnetPosition,
+  targetMagnet: MagnetPosition
+): boolean {
+  const src = getMagnetPoint(srcBox, sourceMagnet);
+  const tgt = getMagnetPoint(tgtBox, targetMagnet);
+  if (sourceMagnet === 'RIGHT' && targetMagnet === 'LEFT') {
+    return !(src.x + FACING_PORT_CLEARANCE < tgt.x);
+  }
+  if (sourceMagnet === 'LEFT' && targetMagnet === 'RIGHT') {
+    return !(src.x > tgt.x + FACING_PORT_CLEARANCE);
+  }
+  if (sourceMagnet === 'BOTTOM' && targetMagnet === 'TOP') {
+    return !(src.y + FACING_PORT_CLEARANCE < tgt.y);
+  }
+  if (sourceMagnet === 'TOP' && targetMagnet === 'BOTTOM') {
+    return !(src.y > tgt.y + FACING_PORT_CLEARANCE);
+  }
+  return false;
+}
+
+// 현재 magnet으로 만든 경로가 연결 노드를 관통하지 않으면 유지할 수 있다.
+// 포인트가 없거나 비정상 좌표이거나 doesPathCrossBoxes가 참이면 false.
+export function canKeepMagnetPair(
+  srcBox: Box,
+  tgtBox: Box,
+  sourceMagnet: MagnetPosition,
+  targetMagnet: MagnetPosition,
+  routingType: ConnectorRoutingType = 'ORTHOGONAL',
+  startOffset: number = 0,
+  endOffset: number = 0
+): boolean {
+  if (!isFixedMagnetPosition(sourceMagnet) || !isFixedMagnetPosition(targetMagnet)) return false;
+
+  const boxes = [srcBox, tgtBox];
+  for (const box of boxes) {
+    if (![box.x, box.y, box.width, box.height].every((n) => Number.isFinite(n))) return false;
+  }
+
+  const points = calculateRoutingPoints(
+    getMagnetPoint(srcBox, sourceMagnet),
+    sourceMagnet,
+    getMagnetPoint(tgtBox, targetMagnet),
+    targetMagnet,
+    srcBox,
+    tgtBox,
+    routingType,
+    startOffset,
+    endOffset
+  );
+
+  if (points.length < 2) return false;
+  if (points.some((p) => !Number.isFinite(p.x) || !Number.isFinite(p.y))) return false;
+  return !doesPathCrossBoxes(points, srcBox, tgtBox);
+}
+
+export interface MagnetResolveInput {
+  srcBox: Box;
+  tgtBox: Box;
+  sourceMagnet?: string;
+  targetMagnet?: string;
+  routingType?: ConnectorRoutingType;
+  startOffset?: number;
+  endOffset?: number;
+  /** true면 저장된 magnet을 무시하고 최적 쌍을 고른다. 노드 드래그 갱신에서는 쓰지 않는다. */
+  forceOptimal?: boolean;
+  /** true면 수동(기즈모 지정) magnet으로 취급해 완화 임계로 유지한다. */
+  isManual?: boolean;
+  /** 수동 지정 시점의 중심 델타. 있으면 이동량으로 해제 여부를 판단한다. */
+  manualBaseDx?: number;
+  manualBaseDy?: number;
+}
+
+// 수동 magnet용 방향 반전 판정. dead zone을 넓혀 작은 이동에는 유지한다.
+export function isManualDirectionReversed(
+  srcBox: Box,
+  tgtBox: Box,
+  sourceMagnet: MagnetPosition,
+  targetMagnet: MagnetPosition
+): boolean {
+  const dx = (tgtBox.x + tgtBox.width / 2) - (srcBox.x + srcBox.width / 2);
+  const dy = (tgtBox.y + tgtBox.height / 2) - (srcBox.y + srcBox.height / 2);
+  const deadX = Math.min(srcBox.width, tgtBox.width) * MANUAL_DEAD_ZONE_RATIO;
+  const deadY = Math.min(srcBox.height, tgtBox.height) * MANUAL_DEAD_ZONE_RATIO;
+  const checks = [
+    magnetExpectedDeltaSign(sourceMagnet, 'source'),
+    magnetExpectedDeltaSign(targetMagnet, 'target'),
+  ];
+  for (const check of checks) {
+    const delta = check.axis === 'x' ? dx : dy;
+    const dead = check.axis === 'x' ? deadX : deadY;
+    if (Math.abs(delta) <= dead) continue;
+    if (Math.sign(delta) !== check.sign) return true;
+  }
+  return false;
+}
+
+// 수동 지정 시점의 중심 델타 (앵커)
+export function getManualBaseDelta(srcBox: Box, tgtBox: Box): { dx: number; dy: number } {
+  return relativeCenterDelta(srcBox, tgtBox);
+}
+
+// 앵커 대비 현재 중심 델타 이동량 (px)
+export function manualDisplacement(
+  srcBox: Box,
+  tgtBox: Box,
+  baseDx: number,
+  baseDy: number
+): number {
+  const cur = relativeCenterDelta(srcBox, tgtBox);
+  return Math.hypot(cur.dx - baseDx, cur.dy - baseDy);
+}
+
+function pathLengthOf(points: Point[]): number {
+  let length = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    length += Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+  }
+  return length;
+}
+
+function keptPathLength(
+  srcBox: Box,
+  tgtBox: Box,
+  sourceMagnet: MagnetPosition,
+  targetMagnet: MagnetPosition,
+  routingType: ConnectorRoutingType,
+  startOffset: number,
+  endOffset: number
+): number {
+  const points = calculateRoutingPoints(
+    getMagnetPoint(srcBox, sourceMagnet),
+    sourceMagnet,
+    getMagnetPoint(tgtBox, targetMagnet),
+    targetMagnet,
+    srcBox,
+    tgtBox,
+    routingType,
+    startOffset,
+    endOffset
+  );
+  return pathLengthOf(points);
+}
+
+/**
+ * 자동 magnet 유지 조건은 네 가지가 모두 참일 때다.
+ * 수동 magnet(isManual)은 앵커 이동량이 임계를 넘거나 관통·방향 반전(완화)일 때만 해제한다.
+ * forceOptimal일 때만 이 검사 없이 최적 쌍을 고른다.
+ */
+export function resolveMagnetPair(input: MagnetResolveInput): {
+  sourceMagnet: MagnetPosition;
+  targetMagnet: MagnetPosition;
+  kept: boolean;
+} {
+  const routingType = input.routingType ?? 'ORTHOGONAL';
+  const startOffset = input.startOffset ?? 0;
+  const endOffset = input.endOffset ?? 0;
+  const source = isFixedMagnetPosition(input.sourceMagnet) ? input.sourceMagnet : undefined;
+  const target = isFixedMagnetPosition(input.targetMagnet) ? input.targetMagnet : undefined;
+
+  if (!input.forceOptimal && source && target) {
+    const pathOk = canKeepMagnetPair(input.srcBox, input.tgtBox, source, target, routingType, startOffset, endOffset);
+    if (!pathOk) {
+      const optimal = getOptimalMagnetPair(input.srcBox, input.tgtBox);
+      return {
+        sourceMagnet: optimal.sourceMagnet,
+        targetMagnet: optimal.targetMagnet,
+        kept: false,
+      };
+    }
+    if (!input.isManual) {
+      const directionReversed = isRelativeDirectionReversed(input.srcBox, input.tgtBox, source, target);
+      const axisMismatched = isRelativeAxisMismatched(input.srcBox, input.tgtBox, source, target);
+      const facingReversed = isFacingPortReversed(input.srcBox, input.tgtBox, source, target);
+      if (!directionReversed && !axisMismatched && !facingReversed) {
+        return { sourceMagnet: source, targetMagnet: target, kept: true };
+      }
+      const optimal = getOptimalMagnetPair(input.srcBox, input.tgtBox);
+      return {
+        sourceMagnet: optimal.sourceMagnet,
+        targetMagnet: optimal.targetMagnet,
+        kept: false,
+      };
+    }
+    const hasBase =
+      typeof input.manualBaseDx === 'number' &&
+      Number.isFinite(input.manualBaseDx) &&
+      typeof input.manualBaseDy === 'number' &&
+      Number.isFinite(input.manualBaseDy);
+    if (hasBase) {
+      const moved = manualDisplacement(
+        input.srcBox,
+        input.tgtBox,
+        input.manualBaseDx as number,
+        input.manualBaseDy as number
+      );
+      if (moved > MANUAL_MOVE_THRESHOLD) {
+        const optimal = getOptimalMagnetPair(input.srcBox, input.tgtBox);
+        return {
+          sourceMagnet: optimal.sourceMagnet,
+          targetMagnet: optimal.targetMagnet,
+          kept: false,
+        };
+      }
+      if (isManualDirectionReversed(input.srcBox, input.tgtBox, source, target)) {
+        const optimal = getOptimalMagnetPair(input.srcBox, input.tgtBox);
+        return {
+          sourceMagnet: optimal.sourceMagnet,
+          targetMagnet: optimal.targetMagnet,
+          kept: false,
+        };
+      }
+      return { sourceMagnet: source, targetMagnet: target, kept: true };
+    }
+    if (isManualDirectionReversed(input.srcBox, input.tgtBox, source, target)) {
+      const optimal = getOptimalMagnetPair(input.srcBox, input.tgtBox);
+      return {
+        sourceMagnet: optimal.sourceMagnet,
+        targetMagnet: optimal.targetMagnet,
+        kept: false,
+      };
+    }
+    const optimal = getOptimalMagnetPair(input.srcBox, input.tgtBox);
+    const keptLen = keptPathLength(input.srcBox, input.tgtBox, source, target, routingType, startOffset, endOffset);
+    const optimalPoints = calculateRoutingPoints(
+      getMagnetPoint(input.srcBox, optimal.sourceMagnet),
+      optimal.sourceMagnet,
+      getMagnetPoint(input.tgtBox, optimal.targetMagnet),
+      optimal.targetMagnet,
+      input.srcBox,
+      input.tgtBox,
+      routingType,
+      startOffset,
+      endOffset
+    );
+    const optimalLen = pathLengthOf(optimalPoints);
+    if (keptLen > optimalLen * MANUAL_LENGTH_RATIO) {
+      return {
+        sourceMagnet: optimal.sourceMagnet,
+        targetMagnet: optimal.targetMagnet,
+        kept: false,
+      };
+    }
+    return { sourceMagnet: source, targetMagnet: target, kept: true };
+  }
+
+  const optimal = getOptimalMagnetPair(input.srcBox, input.tgtBox);
+  return {
+    sourceMagnet: input.forceOptimal || !source ? optimal.sourceMagnet : source,
+    targetMagnet: input.forceOptimal || !target ? optimal.targetMagnet : target,
+    kept: false,
+  };
+}
+
+function readNativeMagnet(endpoint: ConnectorEndpoint, pluginValue: string): string {
+  if ('magnet' in endpoint && isFixedMagnetPosition(endpoint.magnet)) return endpoint.magnet;
+  return pluginValue;
+}
+
+// 네이티브 ConnectorNode: 현재 magnet이 유효하면 엔드포인트를 다시 쓰지 않는다.
 export function optimizeNativeConnector(conn: ConnectorNode) {
   try {
     const start = conn.connectorStart;
@@ -1240,17 +1567,76 @@ export function optimizeNativeConnector(conn: ConnectorNode) {
       height: targetNode.height,
     };
 
-    const optimal = getOptimalMagnetPair(srcBox, tgtBox);
-    conn.connectorStart = {
-      endpointNodeId: start.endpointNodeId,
-      magnet: optimal.sourceMagnet,
-    };
-    conn.connectorEnd = {
-      endpointNodeId: end.endpointNodeId,
-      magnet: optimal.targetMagnet,
-    };
+    const routingType: ConnectorRoutingType = conn.connectorLineType === 'STRAIGHT' ? 'STRAIGHT' : 'ORTHOGONAL';
+    const wasManual = safeGetPluginData(conn, MANUAL_MAGNET_FLAG_KEY) === 'true';
+    const baseDxRaw = safeGetPluginData(conn, MANUAL_BASE_DX_KEY);
+    const baseDyRaw = safeGetPluginData(conn, MANUAL_BASE_DY_KEY);
+    const baseDx = baseDxRaw === '' ? NaN : parseFloat(baseDxRaw);
+    const baseDy = baseDyRaw === '' ? NaN : parseFloat(baseDyRaw);
+    const resolved = resolveMagnetPair({
+      srcBox,
+      tgtBox,
+      sourceMagnet: readNativeMagnet(start, safeGetPluginData(conn, 'source_magnet')),
+      targetMagnet: readNativeMagnet(end, safeGetPluginData(conn, 'target_magnet')),
+      routingType,
+      isManual: wasManual,
+      manualBaseDx: baseDx,
+      manualBaseDy: baseDy,
+    });
+
+    if (resolved.kept) return;
+
+    if (wasManual) {
+      try {
+        conn.setPluginData(MANUAL_MAGNET_FLAG_KEY, '');
+        conn.setPluginData(MANUAL_BASE_DX_KEY, '');
+        conn.setPluginData(MANUAL_BASE_DY_KEY, '');
+      } catch (_) {}
+    }
+
+    const startMagnet = 'magnet' in start ? start.magnet : undefined;
+    const endMagnet = 'magnet' in end ? end.magnet : undefined;
+    if (startMagnet !== resolved.sourceMagnet) {
+      conn.connectorStart = {
+        endpointNodeId: start.endpointNodeId,
+        magnet: resolved.sourceMagnet,
+      };
+      conn.setPluginData('source_magnet', resolved.sourceMagnet);
+    }
+    if (endMagnet !== resolved.targetMagnet) {
+      conn.connectorEnd = {
+        endpointNodeId: end.endpointNodeId,
+        magnet: resolved.targetMagnet,
+      };
+      conn.setPluginData('target_magnet', resolved.targetMagnet);
+    }
   } catch (err) {
     console.error('네이티브 커넥터 최적화 실패:', err);
+  }
+}
+
+// 드래그 틱 중복 재빌드 방지용 스냅샷. 직전 적용 입력과 동일하면 재생성을 건너뛴다.
+// Apply(명시 magnet/오프셋/forceOptimal) 경로는 항상 재빌드한다.
+const appliedConnectorSnapshots = new Map<string, string>();
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+function connectorApplyKey(parts: Array<string | number>): string {
+  return parts.map((p) => String(p)).join('|');
+}
+
+// 라벨 중심이 목표점에서 0.5px 이내면 이동 생략. 매 틱 place는 씬 변경·리페인트를 유발한다.
+function labelNeedsMove(labelFrame: FrameNode, target: Point): boolean {
+  try {
+    const b = labelFrame.absoluteBoundingBox;
+    if (!b) return true;
+    const cx = b.x + b.width / 2;
+    const cy = b.y + b.height / 2;
+    return Math.abs(cx - target.x) > 0.5 || Math.abs(cy - target.y) > 0.5;
+  } catch (_) {
+    return true;
   }
 }
 
@@ -1320,36 +1706,12 @@ export async function updateOrthogonalVectorConnector(
     height: targetNode.height,
   };
 
-  // 수동 지정 마그넷이 있으면 우선 사용
-  // explicit 인자가 없으면 기존 저장된 플러그인데이터 마그넷을 유지하고,
-  // forceOptimal이거나 마그넷 정보가 아예 없는 경우에만 노드 상대 위치 기반 최적 마그넷 자동 판별
-  let sourceMagnet = explicitSourceMagnet || (safeGetPluginData(rootNode, 'source_magnet') as MagnetPosition) || undefined;
-  let targetMagnet = explicitTargetMagnet || (safeGetPluginData(rootNode, 'target_magnet') as MagnetPosition) || undefined;
-
-  if (!sourceMagnet || !targetMagnet || forceOptimal) {
-    const optimal = getOptimalMagnetPair(srcBox, tgtBox);
-    if (!sourceMagnet || forceOptimal) sourceMagnet = optimal.sourceMagnet;
-    if (!targetMagnet || forceOptimal) targetMagnet = optimal.targetMagnet;
-  }
-
-  // 최신 마그넷 정보 동기화 저장
-  rootNode.setPluginData('source_magnet', sourceMagnet);
-  rootNode.setPluginData('target_magnet', targetMagnet);
-  if (vector !== rootNode) {
-    vector.setPluginData('source_magnet', sourceMagnet);
-    vector.setPluginData('target_magnet', targetMagnet);
-  }
-
-  // 라우팅 타입 조회 (직각, 라운드니스 S_CURVE, 자유곡선 CURVED, 직선 STRAIGHT)
+  // 라우팅·오프셋을 먼저 읽는다. 드래그 시 magnet 유지 여부는 이 경로의 관통 여부로 판단한다.
   const routingType: ConnectorRoutingType =
     (safeGetPluginData(rootNode, 'connector_routing') as ConnectorRoutingType) ||
     (safeGetPluginData(vector, 'connector_routing') as ConnectorRoutingType) ||
     'ORTHOGONAL';
 
-  const pStart = getMagnetPoint(srcBox, sourceMagnet);
-  const pEnd = getMagnetPoint(tgtBox, targetMagnet);
-
-  // 명시적으로 인자로 넘어온 오프셋이 있다면 우선 적용, 없다면 저장된 플러그인 데이터 활용
   const startOffset = typeof explicitStartOffset === 'number'
     ? explicitStartOffset
     : (parseFloat(
@@ -1365,6 +1727,84 @@ export async function updateOrthogonalVectorConnector(
         safeGetPluginData(vector, 'end_offset') ||
         '0'
       ) || 0);
+
+  // 저장된 magnet으로 관통 없는 경로가 나오면 유지한다.
+  // forceOptimal은 명시적 재최적화 호출용이며, 노드 드래그는 이 값을 넘기지 않는다.
+  // 수동 고정이면 앵커 대비 이동량이 임계를 넘을 때만 최적 쌍으로 해제한다.
+  const hasExplicitMagnets =
+    (explicitSourceMagnet && isFixedMagnetPosition(explicitSourceMagnet)) ||
+    (explicitTargetMagnet && isFixedMagnetPosition(explicitTargetMagnet));
+  const storedWasManual =
+    safeGetPluginData(rootNode, MANUAL_MAGNET_FLAG_KEY) === 'true' ||
+    safeGetPluginData(vector, MANUAL_MAGNET_FLAG_KEY) === 'true';
+  const storedBaseDxRaw =
+    safeGetPluginData(rootNode, MANUAL_BASE_DX_KEY) || safeGetPluginData(vector, MANUAL_BASE_DX_KEY);
+  const storedBaseDyRaw =
+    safeGetPluginData(rootNode, MANUAL_BASE_DY_KEY) || safeGetPluginData(vector, MANUAL_BASE_DY_KEY);
+  const storedBaseDx = storedBaseDxRaw === '' ? NaN : parseFloat(storedBaseDxRaw);
+  const storedBaseDy = storedBaseDyRaw === '' ? NaN : parseFloat(storedBaseDyRaw);
+  const resolvedMagnets = resolveMagnetPair({
+    srcBox,
+    tgtBox,
+    sourceMagnet: explicitSourceMagnet || safeGetPluginData(rootNode, 'source_magnet'),
+    targetMagnet: explicitTargetMagnet || safeGetPluginData(rootNode, 'target_magnet'),
+    routingType,
+    startOffset,
+    endOffset,
+    forceOptimal,
+    isManual: storedWasManual || Boolean(hasExplicitMagnets),
+    manualBaseDx: storedBaseDx,
+    manualBaseDy: storedBaseDy,
+  });
+  const sourceMagnet = resolvedMagnets.sourceMagnet;
+  const targetMagnet = resolvedMagnets.targetMagnet;
+
+  // 최신 마그넷 정보 동기화 저장
+  rootNode.setPluginData('source_magnet', sourceMagnet);
+  rootNode.setPluginData('target_magnet', targetMagnet);
+  if (vector !== rootNode) {
+    vector.setPluginData('source_magnet', sourceMagnet);
+    vector.setPluginData('target_magnet', targetMagnet);
+  }
+
+  // 기즈모 Apply(명시 magnet)면 수동 고정 + 앵커를 현재 배치로 갱신한다.
+  // 드래그로 수동 고정이 해제되면 앵커를 지워 이후에는 자동 최적을 따른다.
+  const baseDelta = getManualBaseDelta(srcBox, tgtBox);
+  if (hasExplicitMagnets) {
+    rootNode.setPluginData(MANUAL_MAGNET_FLAG_KEY, 'true');
+    rootNode.setPluginData(MANUAL_BASE_DX_KEY, String(baseDelta.dx));
+    rootNode.setPluginData(MANUAL_BASE_DY_KEY, String(baseDelta.dy));
+    if (vector !== rootNode) {
+      vector.setPluginData(MANUAL_MAGNET_FLAG_KEY, 'true');
+      vector.setPluginData(MANUAL_BASE_DX_KEY, String(baseDelta.dx));
+      vector.setPluginData(MANUAL_BASE_DY_KEY, String(baseDelta.dy));
+    }
+  } else if (storedWasManual) {
+    if (!resolvedMagnets.kept) {
+      try {
+        rootNode.setPluginData(MANUAL_MAGNET_FLAG_KEY, '');
+        rootNode.setPluginData(MANUAL_BASE_DX_KEY, '');
+        rootNode.setPluginData(MANUAL_BASE_DY_KEY, '');
+      } catch (_) {}
+      if (vector !== rootNode) {
+        try {
+          vector.setPluginData(MANUAL_MAGNET_FLAG_KEY, '');
+          vector.setPluginData(MANUAL_BASE_DX_KEY, '');
+          vector.setPluginData(MANUAL_BASE_DY_KEY, '');
+        } catch (_) {}
+      }
+    } else if (Number.isNaN(storedBaseDx) || Number.isNaN(storedBaseDy)) {
+      rootNode.setPluginData(MANUAL_BASE_DX_KEY, String(baseDelta.dx));
+      rootNode.setPluginData(MANUAL_BASE_DY_KEY, String(baseDelta.dy));
+      if (vector !== rootNode) {
+        vector.setPluginData(MANUAL_BASE_DX_KEY, String(baseDelta.dx));
+        vector.setPluginData(MANUAL_BASE_DY_KEY, String(baseDelta.dy));
+      }
+    }
+  }
+
+  const pStart = getMagnetPoint(srcBox, sourceMagnet);
+  const pEnd = getMagnetPoint(tgtBox, targetMagnet);
 
   // 최신 오프셋 동기화 저장
   rootNode.setPluginData('start_offset', String(startOffset));
@@ -1403,6 +1843,23 @@ export async function updateOrthogonalVectorConnector(
   let strokeColor: RGB = { r: 0.18, g: 0.18, b: 0.22 };
   if (Array.isArray(vector.strokes) && vector.strokes.length > 0 && vector.strokes[0].type === 'SOLID') {
     strokeColor = vector.strokes[0].color;
+  }
+
+  // 순수 드래그 갱신인데 직전 적용과 입력이 동일하면 resize·네트워크 재적용을 건너뛴다.
+  const isDragRefresh =
+    !forceOptimal &&
+    !hasExplicitMagnets &&
+    typeof explicitStartOffset !== 'number' &&
+    typeof explicitEndOffset !== 'number';
+  let dragCacheKey: string | null = null;
+  if (isDragRefresh) {
+    dragCacheKey = connectorApplyKey([
+      round1(srcBox.x), round1(srcBox.y), round1(srcBox.width), round1(srcBox.height),
+      round1(tgtBox.x), round1(tgtBox.y), round1(tgtBox.width), round1(tgtBox.height),
+      routingType, startOffset, endOffset,
+      sourceMagnet, targetMagnet, startTerminal, endTerminal,
+    ]);
+    if (appliedConnectorSnapshots.get(rootNode.id) === dragCacheKey) return;
   }
 
   const minX = Math.min(...allX);
@@ -1470,8 +1927,12 @@ export async function updateOrthogonalVectorConnector(
   }
 
   if (rootNode.parent) {
-    // 커넥터가 노드 뒤에 깔리지 않도록 항상 상위 레이어에 유지
-    rootNode.parent.appendChild(rootNode);
+    // 커넥터가 노드 뒤에 깔리지 않도록 상위 레이어에 유지한다.
+    // 이미 최상위면 생략한다. 매 틱 reorder는 씬 변경 이벤트·리페인트를 유발해 드래그 티어링을 키운다.
+    const siblings = 'children' in rootNode.parent ? rootNode.parent.children : [];
+    if (siblings.length === 0 || siblings[siblings.length - 1].id !== rootNode.id) {
+      rootNode.parent.appendChild(rootNode);
+    }
   }
 
   // 라벨 위치 및 스타일 갱신
@@ -1488,7 +1949,10 @@ export async function updateOrthogonalVectorConnector(
     const labelOn = safeGetPluginData(rootNode, 'connector_label_on') === 'true' ||
                     safeGetPluginData(vector, 'connector_label_on') === 'true' ||
                     Boolean(labelText);
-    if (labelOn && textNode) {
+    // 드래그 경로에서는 라벨 입력이 바뀔 수 없으므로 방향·텍스트가 같으면 고비용 restyle 생략.
+    // Apply 경로는 항상 restyle한다.
+    const prevVertical = readPrevLabelVertical(labelFrame);
+    if (labelOn && textNode && (!isDragRefresh || prevVertical !== isVertical || textNode.characters !== labelText)) {
       const boxStyle = (safeGetPluginData(rootNode, 'connector_label_box_style') ||
                         safeGetPluginData(vector, 'connector_label_box_style') || 'BOX') as ConnectorLabelBoxStyle;
       const align = (safeGetPluginData(rootNode, 'connector_label_align') ||
@@ -1510,7 +1974,17 @@ export async function updateOrthogonalVectorConnector(
       });
     }
 
-    placeNodeAtWorldCenter(labelFrame, midSegmentPoint);
+    if (labelNeedsMove(labelFrame, midSegmentPoint)) {
+      placeNodeAtWorldCenter(labelFrame, midSegmentPoint);
+    }
+  }
+
+  if (dragCacheKey !== null) {
+    appliedConnectorSnapshots.set(rootNode.id, dragCacheKey);
+    if (appliedConnectorSnapshots.size > 500) {
+      const oldest = appliedConnectorSnapshots.keys().next();
+      if (!oldest.done && oldest.value) appliedConnectorSnapshots.delete(oldest.value);
+    }
   }
 }
 
@@ -1537,6 +2011,9 @@ export function copyConnectorData(source: SceneNode, target: SceneNode) {
     'connector_color',
     'start_offset',
     'end_offset',
+    'is_manual_magnet',
+    'manual_base_dx',
+    'manual_base_dy',
   ];
   for (const k of keys) {
     const v = safeGetPluginData(source, k);
@@ -1548,7 +2025,9 @@ export function copyConnectorData(source: SceneNode, target: SceneNode) {
   }
 }
 
-// 특정 노드들이 드래그 이동되었을 때 연결된 커넥터 일괄 갱신 (자동 최적화 라인 연결 적용)
+// 특정 노드들이 드래그 이동되었을 때 연결된 커넥터 일괄 갱신.
+// 자동은 관통·방향 반전·주축 불일치·포트 겹침 시 최적 쌍으로 떨어진다.
+// 수동은 앵커 대비 이동량이 임계를 넘거나 관통·방향 반전(완화)일 때만 해제된다.
 export async function syncConnectorsForMovedNodes(nodeIds: Set<string>) {
   if (isUpdatingConnectors || nodeIds.size === 0) return;
   isUpdatingConnectors = true;
@@ -1606,7 +2085,7 @@ export async function syncConnectorsForMovedNodes(nodeIds: Set<string>) {
       if (connNode.type === 'CONNECTOR') {
         optimizeNativeConnector(connNode as ConnectorNode);
       } else {
-        await updateOrthogonalVectorConnector(connNode, undefined, undefined, true);
+        await updateOrthogonalVectorConnector(connNode);
       }
     }
   } catch (err) {

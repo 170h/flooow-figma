@@ -85,6 +85,13 @@ runTest('PAID_ACTIVE, count 20, request 1 → allowed', () => {
   assert.equal(r.reason, 'PAID_ACTIVE');
 });
 
+runTest('DEV_ACTIVE, count 20, request 5 → allowed (Pro와 동일, 이름만 Dev)', () => {
+  const r = canCreateFlooowElements({ currentCount: 20, requestedCount: 5, entitlement: 'DEV_ACTIVE' });
+  assert.equal(r.allowed, true);
+  assert.equal(r.reason, 'DEV_ACTIVE');
+  assert.equal(r.entitlement, 'DEV_ACTIVE');
+});
+
 runTest('PAID_ACTIVE, count 100, request 10 → allowed', () => {
   const r = canCreateFlooowElements({ currentCount: 100, requestedCount: 10, entitlement: 'PAID_ACTIVE' });
   assert.equal(r.allowed, true);

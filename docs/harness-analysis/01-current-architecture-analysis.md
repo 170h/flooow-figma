@@ -19,11 +19,12 @@
   - 캔버스 변경 감지: `figma.on('documentchange', ...)` (L4807) — 커넥터 레지스트리 등록, 노드 이동 시 커넥터 추적
 - `src/customConnector.ts` — 코어 측 지오메트리 엔진:
   - 직교/S-커브/자유곡선 라우팅 (`calculateOrthogonalPoints`, `calculateCurvedPoints`)
-  - 마그넷 최적화 (`getOptimalMagnetPair`)
+  - 마그넷 선택: 자동 4조건 유지 + 최적 (`resolveMagnetPair`, `getOptimalMagnetPair`), 수동(기즈모)은 앵커 이동량·완화 임계로 유지 (`is_manual_magnet`, `manual_base_dx/dy`)
   - 벡터 네트워크 생성 (`buildVectorNetwork`)
+  - 드래그 갱신은 벡터 재사용(resize·네트워크만 갱신) + 동일 입력 틱 early-return + 최상위 reorder·라벨 이동 생략
   - 레지스트리 (`registerConnectorInRegistry`, `refreshConnectorRegistry`)
-  - 고스트 마커 청소 (`cleanupGhostTerminalMarkers`)
   - **Figma API 타입(`SceneNode`, `StrokeCap`)을 사용하므로 UI 샌드박스에서 import 불가**
+  - (2026-10-06 갱신: `cleanupGhostTerminalMarkers` 삭제, 관통-only 유지→자동 4조건 + 수동 분리로 변경)
 
 ### 1-2. React UI Sandbox
 

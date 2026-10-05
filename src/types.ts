@@ -226,6 +226,10 @@ export interface ConnectPointsPayload {
 
 export interface ConnectChainPayload {
   orderedNodeIds: string[];
+  /** Start 카드 Draft — 신규 생성 pair 중 첫 pair의 source magnet. 미지정이면 Core 최적값 */
+  sourceMagnet?: MagnetPosition;
+  /** End 카드 Draft — 첫 신규 pair의 target, 이후 신규 pair의 source/target. 미지정이면 Core 최적값 */
+  targetMagnet?: MagnetPosition;
   label?: string;
   colorHex?: string;
   strokePattern?: ConnectorStrokePattern;

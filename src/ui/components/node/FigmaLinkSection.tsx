@@ -350,7 +350,7 @@ export function FigmaLinkSection() {
     >
       <div className="section-header toggle-row">
         <span className={`section-title${effectiveState.disabled ? " disabled" : ""}`}>
-          Figma Screen Link
+          Reference Link
           {!effectiveState.disabled && isLinkValueMixed && (
             <span className="section-mixed-label">(Mixed)</span>
           )}
@@ -362,7 +362,7 @@ export function FigmaLinkSection() {
           disabled={effectiveState.disabled}
           data-tooltip={
             effectiveState.disabled
-              ? "Figma Screen Link is disabled for this shape"
+              ? "Reference Link is disabled for this shape"
               : undefined
           }
           onChange={handleToggle}
@@ -387,7 +387,7 @@ export function FigmaLinkSection() {
               id="single-screen-url"
               className="form-input"
               style={{ width: "100%", paddingRight: displayUrl ? "28px" : "10px" }}
-              placeholder={isLinkValueMixed ? "Mixed" : "Add a Figma Screen URL"}
+              placeholder={isLinkValueMixed ? "Mixed" : "Add a Figma or external URL"}
               value={displayUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
               onKeyDown={handleKeyDown}

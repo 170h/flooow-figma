@@ -6,7 +6,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { orderNodesForChain, makePairKey, ROW_OVERLAP_THRESHOLD } from '../src/chainOrder.ts';
+import { orderNodesForChain, orderFlowNodesForChain, resolveCreatedPairMagnets, makePairKey, ROW_OVERLAP_THRESHOLD } from '../src/chainOrder.ts';
 
 console.log('=== chainOrder.test.mjs — Repository Regression Test ===');
 
@@ -145,6 +145,32 @@ runTest('Test 9 — makePairKey Direction Independence', () => {
 
   const keyDifferent = makePairKey('A', 'C');
   assert.notEqual(keyForward, keyDifferent, 'different pairs should produce different keys');
+});
+
+const box = (id, x, isFlowNode) => ({ id, x, y: 0, width: 100, height: 80, isFlowNode });
+
+runTest('CONNECT_CHAIN all-new A-B-C magnets', () => {
+  const first = resolveCreatedPairMagnets(0, 'RIGHT', 'LEFT', 'TOP', 'BOTTOM');
+  const second = resolveCreatedPairMagnets(1, 'RIGHT', 'LEFT', 'TOP', 'BOTTOM');
+  assert.deepEqual(first, { sourceMagnet: 'RIGHT', targetMagnet: 'LEFT' });
+  assert.deepEqual(second, { sourceMagnet: 'LEFT', targetMagnet: 'LEFT' });
+});
+
+runTest('CONNECT_CHAIN existing A-B + new B-C uses first created pair', () => {
+  // A-B is skipped, so B-C is createdIndex 0 even if its chain slot was 1.
+  const created = resolveCreatedPairMagnets(0, 'RIGHT', 'LEFT', 'TOP', 'BOTTOM');
+  assert.deepEqual(created, { sourceMagnet: 'RIGHT', targetMagnet: 'LEFT' });
+});
+
+runTest('CONNECT_CHAIN drops Figma objects before ordering', () => {
+  const nodes = [
+    box('B', 200, true),
+    box('FIG', 100, false),
+    box('C', 400, true),
+    box('A', 0, true),
+  ];
+  const ordered = orderFlowNodesForChain(nodes);
+  assert.deepEqual(ordered.map((n) => n.id), ['A', 'B', 'C']);
 });
 
 console.log(`\nResult: ${passCount} passed, ${failCount} failed.`);
