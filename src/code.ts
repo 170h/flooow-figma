@@ -63,6 +63,15 @@ import {
   Box,
 } from './customConnector';
 import { orderNodesForChain, makePairKey } from './chainOrder';
+import { countFlooowElements, type FlooowElementCount } from './elementCount';
+import {
+  canCreateFlooowElements,
+  assembleFlooowUsage,
+  normalizePaymentStatus,
+  type CreateEntitlement,
+  type CreateGateResult,
+  type FlooowUsageState,
+} from './entitlementGate';
 
 // RGB 객체를 6자리 HEX 문자열로 변환하는 헬퍼
 function rgbToHexColor(rgb: RGB): string {
@@ -771,6 +780,69 @@ function getNextFlowTag(): string {
   } catch (_) {
     return 'p1';
   }
+}
+
+// Document 전체 기준 실제 Flooow element 수 (Nodes + Connectors) — Step 1 live recount
+// - selection 무관(figma.root 전체 탐색), 저장 카운터 미사용
+// - entitlement/payment/limit 미포함 (향후 create gate에서 재사용)
+function getFlooowElementCount(): FlooowElementCount {
+  const allNodes = figma.root.findAll(() => true);
+  return countFlooowElements(allNodes);
+}
+
+// Core Usage 단일 API (Step 3): live recount 기반 사용량 + 생성 가능 상태.
+// - delta/카운터 저장 없음. 호출 시점의 document 실측 + Gate 정책 합성.
+function getFlooowUsage(): FlooowUsageState {
+  return assembleFlooowUsage(getFlooowElementCount(), getCreateEntitlement());
+}
+
+function postFlooowUsage(): void {
+  postToUI({
+    type: 'FLOOOW_USAGE',
+    usage: getFlooowUsage(),
+  });
+}
+
+// Create Gate entitlement (Step 4): Figma Plugin Payments 실측.
+// - 동기 읽기(figma.payments.status). 별도 cache 없음 (읽기 비용이 없는 속성 접근).
+// - PAID → PAID_ACTIVE, 그 외(UNPAID/NOT_SUPPORTED/권한 미선언) → FREE.
+// - clientStorage/pluginData/UI 값은 절대 사용하지 않는다 (위조 불가 구조).
+function getCreateEntitlement(): CreateEntitlement {
+  try {
+    return normalizePaymentStatus(figma.payments?.status?.type);
+  } catch (_) {
+    return 'FREE';
+  }
+}
+
+// CREATE 직렬화 mutex: recount → approve → actual create를 하나의
+// critical section에서 수행하여 동시 CREATE race를 방지한다.
+let createGateQueue: Promise<void> = Promise.resolve();
+function runCreateExclusive<T>(task: () => Promise<T> | T): Promise<T> {
+  const run = createGateQueue.then(task, task);
+  createGateQueue = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+}
+
+// Live recount + 정책 승인 (동기). 반드시 runCreateExclusive 내부에서 호출한다.
+function approveNewElements(requestedCount: number): CreateGateResult {
+  // Usage 단일 합성 경로를 경유한다 (recount·entitlement 중복 구현 금지).
+  const usage = getFlooowUsage();
+  return canCreateFlooowElements({
+    currentCount: usage.total,
+    requestedCount,
+    entitlement: usage.entitlement,
+  });
+}
+
+function notifyLimitReached(result: CreateGateResult): void {
+  notify(
+    `Flooow element가 가득 찼습니다 (${result.currentCount}/${result.limit}). 기존 element를 삭제한 뒤 다시 시도해 주세요.`,
+    'warning'
+  );
 }
 
 // FigJam Node 객체 자체를 Source of Truth로 하여 실제 Title/Description 텍스트 추출
@@ -2896,6 +2968,13 @@ function attachShapeVectorNode(
 // ----------------------------------------------------
 async function createFlowNode(payload: FlowNodePayload) {
   try {
+    // Create Gate: 신규 Node 1개 승인 (거부 시 생성하지 않음)
+    const createGate = approveNewElements(1);
+    if (!createGate.allowed) {
+      notifyLimitReached(createGate);
+      return;
+    }
+
     await loadRequiredFonts();
 
     const nodeType = normalizeNodeType(payload.nodeType || 'Screen');
@@ -4456,11 +4535,23 @@ async function connectPoints(payload: ConnectPointsPayload) {
       console.warn('기존 커넥터 탐색 중 오류 (생성 계속 진행):', err);
     }
 
+    // 동일 pair 교체(net-zero) 성공 시에만 Gate 면제. 그 외(신규·제거 실패)는 +1 승인 필요.
+    let replacedExisting = false;
     if (existingConnector && existingConnector.id !== sourceNode.id && existingConnector.id !== targetNode.id) {
       try {
         existingConnector.remove();
+        replacedExisting = true;
       } catch (err) {
         console.warn('기존 커넥터 제거 실패:', err);
+      }
+    }
+
+    // Create Gate: 신규 생성만 승인 (거부 시 생성하지 않음)
+    if (!replacedExisting) {
+      const createGate = approveNewElements(1);
+      if (!createGate.allowed) {
+        notifyLimitReached(createGate);
+        return;
       }
     }
 
@@ -4587,6 +4678,13 @@ async function autoConnectSelected(label?: string) {
     // 캔버스 배치 위치에 따라 상대적으로 위/왼쪽 노드 우선 정렬
     nodes = sortNodesBySpatialPosition(nodes);
 
+    // Create Gate: 체인 전체 신규 수(N-1) 원자 승인 (거부 시 0개 생성)
+    const autoGate = approveNewElements(nodes.length - 1);
+    if (!autoGate.allowed) {
+      notifyLimitReached(autoGate);
+      return;
+    }
+
     await loadRequiredFonts();
 
     // 1. 2개 선택인 경우: 정렬된 순서(출발: 위/왼쪽 -> 도착: 아래/오른쪽)로 최단 방향 직각 연결
@@ -4706,10 +4804,11 @@ async function connectChain(payload: ConnectChainPayload) {
     const validNodeIds = validNodes.map((n) => n.id);
     const existingPairKeys = buildPairKeySet(validNodeIds);
 
-    let createdCount = 0;
     let skippedCount = 0;
 
-    // 5. 인접 Pair를 순서대로 처리
+    // 4-1. 실제 신규 생성 pair 사전 확정 (원자적 Gate용: skip 제외 후 신규 수).
+    // isFirstPair 규칙 보존을 위해 원본 loop index를 함께 보관한다.
+    const pairsToCreate: Array<{ srcNode: SceneNode; tgtNode: SceneNode; pairIndex: number }> = [];
     for (let i = 0; i < validNodes.length - 1; i++) {
       const srcNode = validNodes[i];
       const tgtNode = validNodes[i + 1];
@@ -4726,6 +4825,26 @@ async function connectChain(payload: ConnectChainPayload) {
         skippedCount++;
         continue;
       }
+
+      pairsToCreate.push({ srcNode, tgtNode, pairIndex: i });
+    }
+
+    // Create Gate: 체인 전체 신규 수 원자 승인 (거부 시 0개 생성)
+    const chainGate = approveNewElements(pairsToCreate.length);
+    if (!chainGate.allowed) {
+      notifyLimitReached(chainGate);
+      return;
+    }
+
+    let createdCount = 0;
+
+    // 5. 확정된 신규 Pair만 순서대로 생성
+    for (const pair of pairsToCreate) {
+      const srcNode = pair.srcNode;
+      const tgtNode = pair.tgtNode;
+      const i = pair.pairIndex;
+
+      const pKey = makePairKey(srcNode.id, tgtNode.id);
 
       // 새 Pair 생성: getOptimalMagnetPair로 최적 마그넷 계산
       const srcBox: Box = {
@@ -6117,7 +6236,8 @@ async function extractUI3Variables() {
 figma.ui.onmessage = async (msg: PluginAction) => {
   switch (msg.type) {
     case 'CREATE_FLOW_NODE':
-      await createFlowNode(msg.payload);
+      await runCreateExclusive(() => createFlowNode(msg.payload));
+      postFlooowUsage();
       break;
     case 'UPDATE_FLOW_NODE':
       await updateFlowNode(msg.payload);
@@ -6126,13 +6246,16 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       await batchUpdateFlowNodes(msg.payload.nodeIds, msg.payload.patch);
       break;
     case 'CONNECT_POINTS':
-      await connectPoints(msg.payload);
+      await runCreateExclusive(() => connectPoints(msg.payload));
+      postFlooowUsage();
       break;
     case 'CONNECT_CHAIN':
-      await connectChain(msg.payload);
+      await runCreateExclusive(() => connectChain(msg.payload));
+      postFlooowUsage();
       break;
     case 'AUTO_CONNECT_SELECTED':
-      await autoConnectSelected(msg.label);
+      await runCreateExclusive(() => autoConnectSelected(msg.label));
+      postFlooowUsage();
       break;
     case 'UPDATE_CONNECTOR_LABEL':
       await updateConnectorLabel(msg.connectorId, msg.label);
@@ -6175,6 +6298,9 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       });
       break;
     }
+    case 'GET_FLOOOW_USAGE':
+      postFlooowUsage();
+      break;
     case 'RESIZE_NODE':
       await resizeNode(msg.nodeId, msg.width, msg.height);
       break;

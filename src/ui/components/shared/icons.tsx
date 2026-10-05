@@ -38,6 +38,13 @@ export const IcChevronDownSm = () => (
   </svg>
 );
 
+/** 우향 쉐브론 (플랜 타이틀용, Figma export 기준) */
+export const IcChevronRight = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M6.76777 5.52511C6.96303 5.32985 7.27954 5.32985 7.4748 5.52511L9.94941 7.99972L7.4748 10.4753C7.2796 10.6702 6.96297 10.6702 6.76777 10.4753C6.57251 10.28 6.57251 9.96256 6.76777 9.7673L8.53535 7.99972L6.76777 6.23214C6.57251 6.03688 6.57251 5.72037 6.76777 5.52511Z" fill="currentColor"/>
+  </svg>
+);
+
 /** 터미널 드롭다운 쉐브론 */
 export const IcChevronDownXs = () => (
   <svg width="8" height="8" viewBox="0 0 8 8" fill="none">

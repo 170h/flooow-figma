@@ -2,6 +2,7 @@
   "name": "Flooow",
   "id": "ui-flow-diagram",
   "api": "1.0.0",
+  "permissions": ["payments"],
   "main": "dist/code.js",
   "ui": "dist/ui.html",
   "editorType": ["figjam", "figma"],

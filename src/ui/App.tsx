@@ -10,6 +10,7 @@ import { AppearancePanel } from './components/appearance/AppearancePanel';
 import { ConnectionPanel } from './components/connection/ConnectionPanel';
 import { FigmaTooltip } from './components/shared/Tooltip';
 import { ContextMenu } from './components/popovers/ContextMenu';
+import { IcChevronRight } from './components/shared/icons';
 import { SizeModal } from './components/modals/SizeModal';
 import { FigmaDesignPickerModal } from './components/modals/FigmaDesignPickerModal';
 import { StyleModal } from './components/modals/StyleModal';
@@ -79,6 +80,7 @@ export function App() {
     connectorDirty,
     connectorLabelDraft,
     updateConnectorLabelDraft,
+    flooowUsage,
   } = useApp();
 
   // SizeModal onSave 핸들러 (매 렌더마다 새 함수 생성 방지)
@@ -419,11 +421,36 @@ export function App() {
         const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
         const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected && !isMixedNodeAndFigjam;
 
+        // Quota UI는 Core FLOOOW_USAGE만 사용 (UI 자체 계산 금지).
+        // usage 미수신(null) 상태에서는 어떤 수치도 가정하지 않는다.
+        const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
+        const planBadgeText = flooowUsage === null
+          ? '…'
+          : flooowUsage.entitlement === 'PAID_ACTIVE' ? 'Pro Plan' : 'Free Plan';
+        const meterText = flooowUsage === null
+          ? 'Loading…'
+          : flooowUsage.entitlement === 'PAID_ACTIVE'
+            ? 'Unlimited elements'
+            : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
+
         return (
           <footer className="app-footer">
-            {/* 왼쪽: 현재 구독 상태 항상 표시 */}
+            {/* 왼쪽: 플랜 타이틀 + 사용량 (Modal footer 디자인 기준) */}
             <div className="footer-left">
-              <span className="footer-plan-badge">Free Plan</span>
+              <div className="footer-plan-block">
+                <div className="footer-plan-row">
+                  <span className={`footer-plan-title${flooowUsage?.entitlement === 'PAID_ACTIVE' ? ' paid' : ''}`}>{planBadgeText}</span>
+                  <span className={`footer-plan-chevron${flooowUsage?.entitlement === 'PAID_ACTIVE' ? ' paid' : ''}`}>
+                    <IcChevronRight />
+                  </span>
+                </div>
+                <span
+                  className={`footer-usage-meter${usageBlocked ? ' limit-reached' : ''}`}
+                  title={usageBlocked ? `Free limit reached (${flooowUsage?.total ?? 20} elements). Upgrade to create more.` : meterText}
+                >
+                  {meterText}
+                </span>
+              </div>
             </div>
 
             {/* 오른쪽: 선택 상태에 따른 액션 버튼 */}
@@ -475,9 +502,10 @@ export function App() {
                   )}
                   <button
                     id="btn-main-cta"
-                    className={`btn-cta-primary${(isFigjamSelected && !isMultiFigjam) ? ' disabled' : ''}`}
+                    className={`btn-cta-primary${((isFigjamSelected && !isMultiFigjam) || (!isConnSel && usageBlocked)) ? ' disabled' : ''}`}
                     type="button"
-                    disabled={isFigjamSelected && !isMultiFigjam}
+                    disabled={(isFigjamSelected && !isMultiFigjam) || (!isConnSel && usageBlocked)}
+                    title={!isConnSel && usageBlocked ? 'Free limit reached (20 elements). Upgrade to create more.' : undefined}
                     onClick={handleMainAction}
                   >
                     {isConnSel ? 'Apply' : 'Create Node'}

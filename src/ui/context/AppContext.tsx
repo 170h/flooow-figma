@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
-import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload, ConnectorLabelBoxStyle, ConnectorLabelAlign } from '../../types';
+import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload, ConnectorLabelBoxStyle, ConnectorLabelAlign, FlooowUsageState } from '../../types';
 import {
   NODE_TYPE_SHAPE_SPECS,
   normalizeNodeType,
@@ -281,6 +281,11 @@ export interface AppContextValue {
   setDesignFrames: React.Dispatch<React.SetStateAction<DesignFrameItem[]>>;
   loadDesignFrames: () => void;
 
+  // Flooow usage (Core live recount 기반, 표시용)
+  flooowUsage: FlooowUsageState | null;
+  setFlooowUsage: React.Dispatch<React.SetStateAction<FlooowUsageState | null>>;
+  requestFlooowUsage: () => void;
+
   // 핵심 함수들
   sizePresets: SizePreset[];
   addSizePreset: (preset: Omit<SizePreset, 'id'>) => void;
@@ -482,6 +487,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedStylePresetId, setSelectedStylePresetId] = useState<string | null>('style-white');
   const [designFrames, setDesignFrames] = useState<DesignFrameItem[]>([]);
 
+  // Flooow usage (Core live recount 기반, 표시용 — 저장 카운터 아님)
+  const [flooowUsage, setFlooowUsage] = useState<FlooowUsageState | null>(null);
+
   // 다중 선택 편집용 임시 저장소 (Multi Node Draft)
   const [multiDraft, setMultiDraftRaw] = useState<MultiNodeDraft>({});
   const multiDraftRef = useRef<MultiNodeDraft>({});
@@ -655,6 +663,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const loadDesignFrames = useCallback(() => {
     parent.postMessage({ pluginMessage: { type: 'GET_DESIGN_FRAMES' } }, '*');
+  }, []);
+
+  const requestFlooowUsage = useCallback(() => {
+    parent.postMessage({ pluginMessage: { type: 'GET_FLOOOW_USAGE' } }, '*');
   }, []);
 
   // 사이즈 프리셋 상태 관리 (기본값 및 로컬스토리지 영속화)
@@ -1310,7 +1322,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             description: desc,
             descriptionOn: isDescOn,
             width: w, height: h, cornerRadius: radius,
-            theme: node.theme || getCurrentUITheme(),
+            theme: node.theme || 'light',
             figmaLink: figmaUrl,
             clearLinkCache: linkOverrides?.clearLinkCache,
             nodeType: effectiveNodeType,
@@ -1905,7 +1917,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       parent.postMessage({
         pluginMessage: {
           type: 'UPDATE_FLOW_NODE',
-          payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: nodes[0]?.theme || getCurrentUITheme(), figmaLink: figmaUrl, nodeType: targetNodeType, colorHex: nodeOptionStateRef.current.fillColor, elevation: finalElevation }
+          payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: nodes[0]?.theme || 'light', figmaLink: figmaUrl, nodeType: targetNodeType, colorHex: nodeOptionStateRef.current.fillColor, elevation: finalElevation }
         }
       }, '*');
     } else if (nodes.length >= 2) {
@@ -1925,7 +1937,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             width: w,
             height: h,
             cornerRadius: radius,
-            theme: getCurrentUITheme(),
+            theme: 'light',
             figmaLink: figmaUrl,
             nodeType: targetNodeType,
             branchVariant: targetNodeType === 'Branch' ? storedBranchVariant : undefined,
@@ -2199,6 +2211,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     designFrames,
     setDesignFrames,
     loadDesignFrames,
+    flooowUsage,
+    setFlooowUsage,
+    requestFlooowUsage,
     sizePresets,
     addSizePreset,
     updateSizePreset,

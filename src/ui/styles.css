@@ -879,6 +879,16 @@
       font-weight: 450;
     }
 
+    /* 다크 모드: 비활성 칩/프리셋 칩 텍스트는 테마 secondary (active/purple 제외) */
+    body.figma-dark .chip-btn:not(.active),
+    .figma-dark .chip-btn:not(.active),
+    [data-theme="dark"] .chip-btn:not(.active),
+    body.figma-dark .tab-btn.mixed,
+    .figma-dark .tab-btn.mixed,
+    [data-theme="dark"] .tab-btn.mixed {
+      color: var(--color-text-secondary);
+    }
+
     .chip-btn.active {
       background: #8C4CF6;
       /* 기본 피그잼 퍼플 컬러 */
@@ -1238,6 +1248,41 @@
       font-weight: 400 !important;
     }
 
+    /* 다크 모드: Mixed placeholder/값은 검정 강제 대신 테마 텍스트 컬러 사용 */
+    body.figma-dark .input-scrubber-box:not(.disabled) input[placeholder="Mixed" i]:not(:disabled)::placeholder,
+    .figma-dark .input-scrubber-box:not(.disabled) input[placeholder="Mixed" i]:not(:disabled)::placeholder,
+    [data-theme="dark"] .input-scrubber-box:not(.disabled) input[placeholder="Mixed" i]:not(:disabled)::placeholder,
+    body.figma-dark input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .figma-dark input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    [data-theme="dark"] input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    body.figma-dark textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .figma-dark textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    [data-theme="dark"] textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder {
+      color: var(--color-text-primary) !important;
+      -webkit-text-fill-color: var(--color-text-primary) !important;
+      opacity: 1 !important;
+    }
+
+    body.figma-dark input[value="Mixed" i]:not(:disabled):not(.disabled),
+    .figma-dark input[value="Mixed" i]:not(:disabled):not(.disabled),
+    [data-theme="dark"] input[value="Mixed" i]:not(:disabled):not(.disabled),
+    body.figma-dark textarea[value="Mixed" i]:not(:disabled):not(.disabled),
+    .figma-dark textarea[value="Mixed" i]:not(:disabled):not(.disabled),
+    [data-theme="dark"] textarea[value="Mixed" i]:not(:disabled):not(.disabled) {
+      color: var(--color-text-primary) !important;
+      -webkit-text-fill-color: var(--color-text-primary) !important;
+      opacity: 1 !important;
+    }
+
+    /* 컬러 모달 Hex 입력의 Mixed placeholder는 입력 고유 placeholder 스타일과 일치 */
+    body.figma-dark input.conn-modal-hex-input[placeholder="Mixed" i]::placeholder,
+    .figma-dark input.conn-modal-hex-input[placeholder="Mixed" i]::placeholder,
+    [data-theme="dark"] input.conn-modal-hex-input[placeholder="Mixed" i]::placeholder {
+      color: var(--color-text-ondark-muted, rgba(255, 255, 255, 0.45)) !important;
+      -webkit-text-fill-color: var(--color-text-ondark-muted, rgba(255, 255, 255, 0.45)) !important;
+      opacity: 1 !important;
+    }
+
     /* ============================================================ */
     /* 공통 Disabled 상태 텍스트 컬러 규칙 (Disabled Text Color Rule)  */
     /* 규칙: Disabled 상태가 모든 텍스트 컬러(Mixed/수치/라벨 등)보다 우선 */
@@ -1513,6 +1558,65 @@
       border-color: var(--color-brand);
       box-shadow: none;
       outline: none;
+    }
+
+    /* 다크 모드: 포커스/활성 트리거 배경은 resting dark surface 유지 (흰 플래시 방지) */
+    body.figma-dark .figma-dropdown-btn:focus,
+    body.figma-dark .figma-dropdown-btn.active,
+    body.figma-dark .size-mode-dropdown-btn:focus,
+    body.figma-dark .size-mode-dropdown-btn.active,
+    .figma-dark .figma-dropdown-btn:focus,
+    .figma-dark .figma-dropdown-btn.active,
+    .figma-dark .size-mode-dropdown-btn:focus,
+    .figma-dark .size-mode-dropdown-btn.active,
+    [data-theme="dark"] .figma-dropdown-btn:focus,
+    [data-theme="dark"] .figma-dropdown-btn.active,
+    [data-theme="dark"] .size-mode-dropdown-btn:focus,
+    [data-theme="dark"] .size-mode-dropdown-btn.active {
+      background-color: var(--color-bg-secondary);
+    }
+
+    /* 다크 모드: 흰 배경의 포커스/활성 드롭다운 트리거 위 텍스트·아이콘은 검정 계열 */
+    body.figma-dark .figma-dropdown-btn:focus .figma-dropdown-current-text,
+    body.figma-dark .figma-dropdown-btn.active .figma-dropdown-current-text,
+    body.figma-dark .size-mode-dropdown-btn:focus .size-mode-current-text,
+    body.figma-dark .size-mode-dropdown-btn.active .size-mode-current-text,
+    .figma-dark .figma-dropdown-btn:focus .figma-dropdown-current-text,
+    .figma-dark .figma-dropdown-btn.active .figma-dropdown-current-text,
+    .figma-dark .size-mode-dropdown-btn:focus .size-mode-current-text,
+    .figma-dark .size-mode-dropdown-btn.active .size-mode-current-text,
+    [data-theme="dark"] .figma-dropdown-btn:focus .figma-dropdown-current-text,
+    [data-theme="dark"] .figma-dropdown-btn.active .figma-dropdown-current-text,
+    [data-theme="dark"] .size-mode-dropdown-btn:focus .size-mode-current-text,
+    [data-theme="dark"] .size-mode-dropdown-btn.active .size-mode-current-text {
+      color: var(--color-text-primary);
+    }
+
+    body.figma-dark .figma-dropdown-btn:focus .figma-dropdown-current-icon,
+    body.figma-dark .figma-dropdown-btn.active .figma-dropdown-current-icon,
+    body.figma-dark .figma-dropdown-btn:focus .figma-dropdown-chevron-icon,
+    body.figma-dark .figma-dropdown-btn.active .figma-dropdown-chevron-icon,
+    body.figma-dark .size-mode-dropdown-btn:focus .size-mode-current-icon,
+    body.figma-dark .size-mode-dropdown-btn.active .size-mode-current-icon,
+    body.figma-dark .size-mode-dropdown-btn:focus .size-mode-chevron-icon,
+    body.figma-dark .size-mode-dropdown-btn.active .size-mode-chevron-icon,
+    .figma-dark .figma-dropdown-btn:focus .figma-dropdown-current-icon,
+    .figma-dark .figma-dropdown-btn.active .figma-dropdown-current-icon,
+    .figma-dark .figma-dropdown-btn:focus .figma-dropdown-chevron-icon,
+    .figma-dark .figma-dropdown-btn.active .figma-dropdown-chevron-icon,
+    .figma-dark .size-mode-dropdown-btn:focus .size-mode-current-icon,
+    .figma-dark .size-mode-dropdown-btn.active .size-mode-current-icon,
+    .figma-dark .size-mode-dropdown-btn:focus .size-mode-chevron-icon,
+    .figma-dark .size-mode-dropdown-btn.active .size-mode-chevron-icon,
+    [data-theme="dark"] .figma-dropdown-btn:focus .figma-dropdown-current-icon,
+    [data-theme="dark"] .figma-dropdown-btn.active .figma-dropdown-current-icon,
+    [data-theme="dark"] .figma-dropdown-btn:focus .figma-dropdown-chevron-icon,
+    [data-theme="dark"] .figma-dropdown-btn.active .figma-dropdown-chevron-icon,
+    [data-theme="dark"] .size-mode-dropdown-btn:focus .size-mode-current-icon,
+    [data-theme="dark"] .size-mode-dropdown-btn.active .size-mode-current-icon,
+    [data-theme="dark"] .size-mode-dropdown-btn:focus .size-mode-chevron-icon,
+    [data-theme="dark"] .size-mode-dropdown-btn.active .size-mode-chevron-icon {
+      color: var(--color-text-secondary);
     }
 
     .figma-dropdown-btn-content,
@@ -2856,6 +2960,18 @@
       color: var(--color-text-secondary);
       user-select: none;
       white-space: nowrap;
+    }
+
+    .footer-usage-meter {
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      color: var(--color-text-tertiary);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .footer-usage-meter.limit-reached {
+      color: var(--color-text-primary);
     }
 
     .footer-right {

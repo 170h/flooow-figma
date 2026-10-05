@@ -1,3 +1,7 @@
+import type { FlooowUsageState } from './entitlementGate';
+
+export type { FlooowUsageState };
+
 export type WorkflowStatus =
   | 'draft'
   | 'wireframe'
@@ -27,7 +31,6 @@ export interface FrameStatusItem {
 }
 
 export type MagnetPosition = 'TOP' | 'BOTTOM' | 'LEFT' | 'RIGHT';
-
 // Figma UI3 6종 노드 분류 타입 및 레거시 호환 타입
 export type DiagramNodeType =
   | 'Screen'
@@ -340,6 +343,7 @@ export type PluginAction =
   | { type: 'GET_STATUS_LIST' }
   | { type: 'FOCUS_FRAME'; nodeId: string }
   | { type: 'GET_DESIGN_FRAMES' }
+  | { type: 'GET_FLOOOW_USAGE' }
   | { type: 'CREATE_TEMPLATE'; templateType: 'user_flow' | 'screen_spec' | 'feature_roadmap' }
   | { type: 'RESIZE_NODE'; nodeId: string; width: number; height: number }
   | {
@@ -480,6 +484,10 @@ export type CoreToUIMessage =
   | {
       type: 'DESIGN_FRAMES_LOADED';
       frames: DesignFrameItem[];
+    }
+  | {
+      type: 'FLOOOW_USAGE';
+      usage: FlooowUsageState;
     }
   | {
       type: 'UI3_VARIABLES_EXTRACTED';

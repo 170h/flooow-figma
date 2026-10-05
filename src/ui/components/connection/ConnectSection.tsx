@@ -105,6 +105,7 @@ export function ConnectSection() {
     selectedStylePresetId,
     setSelectedStylePresetId,
     nodeOptionState,
+    flooowUsage,
   } = useApp();
   const summary = useSelectionSummary();
   const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
@@ -1441,6 +1442,9 @@ export function ConnectSection() {
 
           const showUpdate = isAllConnectors || hasExisting;
 
+          // Quota UI 표시 전용: 신규 연결 생성이 막힌 상태 (업데이트는 제한하지 않음)
+          const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
+
           let isConnectDisabled = false;
           if (showUpdate) {
             // 기존 커넥터/연결은 설정이 바뀔 때만 Update
@@ -1449,12 +1453,12 @@ export function ConnectSection() {
             isConnectDisabled = true;
           } else if (selectedNodes.length === 2) {
             // 2개 노드: 기즈모 없이도 거리 기준 최적 단자로 연결 가능
-            isConnectDisabled = false;
+            isConnectDisabled = usageBlocked;
           } else {
             // 3개 이상: Start와 End anchor가 모두 선택 완료되어야 활성화
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
-            isConnectDisabled = !hasStart || !hasEnd;
+            isConnectDisabled = (!hasStart || !hasEnd) || usageBlocked;
           }
 
           let statusText = 'Select 2+ nodes to connect';
@@ -1515,7 +1519,7 @@ export function ConnectSection() {
                   showUpdate
                     ? (isConnectDisabled ? 'No changes to update' : 'Apply connector changes')
                     : isConnectDisabled
-                    ? statusText
+                    ? (usageBlocked ? 'Free limit reached (20 elements). Upgrade to create more.' : statusText)
                     : 'Connect selected nodes'
                 }
               >

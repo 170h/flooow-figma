@@ -885,6 +885,16 @@
       font-weight: 450;
     }
 
+    /* 다크 모드: 비활성 칩/프리셋 칩 텍스트는 테마 secondary (active/purple 제외) */
+    body.figma-dark .chip-btn:not(.active),
+    .figma-dark .chip-btn:not(.active),
+    [data-theme="dark"] .chip-btn:not(.active),
+    body.figma-dark .tab-btn.mixed,
+    .figma-dark .tab-btn.mixed,
+    [data-theme="dark"] .tab-btn.mixed {
+      color: var(--color-text-secondary);
+    }
+
     .chip-btn.active {
       background: #8C4CF6;
       /* 기본 피그잼 퍼플 컬러 */
@@ -1244,6 +1254,41 @@
       font-weight: 400 !important;
     }
 
+    /* 다크 모드: Mixed placeholder/값은 검정 강제 대신 테마 텍스트 컬러 사용 */
+    body.figma-dark .input-scrubber-box:not(.disabled) input[placeholder="Mixed" i]:not(:disabled)::placeholder,
+    .figma-dark .input-scrubber-box:not(.disabled) input[placeholder="Mixed" i]:not(:disabled)::placeholder,
+    [data-theme="dark"] .input-scrubber-box:not(.disabled) input[placeholder="Mixed" i]:not(:disabled)::placeholder,
+    body.figma-dark input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .figma-dark input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    [data-theme="dark"] input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    body.figma-dark textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    .figma-dark textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder,
+    [data-theme="dark"] textarea[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder {
+      color: var(--color-text-primary) !important;
+      -webkit-text-fill-color: var(--color-text-primary) !important;
+      opacity: 1 !important;
+    }
+
+    body.figma-dark input[value="Mixed" i]:not(:disabled):not(.disabled),
+    .figma-dark input[value="Mixed" i]:not(:disabled):not(.disabled),
+    [data-theme="dark"] input[value="Mixed" i]:not(:disabled):not(.disabled),
+    body.figma-dark textarea[value="Mixed" i]:not(:disabled):not(.disabled),
+    .figma-dark textarea[value="Mixed" i]:not(:disabled):not(.disabled),
+    [data-theme="dark"] textarea[value="Mixed" i]:not(:disabled):not(.disabled) {
+      color: var(--color-text-primary) !important;
+      -webkit-text-fill-color: var(--color-text-primary) !important;
+      opacity: 1 !important;
+    }
+
+    /* 컬러 모달 Hex 입력의 Mixed placeholder는 입력 고유 placeholder 스타일과 일치 */
+    body.figma-dark input.conn-modal-hex-input[placeholder="Mixed" i]::placeholder,
+    .figma-dark input.conn-modal-hex-input[placeholder="Mixed" i]::placeholder,
+    [data-theme="dark"] input.conn-modal-hex-input[placeholder="Mixed" i]::placeholder {
+      color: var(--color-text-ondark-muted, rgba(255, 255, 255, 0.45)) !important;
+      -webkit-text-fill-color: var(--color-text-ondark-muted, rgba(255, 255, 255, 0.45)) !important;
+      opacity: 1 !important;
+    }
+
     /* ============================================================ */
     /* 공통 Disabled 상태 텍스트 컬러 규칙 (Disabled Text Color Rule)  */
     /* 규칙: Disabled 상태가 모든 텍스트 컬러(Mixed/수치/라벨 등)보다 우선 */
@@ -1519,6 +1564,65 @@
       border-color: var(--color-brand);
       box-shadow: none;
       outline: none;
+    }
+
+    /* 다크 모드: 포커스/활성 트리거 배경은 resting dark surface 유지 (흰 플래시 방지) */
+    body.figma-dark .figma-dropdown-btn:focus,
+    body.figma-dark .figma-dropdown-btn.active,
+    body.figma-dark .size-mode-dropdown-btn:focus,
+    body.figma-dark .size-mode-dropdown-btn.active,
+    .figma-dark .figma-dropdown-btn:focus,
+    .figma-dark .figma-dropdown-btn.active,
+    .figma-dark .size-mode-dropdown-btn:focus,
+    .figma-dark .size-mode-dropdown-btn.active,
+    [data-theme="dark"] .figma-dropdown-btn:focus,
+    [data-theme="dark"] .figma-dropdown-btn.active,
+    [data-theme="dark"] .size-mode-dropdown-btn:focus,
+    [data-theme="dark"] .size-mode-dropdown-btn.active {
+      background-color: var(--color-bg-secondary);
+    }
+
+    /* 다크 모드: 흰 배경의 포커스/활성 드롭다운 트리거 위 텍스트·아이콘은 검정 계열 */
+    body.figma-dark .figma-dropdown-btn:focus .figma-dropdown-current-text,
+    body.figma-dark .figma-dropdown-btn.active .figma-dropdown-current-text,
+    body.figma-dark .size-mode-dropdown-btn:focus .size-mode-current-text,
+    body.figma-dark .size-mode-dropdown-btn.active .size-mode-current-text,
+    .figma-dark .figma-dropdown-btn:focus .figma-dropdown-current-text,
+    .figma-dark .figma-dropdown-btn.active .figma-dropdown-current-text,
+    .figma-dark .size-mode-dropdown-btn:focus .size-mode-current-text,
+    .figma-dark .size-mode-dropdown-btn.active .size-mode-current-text,
+    [data-theme="dark"] .figma-dropdown-btn:focus .figma-dropdown-current-text,
+    [data-theme="dark"] .figma-dropdown-btn.active .figma-dropdown-current-text,
+    [data-theme="dark"] .size-mode-dropdown-btn:focus .size-mode-current-text,
+    [data-theme="dark"] .size-mode-dropdown-btn.active .size-mode-current-text {
+      color: var(--color-text-primary);
+    }
+
+    body.figma-dark .figma-dropdown-btn:focus .figma-dropdown-current-icon,
+    body.figma-dark .figma-dropdown-btn.active .figma-dropdown-current-icon,
+    body.figma-dark .figma-dropdown-btn:focus .figma-dropdown-chevron-icon,
+    body.figma-dark .figma-dropdown-btn.active .figma-dropdown-chevron-icon,
+    body.figma-dark .size-mode-dropdown-btn:focus .size-mode-current-icon,
+    body.figma-dark .size-mode-dropdown-btn.active .size-mode-current-icon,
+    body.figma-dark .size-mode-dropdown-btn:focus .size-mode-chevron-icon,
+    body.figma-dark .size-mode-dropdown-btn.active .size-mode-chevron-icon,
+    .figma-dark .figma-dropdown-btn:focus .figma-dropdown-current-icon,
+    .figma-dark .figma-dropdown-btn.active .figma-dropdown-current-icon,
+    .figma-dark .figma-dropdown-btn:focus .figma-dropdown-chevron-icon,
+    .figma-dark .figma-dropdown-btn.active .figma-dropdown-chevron-icon,
+    .figma-dark .size-mode-dropdown-btn:focus .size-mode-current-icon,
+    .figma-dark .size-mode-dropdown-btn.active .size-mode-current-icon,
+    .figma-dark .size-mode-dropdown-btn:focus .size-mode-chevron-icon,
+    .figma-dark .size-mode-dropdown-btn.active .size-mode-chevron-icon,
+    [data-theme="dark"] .figma-dropdown-btn:focus .figma-dropdown-current-icon,
+    [data-theme="dark"] .figma-dropdown-btn.active .figma-dropdown-current-icon,
+    [data-theme="dark"] .figma-dropdown-btn:focus .figma-dropdown-chevron-icon,
+    [data-theme="dark"] .figma-dropdown-btn.active .figma-dropdown-chevron-icon,
+    [data-theme="dark"] .size-mode-dropdown-btn:focus .size-mode-current-icon,
+    [data-theme="dark"] .size-mode-dropdown-btn.active .size-mode-current-icon,
+    [data-theme="dark"] .size-mode-dropdown-btn:focus .size-mode-chevron-icon,
+    [data-theme="dark"] .size-mode-dropdown-btn.active .size-mode-chevron-icon {
+      color: var(--color-text-secondary);
     }
 
     .figma-dropdown-btn-content,
@@ -2862,6 +2966,18 @@
       color: var(--color-text-secondary);
       user-select: none;
       white-space: nowrap;
+    }
+
+    .footer-usage-meter {
+      font-size: 11px;
+      font-weight: var(--font-weight-default, 450);
+      color: var(--color-text-tertiary);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .footer-usage-meter.limit-reached {
+      color: var(--color-text-primary);
     }
 
     .footer-right {
@@ -29352,12 +29468,6 @@
     { id: "style-black", name: "Black", fillColor: "#000000", strokeWeight: 0, strokeColor: "#000000", isDefault: true }
   ];
   var DEFAULT_STYLE_PRESET_IDS = /* @__PURE__ */ new Set(["style-white", "style-black"]);
-  var getCurrentUITheme = () => {
-    if (typeof document !== "undefined" && (document.documentElement.classList.contains("figma-dark") || document.body.classList.contains("figma-dark") || document.querySelector('[data-theme="dark"]'))) {
-      return "dark";
-    }
-    return "light";
-  };
   function normalizeTerminal(term, fallback = "NONE") {
     if (!term || term === "BAR" || term === "SQUARE") return fallback;
     return term;
@@ -29473,6 +29583,7 @@
     const [selectedSizePresetId, setSelectedSizePresetId] = (0, import_react2.useState)("default");
     const [selectedStylePresetId, setSelectedStylePresetId] = (0, import_react2.useState)("style-white");
     const [designFrames, setDesignFrames] = (0, import_react2.useState)([]);
+    const [flooowUsage, setFlooowUsage] = (0, import_react2.useState)(null);
     const [multiDraft, setMultiDraftRaw] = (0, import_react2.useState)({});
     const multiDraftRef = (0, import_react2.useRef)({});
     const multiDraftSelectionRef = (0, import_react2.useRef)([]);
@@ -29612,6 +29723,9 @@
     }, [hasMultiDraft, showToast]);
     const loadDesignFrames = (0, import_react2.useCallback)(() => {
       parent.postMessage({ pluginMessage: { type: "GET_DESIGN_FRAMES" } }, "*");
+    }, []);
+    const requestFlooowUsage = (0, import_react2.useCallback)(() => {
+      parent.postMessage({ pluginMessage: { type: "GET_FLOOOW_USAGE" } }, "*");
     }, []);
     const [sizePresets, setSizePresets] = (0, import_react2.useState)(() => {
       try {
@@ -30135,7 +30249,7 @@
               width: w,
               height: h,
               cornerRadius: radius,
-              theme: node.theme || getCurrentUITheme(),
+              theme: node.theme || "light",
               figmaLink: figmaUrl,
               clearLinkCache: linkOverrides?.clearLinkCache,
               nodeType: effectiveNodeType,
@@ -30653,7 +30767,7 @@
         parent.postMessage({
           pluginMessage: {
             type: "UPDATE_FLOW_NODE",
-            payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: nodes[0]?.theme || getCurrentUITheme(), figmaLink: figmaUrl, nodeType: targetNodeType, colorHex: nodeOptionStateRef.current.fillColor, elevation: finalElevation }
+            payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: nodes[0]?.theme || "light", figmaLink: figmaUrl, nodeType: targetNodeType, colorHex: nodeOptionStateRef.current.fillColor, elevation: finalElevation }
           }
         }, "*");
       } else if (nodes.length >= 2) {
@@ -30672,7 +30786,7 @@
               width: w,
               height: h,
               cornerRadius: radius,
-              theme: getCurrentUITheme(),
+              theme: "light",
               figmaLink: figmaUrl,
               nodeType: targetNodeType,
               branchVariant: targetNodeType === "Branch" ? storedBranchVariant : void 0,
@@ -30887,6 +31001,9 @@
       designFrames,
       setDesignFrames,
       loadDesignFrames,
+      flooowUsage,
+      setFlooowUsage,
+      requestFlooowUsage,
       sizePresets,
       addSizePreset,
       updateSizePreset,
@@ -30937,7 +31054,8 @@
       handleSelectionChange,
       setCurrentTab,
       setUIState,
-      setDesignFrames
+      setDesignFrames,
+      setFlooowUsage
     } = useApp();
     const handlerRef = (0, import_react3.useRef)(null);
     const prevNodeIdRef = (0, import_react3.useRef)(void 0);
@@ -31020,6 +31138,10 @@
             setDesignFrames(msg.frames || []);
             break;
           }
+          case "FLOOOW_USAGE": {
+            if (msg.usage) setFlooowUsage(msg.usage);
+            break;
+          }
           case "SWITCH_TAB": {
             if (msg.tab) setCurrentTab(msg.tab);
             break;
@@ -31034,11 +31156,12 @@
       if (urlParams.get("nodes") === "2") {
       } else {
         parent.postMessage({ pluginMessage: { type: "INIT" } }, "*");
+        parent.postMessage({ pluginMessage: { type: "GET_FLOOOW_USAGE" } }, "*");
       }
       return () => {
         window.removeEventListener("message", handler);
       };
-    }, [handleSelectionChange, setCurrentTab, setUIState]);
+    }, [handleSelectionChange, setCurrentTab, setUIState, setFlooowUsage]);
   }
 
   // src/ui/hooks/useSelectionSummary.ts
@@ -35297,7 +35420,8 @@
       stylePresets,
       selectedStylePresetId,
       setSelectedStylePresetId,
-      nodeOptionState
+      nodeOptionState,
+      flooowUsage
     } = useApp();
     const summary = useSelectionSummary();
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
@@ -36506,17 +36630,18 @@
           const twoNodesConnected = selectedNodes.length === 2 && hasExisting2 && !isAllConnectors;
           if (isAllConnectors || twoNodesConnected) return null;
           const showUpdate = isAllConnectors || hasExisting2;
+          const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
           let isConnectDisabled = false;
           if (showUpdate) {
             isConnectDisabled = !connectorDirty;
           } else if (selectedNodes.length < 2) {
             isConnectDisabled = true;
           } else if (selectedNodes.length === 2) {
-            isConnectDisabled = false;
+            isConnectDisabled = usageBlocked;
           } else {
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
-            isConnectDisabled = !hasStart || !hasEnd;
+            isConnectDisabled = !hasStart || !hasEnd || usageBlocked;
           }
           let statusText = "Select 2+ nodes to connect";
           if (isAllConnectors) {
@@ -36574,7 +36699,7 @@
                     className: "btn-add-step-badges",
                     disabled: isConnectDisabled,
                     onClick: connectSelectedNodes,
-                    title: showUpdate ? isConnectDisabled ? "No changes to update" : "Apply connector changes" : isConnectDisabled ? statusText : "Connect selected nodes",
+                    title: showUpdate ? isConnectDisabled ? "No changes to update" : "Apply connector changes" : isConnectDisabled ? usageBlocked ? "Free limit reached (20 elements). Upgrade to create more." : statusText : "Connect selected nodes",
                     children: [
                       /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
                         "path",
@@ -39569,7 +39694,8 @@
       hasConnectorLabelDraft,
       connectorDirty,
       connectorLabelDraft,
-      updateConnectorLabelDraft
+      updateConnectorLabelDraft,
+      flooowUsage
     } = useApp();
     const handleAddSizeSave = (0, import_react25.useCallback)((preset) => {
       addSizePreset(preset);
@@ -39789,8 +39915,21 @@
       (() => {
         const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
         const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected && !isMixedNodeAndFigjam;
+        const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
+        const planBadgeText = flooowUsage === null ? "\u2026" : flooowUsage.entitlement === "PAID_ACTIVE" ? "Paid Plan" : "Free Plan";
+        const meterText = flooowUsage === null ? "Loading\u2026" : flooowUsage.entitlement === "PAID_ACTIVE" ? "Unlimited" : `${flooowUsage.total} / ${flooowUsage.limit}`;
         return /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("footer", { className: "app-footer", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "footer-left", children: /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "footer-plan-badge", children: "Free Plan" }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)("div", { className: "footer-left", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("span", { className: "footer-plan-badge", children: planBadgeText }),
+            /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+              "span",
+              {
+                className: `footer-usage-meter${usageBlocked ? " limit-reached" : ""}`,
+                title: usageBlocked ? `Free limit reached (${flooowUsage?.total ?? 20} elements). Upgrade to create more.` : meterText,
+                children: meterText
+              }
+            )
+          ] }),
           /* @__PURE__ */ (0, import_jsx_runtime28.jsx)("div", { className: "footer-right", children: isSingleFlow || isSingleFigjam ? (
             /* 단일 선택: Undo / Apply 미렌더링, Upgrade 버튼 표시 */
             /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
@@ -39847,9 +39986,10 @@
                 "button",
                 {
                   id: "btn-main-cta",
-                  className: `btn-cta-primary${isFigjamSelected && !isMultiFigjam ? " disabled" : ""}`,
+                  className: `btn-cta-primary${isFigjamSelected && !isMultiFigjam || !isConnSel && usageBlocked ? " disabled" : ""}`,
                   type: "button",
-                  disabled: isFigjamSelected && !isMultiFigjam,
+                  disabled: isFigjamSelected && !isMultiFigjam || !isConnSel && usageBlocked,
+                  title: !isConnSel && usageBlocked ? "Free limit reached (20 elements). Upgrade to create more." : void 0,
                   onClick: handleMainAction,
                   children: isConnSel ? "Apply" : "Create Node"
                 }

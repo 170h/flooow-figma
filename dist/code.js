@@ -1443,6 +1443,128 @@
     return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
   }
 
+  // src/elementCount.ts
+  function readPluginData(node, key) {
+    try {
+      if (node && typeof node.getPluginData === "function") {
+        return node.getPluginData(key) || "";
+      }
+    } catch (_) {
+    }
+    return "";
+  }
+  function isTaggedConnector(node) {
+    return readPluginData(node, "is_custom_connector") === "true" || readPluginData(node, "is_flow_connector") === "true";
+  }
+  function isConnectorLabel(node) {
+    return readPluginData(node, "is_connector_label") === "true" || node != null && node.name === "ConnectorLabel";
+  }
+  function findTopConnectorNode(node) {
+    let curr = node;
+    while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
+      if (curr.type === "CONNECTOR" || isTaggedConnector(curr)) {
+        let top = curr;
+        let parentScan = curr.parent;
+        while (parentScan && parentScan.type !== "PAGE" && parentScan.type !== "DOCUMENT") {
+          if (parentScan.type === "CONNECTOR" || isTaggedConnector(parentScan)) {
+            top = parentScan;
+          }
+          parentScan = parentScan.parent;
+        }
+        return top;
+      }
+      curr = curr.parent;
+    }
+    return null;
+  }
+  function findTopFlowNode(node) {
+    if (!node) return null;
+    if (findTopConnectorNode(node)) return null;
+    let curr = node;
+    while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
+      if (readPluginData(curr, "is_flow_node") === "true" || Boolean(readPluginData(curr, "node_type"))) {
+        return curr;
+      }
+      curr = curr.parent;
+    }
+    return null;
+  }
+  function countFlooowElements(allNodes, options) {
+    const nodeIds = /* @__PURE__ */ new Set();
+    const connectorIds = /* @__PURE__ */ new Set();
+    const includeNative = options?.includeNativeConnectors === true;
+    for (const n of allNodes) {
+      if (!n) continue;
+      const connTop = findTopConnectorNode(n);
+      if (connTop) {
+        if (isConnectorLabel(connTop)) continue;
+        if (isTaggedConnector(connTop)) {
+          connectorIds.add(connTop.id);
+          continue;
+        }
+        if (includeNative && connTop.type === "CONNECTOR") {
+          connectorIds.add(connTop.id);
+        }
+        continue;
+      }
+      const flowTop = findTopFlowNode(n);
+      if (flowTop) {
+        nodeIds.add(flowTop.id);
+      }
+    }
+    return {
+      nodes: nodeIds.size,
+      connectors: connectorIds.size,
+      total: nodeIds.size + connectorIds.size
+    };
+  }
+
+  // src/entitlementGate.ts
+  var FREE_ELEMENT_LIMIT = 20;
+  function normalizePaymentStatus(statusType) {
+    return statusType === "PAID" ? "PAID_ACTIVE" : "FREE";
+  }
+  function canCreateFlooowElements(request) {
+    const limit = request.limit ?? FREE_ELEMENT_LIMIT;
+    const currentCount = Math.max(0, Math.floor(request.currentCount));
+    const requestedCount = Math.max(0, Math.floor(request.requestedCount));
+    const entitlement = request.entitlement;
+    if (entitlement === "PAID_ACTIVE") {
+      return {
+        allowed: true,
+        currentCount,
+        requestedCount,
+        limit,
+        entitlement,
+        reason: "PAID_ACTIVE"
+      };
+    }
+    const allowed = currentCount + requestedCount <= limit;
+    return {
+      allowed,
+      currentCount,
+      requestedCount,
+      limit,
+      entitlement,
+      reason: allowed ? "WITHIN_LIMIT" : "LIMIT_EXCEEDED"
+    };
+  }
+  function assembleFlooowUsage(count, entitlement) {
+    const gate = canCreateFlooowElements({
+      currentCount: count.total,
+      requestedCount: 1,
+      entitlement
+    });
+    return {
+      nodes: count.nodes,
+      connectors: count.connectors,
+      total: count.total,
+      limit: gate.limit,
+      entitlement,
+      canCreate: gate.allowed
+    };
+  }
+
   // src/code.ts
   function rgbToHexColor(rgb) {
     const toHex = (c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, "0");
@@ -2013,6 +2135,49 @@
     } catch (_) {
       return "p1";
     }
+  }
+  function getFlooowElementCount() {
+    const allNodes = figma.root.findAll(() => true);
+    return countFlooowElements(allNodes);
+  }
+  function getFlooowUsage() {
+    return assembleFlooowUsage(getFlooowElementCount(), getCreateEntitlement());
+  }
+  function postFlooowUsage() {
+    postToUI({
+      type: "FLOOOW_USAGE",
+      usage: getFlooowUsage()
+    });
+  }
+  function getCreateEntitlement() {
+    try {
+      return normalizePaymentStatus(figma.payments?.status?.type);
+    } catch (_) {
+      return "FREE";
+    }
+  }
+  var createGateQueue = Promise.resolve();
+  function runCreateExclusive(task) {
+    const run = createGateQueue.then(task, task);
+    createGateQueue = run.then(
+      () => void 0,
+      () => void 0
+    );
+    return run;
+  }
+  function approveNewElements(requestedCount) {
+    const usage = getFlooowUsage();
+    return canCreateFlooowElements({
+      currentCount: usage.total,
+      requestedCount,
+      entitlement: usage.entitlement
+    });
+  }
+  function notifyLimitReached(result) {
+    notify(
+      `Flooow element\uAC00 \uAC00\uB4DD \uCC3C\uC2B5\uB2C8\uB2E4 (${result.currentCount}/${result.limit}). \uAE30\uC874 element\uB97C \uC0AD\uC81C\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.`,
+      "warning"
+    );
   }
   function extractNodeText(node) {
     let title = "";
@@ -3781,6 +3946,11 @@
   }
   async function createFlowNode(payload) {
     try {
+      const createGate = approveNewElements(1);
+      if (!createGate.allowed) {
+        notifyLimitReached(createGate);
+        return;
+      }
       await loadRequiredFonts();
       const nodeType = normalizeNodeType(payload.nodeType || "Screen");
       const branchVariant = nodeType === "Branch" ? normalizeBranchVariant(payload.branchVariant) : void 0;
@@ -5070,11 +5240,20 @@
       } catch (err) {
         console.warn("\uAE30\uC874 \uCEE4\uB125\uD130 \uD0D0\uC0C9 \uC911 \uC624\uB958 (\uC0DD\uC131 \uACC4\uC18D \uC9C4\uD589):", err);
       }
+      let replacedExisting = false;
       if (existingConnector && existingConnector.id !== sourceNode.id && existingConnector.id !== targetNode.id) {
         try {
           existingConnector.remove();
+          replacedExisting = true;
         } catch (err) {
           console.warn("\uAE30\uC874 \uCEE4\uB125\uD130 \uC81C\uAC70 \uC2E4\uD328:", err);
+        }
+      }
+      if (!replacedExisting) {
+        const createGate = approveNewElements(1);
+        if (!createGate.allowed) {
+          notifyLimitReached(createGate);
+          return;
         }
       }
       let sourceMagnet = payload.sourceMagnet;
@@ -5169,6 +5348,11 @@
         return;
       }
       nodes = sortNodesBySpatialPosition(nodes);
+      const autoGate = approveNewElements(nodes.length - 1);
+      if (!autoGate.allowed) {
+        notifyLimitReached(autoGate);
+        return;
+      }
       await loadRequiredFonts();
       if (nodes.length === 2) {
         const sourceNode = nodes[0];
@@ -5262,8 +5446,8 @@
       await loadRequiredFonts();
       const validNodeIds = validNodes.map((n) => n.id);
       const existingPairKeys = buildPairKeySet(validNodeIds);
-      let createdCount = 0;
       let skippedCount = 0;
+      const pairsToCreate = [];
       for (let i = 0; i < validNodes.length - 1; i++) {
         const srcNode = validNodes[i];
         const tgtNode = validNodes[i + 1];
@@ -5275,6 +5459,19 @@
           skippedCount++;
           continue;
         }
+        pairsToCreate.push({ srcNode, tgtNode, pairIndex: i });
+      }
+      const chainGate = approveNewElements(pairsToCreate.length);
+      if (!chainGate.allowed) {
+        notifyLimitReached(chainGate);
+        return;
+      }
+      let createdCount = 0;
+      for (const pair of pairsToCreate) {
+        const srcNode = pair.srcNode;
+        const tgtNode = pair.tgtNode;
+        const i = pair.pairIndex;
+        const pKey = makePairKey(srcNode.id, tgtNode.id);
         const srcBox = {
           x: srcNode.x,
           y: srcNode.y,
@@ -6340,7 +6537,8 @@
   figma.ui.onmessage = async (msg) => {
     switch (msg.type) {
       case "CREATE_FLOW_NODE":
-        await createFlowNode(msg.payload);
+        await runCreateExclusive(() => createFlowNode(msg.payload));
+        postFlooowUsage();
         break;
       case "UPDATE_FLOW_NODE":
         await updateFlowNode(msg.payload);
@@ -6349,13 +6547,16 @@
         await batchUpdateFlowNodes(msg.payload.nodeIds, msg.payload.patch);
         break;
       case "CONNECT_POINTS":
-        await connectPoints(msg.payload);
+        await runCreateExclusive(() => connectPoints(msg.payload));
+        postFlooowUsage();
         break;
       case "CONNECT_CHAIN":
-        await connectChain(msg.payload);
+        await runCreateExclusive(() => connectChain(msg.payload));
+        postFlooowUsage();
         break;
       case "AUTO_CONNECT_SELECTED":
-        await autoConnectSelected(msg.label);
+        await runCreateExclusive(() => autoConnectSelected(msg.label));
+        postFlooowUsage();
         break;
       case "UPDATE_CONNECTOR_LABEL":
         await updateConnectorLabel(msg.connectorId, msg.label);
@@ -6398,6 +6599,9 @@
         });
         break;
       }
+      case "GET_FLOOOW_USAGE":
+        postFlooowUsage();
+        break;
       case "RESIZE_NODE":
         await resizeNode(msg.nodeId, msg.width, msg.height);
         break;

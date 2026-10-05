@@ -11,6 +11,7 @@ export function useFigmaMessage() {
     setCurrentTab,
     setUIState,
     setDesignFrames,
+    setFlooowUsage,
   } = useApp();
 
   const handlerRef = useRef<((event: MessageEvent) => void) | null>(null);
@@ -109,6 +110,11 @@ export function useFigmaMessage() {
           break;
         }
 
+        case 'FLOOOW_USAGE': {
+          if (msg.usage) setFlooowUsage(msg.usage);
+          break;
+        }
+
         case 'SWITCH_TAB': {
           if (msg.tab) setCurrentTab(msg.tab);
           break;
@@ -128,10 +134,12 @@ export function useFigmaMessage() {
       // 개발 테스트 모드
     } else {
       parent.postMessage({ pluginMessage: { type: 'INIT' } }, '*');
+      // 초기 usage 1회 조회 (이후 생성 시 Core가 자동 push, polling 없음)
+      parent.postMessage({ pluginMessage: { type: 'GET_FLOOOW_USAGE' } }, '*');
     }
 
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, [handleSelectionChange, setCurrentTab, setUIState]);
+  }, [handleSelectionChange, setCurrentTab, setUIState, setFlooowUsage]);
 }
