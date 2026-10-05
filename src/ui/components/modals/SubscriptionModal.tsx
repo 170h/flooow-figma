@@ -1,5 +1,6 @@
 import React from "react";
 import type { FlooowUsageState } from "../../../types";
+import { usageRemainingTone } from "../../../planUsageTone";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘 ( FillColorModal 템플릿과 동일 )
 const CLOSE_SVG = (
@@ -18,10 +19,10 @@ export interface SubscriptionModalProps {
 
 /**
  * Plan & Usage 모달 (Figma UI3 Modal footer 디자인 기준)
- * - Free: Free見出し + 20개 제한 안내 + Usage(N remaining/Limit reached) + Node/Connector/Total 실측 + Upgrade to Pro 안내
- * - Pro: Pro見出し + Usage(Unlimited) + 동일 실측 박스
- * - 모든 수치는 Core FLOOOW_USAGE만 사용. 갱신일/과금 주기는 데이터 소스가 없어 표시하지 않는다.
- * - Adjust Plan / 구매 플로우는 이번 범위 밖이라 버튼을 두지 않는다 (죽은 UI 방지).
+ * - Free: Current Plan 행 + Free + 제한 안내 + Usage 색(잔여 수량) + 실측 + Upgrade to Pro
+ * - Pro: Current Plan 행 + Pro + 안내(tertiary) + Usage Unlimited + 실측
+ * - 남은 수량 색: 6+ secondary, 4–5 warning, 2–3 danger, 1 pink, 0 red
+ * - 갱신일/과금 주기/Adjust Plan은 Payments API에 값이 없어 표시하지 않는다.
  */
 export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
   const isPaid = usage !== null && usage.entitlement === "PAID_ACTIVE";
@@ -31,6 +32,7 @@ export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
   const limit = usage?.limit ?? 20;
   const remaining = Math.max(0, limit - total);
   const limitReached = usage !== null && !usage.canCreate;
+  const usageTone = usageRemainingTone(remaining, { paid: isPaid, limitReached });
 
   return (
     <div
@@ -67,11 +69,13 @@ export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
         <div className="subscription-modal-body">
           {/* Current Plan 섹션 */}
           <div className="subscription-plan-section">
-            <div className="subscription-section-label">Current Plan</div>
-            <div className={`subscription-plan-name${isPaid ? " paid" : ""}`}>
+            <div className="subscription-plan-label-row">
+              <div className="subscription-section-label">Current Plan</div>
+            </div>
+            <div className="subscription-plan-name">
               {isPaid ? "Pro" : "Free"}
             </div>
-            <div className="subscription-plan-desc">
+            <div className={`subscription-plan-desc${isPaid ? " is-pro" : ""}`}>
               {isPaid
                 ? "Unlimited elements, every project"
                 : "Create up to 20 elements per project"}
@@ -79,14 +83,10 @@ export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
           </div>
 
           {/* Usage 섹션 */}
-          <div className="subscription-usage-section">
+          <div className={`subscription-usage-section${isPaid ? " is-pro" : ""}`}>
             <div className="subscription-usage-label-row">
               <span className="subscription-section-label">Usage</span>
-              <span
-                className={`subscription-usage-state${
-                  isPaid ? " unlimited" : limitReached ? " reached" : ""
-                }`}
-              >
+              <span className={`subscription-usage-state is-${usageTone}`}>
                 {isPaid
                   ? "Unlimited"
                   : limitReached
@@ -112,15 +112,14 @@ export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
 
           {/* Free 전용 Upgrade 안내 (표시 전용, 구매 플로우 없음) */}
           {!isPaid && (
-            <>
-              <div className="subscription-divider" />
+            <div className="subscription-upgrade-section">
               <div className="subscription-upgrade-box">
                 <div className="subscription-upgrade-title">Upgrade to Pro</div>
                 <div className="subscription-upgrade-desc">
                   Unlimited elements, every project
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
 

@@ -450,7 +450,7 @@ export function App() {
                   </span>
                 </div>
                 <span
-                  className={`footer-usage-meter${usageBlocked ? ' limit-reached' : ''}`}
+                  className="footer-usage-meter"
                   title={usageBlocked ? `Free limit reached (${flooowUsage?.total ?? 20} elements). Upgrade to create more.` : meterText}
                 >
                   {meterText}

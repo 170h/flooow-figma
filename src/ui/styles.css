@@ -34,9 +34,13 @@
       /* 플랜 & 사용량 액센트 (Plan & Usage 모달 전용) */
       --color-plan-pink: #FC9CE0;
       --color-plan-red: #E03E1A;
+      --color-plan-warning: #F7D15F;
+      --color-plan-danger: #FCA397;
       --color-plan-lavender: #C5B2DC;
       --color-plan-violet: #8A38F5;
       --color-plan-stat-bg: #2C2C2C;
+      --color-plan-text: rgba(255, 255, 255, 0.7);
+      --color-plan-text-tertiary: rgba(255, 255, 255, 0.4);
 
       /* 보더 및 구분선 */
       --color-border: var(--figma-color-border, rgba(0, 0, 0, 0.08));
@@ -115,6 +119,13 @@
     }
 
     /* 피그마 플러그인 다크모드 클래스 및 다크 테마 지원 */
+    body.figma-dark .app-footer .btn-ghost:disabled,
+    body.figma-dark-auto .app-footer .btn-ghost:disabled,
+    .figma-dark .app-footer .btn-ghost:disabled,
+    [data-theme="dark"] .app-footer .btn-ghost:disabled {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
     body.figma-dark,
     .figma-dark,
     [data-theme="dark"] {
@@ -2989,7 +3000,8 @@
 
     .footer-plan-title {
       font-size: 13px;
-      font-weight: var(--font-weight-medium, 450);
+      line-height: 22px;
+      font-weight: var(--font-weight-strong, 550);
       color: var(--color-text-secondary);
       user-select: none;
       white-space: nowrap;
@@ -3015,14 +3027,29 @@
 
     .footer-usage-meter {
       font-size: 9px;
+      line-height: 14px;
       font-weight: var(--font-weight-default, 450);
       color: var(--color-text-secondary);
       user-select: none;
       white-space: nowrap;
     }
 
-    .footer-usage-meter.limit-reached {
-      color: var(--color-text-primary);
+    .app-footer .btn-ghost,
+    .app-footer .btn-cta-primary,
+    .app-footer .btn-upgrade,
+    .app-footer .btn-cta-secondary {
+      height: 32px;
+      padding: 4px 12px;
+      border-radius: 5px;
+    }
+
+    .app-footer .btn-ghost:disabled {
+      color: rgba(0, 0, 0, 0.3);
+    }
+
+    .app-footer .btn-cta-primary:disabled {
+      background: #d9d9d9;
+      color: #ffffff;
     }
 
     /* Ghost 버튼 (Modal footer Undo 기준: 투명 배경·보더 없음) */
@@ -4613,8 +4640,8 @@
       height: 40px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 0 8px;
+      justify-content: flex-start;
+      padding: 0 40px 0 16px;
       border-bottom: 1px solid #444444;
       box-sizing: border-box;
       position: relative;
@@ -4663,6 +4690,12 @@
       padding: 0 0 12px;
     }
 
+    .subscription-plan-label-row {
+      display: flex;
+      align-items: center;
+      height: 40px;
+    }
+
     .subscription-section-label {
       font-size: 11px;
       font-weight: var(--font-weight-strong, 550);
@@ -4681,7 +4714,11 @@
       font-size: 9px;
       font-weight: var(--font-weight-default, 450);
       line-height: 14px;
-      color: rgba(255, 255, 255, 0.7);
+      color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
+    }
+
+    .subscription-plan-desc.is-pro {
+      color: var(--color-plan-text-tertiary, rgba(255, 255, 255, 0.4));
     }
 
     .subscription-usage-section {
@@ -4689,6 +4726,10 @@
       flex-direction: column;
       padding: 0 0 12px;
       border-top: 1px solid #444444;
+    }
+
+    .subscription-usage-section.is-pro {
+      padding-bottom: 4px;
     }
 
     .subscription-usage-label-row {
@@ -4702,15 +4743,31 @@
       font-size: 11px;
       font-weight: var(--font-weight-strong, 550);
       line-height: 16px;
-      color: var(--color-plan-pink);
+      color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
     }
 
-    .subscription-usage-state.unlimited {
-      color: var(--color-plan-lavender);
+    .subscription-usage-state.is-calm {
+      color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
     }
 
-    .subscription-usage-state.reached {
-      color: var(--color-plan-red);
+    .subscription-usage-state.is-warning {
+      color: var(--color-plan-warning, #f7d15f);
+    }
+
+    .subscription-usage-state.is-danger {
+      color: var(--color-plan-danger, #fca397);
+    }
+
+    .subscription-usage-state.is-critical {
+      color: var(--color-plan-pink, #fc9ce0);
+    }
+
+    .subscription-usage-state.is-reached {
+      color: var(--color-plan-red, #e03e1a);
+    }
+
+    .subscription-usage-state.is-unlimited {
+      color: var(--color-plan-lavender, #c5b2dc);
     }
 
     .subscription-stat-box {
@@ -4750,21 +4807,20 @@
       color: rgba(255, 255, 255, 0.7);
     }
 
+    .subscription-upgrade-section {
+      border-top: 1px solid #444444;
+      padding: 12px 0 4px;
+    }
+
     .subscription-upgrade-box {
       display: flex;
       flex-direction: column;
       gap: 2px;
-      width: 168px;
+      width: 100%;
       background: var(--color-plan-violet);
       border-radius: 5px;
       padding: 8px;
       box-sizing: border-box;
-    }
-
-    .subscription-divider {
-      height: 1px;
-      background: #444444;
-      margin: 12px 0 4px;
     }
 
     .subscription-upgrade-title {
@@ -4795,4 +4851,10 @@
       height: 24px;
       padding: 4px 8px;
       font-size: 11px;
+      border-radius: 5px;
+      background: var(--color-primary, #8c4cf6);
+    }
+
+    .subscription-modal-footer .btn-cta-primary:hover:not(:disabled) {
+      background: var(--color-primary-hover, #7b3ce3);
     }
