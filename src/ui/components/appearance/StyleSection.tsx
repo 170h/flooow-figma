@@ -3,7 +3,7 @@ import { useApp, StylePreset } from "../../context/AppContext";
 import { useSelectionSummary } from "../../hooks/useSelectionSummary";
 import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
 import { t } from "../../../i18n";
-import { normalizeNodeType } from "../../../domain/nodeDomain";
+import { normalizeNodeType, normalizeBranchVariant, branchVariantUsesStroke } from "../../../domain/nodeDomain";
 
 /**
  * 기본 스타일 프리셋 ID 목록 (첫 번째: 흰색 + 1.5px 블랙 보더, 두 번째: 블랙 + 0px 보더)
@@ -199,6 +199,20 @@ export function StyleSection() {
           (n?.nodeType === "FRAME" ? "Screen" : n?.nodeType),
       ) !== "Screen",
   );
+
+  // Branch CHECK/CROSS 등 보더 미사용 변형만 선택된 경우 스트로크 컨트롤 비활성.
+  // 하나라도 보더 사용 노드가 섞여 있으면 활성 유지한다.
+  const isStrokeApplicable = (() => {
+    const flows = selectedNodes.filter((n) => n && n.isFlowNode);
+    if (flows.length === 0) return true;
+    return flows.some((n) => {
+      const nodeType = normalizeNodeType(
+        n?.flowNodeType || (n?.nodeType === "FRAME" ? "Screen" : n?.nodeType),
+      );
+      if (nodeType !== "Branch") return true;
+      return branchVariantUsesStroke(normalizeBranchVariant(n?.branchVariant));
+    });
+  })();
 
   // 다중 노드 선택 시 전체 스타일 Mixed 여부 판별
   // 사용자가 새 스타일을 드래프트 선택한 경우에는 Mixed가 해제됨
@@ -626,11 +640,12 @@ export function StyleSection() {
           </div>
 
           {/* (2) Stroke Color 컨트롤 박스 */}
-          <div className="style-input-box style-color-input-box" data-tooltip={t('tipStrokeColor')}>
+          <div className={`style-input-box style-color-input-box${!isStrokeApplicable ? ' disabled' : ''}`} data-tooltip={t('tipStrokeColor')}>
             {/* 사용자 제공 공식 Stroke SVG 아이콘 버튼 (None 상태 시 대각선 표시 및 클릭 시 토글) */}
             <button
               type="button"
               className="style-stroke-btn"
+              disabled={!isStrokeApplicable}
               onClick={handleStrokeIconClick}
             >
               <StrokeColorIcon
@@ -649,6 +664,7 @@ export function StyleSection() {
               placeholder={
                 isStrokeMixed ? "Mixed" : isStrokeNone ? "None" : "000000"
               }
+              disabled={!isStrokeApplicable}
               onChange={handleStrokeChange}
               onFocus={(e) => {
                 if (isStrokeNone || e.target.value === "None") {
@@ -672,11 +688,12 @@ export function StyleSection() {
           </div>
 
           {/* (3) Stroke Weight 컨트롤 박스 */}
-          <div className="style-input-box style-weight-input-box" data-tooltip={t('tipStrokeWeight')}>
+          <div className={`style-input-box style-weight-input-box${!isStrokeApplicable ? ' disabled' : ''}`} data-tooltip={t('tipStrokeWeight')}>
             {/* 3선 스트로크 아이콘 버튼 */}
             <button
               type="button"
               className="style-weight-action-btn"
+              disabled={!isStrokeApplicable}
               onClick={toggleStrokeWeight}
             >
               {STROKE_WEIGHT_ICON_SVG}
@@ -687,6 +704,7 @@ export function StyleSection() {
               type="text"
               inputMode="decimal"
               className="style-weight-num-input"
+              disabled={!isStrokeApplicable}
               value={isWeightMixed ? "" : weightInput}
               placeholder={isWeightMixed ? "Mixed" : "0"}
               onChange={handleWeightChange}

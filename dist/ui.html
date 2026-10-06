@@ -1232,6 +1232,39 @@
       opacity: 1 !important;
     }
 
+    /* 스타일 입력 박스 비활성 (UI3 tertiary 감쇄, 박스 유지) */
+    .style-input-box.disabled,
+    .style-input-box:has(input:disabled),
+    .style-input-box:has(button:disabled) {
+      background-color: var(--color-bg-secondary);
+      border-color: transparent !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .style-input-box.disabled span,
+    .style-input-box:has(input:disabled) span,
+    .style-input-box:has(button:disabled) span {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .style-input-box.disabled svg,
+    .style-input-box:has(input:disabled) svg,
+    .style-input-box:has(button:disabled) svg {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 0.6;
+    }
+
+    .style-input-box.disabled input,
+    .style-input-box input:disabled {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
     body.figma-dark .input-scrubber-box input::placeholder,
     .figma-dark .input-scrubber-box input::placeholder,
     [data-theme="dark"] .input-scrubber-box input::placeholder {
@@ -35870,6 +35903,17 @@
         n?.flowNodeType || (n?.nodeType === "FRAME" ? "Screen" : n?.nodeType)
       ) !== "Screen"
     );
+    const isStrokeApplicable = (() => {
+      const flows = selectedNodes.filter((n) => n && n.isFlowNode);
+      if (flows.length === 0) return true;
+      return flows.some((n) => {
+        const nodeType = normalizeNodeType(
+          n?.flowNodeType || (n?.nodeType === "FRAME" ? "Screen" : n?.nodeType)
+        );
+        if (nodeType !== "Branch") return true;
+        return branchVariantUsesStroke(normalizeBranchVariant(n?.branchVariant));
+      });
+    })();
     const isNodeColorMixed = !isStyleDrafted && summary.isMultiFlowNode && (summary.color.isMixed || !hasShapeNode && (summary.strokeWeight.isMixed || summary.strokeColor.isMixed));
     const activeStylePreset = isNodeColorMixed ? void 0 : stylePresets.find((p) => {
       const pFill = normalizeColorHex(p.fillColor);
@@ -36192,12 +36236,13 @@
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "style-input-box style-color-input-box", "data-tooltip": t("tipStrokeColor"), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: `style-input-box style-color-input-box${!isStrokeApplicable ? " disabled" : ""}`, "data-tooltip": t("tipStrokeColor"), children: [
             /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
               "button",
               {
                 type: "button",
                 className: "style-stroke-btn",
+                disabled: !isStrokeApplicable,
                 onClick: handleStrokeIconClick,
                 children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
                   StrokeColorIcon,
@@ -36217,6 +36262,7 @@
                 className: `style-text-input${isStrokeNone ? " is-none" : ""}`,
                 value: isStrokeMixed ? "" : isStrokeNone ? "None" : strokeInput,
                 placeholder: isStrokeMixed ? "Mixed" : isStrokeNone ? "None" : "000000",
+                disabled: !isStrokeApplicable,
                 onChange: handleStrokeChange,
                 onFocus: (e) => {
                   if (isStrokeNone || e.target.value === "None") {
@@ -36239,12 +36285,13 @@
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "style-input-box style-weight-input-box", "data-tooltip": t("tipStrokeWeight"), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: `style-input-box style-weight-input-box${!isStrokeApplicable ? " disabled" : ""}`, "data-tooltip": t("tipStrokeWeight"), children: [
             /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
               "button",
               {
                 type: "button",
                 className: "style-weight-action-btn",
+                disabled: !isStrokeApplicable,
                 onClick: toggleStrokeWeight,
                 children: STROKE_WEIGHT_ICON_SVG
               }
@@ -36255,6 +36302,7 @@
                 type: "text",
                 inputMode: "decimal",
                 className: "style-weight-num-input",
+                disabled: !isStrokeApplicable,
                 value: isWeightMixed ? "" : weightInput,
                 placeholder: isWeightMixed ? "Mixed" : "0",
                 onChange: handleWeightChange,

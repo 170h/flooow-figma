@@ -1226,6 +1226,39 @@
       opacity: 1 !important;
     }
 
+    /* 스타일 입력 박스 비활성 (UI3 tertiary 감쇄, 박스 유지) */
+    .style-input-box.disabled,
+    .style-input-box:has(input:disabled),
+    .style-input-box:has(button:disabled) {
+      background-color: var(--color-bg-secondary);
+      border-color: transparent !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .style-input-box.disabled span,
+    .style-input-box:has(input:disabled) span,
+    .style-input-box:has(button:disabled) span {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+    }
+
+    .style-input-box.disabled svg,
+    .style-input-box:has(input:disabled) svg,
+    .style-input-box:has(button:disabled) svg {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      opacity: 0.6;
+    }
+
+    .style-input-box.disabled input,
+    .style-input-box input:disabled {
+      color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      -webkit-text-fill-color: var(--color-text-tertiary, rgba(0, 0, 0, 0.4)) !important;
+      cursor: default;
+      pointer-events: none;
+      user-select: none;
+    }
+
     body.figma-dark .input-scrubber-box input::placeholder,
     .figma-dark .input-scrubber-box input::placeholder,
     [data-theme="dark"] .input-scrubber-box input::placeholder {
