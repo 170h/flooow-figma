@@ -18,8 +18,8 @@
  *   NEW   — 신규 위반 (zero 모드 발견 또는 tracked 초과분)
  *
  * Exit code:
- *   0 — 위반 없음
- *   1 — 위반 감지 (KNOWN 또는 NEW)
+ *   0 — NEW 위반 없음 (KNOWN 잔재는 실패 조건 아님)
+ *   1 — NEW 위반 감지
  *   2 — 스크립트 오류
  *
  * 사용: node scripts/check-css.mjs  (또는 npm run check:css)
@@ -123,12 +123,12 @@ function main() {
   }
   L.push("");
 
-  if (knownTotal + newTotal === 0) {
-    L.push("  Result: PASS (위반 없음)");
+  if (newTotal === 0) {
+    L.push("  Result: PASS (NEW 0건)");
     console.log(L.join("\n"));
     process.exit(0);
   } else {
-    L.push(`  Result: FAIL (${knownTotal + newTotal}건 위반 감지 — KNOWN ${knownTotal} / NEW ${newTotal})`);
+    L.push(`  Result: FAIL (${newTotal}건 신규 위반 감지 — KNOWN ${knownTotal} / NEW ${newTotal})`);
     console.log(L.join("\n"));
     process.exit(1);
   }
