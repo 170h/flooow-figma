@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { t } from '../../../i18n';
 
 interface ContextMenuProps {
   onEdit?: () => void;
@@ -41,7 +42,7 @@ export function ContextMenu({ onEdit, onDelete }: ContextMenuProps) {
         (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS.has(selectedStylePresetId)) ||
         (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))
       ) {
-        showToast('기본 스타일은 수정할 수 없습니다.', 'warning');
+        showToast(t('styleEditNoDefault'), 'warning');
         return;
       }
       setActiveModal('edit-style');
@@ -56,24 +57,24 @@ export function ContextMenu({ onEdit, onDelete }: ContextMenuProps) {
     if (contextMenuTarget === 'size') {
       const DEFAULT_PRESET_IDS = new Set(['default', 'square', 'web', 'mobile']);
       if (!selectedSizePresetId || DEFAULT_PRESET_IDS.has(selectedSizePresetId)) {
-        showToast('기본 프리셋은 삭제할 수 없습니다.', 'warning');
+        showToast(t('presetDeleteNoDefault'), 'warning');
         return;
       }
       deleteSizePreset(selectedSizePresetId);
-      showToast('사이즈 프리셋이 삭제되었습니다.');
+      showToast(t('sizePresetDeleted2'));
     } else if (contextMenuTarget === 'style') {
       const color = nodeOptionState.fillColor;
       if (
         (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS.has(selectedStylePresetId)) ||
         (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))
       ) {
-        showToast('기본 스타일은 삭제할 수 없습니다.', 'warning');
+        showToast(t('styleDefaultNoDelete'), 'warning');
         return;
       }
       if (selectedStylePresetId) {
         deleteStylePreset(selectedStylePresetId);
       } else {
-        showToast('스타일이 삭제되었습니다.');
+        showToast(t('styleDeleted'));
       }
     } else {
       onDelete?.();

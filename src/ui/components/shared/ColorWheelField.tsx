@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { COLOR_MIXED_ICON } from "./icons";
+import { t } from "../../../i18n";
 
 // ---- 색상 변환 유틸리티 (Hex <-> HSV) ----
 
@@ -406,7 +407,7 @@ export function ColorWheelField({
       <div className="conn-color-input-row">
         {extraControlPosition === "left" && extraControl}
 
-        <div className="conn-modal-hex-box" data-tooltip="Hex color">
+        <div className="conn-modal-hex-box" data-tooltip={t('tipHexColor')}>
           {customChip !== undefined ? (
             customChip
           ) : (

@@ -72,7 +72,6 @@ export function StylePresetColorGrid({
               className={`conn-preset-card${selected === item.color ? " selected" : ""}`}
               style={{ backgroundColor: item.color }}
               data-color={item.color.toLowerCase()}
-              data-tooltip={item.name ? `${item.name} ${item.color}` : item.color}
               onClick={() => onSelect(item.color.replace("#", ""))}
             />
           ))}

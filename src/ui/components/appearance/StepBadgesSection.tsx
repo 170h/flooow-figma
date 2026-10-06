@@ -4,6 +4,8 @@ import { useSelectionSummary } from "../../hooks/useSelectionSummary";
 import { DropdownMixedItem } from "../shared/DropdownMixedItem";
 import { COLOR_MIXED_ICON, MixedDashChip } from "../shared/icons";
 import { Switch } from "../shared/Switch";
+import { useDisabledNotice, DisabledNoticeChip } from "../shared/DisabledNotice";
+import { t } from "../../../i18n";
 import {
   type BadgePosition,
   type BadgeShape,
@@ -113,6 +115,9 @@ export function StepBadgesSection() {
 
   const userActionLockRef = useRef<number>(0);
   const prevSelectedNodeIdRef = useRef<string | null>(null);
+
+  // 비활성 사유 칩 (클릭 시 잠시 표시)
+  const disabledNotice = useDisabledNotice();
 
   const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
   // 미확정 입력 텍스트는 AppContext 단일 소유(formTextDraft).
@@ -601,11 +606,18 @@ export function StepBadgesSection() {
     <div
       className="section-block step-badges-section"
       style={{ paddingBottom: effectiveState.isOpen ? "12px" : "0px" }}
+      onClick={effectiveState.disabled ? () => disabledNotice.flash() : undefined}
     >
       {/* 상단 헤더: Step Badges + 보라색 토글 스위치 */}
       <div className="section-header toggle-row">
         <span className={`section-title${effectiveState.disabled ? " disabled" : ""}`}>
           Step Badges
+          {effectiveState.disabled && disabledNotice.phase !== 'hidden' && (
+            <DisabledNoticeChip
+              text={t(effectiveState.isMixed ? 'noticeMixed' : 'noticeStepUnsupported')}
+              fading={disabledNotice.phase === 'fading'}
+            />
+          )}
         </span>
         <Switch
           id="toggle-step-badges"
@@ -637,7 +649,7 @@ export function StepBadgesSection() {
             {/* 좌측 Numeric Input */}
             <div
               data-tooltip={
-                isMultiMode ? "Start Number" : "Number"
+                isMultiMode ? t('tipStepStartNumber') : t('tipStepNumber')
               }
               style={{
                 width: "100px",
@@ -722,7 +734,7 @@ export function StepBadgesSection() {
                   <button
                     key={c.pos}
                     type="button"
-                    data-tooltip={c.title}
+                    data-tooltip={t(c.pos === 'TOP_LEFT' ? 'tipCornerTL' : c.pos === 'TOP_RIGHT' ? 'tipCornerTR' : c.pos === 'BOTTOM_LEFT' ? 'tipCornerBL' : 'tipCornerBR')}
                     onClick={() => handleCornerSelect(c.pos)}
                     className={`corner-btn${active ? " active" : ""}`}
                   >

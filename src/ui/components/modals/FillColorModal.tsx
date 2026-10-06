@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { t } from "../../../i18n";
 import { ColorWheelField } from "../shared/ColorWheelField";
 import { FillColorIcon } from "../shared/icons";
 import { StylePresetColorGrid } from "../shared/StylePresetColorGrid";
@@ -156,7 +157,7 @@ export function FillColorModal({
             type="button"
             className="style-modal-close-btn"
             onClick={handleCancel}
-            data-tooltip="Close"
+            data-tooltip={t('tipClose')}
           >
             {CLOSE_SVG}
           </button>

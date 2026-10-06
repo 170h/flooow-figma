@@ -8,6 +8,7 @@ import {
   IcTextAlignCenter,
   IcTextAlignRight,
 } from '../shared/icons';
+import { t } from '../../../i18n';
 import { ConnectorLabelBoxStyle, ConnectorLabelAlign } from '../../../types';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 
@@ -403,7 +404,7 @@ export function LabelSection() {
               type="text"
               id="input-conn-label"
               className="conn-label-input"
-              data-tooltip="Label text"
+              data-tooltip={t('tipLabelText')}
               placeholder={isTextMixed ? 'Mixed' : 'Add a label'}
               {...(isMultiConnector
                 ? { value: displayText }
@@ -426,7 +427,7 @@ export function LabelSection() {
             {/* 3행: [배경색 인풋] [보더색 인풋] [텍스트 정렬 세그먼트] */}
             <div className="style-inputs-row">
               {/* (1) Fill Color 컨트롤 박스 (Style 컴포넌트 규격) */}
-              <div className="style-input-box style-color-input-box" data-tooltip="Label fill color">
+              <div className="style-input-box style-color-input-box" data-tooltip={t('tipLabelFill')}>
                 {/* 컬러 칩 (클릭 시 배경 투명 None 토글) */}
                 <FillColorIcon
                   color={isFillNone ? lastValidFillRef.current : (displayFill || fillColor)}
@@ -465,11 +466,10 @@ export function LabelSection() {
               </div>
 
               {/* (2) Stroke Color 컨트롤 박스 (Style 컴포넌트 규격) */}
-              <div className="style-input-box style-color-input-box" data-tooltip="Label stroke color">
+              <div className="style-input-box style-color-input-box" data-tooltip={t('tipLabelStroke')}>
                 <button
                   type="button"
                   className="style-stroke-btn"
-                  data-tooltip={isStrokeMixed ? 'Mixed stroke' : (isStrokeNone ? 'Show border' : 'Hide border')}
                   onClick={handleStrokeChipClick}
                 >
                   <StrokeColorIcon
@@ -513,7 +513,7 @@ export function LabelSection() {
                 <button
                   type="button"
                   className={`corner-btn${displayAlign === 'LEFT' ? ' active' : ''}`}
-                  data-tooltip="Align left"
+                  data-tooltip={t('tipAlignLeft')}
                   onClick={() => handleAlignSelect('LEFT')}
                 >
                   <IcTextAlignLeft size={16} />
@@ -521,7 +521,7 @@ export function LabelSection() {
                 <button
                   type="button"
                   className={`corner-btn${displayAlign === 'CENTER' ? ' active' : ''}`}
-                  data-tooltip="Align center"
+                  data-tooltip={t('tipAlignCenter')}
                   onClick={() => handleAlignSelect('CENTER')}
                 >
                   <IcTextAlignCenter size={16} />
@@ -529,7 +529,7 @@ export function LabelSection() {
                 <button
                   type="button"
                   className={`corner-btn${displayAlign === 'RIGHT' ? ' active' : ''}`}
-                  data-tooltip="Align right"
+                  data-tooltip={t('tipAlignRight')}
                   onClick={() => handleAlignSelect('RIGHT')}
                 >
                   <IcTextAlignRight size={16} />

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../context/AppContext";
 import { Switch } from "../shared/Switch";
+import { useDisabledNotice, DisabledNoticeChip } from "../shared/DisabledNotice";
+import { t } from "../../../i18n";
 import {
   type OptionSwitchState,
 } from "../../../types";
@@ -50,6 +52,9 @@ export function FigmaLinkSection() {
   const cachedUrlRef = useRef<string>("");
   const userActionLockRef = useRef<number>(0);
   const prevSelectedNodeIdRef = useRef<string | null>(null);
+
+  // 비활성 사유 칩 (클릭 시 잠시 표시)
+  const disabledNotice = useDisabledNotice();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Option Capability Matrix 기반 스위치 상태 산출
@@ -347,12 +352,19 @@ export function FigmaLinkSection() {
     <div
       className="section-block figma-link-section"
       style={{ paddingBottom: effectiveState.isOpen ? "12px" : "0px" }}
+      onClick={effectiveState.disabled ? () => disabledNotice.flash() : undefined}
     >
       <div className="section-header toggle-row">
         <span className={`section-title${effectiveState.disabled ? " disabled" : ""}`}>
           Reference Link
           {!effectiveState.disabled && isLinkValueMixed && (
             <span className="section-mixed-label">(Mixed)</span>
+          )}
+          {effectiveState.disabled && disabledNotice.phase !== 'hidden' && (
+            <DisabledNoticeChip
+              text={t(effectiveState.isMixed ? 'noticeMixed' : 'noticeLinkUnsupported')}
+              fading={disabledNotice.phase === 'fading'}
+            />
           )}
         </span>
         <Switch
@@ -362,7 +374,7 @@ export function FigmaLinkSection() {
           disabled={effectiveState.disabled}
           data-tooltip={
             effectiveState.disabled
-              ? "Reference Link is disabled for this shape"
+              ? t('tipLinkDisabled')
               : undefined
           }
           onChange={handleToggle}

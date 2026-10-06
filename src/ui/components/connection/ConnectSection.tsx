@@ -5,6 +5,7 @@ import {
   ConnectorTerminalType,
   MagnetPosition,
 } from '../../../types';
+import { t } from '../../../i18n';
 import {
   BRANCH_VARIANT_LABELS,
   normalizeBranchVariant,
@@ -843,7 +844,7 @@ export function ConnectSection() {
           <div className="conn-color-input-wrapper" id="wrap-conn-color">
             <div
               className="conn-color-input-box"
-              data-tooltip="Connector color"
+              data-tooltip={t('tipConnectorColor')}
               onClick={() => {
                 hexInputRef.current?.focus();
                 hexInputRef.current?.select();
@@ -928,7 +929,7 @@ export function ConnectSection() {
               return (
                 <button key={r.type}
                   className={`routing-btn${isActive ? ' active' : ''}`}
-                  data-tooltip={r.title}
+                  data-tooltip={t(r.type === 'ORTHOGONAL' ? 'tipRouteOrtho' : r.type === 'S_CURVE' ? 'tipRouteSCurve' : r.type === 'CURVED' ? 'tipRouteCurve' : 'tipRouteStraight')}
                   onClick={() => selectRoutingType(r.type)}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" dangerouslySetInnerHTML={{ __html: r.svg }} />
                 </button>
@@ -953,7 +954,7 @@ export function ConnectSection() {
                   className={`anchor-handle anchor-${pos.toLowerCase()}${isActive ? ' active' : ''}${isMixed ? ' mixed' : ''}`}
                   data-node="1"
                   data-pos={pos}
-                  data-tooltip={isMixed ? `Source ${pos} Mixed` : (isActive ? `Source ${pos} Active` : `Source ${pos}`)}
+                  data-tooltip={`${t('tipGizmoSource')} ${pos}${isMixed ? ` ${t('tipMixed')}` : isActive ? ` ${t('tipActive')}` : ''}`}
                   onClick={() => selectAnchor(1, pos)}
                 />
               );
@@ -974,7 +975,7 @@ export function ConnectSection() {
                   className={`anchor-handle anchor-${pos.toLowerCase()}${isActive ? ' active' : ''}${isMixed ? ' mixed' : ''}`}
                   data-node="2"
                   data-pos={pos}
-                  data-tooltip={isMixed ? `Target ${pos} Mixed` : (isActive ? `Target ${pos} Active` : `Target ${pos}`)}
+                  data-tooltip={`${t('tipGizmoTarget')} ${pos}${isMixed ? ` ${t('tipMixed')}` : isActive ? ` ${t('tipActive')}` : ''}`}
                   onClick={() => selectAnchor(2, pos)}
                 />
               );
@@ -988,7 +989,7 @@ export function ConnectSection() {
 
         {/* 두께 + 선 모양 */}
         <div style={{ display: 'flex', gap: '6px' }}>
-          <div className="input-scrubber-box" style={{ width: '70px' }} data-tooltip="Stroke width">
+          <div className="input-scrubber-box" style={{ width: '70px' }} data-tooltip={t('tipStrokeWidth')}>
             <svg
               width="24"
               height="24"
@@ -1034,7 +1035,7 @@ export function ConnectSection() {
               return (
                 <button key={pattern}
                   className={`line-style-btn${isActive ? ' active' : ''}`}
-                  data-tooltip={title}
+                  data-tooltip={t(pattern === 'SOLID' ? 'tipSolid' : 'tipDashed')}
                   onClick={e => selectLinePattern(pattern, e.currentTarget)}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d={path} fill="currentColor"/></svg>
                 </button>
@@ -1042,7 +1043,7 @@ export function ConnectSection() {
             })}
             <button
               className={`line-style-btn${!isLinePatternMixed && selectedLinePattern === 'DOTTED' ? ' active' : ''}`}
-              data-tooltip="Dotted"
+              data-tooltip={t('tipDotted')}
               onClick={e => selectLinePattern('DOTTED', e.currentTarget)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <g transform="translate(5, 11.3)">
@@ -1060,7 +1061,7 @@ export function ConnectSection() {
         {/* 단자 + 오프셋 */}
         <div className="terminal-offset-row">
           {/* 시작 오프셋 */}
-          <div className="input-scrubber-box offset-start-box" style={{ width: '70px' }} data-tooltip="Start offset">
+          <div className="input-scrubber-box offset-start-box" style={{ width: '70px' }} data-tooltip={t('tipStartOffset')}>
             <svg
               width="24"
               height="24"
@@ -1132,7 +1133,7 @@ export function ConnectSection() {
               type="button"
               id="btn-start-terminal"
               className={`figma-dropdown-btn${startTermPopupOpen ? ' active' : ''}`}
-              data-tooltip="Start terminal"
+              data-tooltip={t('tipStartTerminal')}
               style={{ padding: '0 4px 0 6px' }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -1202,7 +1203,7 @@ export function ConnectSection() {
                     <div
                       key={opt}
                       className={`terminal-ui3-item${isSelected ? ' selected' : ''}`}
-                      data-tooltip={opt.charAt(0) + opt.slice(1).toLowerCase()}
+                      data-tooltip={t(opt === 'NONE' ? 'tipTermNone' : opt === 'ARROW' ? 'tipTermArrow' : opt === 'CIRCLE' ? 'tipTermCircle' : 'tipTermDiamond')}
                       style={{
                         width: '100%',
                         height: '24px',
@@ -1243,7 +1244,7 @@ export function ConnectSection() {
               type="button"
               id="btn-end-terminal"
               className={`figma-dropdown-btn${endTermPopupOpen ? ' active' : ''}`}
-              data-tooltip="End terminal"
+              data-tooltip={t('tipEndTerminal')}
               style={{ padding: '0 4px 0 6px' }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -1313,7 +1314,7 @@ export function ConnectSection() {
                     <div
                       key={opt}
                       className={`terminal-ui3-item${isSelected ? ' selected' : ''}`}
-                      data-tooltip={opt.charAt(0) + opt.slice(1).toLowerCase()}
+                      data-tooltip={t(opt === 'NONE' ? 'tipTermNone' : opt === 'ARROW' ? 'tipTermArrow' : opt === 'CIRCLE' ? 'tipTermCircle' : 'tipTermDiamond')}
                       style={{
                         width: '100%',
                         height: '24px',
@@ -1348,7 +1349,7 @@ export function ConnectSection() {
           </div>
 
           {/* 끝 오프셋 */}
-          <div className="input-scrubber-box offset-end-box" style={{ width: '70px' }} data-tooltip="End offset">
+          <div className="input-scrubber-box offset-end-box" style={{ width: '70px' }} data-tooltip={t('tipEndOffset')}>
             <input
               type="number"
               id="input-end-offset"

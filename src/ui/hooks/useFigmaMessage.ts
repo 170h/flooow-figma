@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import { resolveAppLocale, setAppLocale } from '../../i18n';
 
 /**
  * Figma 플러그인 → UI 방향 메시지 처리 훅
@@ -128,12 +129,12 @@ export function useFigmaMessage() {
     handlerRef.current = handler;
     window.addEventListener('message', handler);
 
-    // 플러그인 초기화 메시지 전송
+    // 플러그인 초기화 메시지 전송 (UI 로케일 포함)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('nodes') === '2') {
       // 개발 테스트 모드
     } else {
-      parent.postMessage({ pluginMessage: { type: 'INIT' } }, '*');
+      parent.postMessage({ pluginMessage: { type: 'INIT', locale: setAppLocale(resolveAppLocale(navigator.language)) } }, '*');
       // 초기 usage 1회 조회 (이후 생성 시 Core가 자동 push, polling 없음)
       parent.postMessage({ pluginMessage: { type: 'GET_FLOOOW_USAGE' } }, '*');
     }

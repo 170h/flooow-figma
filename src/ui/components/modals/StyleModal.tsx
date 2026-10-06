@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { useApp } from "../../context/AppContext";
 import { ColorWheelField } from "../shared/ColorWheelField";
 import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
+import { t } from "../../../i18n";
 import { SCREEN_NODE_CONSTRAINTS, clampStrokeWeight } from "../../../domain/nodeDomain";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
@@ -164,7 +165,7 @@ export function StyleModal({
         strokeWeight: finalStrokeWeight,
         strokeColor: finalStrokeColor,
       });
-      showToast("새 스타일이 추가되었습니다.", "success");
+      showToast(t('styleAddedNew'), "success");
     }
 
     // UI 및 노드 옵션 상태 갱신
@@ -232,7 +233,7 @@ export function StyleModal({
             type="button"
             className="style-modal-close-btn"
             onClick={onClose}
-            data-tooltip="Close"
+            data-tooltip={t('tipClose')}
           >
             {CLOSE_SVG}
           </button>
@@ -373,7 +374,7 @@ export function StyleModal({
               }
               extraControlPosition="left"
               extraControl={
-                <div className="stroke-width-box" data-tooltip="Stroke width">
+                <div className="stroke-width-box" data-tooltip={t('tipStrokeWeight')}>
                   <span
                     style={{
                       width: 24,

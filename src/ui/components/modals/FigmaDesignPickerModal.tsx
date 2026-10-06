@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { t } from "../../../i18n";
 import { useApp } from '../../context/AppContext';
 import { DesignFrameItem } from '../../../types';
 
@@ -157,7 +158,7 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
             type="button"
             className="size-modal-close-btn"
             onClick={onClose}
-            data-tooltip="Close"
+            data-tooltip={t('tipClose')}
             style={{
               background: 'transparent',
               border: 'none',
@@ -235,7 +236,7 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
           <button
             type="button"
             onClick={loadDesignFrames}
-            data-tooltip="Refresh frames from canvas"
+            data-tooltip={t('tipRefreshFrames')}
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.12)',

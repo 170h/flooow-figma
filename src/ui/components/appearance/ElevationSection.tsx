@@ -2,6 +2,8 @@ import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { Switch } from '../shared/Switch';
+import { useDisabledNotice, DisabledNoticeChip } from '../shared/DisabledNotice';
+import { t } from '../../../i18n';
 import {
   type OptionSwitchState,
 } from '../../../types';
@@ -40,6 +42,9 @@ export function ElevationSection() {
 
   const [isOpen, setIsOpen] = React.useState<boolean | null>(null);
   const prevSelectedNodeIdRef = React.useRef<string | null>(null);
+
+  // 비활성 사유 칩 (클릭 시 잠시 표시)
+  const disabledNotice = useDisabledNotice();
 
   React.useEffect(() => {
     const currentNodeId = selectedNodes.length === 1 ? selectedNodes[0]?.id : (selectedNodes.length > 1 ? 'MULTI' : null);
@@ -224,10 +229,17 @@ export function ElevationSection() {
     <div
       className="section-block"
       style={{ paddingBottom: effectiveState.isOpen ? '12px' : '0px' }}
+      onClick={effectiveState.disabled ? () => disabledNotice.flash() : undefined}
     >
       <div className="section-header toggle-row">
         <span className={`section-title${effectiveState.disabled ? ' disabled' : ''}`}>
           Elevation
+          {effectiveState.disabled && disabledNotice.phase !== 'hidden' && (
+            <DisabledNoticeChip
+              text={t(effectiveState.isMixed ? 'noticeMixed' : 'noticeElevationUnsupported')}
+              fading={disabledNotice.phase === 'fading'}
+            />
+          )}
         </span>
         <Switch
           id="toggle-elevation"

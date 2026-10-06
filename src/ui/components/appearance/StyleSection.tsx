@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useApp, StylePreset } from "../../context/AppContext";
 import { useSelectionSummary } from "../../hooks/useSelectionSummary";
 import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
+import { t } from "../../../i18n";
 import { normalizeNodeType } from "../../../domain/nodeDomain";
 
 /**
@@ -550,7 +551,7 @@ export function StyleSection() {
         <div className="section-actions">
           <button
             className="btn-action-icon"
-            data-tooltip="Add style"
+            data-tooltip={t('tipAddStyle')}
             onClick={() => setActiveModal("add-style")}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -566,8 +567,8 @@ export function StyleSection() {
             className={`btn-action-icon btn-more-icon${isMoreDisabled ? " disabled" : ""}${contextMenuOpen && contextMenuTarget === "style" ? " active" : ""}`}
             data-tooltip={
               isMoreDisabled
-                ? "Default styles cannot be edited or deleted"
-                : "More options"
+                ? t('tipStyleMoreLocked')
+                : t('tipStyleMore')
             }
             disabled={isMoreDisabled}
             onClick={toggleStyleMoreMenu}
@@ -585,7 +586,7 @@ export function StyleSection() {
         {/* 2. 피그마 UI3 공식 컨트롤 행 (Fill Color, Stroke Color, Stroke Weight) */}
         <div className="style-inputs-row">
           {/* (1) Fill Color 컨트롤 박스 */}
-          <div className="style-input-box style-color-input-box" data-tooltip="Fill color">
+          <div className="style-input-box style-color-input-box" data-tooltip={t('tipFillColor')}>
             {/* 컬러 칩 (클릭 시 배경 끄기/None 토글) */}
             <FillColorIcon
               color={effectiveFillColor}
@@ -625,18 +626,11 @@ export function StyleSection() {
           </div>
 
           {/* (2) Stroke Color 컨트롤 박스 */}
-          <div className="style-input-box style-color-input-box" data-tooltip="Stroke color">
+          <div className="style-input-box style-color-input-box" data-tooltip={t('tipStrokeColor')}>
             {/* 사용자 제공 공식 Stroke SVG 아이콘 버튼 (None 상태 시 대각선 표시 및 클릭 시 토글) */}
             <button
               type="button"
               className="style-stroke-btn"
-              data-tooltip={
-                isStrokeMixed
-                  ? "Mixed stroke color"
-                  : isStrokeNone
-                    ? "Show border"
-                    : "Hide border"
-              }
               onClick={handleStrokeIconClick}
             >
               <StrokeColorIcon
@@ -678,16 +672,11 @@ export function StyleSection() {
           </div>
 
           {/* (3) Stroke Weight 컨트롤 박스 */}
-          <div className="style-input-box style-weight-input-box" data-tooltip="Stroke width">
+          <div className="style-input-box style-weight-input-box" data-tooltip={t('tipStrokeWeight')}>
             {/* 3선 스트로크 아이콘 버튼 */}
             <button
               type="button"
               className="style-weight-action-btn"
-              data-tooltip={
-                isWeightMixed
-                  ? "Mixed stroke width"
-                  : "Stroke width"
-              }
               onClick={toggleStrokeWeight}
             >
               {STROKE_WEIGHT_ICON_SVG}
@@ -745,7 +734,6 @@ export function StyleSection() {
                 }}
                 data-color={preset.fillColor}
                 data-style-id={preset.id}
-                data-tooltip={`Background ${preset.fillColor}${hasBorder ? ` Border ${preset.strokeWeight}px ${preset.strokeColor}` : " No border"}`}
                 onClick={() => selectStylePreset(preset)}
               >
                 {isPresetFillNone && (

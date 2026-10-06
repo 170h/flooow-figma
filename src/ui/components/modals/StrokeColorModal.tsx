@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { t } from "../../../i18n";
 import { ColorWheelField } from "../shared/ColorWheelField";
 import { StrokeColorIcon } from "../shared/icons";
 import { StylePresetColorGrid } from "../shared/StylePresetColorGrid";
@@ -212,7 +213,7 @@ export function StrokeColorModal({
             type="button"
             className="style-modal-close-btn"
             onClick={handleCancel}
-            data-tooltip="Close"
+            data-tooltip={t('tipClose')}
           >
             {CLOSE_SVG}
           </button>
@@ -252,7 +253,7 @@ export function StrokeColorModal({
               extraControlPosition={hideWeightControl ? undefined : "left"}
               extraControl={
                 hideWeightControl ? undefined : (
-                  <div className="stroke-width-box" data-tooltip="Stroke width">
+                  <div className="stroke-width-box" data-tooltip={t('tipStrokeWeight')}>
                   <span
                     style={{
                       width: 24,

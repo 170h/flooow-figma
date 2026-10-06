@@ -222,7 +222,7 @@
       description: false,
       status: false,
       stepBadge: false,
-      elevation: false,
+      elevation: true,
       size: false,
       figmaLink: false,
       style: true
@@ -491,10 +491,10 @@
     };
     const points = [];
     for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const invT = 1 - t;
-      const x = invT * invT * invT * srcPoint.x + 3 * invT * invT * t * cp1.x + 3 * invT * t * t * cp2.x + t * t * t * tgtPoint.x;
-      const y = invT * invT * invT * srcPoint.y + 3 * invT * invT * t * cp1.y + 3 * invT * t * t * cp2.y + t * t * t * tgtPoint.y;
+      const t2 = i / steps;
+      const invT = 1 - t2;
+      const x = invT * invT * invT * srcPoint.x + 3 * invT * invT * t2 * cp1.x + 3 * invT * t2 * t2 * cp2.x + t2 * t2 * t2 * tgtPoint.x;
+      const y = invT * invT * invT * srcPoint.y + 3 * invT * invT * t2 * cp1.y + 3 * invT * t2 * t2 * cp2.y + t2 * t2 * t2 * tgtPoint.y;
       points.push({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
     }
     return points;
@@ -638,11 +638,11 @@
             };
           }
         }
-        const t = (half - walked) / segLen;
+        const t2 = (half - walked) / segLen;
         return {
           point: {
-            x: p1.x + (p2.x - p1.x) * t,
-            y: p1.y + (p2.y - p1.y) * t
+            x: p1.x + (p2.x - p1.x) * t2,
+            y: p1.y + (p2.y - p1.y) * t2
           },
           isVertical: classifySegmentVertical(p2.x - p1.x, p2.y - p1.y, prevIsVertical)
         };
@@ -1837,6 +1837,319 @@
     return { sourceMagnet, targetMagnet };
   }
 
+  // src/i18n.ts
+  var activeLocale = "ko";
+  function setAppLocale(locale) {
+    if (locale === "ko" || locale === "en") activeLocale = locale;
+    return activeLocale;
+  }
+  var KO = {
+    limitReached: "Flooow element\uAC00 \uAC00\uB4DD \uCC3C\uC2B5\uB2C8\uB2E4 ({current}/{limit}). \uAE30\uC874 element\uB97C \uC0AD\uC81C\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
+    nodeCreated: '\uB178\uB4DC "{title}"\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4',
+    nodeCreateFailed: "\uB178\uB4DC \uC0DD\uC131 \uC2E4\uD328: {error}",
+    nodeNotFoundSelect: "\uC218\uC815\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE94\uBC84\uC2A4\uC5D0\uC11C \uB178\uB4DC\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    nodeUpdated: '\uB178\uB4DC "{title}"\uC744 \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4',
+    nodeUpdateFailed: "\uB178\uB4DC \uC218\uC815 \uC2E4\uD328: {error}",
+    nodesBatchUpdated: "{count}\uAC1C \uB178\uB4DC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4!",
+    nodesBatchUpdateFailed: "\uB2E4\uC911 \uB178\uB4DC \uC5C5\uB370\uC774\uD2B8 \uC2E4\uD328: {error}",
+    connectNodesNotFound: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    connectNeedTwoDifferent: "\uC11C\uB85C \uB2E4\uB978 \uB450 \uB178\uB4DC\uB97C \uC120\uD0DD\uD558\uC5EC \uC5F0\uACB0\uD574 \uC8FC\uC138\uC694.",
+    connectDone: "\uC5F0\uACB0 \uC644\uB8CC",
+    connectDoneLabel: '\uB77C\uBCA8 "{label}" \uC5F0\uACB0 \uC644\uB8CC',
+    connectCreateFailed: "\uC5F0\uACB0\uC120 \uC0DD\uC131 \uC2E4\uD328: {error}",
+    connectNeedTwoOrMore: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    connectNeedTwoDifferentOrMore: "\uC11C\uB85C \uB2E4\uB978 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    autoConnectDone: "\uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC",
+    autoConnectDoneLabel: '\uB77C\uBCA8 "{label}" \uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC',
+    autoChainDone: "\u26A1 \uCD1D {nodes}\uAC1C \uB178\uB4DC\uAC00 \uCE7C\uAC01 \uC9C1\uAC01 \uC21C\uCC28 \uC5F0\uACB0\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({conns}\uAC1C \uC5F0\uACB0\uC120).",
+    autoConnectFailed: "\uC21C\uCC28 \uC790\uB3D9 \uC5F0\uACB0 \uC2E4\uD328: {error}",
+    chainExistsAll: "\uBAA8\uB4E0 \uC5F0\uACB0\uC774 \uC774\uBBF8 \uC874\uC7AC\uD569\uB2C8\uB2E4.",
+    chainCreatedPartial: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC ({skipped}\uAC1C\uB294 \uC774\uBBF8 \uC5F0\uACB0\uB428)",
+    chainCreated: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC",
+    chainFailed: "\uCCB4\uC778 \uC5F0\uACB0 \uC2E4\uD328: {error}",
+    connectorSelectForLabel: "\uC218\uC815\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    connectorLabelSet: '\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 "{label}"(\uC73C)\uB85C \uBC18\uC601\uB418\uC5C8\uC2B5\uB2C8\uB2E4!',
+    connectorLabelCleared: "\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 \uC9C0\uC6CC\uC84C\uC2B5\uB2C8\uB2E4.",
+    connectorLabelFailed: "\uC120 \uD14D\uC2A4\uD2B8 \uC218\uC815 \uC2E4\uD328: {error}",
+    connectorNotFound: "\uC218\uC815\uD560 \uCEE4\uB125\uD130\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    connectorOffsetConverted: "\uC624\uD504\uC14B \uC801\uC6A9\uC744 \uC704\uD574 \uC9C1\uAC01 \uCEE4\uC2A4\uD140 \uCEE4\uB125\uD130\uB85C \uC790\uB3D9 \uBCC0\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    connectorUpdateFailed: "\uCEE4\uB125\uD130 \uC218\uC815 \uC2E4\uD328: {error}",
+    connectorSelectForLineType: "\uBCC0\uACBD\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    connectorLineElbowed: "\u{1F4D0} \uC5F0\uACB0\uC120\uC744 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
+    connectorLineStraight: "\u{1F4CF} \uC5F0\uACB0\uC120\uC744 \uC9C1\uC120\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
+    connectorLineTypeFailed: "\uC5F0\uACB0\uC120 \uD615\uD0DC \uBCC0\uACBD \uC2E4\uD328: {error}",
+    connectorsNoneToConvert: "\uCE94\uBC84\uC2A4\uC5D0 \uBCC0\uD658\uD560 \uC5F0\uACB0\uC120\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    connectorsConvertedAll: "\u26A1 \uC5F0\uACB0\uC120 {count}\uAC1C\uB97C \uBAA8\uB450 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uD658\uD588\uC2B5\uB2C8\uB2E4",
+    connectorsAlreadyElbowed: "\uC5F0\uACB0\uC120 {count}\uAC1C\uAC00 \uC774\uBBF8 \uBAA8\uB450 \uC9C1\uAC01 \uC0C1\uD0DC\uC785\uB2C8\uB2E4",
+    connectorsConvertFailed: "\uC5F0\uACB0\uC120 \uC77C\uAD04 \uBCC0\uD658 \uC2E4\uD328: {error}",
+    statusNeedSelection: "\uC0C1\uD0DC\uB97C \uC9C0\uC815\uD560 \uC694\uC18C\uB97C 1\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    statusRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    statusAttached: '{count}\uAC1C \uB178\uB4DC\uC5D0 \uC0C1\uD0DC \uBC43\uC9C0 "{label}"\uC744 \uBD80\uCC29\uD588\uC2B5\uB2C8\uB2E4',
+    elevationNeedSelection: "\uC5D8\uB9AC\uBCA0\uC774\uC158\uC744 \uC801\uC6A9\uD560 \uC694\uC18C\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    elevationRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    elevationApplied: "{count}\uAC1C \uB178\uB4DC\uC5D0 Level {level} \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    stepNeedSelection: "\uC2A4\uD15D \uBC88\uD638\uB97C \uB9E4\uAE38 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    stepApplied: "{count}\uAC1C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    stepRemoveNeedSelection: "\uC2A4\uD15D \uBC88\uD638\uB97C \uC81C\uAC70\uD560 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    stepRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    stepNoneExist: "\uC120\uD0DD\uD55C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC874\uC7AC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+    nodeGone: "\uD574\uB2F9 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    settingsSaved: "\uD53C\uADF8\uB9C8 \uC5F0\uB3D9 \uC124\uC815\uC774 \uC548\uC804\uD558\uAC8C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    variablesUnsupported: "\uC774 \uD53C\uADF8\uB9C8 \uBC84\uC804\uC5D0\uC11C\uB294 Variables API\uB97C \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+    variablesNoneLocal: "\uD604\uC7AC \uC5F4\uB9B0 \uD30C\uC77C\uC5D0 \uB4F1\uB85D\uB41C \uB85C\uCEEC \uBCC0\uC218(Variables)\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. UI3 Kit \uD30C\uC77C \uD0ED\uC5D0\uC11C \uC2E4\uD589\uD574 \uC8FC\uC138\uC694.",
+    tokensExtracted: "\u{1F3A8} \uCD1D {count}\uAC1C\uC758 UI3 \uB514\uC790\uC778 \uD1A0\uD070\uC774 \uCD94\uCD9C\uB418\uC5C8\uC2B5\uB2C8\uB2E4!",
+    tokensFailed: "UI3 \uBCC0\uC218 \uCD94\uCD9C \uC2E4\uD328: {error}",
+    undoHint: "\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Z (Mac) \uB610\uB294 Ctrl+Z (Windows)\uB85C \uC791\uC5C5\uC744 \uB418\uB3CC\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+    redoHint: "\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Shift+Z (Mac) \uB610\uB294 Ctrl+Y (Windows)\uB85C \uB2E4\uC2DC \uC2E4\uD589\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+    undoCancelled: "\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    undone: "\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.",
+    titleMax32: "\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+    sizePresetAdded: '"{name}" \uC0AC\uC774\uC988\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.',
+    sizeUpdated: "\uC0AC\uC774\uC988\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    sizePresetDeleted: '"{name}" \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.',
+    styleAddedNew: "\uC0C8 \uC2A4\uD0C0\uC77C\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    styleUpdated: "\uC2A4\uD0C0\uC77C\uC774 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    styleDefaultNoDelete: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    styleDeleted: "\uC2A4\uD0C0\uC77C\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    connectNeedTwo: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    max999: "\uCD5C\uB300\uAC12\uC740 999\uC785\uB2C8\uB2E4.",
+    sizeMinW: "\uCD5C\uC18C \uB108\uBE44\uB294 {px}px\uC785\uB2C8\uB2E4.",
+    sizeMaxW: "\uCD5C\uB300 \uB108\uBE44\uB294 {px}px\uC785\uB2C8\uB2E4.",
+    sizeMinH: "\uCD5C\uC18C \uB192\uC774\uB294 {px}px\uC785\uB2C8\uB2E4.",
+    sizeMaxH: "\uCD5C\uB300 \uB192\uC774\uB294 {px}px\uC785\uB2C8\uB2E4.",
+    sizeMaxCorner: "\uCD5C\uB300\uAC12\uC740 {px}\uC785\uB2C8\uB2E4.",
+    styleEditNoDefault: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    presetDeleteNoDefault: "\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    sizePresetDeleted2: "\uC0AC\uC774\uC988 \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    descCopyEmpty: "\uBCF5\uC0AC\uD560 \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    descCopied: "\uB514\uC2A4\uD06C\uB9BD\uC158\uC744 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4",
+    tipWidth: "\uB108\uBE44",
+    tipHeight: "\uB192\uC774",
+    tipCornerRadius: "\uBAA8\uC11C\uB9AC \uACE1\uB960",
+    tipStrokeWidth: "\uC120 \uB450\uAED8",
+    tipStartOffset: "\uC2DC\uC791 \uC624\uD504\uC14B",
+    tipEndOffset: "\uB05D \uC624\uD504\uC14B",
+    tipLabelText: "\uB77C\uBCA8 \uD14D\uC2A4\uD2B8",
+    tipLabelFill: "\uB77C\uBCA8 \uBC30\uACBD \uC0C9\uC0C1",
+    tipLabelStroke: "\uB77C\uBCA8 \uBCF4\uB354 \uC0C9\uC0C1",
+    tipAlignLeft: "\uC67C\uCABD \uC815\uB82C",
+    tipAlignCenter: "\uAC00\uC6B4\uB370 \uC815\uB82C",
+    tipAlignRight: "\uC624\uB978\uCABD \uC815\uB82C",
+    tipAddStyle: "\uC2A4\uD0C0\uC77C \uCD94\uAC00",
+    tipStyleMore: "\uCD94\uAC00 \uC635\uC158",
+    tipStyleMoreLocked: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD558\uAC70\uB098 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    tipFillColor: "\uBC30\uACBD \uC0C9\uC0C1",
+    tipStrokeColor: "\uBCF4\uB354 \uC0C9\uC0C1",
+    tipStrokeWeight: "\uBCF4\uB354 \uB450\uAED8",
+    tipStepNumber: "\uBC88\uD638",
+    tipStepStartNumber: "\uC2DC\uC791 \uBC88\uD638",
+    tipCornerTL: "\uC67C\uCABD \uC704",
+    tipCornerTR: "\uC624\uB978\uCABD \uC704",
+    tipCornerBL: "\uC67C\uCABD \uC544\uB798",
+    tipCornerBR: "\uC624\uB978\uCABD \uC544\uB798",
+    tipCopy: "\uBCF5\uC0AC",
+    tipCopied: "\uBCF5\uC0AC \uC644\uB8CC",
+    tipNoDesc: "\uC785\uB825\uB41C \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    tipDescDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Description\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    tipLinkDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Reference Link\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    tipHexColor: "Hex \uC0C9\uC0C1",
+    tipClose: "\uB2EB\uAE30",
+    tipRefreshFrames: "\uCE94\uBC84\uC2A4\uC5D0\uC11C \uD504\uB808\uC784 \uC0C8\uB85C\uACE0\uCE68",
+    tipSolid: "\uC2E4\uC120",
+    tipDashed: "\uD30C\uC120",
+    tipDotted: "\uC810\uC120",
+    tipStartTerminal: "\uC2DC\uC791 \uB2E8\uC790",
+    tipEndTerminal: "\uB05D \uB2E8\uC790",
+    tipTermNone: "\uC5C6\uC74C",
+    tipTermArrow: "\uD654\uC0B4\uD45C",
+    tipTermCircle: "\uC6D0",
+    tipTermDiamond: "\uB9C8\uB984\uBAA8",
+    tipRouteOrtho: "\uC9C1\uAC01",
+    tipRouteSCurve: "S\uC790 \uACE1\uC120",
+    tipRouteCurve: "\uACE1\uC120",
+    tipRouteStraight: "\uC9C1\uC120",
+    tipGizmoSource: "\uC2DC\uC791",
+    tipGizmoTarget: "\uB05D",
+    tipMixed: "\uD63C\uD569",
+    tipActive: "\uD65C\uC131",
+    tipAddSize: "\uC0AC\uC774\uC988 \uCD94\uAC00",
+    tipAddSizeDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 \uC0AC\uC774\uC988\uB97C \uCD94\uAC00\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    tipSizeMore: "\uCD94\uAC00 \uC635\uC158",
+    tipSizeMoreDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Size \uC635\uC158\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    tipDefaultPresetLocked: "\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC218\uC815\uD558\uAC70\uB098 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    tipSizeMode: "\uB192\uC774 \uBAA8\uB4DC \uC120\uD0DD",
+    tipSizeModeDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Size \uBAA8\uB4DC\uB97C \uBCC0\uACBD\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    tipPresetDims: "{name} {w}\xD7{h}",
+    tipPresetDisabledShape: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Size \uD504\uB9AC\uC14B\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    tipConnectorColor: "\uCEE4\uB125\uD130 \uC0C9\uC0C1",
+    tipQuotaBlocked: "\uBB34\uB8CC \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC2B5\uB2C8\uB2E4. \uC5C5\uADF8\uB808\uC774\uB4DC\uD558\uBA74 \uB354 \uB9CC\uB4E4 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
+    noticeSizeOnlyScreen: "Size\uB294 Screen \uB178\uB4DC\uC5D0\uC11C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
+    noticeDescUnsupported: "Description\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeElevationUnsupported: "Elevation\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeStatusUnsupported: "Status\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeStepUnsupported: "Step Badges\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeLinkUnsupported: "Reference Link\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeMixed: "\uD63C\uD569 \uC120\uD0DD\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4"
+  };
+  var EN = {
+    limitReached: "Flooow elements are full ({current}/{limit}). Delete existing elements and try again.",
+    nodeCreated: 'Created node "{title}"',
+    nodeCreateFailed: "Failed to create node: {error}",
+    nodeNotFoundSelect: "Node to edit not found. Select a node on the canvas.",
+    nodeUpdated: 'Updated node "{title}"',
+    nodeUpdateFailed: "Failed to update node: {error}",
+    nodesBatchUpdated: "Updated {count} nodes",
+    nodesBatchUpdateFailed: "Failed to update nodes: {error}",
+    connectNodesNotFound: "Nodes to connect not found.",
+    connectNeedTwoDifferent: "Select two different nodes to connect.",
+    connectDone: "Connected",
+    connectDoneLabel: 'Connected with label "{label}"',
+    connectCreateFailed: "Failed to create connector: {error}",
+    connectNeedTwoOrMore: "Select 2 or more nodes to connect.",
+    connectNeedTwoDifferentOrMore: "Select 2 or more different nodes.",
+    autoConnectDone: "Orthogonal connection complete",
+    autoConnectDoneLabel: 'Orthogonal connection complete with label "{label}"',
+    autoChainDone: "\u26A1 Connected {nodes} nodes in sequence ({conns} connectors).",
+    autoConnectFailed: "Auto connect failed: {error}",
+    chainExistsAll: "All connections already exist.",
+    chainCreatedPartial: "{created} connections created ({skipped} already connected)",
+    chainCreated: "{created} connections created",
+    chainFailed: "Chain connection failed: {error}",
+    connectorSelectForLabel: "Select a connector on the canvas to edit.",
+    connectorLabelSet: 'Center label set to "{label}"',
+    connectorLabelCleared: "Center label cleared.",
+    connectorLabelFailed: "Failed to update line text: {error}",
+    connectorNotFound: "Connector to edit not found.",
+    connectorOffsetConverted: "Converted to a custom orthogonal connector to apply offsets.",
+    connectorUpdateFailed: "Failed to update connector: {error}",
+    connectorSelectForLineType: "Select a connector on the canvas to change.",
+    connectorLineElbowed: "\u{1F4D0} Connector changed to orthogonal",
+    connectorLineStraight: "\u{1F4CF} Connector changed to straight",
+    connectorLineTypeFailed: "Failed to change connector line type: {error}",
+    connectorsNoneToConvert: "No connectors on the canvas to convert.",
+    connectorsConvertedAll: "\u26A1 Converted {count} connectors to orthogonal",
+    connectorsAlreadyElbowed: "{count} connectors are already orthogonal",
+    connectorsConvertFailed: "Failed to convert connectors: {error}",
+    statusNeedSelection: "Select 1 or more elements to set a status.",
+    statusRemoved: "Removed status badges from {count} nodes.",
+    statusAttached: 'Attached status badge "{label}" to {count} nodes',
+    elevationNeedSelection: "Select elements to apply elevation.",
+    elevationRemoved: "Removed elevation from {count} nodes.",
+    elevationApplied: "Applied Level {level} elevation to {count} nodes.",
+    stepNeedSelection: "Select elements on the canvas to number.",
+    stepApplied: "Applied step numbers to {count} nodes.",
+    stepRemoveNeedSelection: "Select elements on the canvas to remove step numbers.",
+    stepRemoved: "Removed step numbers from {count} nodes.",
+    stepNoneExist: "Selected nodes have no step numbers.",
+    nodeGone: "Node not found.",
+    settingsSaved: "Figma integration settings saved.",
+    variablesUnsupported: "This Figma version does not support the Variables API.",
+    variablesNoneLocal: "No local Variables in the open file. Run it from the UI3 Kit file tab.",
+    tokensExtracted: "\u{1F3A8} Extracted {count} UI3 design tokens.",
+    tokensFailed: "Failed to extract UI3 variables: {error}",
+    undoHint: "Undo with Cmd+Z (Mac) or Ctrl+Z (Windows) on the canvas.",
+    redoHint: "Redo with Cmd+Shift+Z (Mac) or Ctrl+Y (Windows) on the canvas.",
+    undoCancelled: "Changes discarded.",
+    undone: "Undone.",
+    titleMax32: "Titles can be up to 32 characters.",
+    sizePresetAdded: 'Added size preset "{name}".',
+    sizeUpdated: "Size updated.",
+    sizePresetDeleted: 'Deleted preset "{name}".',
+    styleAddedNew: "New style added.",
+    styleUpdated: "Style updated.",
+    styleDefaultNoDelete: "Default styles cannot be deleted.",
+    styleDeleted: "Style deleted.",
+    connectNeedTwo: "Select 2 or more nodes to connect.",
+    max999: "Maximum is 999.",
+    sizeMinW: "Minimum width is {px}px.",
+    sizeMaxW: "Maximum width is {px}px.",
+    sizeMinH: "Minimum height is {px}px.",
+    sizeMaxH: "Maximum height is {px}px.",
+    sizeMaxCorner: "Maximum is {px}.",
+    styleEditNoDefault: "Default styles cannot be edited.",
+    presetDeleteNoDefault: "Default presets cannot be deleted.",
+    sizePresetDeleted2: "Size preset deleted.",
+    descCopyEmpty: "No description to copy.",
+    descCopied: "Description copied to clipboard!",
+    tipWidth: "Width",
+    tipHeight: "Height",
+    tipCornerRadius: "Corner radius",
+    tipStrokeWidth: "Stroke width",
+    tipStartOffset: "Start offset",
+    tipEndOffset: "End offset",
+    tipLabelText: "Label text",
+    tipLabelFill: "Label fill color",
+    tipLabelStroke: "Label stroke color",
+    tipAlignLeft: "Align left",
+    tipAlignCenter: "Align center",
+    tipAlignRight: "Align right",
+    tipAddStyle: "Add style",
+    tipStyleMore: "More options",
+    tipStyleMoreLocked: "Default styles cannot be edited or deleted",
+    tipFillColor: "Fill color",
+    tipStrokeColor: "Stroke color",
+    tipStrokeWeight: "Stroke weight",
+    tipStepNumber: "Number",
+    tipStepStartNumber: "Start Number",
+    tipCornerTL: "Top-Left",
+    tipCornerTR: "Top-Right",
+    tipCornerBL: "Bottom-Left",
+    tipCornerBR: "Bottom-Right",
+    tipCopy: "Copy",
+    tipCopied: "Copied",
+    tipNoDesc: "No description entered",
+    tipDescDisabled: "Description is disabled for this shape",
+    tipLinkDisabled: "Reference Link is disabled for this shape",
+    tipHexColor: "Hex color",
+    tipClose: "Close",
+    tipRefreshFrames: "Refresh frames from canvas",
+    tipSolid: "Solid",
+    tipDashed: "Dashed",
+    tipDotted: "Dotted",
+    tipStartTerminal: "Start terminal",
+    tipEndTerminal: "End terminal",
+    tipTermNone: "None",
+    tipTermArrow: "Arrow",
+    tipTermCircle: "Circle",
+    tipTermDiamond: "Diamond",
+    tipRouteOrtho: "Orthogonal",
+    tipRouteSCurve: "S-curve",
+    tipRouteCurve: "Curve",
+    tipRouteStraight: "Straight",
+    tipGizmoSource: "Source",
+    tipGizmoTarget: "Target",
+    tipMixed: "Mixed",
+    tipActive: "Active",
+    tipAddSize: "Add size",
+    tipAddSizeDisabled: "Add size is disabled for this shape",
+    tipSizeMore: "More options",
+    tipSizeMoreDisabled: "Size options are disabled for this shape",
+    tipDefaultPresetLocked: "Default presets cannot be edited or deleted",
+    tipSizeMode: "Select height mode",
+    tipSizeModeDisabled: "Size mode cannot be changed for this shape",
+    tipPresetDims: "{name} {w}\xD7{h}",
+    tipPresetDisabledShape: "Size presets are disabled for this shape",
+    tipConnectorColor: "Connector color",
+    tipQuotaBlocked: "Free limit reached. Upgrade to create more.",
+    noticeSizeOnlyScreen: "Size is only available for Screen nodes",
+    noticeDescUnsupported: "Description is not available for this shape",
+    noticeElevationUnsupported: "Elevation is not available for this shape",
+    noticeStatusUnsupported: "Status is not available for this shape",
+    noticeStepUnsupported: "Step Badges are not available for this shape",
+    noticeLinkUnsupported: "Reference Link is not available for this shape",
+    noticeMixed: "Not available for mixed selection"
+  };
+  function t(key, params, locale) {
+    const catalog = (locale || activeLocale) === "en" ? EN : KO;
+    let text = catalog[key];
+    if (params) {
+      for (const [name, value] of Object.entries(params)) {
+        text = text.split(`{${name}}`).join(String(value));
+      }
+    }
+    return text;
+  }
+
   // src/elementCount.ts
   function readPluginData(node, key) {
     try {
@@ -2590,7 +2903,7 @@
   }
   function notifyLimitReached(result) {
     notify(
-      `Flooow element\uAC00 \uAC00\uB4DD \uCC3C\uC2B5\uB2C8\uB2E4 (${result.currentCount}/${result.limit}). \uAE30\uC874 element\uB97C \uC0AD\uC81C\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.`,
+      t("limitReached", { current: result.currentCount, limit: result.limit }),
       "warning"
     );
   }
@@ -4359,14 +4672,15 @@
       console.error("attachBranchMark error:", err);
     }
   }
-  function createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight, branchVariant) {
+  function createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight, branchVariant, fillNone) {
     const pathD = getShapeVectorData(nodeType, w, h, branchVariant);
     if (!pathD) return null;
     const bgHex = rgbToHexColor(bgColor);
     const strokeHex = rgbToHexColor(strokeColor);
     const sw = typeof strokeWeight === "number" && strokeWeight >= 0 ? strokeWeight : 1.5;
+    const fillAttr = fillNone ? "none" : bgHex;
     const strokeAttr = sw > 0 ? `stroke="${strokeHex}" stroke-width="${sw}"` : "";
-    const svgStr = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${pathD}" fill="${bgHex}" ${strokeAttr}/></svg>`;
+    const svgStr = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${pathD}" fill="${fillAttr}" ${strokeAttr}/></svg>`;
     try {
       const imported = figma.createNodeFromSvg(svgStr);
       const vector = imported.children.find((c) => c.type === "VECTOR");
@@ -4375,14 +4689,26 @@
         targetNode = vector;
       }
       targetNode.name = "ShapeVector";
+      try {
+        if ("strokeWeight" in targetNode && typeof targetNode.strokeWeight === "number") {
+          targetNode.strokeWeight = sw > 0 ? sw : 0;
+        }
+      } catch (_) {
+      }
+      if (sw <= 0) {
+        try {
+          if ("strokes" in targetNode) targetNode.strokes = [];
+        } catch (_) {
+        }
+      }
       return targetNode;
     } catch (err) {
       console.error("createShapeVectorNode error:", err);
       return null;
     }
   }
-  function attachShapeVectorNode(card, nodeType, w, h, bgColor, strokeColor, strokeWeight, insertAtBottom = false, branchVariant) {
-    const shape = createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight, branchVariant);
+  function attachShapeVectorNode(card, nodeType, w, h, bgColor, strokeColor, strokeWeight, insertAtBottom = false, branchVariant, fillNone) {
+    const shape = createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight, branchVariant, fillNone);
     if (!shape) return null;
     const originalParent = shape.parent;
     if (insertAtBottom) {
@@ -4490,7 +4816,7 @@
         card.itemSpacing = 0;
         if (vectorPathData) {
           const strokeCol = payload.strokeColor ? hexToRgbColor(payload.strokeColor) : branchVariant ? hexToRgbColor("#1E1E1E") : borderColor;
-          attachShapeVectorNode(card, nodeType, width, height, bgColor, strokeCol, cardStrokeWeight, false, branchVariant);
+          attachShapeVectorNode(card, nodeType, width, height, bgColor, strokeCol, cardStrokeWeight, false, branchVariant, isFillNone);
         }
         const titleText = figma.createText();
         titleText.name = "TitleText";
@@ -4715,9 +5041,9 @@
       figma.currentPage.selection = [card];
       figma.viewport.scrollAndZoomIntoView([card]);
       handleSelectionChange();
-      notify(`[${title}] \uB178\uB4DC\uAC00 \uC0DD\uC131\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, "success");
+      notify(t("nodeCreated", { title }), "success");
     } catch (err) {
-      notify(`\uB178\uB4DC \uC0DD\uC131 \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("nodeCreateFailed", { error: String(err) }), "error");
     }
   }
   async function applyNodePatch(card, patch) {
@@ -4805,6 +5131,7 @@
       if (!vectorPathData) {
         if (cardStrokeWeight === 0) {
           card.strokes = [];
+          card.strokeWeight = 0;
         } else {
           const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : existingStrokeColor || borderColor;
           card.strokes = [{ type: "SOLID", color: strokeCol }];
@@ -4950,7 +5277,7 @@
       }
       const defaultStrokeCol = existingStrokeColor || (batchBranchVariant ? hexToRgbColor("#1E1E1E") : borderColor);
       const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : defaultStrokeCol;
-      attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant);
+      attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant, isFillNone);
     } else {
       if (existingShapeVector) {
         existingShapeVector.remove();
@@ -5303,7 +5630,7 @@
       if (isShapeNode) {
         const defaultStrokeCol = existingStrokeColor || (batchBranchVariant ? hexToRgbColor("#1E1E1E") : borderColor);
         const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : defaultStrokeCol;
-        attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant);
+        attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant, isFillNone);
       }
     }
     card.setPluginData("is_flow_node", "true");
@@ -5403,7 +5730,7 @@
       }
       let flowNode = findFlowNode(rawNode) || rawNode;
       if (!flowNode) {
-        notify("\uC218\uC815\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE94\uBC84\uC2A4\uC5D0\uC11C \uB178\uB4DC\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+        notify(t("nodeNotFoundSelect"), "warning");
         return;
       }
       if (flowNode.type === "SHAPE_WITH_TEXT") {
@@ -5414,9 +5741,9 @@
       await applyNodePatch(flowNode, payload);
       handleSelectionChange();
       const title = flowNode.name || payload.title || "\uB178\uB4DC";
-      notify(`[${title}] \uB178\uB4DC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, "success");
+      notify(t("nodeUpdated", { title }), "success");
     } catch (err) {
-      notify(`\uB178\uB4DC \uC218\uC815 \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("nodeUpdateFailed", { error: String(err) }), "error");
     }
   }
   async function batchUpdateFlowNodes(nodeIds, patch) {
@@ -5452,10 +5779,10 @@
       }
       handleSelectionChange();
       if (updatedCount > 0) {
-        notify(`${updatedCount}\uAC1C \uB178\uB4DC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, "success");
+        notify(t("nodesBatchUpdated", { count: updatedCount }), "success");
       }
     } catch (err) {
-      notify(`\uB2E4\uC911 \uB178\uB4DC \uC5C5\uB370\uC774\uD2B8 \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("nodesBatchUpdateFailed", { error: String(err) }), "error");
     }
   }
   async function resizeNode(nodeId, width, height) {
@@ -5570,6 +5897,7 @@
         let curBgColor = { r: 1, g: 1, b: 1 };
         let curStrokeColor = { r: 0.15, g: 0.15, b: 0.18 };
         let curStrokeWeight = 1.5;
+        const curFillNone = !("fills" in shapeVec && Array.isArray(shapeVec.fills) && shapeVec.fills.length > 0);
         if ("fills" in shapeVec && Array.isArray(shapeVec.fills) && shapeVec.fills.length > 0 && shapeVec.fills[0].type === "SOLID") {
           curBgColor = shapeVec.fills[0].color;
         }
@@ -5581,7 +5909,7 @@
         }
         shapeVec.remove();
         const frameBranchVariant = nType === "Branch" ? normalizeBranchVariant(safeGetPluginData2(frame, "branch_variant")) : void 0;
-        attachShapeVectorNode(frame, nType, w, h, curBgColor, curStrokeColor, curStrokeWeight, true, frameBranchVariant);
+        attachShapeVectorNode(frame, nType, w, h, curBgColor, curStrokeColor, curStrokeWeight, true, frameBranchVariant, curFillNone);
       }
       if (nType === "Screen") {
         frame.strokeAlign = "INSIDE";
@@ -5659,7 +5987,7 @@
       let sourceNode = figma.getNodeById(payload.sourceNodeId);
       let targetNode = figma.getNodeById(payload.targetNodeId);
       if (!sourceNode || !targetNode) {
-        notify("\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+        notify(t("connectNodesNotFound"), "warning");
         return;
       }
       const sourceFlow = findFlowNode(sourceNode);
@@ -5667,7 +5995,7 @@
       const targetFlow = findFlowNode(targetNode);
       if (targetFlow) targetNode = targetFlow;
       if (sourceNode.id === targetNode.id) {
-        notify("\uC11C\uB85C \uB2E4\uB978 \uB450 \uB178\uB4DC\uB97C \uC120\uD0DD\uD558\uC5EC \uC5F0\uACB0\uD574 \uC8FC\uC138\uC694.", "warning");
+        notify(t("connectNeedTwoDifferent"), "warning");
         return;
       }
       await loadRequiredFonts();
@@ -5772,9 +6100,9 @@
       }
       figma.currentPage.selection = [connector];
       handleSelectionChange();
-      notify(`\uC5F0\uACB0 \uC644\uB8CC${payload.label ? ` (\uB77C\uBCA8: "${payload.label}")` : ""}`, "success");
+      notify(payload.label ? t("connectDoneLabel", { label: payload.label }) : t("connectDone"), "success");
     } catch (err) {
-      notify(`\uC5F0\uACB0\uC120 \uC0DD\uC131 \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("connectCreateFailed", { error: String(err) }), "error");
     }
   }
   async function createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label, colorHex, strokeWeight, routingType, startTerminal, endTerminal, strokePattern, startOffset, endOffset, labelBoxStyle, labelAlign, labelFillColor, labelStrokeColor) {
@@ -5809,7 +6137,7 @@
     try {
       const rawSelection = [...figma.currentPage.selection];
       if (rawSelection.length < 2) {
-        notify("\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+        notify(t("connectNeedTwoOrMore"), "warning");
         return;
       }
       const nodesMap = /* @__PURE__ */ new Map();
@@ -5819,7 +6147,7 @@
       }
       let nodes = Array.from(nodesMap.values());
       if (nodes.length < 2) {
-        notify("\uC11C\uB85C \uB2E4\uB978 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+        notify(t("connectNeedTwoDifferentOrMore"), "warning");
         return;
       }
       nodes = sortNodesBySpatialPosition(nodes);
@@ -5841,7 +6169,7 @@
         const conn = await createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label);
         figma.currentPage.selection = [conn];
         handleSelectionChange();
-        notify(`\uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC${label ? ` (\uB77C\uBCA8: "${label}")` : ""}`, "success");
+        notify(label ? t("autoConnectDoneLabel", { label }) : t("autoConnectDone"), "success");
         return;
       }
       const createdConnectors = [];
@@ -5860,9 +6188,9 @@
       }
       figma.currentPage.selection = createdConnectors;
       handleSelectionChange();
-      notify(`\u26A1 \uCD1D ${nodes.length}\uAC1C \uB178\uB4DC\uAC00 \uCE7C\uAC01 \uC9C1\uAC01 \uC21C\uCC28 \uC5F0\uACB0\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (${createdConnectors.length}\uAC1C \uC5F0\uACB0\uC120).`, "success");
+      notify(t("autoChainDone", { nodes: nodes.length, conns: createdConnectors.length }), "success");
     } catch (err) {
-      notify(`\uC21C\uCC28 \uC790\uB3D9 \uC5F0\uACB0 \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("autoConnectFailed", { error: String(err) }), "error");
     }
   }
   async function connectChain(payload) {
@@ -5885,7 +6213,7 @@
         }
       }
       if (validNodes.length < 2) {
-        notify("\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+        notify(t("connectNeedTwoOrMore"), "warning");
         return;
       }
       await loadRequiredFonts();
@@ -5969,15 +6297,15 @@
         createdCount++;
       }
       if (createdCount === 0 && skippedCount > 0) {
-        notify("\uBAA8\uB4E0 \uC5F0\uACB0\uC774 \uC774\uBBF8 \uC874\uC7AC\uD569\uB2C8\uB2E4.", "info");
+        notify(t("chainExistsAll"), "info");
       } else if (createdCount > 0 && skippedCount > 0) {
-        notify(`${createdCount}\uAC1C \uC5F0\uACB0 \uC644\uB8CC (${skippedCount}\uAC1C\uB294 \uC774\uBBF8 \uC5F0\uACB0\uB428)`, "success");
+        notify(t("chainCreatedPartial", { created: createdCount, skipped: skippedCount }), "success");
       } else if (createdCount > 0) {
-        notify(`${createdCount}\uAC1C \uC5F0\uACB0 \uC644\uB8CC`, "success");
+        notify(t("chainCreated", { created: createdCount }), "success");
       }
       await handleSelectionChange();
     } catch (err) {
-      notify(`\uCCB4\uC778 \uC5F0\uACB0 \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("chainFailed", { error: String(err) }), "error");
     }
   }
   async function updateConnectorLabel(connectorId, label) {
@@ -5989,12 +6317,12 @@
         hasLabel: trimmed !== ""
       });
       notify(
-        trimmed ? `\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 "${trimmed}"(\uC73C)\uB85C \uBC18\uC601\uB418\uC5C8\uC2B5\uB2C8\uB2E4!` : "\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 \uC9C0\uC6CC\uC84C\uC2B5\uB2C8\uB2E4.",
+        trimmed ? t("connectorLabelSet", { label: trimmed }) : t("connectorLabelCleared"),
         "success"
       );
       handleSelectionChange();
     } catch (err) {
-      notify(`\uC120 \uD14D\uC2A4\uD2B8 \uC218\uC815 \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("connectorLabelFailed", { error: String(err) }), "error");
     }
   }
   async function updateConnectorProperties(payload) {
@@ -6005,7 +6333,7 @@
         if (selection.length > 0) node = selection[0];
       }
       if (!node) {
-        notify("\uC218\uC815\uD560 \uCEE4\uB125\uD130\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+        notify(t("connectorNotFound"), "warning");
         return;
       }
       await loadRequiredFonts();
@@ -6246,7 +6574,7 @@
       handleSelectionChange();
     } catch (err) {
       console.error("[UPDATE_CONNECTOR_PROPERTIES failed]", err);
-      notify(`\uCEE4\uB125\uD130 \uC218\uC815 \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("connectorUpdateFailed", { error: String(err) }), "error");
     }
   }
   async function setConnectorLineType(connectorId, lineType = "ELBOWED") {
@@ -6256,12 +6584,12 @@
         routingType: lineType === "STRAIGHT" ? "STRAIGHT" : "ORTHOGONAL"
       });
       notify(
-        lineType === "ELBOWED" ? "\u{1F4D0} \uC5F0\uACB0\uC120\uC774 [\uC9C1\uAC01(Elbowed)]\uC73C\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4." : "\u{1F4CF} \uC5F0\uACB0\uC120\uC774 [\uC9C1\uC120(Straight)]\uC73C\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+        lineType === "ELBOWED" ? t("connectorLineElbowed") : t("connectorLineStraight"),
         "success"
       );
       handleSelectionChange();
     } catch (err) {
-      notify(`\uC5F0\uACB0\uC120 \uD615\uD0DC \uBCC0\uACBD \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("connectorLineTypeFailed", { error: String(err) }), "error");
     }
   }
   async function toggleNodeTheme(nodeId) {
@@ -6325,7 +6653,7 @@
   async function applyStatusToSelected(status) {
     const selection = figma.currentPage.selection;
     if (selection.length === 0) {
-      notify("\uC0C1\uD0DC\uB97C \uC9C0\uC815\uD560 \uC694\uC18C\uB97C 1\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+      notify(t("statusNeedSelection"), "warning");
       return;
     }
     await loadRequiredFonts();
@@ -6470,15 +6798,15 @@
     syncStatusList();
     handleSelectionChange();
     if (isRemove) {
-      notify(`${selection.length}\uAC1C \uB178\uB4DC\uC758 \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
+      notify(t("statusRemoved", { count: selection.length }), "info");
     } else if (cfg) {
-      notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 [${cfg.label}] \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uBD80\uCC29\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
+      notify(t("statusAttached", { count: selection.length, label: cfg.label }), "success");
     }
   }
   async function applyElevationToSelected(level) {
     const selection = figma.currentPage.selection;
     if (selection.length === 0) {
-      notify("\uC5D8\uB9AC\uBCA0\uC774\uC158\uC744 \uC801\uC6A9\uD560 \uC694\uC18C\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+      notify(t("elevationNeedSelection"), "warning");
       return;
     }
     for (const rawNode of selection) {
@@ -6512,9 +6840,9 @@
     }
     handleSelectionChange();
     if (level === null || level === void 0) {
-      notify(`${selection.length}\uAC1C \uB178\uB4DC\uC758 \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
+      notify(t("elevationRemoved", { count: selection.length }), "info");
     } else {
-      notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 Level ${level} \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
+      notify(t("elevationApplied", { count: selection.length, level }), "success");
     }
   }
   function isColorHighSaturation(rgb) {
@@ -6764,7 +7092,7 @@
   async function addStepBadges(startNumber = 1, corner = "TOP_LEFT", shape = "Square", colorMode = "Style") {
     const rawSelection = [...figma.currentPage.selection];
     if (rawSelection.length === 0) {
-      notify("\uC2A4\uD15D \uBC88\uD638\uB97C \uB9E4\uAE38 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+      notify(t("stepNeedSelection"), "warning");
       return;
     }
     const nodesMap = /* @__PURE__ */ new Map();
@@ -6788,12 +7116,12 @@
       currentNum++;
     }
     handleSelectionChange();
-    notify(`${selection.length}\uAC1C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "success");
+    notify(t("stepApplied", { count: selection.length }), "success");
   }
   async function removeStepBadges() {
     const rawSelection = [...figma.currentPage.selection];
     if (rawSelection.length === 0) {
-      notify("\uC2A4\uD15D \uBC88\uD638\uB97C \uC81C\uAC70\uD560 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.", "warning");
+      notify(t("stepRemoveNeedSelection"), "warning");
       return;
     }
     let removedCount = 0;
@@ -6821,15 +7149,15 @@
     }
     handleSelectionChange();
     if (removedCount > 0) {
-      notify(`${removedCount}\uAC1C \uB178\uB4DC\uC758 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, "info");
+      notify(t("stepRemoved", { count: removedCount }), "info");
     } else {
-      notify("\uC120\uD0DD\uD55C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC874\uC7AC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.", "info");
+      notify(t("stepNoneExist"), "info");
     }
   }
   function focusFrame(nodeId) {
     const node = figma.getNodeById(nodeId);
     if (!node || !("x" in node)) {
-      notify("\uD574\uB2F9 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+      notify(t("nodeGone"), "warning");
       return;
     }
     const sceneNode = node;
@@ -6880,18 +7208,18 @@
   async function saveSettings(token, fileUrl) {
     await figma.clientStorage.setAsync("figma_token", token);
     await figma.clientStorage.setAsync("figma_file_url", fileUrl);
-    notify("\uD53C\uADF8\uB9C8 \uC5F0\uB3D9 \uC124\uC815\uC774 \uC548\uC804\uD558\uAC8C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
+    notify(t("settingsSaved"), "success");
   }
   async function extractUI3Variables() {
     try {
       if (!("variables" in figma) || !figma.variables) {
-        notify("\uC774 \uD53C\uADF8\uB9C8 \uBC84\uC804\uC5D0\uC11C\uB294 Variables API\uB97C \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.", "warning");
+        notify(t("variablesUnsupported"), "warning");
         return;
       }
       const collections = await figma.variables.getLocalVariableCollectionsAsync();
       const variables = await figma.variables.getLocalVariablesAsync();
       if (variables.length === 0) {
-        notify("\uD604\uC7AC \uC5F4\uB9B0 \uD30C\uC77C\uC5D0 \uB4F1\uB85D\uB41C \uB85C\uCEEC \uBCC0\uC218(Variables)\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. UI3 Kit \uD30C\uC77C \uD0ED\uC5D0\uC11C \uC2E4\uD589\uD574 \uC8FC\uC138\uC694.", "warning");
+        notify(t("variablesNoneLocal"), "warning");
         return;
       }
       const varMap = /* @__PURE__ */ new Map();
@@ -6986,9 +7314,9 @@
         count: lightCount,
         collections: collections.map((c) => c.name)
       });
-      notify(`\u{1F3A8} \uCD1D ${lightCount}\uAC1C\uC758 UI3 \uB514\uC790\uC778 \uD1A0\uD070\uC774 \uCD94\uCD9C\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, "success");
+      notify(t("tokensExtracted", { count: lightCount }), "success");
     } catch (err) {
-      notify(`UI3 \uBCC0\uC218 \uCD94\uCD9C \uC2E4\uD328: ${String(err)}`, "error");
+      notify(t("tokensFailed", { error: String(err) }), "error");
     }
   }
   figma.ui.onmessage = async (msg) => {
@@ -7072,10 +7400,10 @@
         figma.closePlugin();
         break;
       case "UNDO":
-        notify("\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Z (Mac) \uB610\uB294 Ctrl+Z (Windows)\uB85C \uC791\uC5C5\uC744 \uB418\uB3CC\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "info");
+        notify(t("undoHint"), "info");
         break;
       case "REDO":
-        notify("\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Shift+Z (Mac) \uB610\uB294 Ctrl+Y (Windows)\uB85C \uB2E4\uC2DC \uC2E4\uD589\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "info");
+        notify(t("redoHint"), "info");
         break;
       case "NOTIFY":
         notify(msg.message, msg.level);
@@ -7087,6 +7415,7 @@
         break;
       }
       case "INIT":
+        setAppLocale(msg.locale);
         handleSelectionChange();
         syncStatusList();
         await loadSavedSettings();
@@ -7106,6 +7435,7 @@
     let bg = { r: 1, g: 1, b: 1 };
     let stroke = hexToRgbColor("#1E1E1E");
     let strokeW = 1.5;
+    const tagFillNone = !(shape && "fills" in shape && Array.isArray(shape.fills) && shape.fills.length > 0);
     if (shape && "fills" in shape && Array.isArray(shape.fills) && shape.fills[0]?.type === "SOLID") {
       bg = shape.fills[0].color;
     }
@@ -7130,7 +7460,7 @@
       card.minHeight = nextH;
       card.maxHeight = nextH;
       if (shape) shape.remove();
-      attachShapeVectorNode(card, "Branch", nextW, nextH, bg, stroke, strokeW, true, "TAG");
+      attachShapeVectorNode(card, "Branch", nextW, nextH, bg, stroke, strokeW, true, "TAG", tagFillNone);
     }
     const titleText = card.findOne(
       (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
@@ -7400,10 +7730,10 @@
           let statusTextNode = null;
           let badgeFrame = null;
           if (maybeStatusNode.type === "TEXT") {
-            const t = maybeStatusNode;
-            if (t.name === "StatusText" || t.parent && (t.parent.name === "StatusBadge" || safeGetPluginData2(t.parent, "is_status_badge") === "true")) {
-              statusTextNode = t;
-              badgeFrame = t.parent && t.parent.type === "FRAME" ? t.parent : null;
+            const t2 = maybeStatusNode;
+            if (t2.name === "StatusText" || t2.parent && (t2.parent.name === "StatusBadge" || safeGetPluginData2(t2.parent, "is_status_badge") === "true")) {
+              statusTextNode = t2;
+              badgeFrame = t2.parent && t2.parent.type === "FRAME" ? t2.parent : null;
             }
           } else if (maybeStatusNode.type === "FRAME") {
             const f = maybeStatusNode;

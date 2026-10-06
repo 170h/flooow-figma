@@ -3,6 +3,8 @@ import { useApp, SizePreset, NodeInfo } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 import { MixedDashChip } from '../shared/icons';
+import { useDisabledNotice, DisabledNoticeChip } from '../shared/DisabledNotice';
+import { t } from '../../../i18n';
 import {
   getNodeCategory,
   normalizeNodeType,
@@ -103,6 +105,9 @@ export function SizeSection() {
     const creationType = nodeOptionState.nodeType || 'Screen';
     return getOptionCapability([{ flowNodeType: creationType, isFlowNode: true }], 'size') === 'SUPPORTED';
   })();
+
+  // 비활성 사유 칩 (클릭 시 잠시 표시)
+  const disabledNotice = useDisabledNotice();
 
   // 1. 파생 상태 선언 (핸들러 및 Effect보다 먼저 선언)
   const activePreset = sizePresets.find(
@@ -334,10 +339,10 @@ export function SizeSection() {
     let validW = isNaN(parsed) ? (nodeOptionState.width || 250) : parsed;
     if (validW < SCREEN_NODE_CONSTRAINTS.MIN_WIDTH) {
       validW = SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
-      showToast(`최소 너비는 ${SCREEN_NODE_CONSTRAINTS.MIN_WIDTH}px입니다.`, 'warning');
+      showToast(t('sizeMinW', { px: SCREEN_NODE_CONSTRAINTS.MIN_WIDTH }), 'warning');
     } else if (validW > SCREEN_NODE_CONSTRAINTS.MAX_WIDTH) {
       validW = SCREEN_NODE_CONSTRAINTS.MAX_WIDTH;
-      showToast(`최대 너비는 ${SCREEN_NODE_CONSTRAINTS.MAX_WIDTH}px입니다.`, 'warning');
+      showToast(t('sizeMaxW', { px: SCREEN_NODE_CONSTRAINTS.MAX_WIDTH }), 'warning');
     }
     setWidthInput(String(validW));
     userActionLockRef.current = Date.now();
@@ -402,10 +407,10 @@ export function SizeSection() {
     let validH = isNaN(parsed) ? (nodeOptionState.height || 90) : parsed;
     if (validH < SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT) {
       validH = SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT;
-      showToast(`최소 높이는 ${SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT}px입니다.`, 'warning');
+      showToast(t('sizeMinH', { px: SCREEN_NODE_CONSTRAINTS.MIN_HEIGHT }), 'warning');
     } else if (validH > SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT) {
       validH = SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT;
-      showToast(`최대 높이는 ${SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT}px입니다.`, 'warning');
+      showToast(t('sizeMaxH', { px: SCREEN_NODE_CONSTRAINTS.MAX_HEIGHT }), 'warning');
     }
     setHeightInput(String(validH));
     userActionLockRef.current = Date.now();
@@ -472,7 +477,7 @@ export function SizeSection() {
       validR = SCREEN_NODE_CONSTRAINTS.MIN_CORNER_RADIUS;
     } else if (validR > SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS) {
       validR = SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS;
-      showToast(`최대값은 ${SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS}입니다.`, 'warning');
+      showToast(t('sizeMaxCorner', { px: SCREEN_NODE_CONSTRAINTS.MAX_CORNER_RADIUS }), 'warning');
     }
     setRadiusInput(String(validR));
     userActionLockRef.current = Date.now();
@@ -618,13 +623,18 @@ export function SizeSection() {
   }
 
   return (
-    <div className={`section-block${!isSizeAllowed ? ' disabled' : ''}`}>
+    <div
+      className={`section-block${!isSizeAllowed ? ' disabled' : ''}`}
+      onClick={!isSizeAllowed ? () => disabledNotice.flash() : undefined}
+    >
       <div className="section-header">
-        <span className={`section-title${!isSizeAllowed ? ' disabled' : ''}`}>Size</span>
+        <span className={`section-title${!isSizeAllowed ? ' disabled' : ''}`}>Size{!isSizeAllowed && disabledNotice.phase !== 'hidden' && (
+          <DisabledNoticeChip text={t('noticeSizeOnlyScreen')} fading={disabledNotice.phase === 'fading'} />
+        )}</span>
         <div className="section-actions">
           <button
             className={`btn-action-icon${!isSizeAllowed ? ' disabled' : ''}`}
-            data-tooltip={!isSizeAllowed ? 'Add size is disabled for this shape' : 'Add size'}
+            data-tooltip={!isSizeAllowed ? t('tipAddSizeDisabled') : t('tipAddSize')}
             disabled={!isSizeAllowed}
             onClick={() => isSizeAllowed && setActiveModal('add-size')}
           >
@@ -633,7 +643,7 @@ export function SizeSection() {
           <button
             id="btn-size-more"
             className={`btn-action-icon btn-more-icon${isMoreDisabled ? ' disabled' : ''}`}
-            data-tooltip={!isSizeAllowed ? 'Size options are disabled for this shape' : (isMoreDisabled ? 'Default presets cannot be edited or deleted' : 'More options')}
+            data-tooltip={!isSizeAllowed ? t('tipSizeMoreDisabled') : (isMoreDisabled ? t('tipDefaultPresetLocked') : t('tipSizeMore'))}
             disabled={isMoreDisabled}
             onClick={toggleSizeMoreMenu}
           >
@@ -644,7 +654,7 @@ export function SizeSection() {
 
       <div className="section-body">
         <div className="numeric-inputs-row">
-          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`} data-tooltip="Width">
+          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`} data-tooltip={t('tipWidth')}>
             <span className="scrubber-label">W</span>
             <input
               type="number"
@@ -660,7 +670,7 @@ export function SizeSection() {
               onKeyDown={handleWKeyDown}
             />
           </div>
-          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`} data-tooltip="Height">
+          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`} data-tooltip={t('tipHeight')}>
             <span className="scrubber-label">H</span>
             <input
               type="number"
@@ -676,7 +686,7 @@ export function SizeSection() {
               onKeyDown={handleHKeyDown}
             />
           </div>
-          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`} data-tooltip="Corner radius">
+          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`} data-tooltip={t('tipCornerRadius')}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z" fill="currentColor"/></svg>
             <input
               type="number"
@@ -703,7 +713,7 @@ export function SizeSection() {
               type="button"
               id="btn-size-mode-dropdown"
               className={`size-mode-dropdown-btn figma-dropdown-btn${dropdownOpen ? ' active' : ''}${!isSizeAllowed ? ' disabled' : ''}`}
-              data-tooltip={!isSizeAllowed ? 'Size mode cannot be changed for this shape' : 'Select height mode'}
+              data-tooltip={!isSizeAllowed ? t('tipSizeModeDisabled') : t('tipSizeMode')}
               disabled={!isSizeAllowed}
               onClick={toggleSizeModeDropdown}
             >
@@ -787,7 +797,7 @@ export function SizeSection() {
                 className={`chip-btn${isPresetActive ? ' active' : ''}${!isSizeAllowed ? ' disabled' : ''}`}
                 onClick={() => isSizeAllowed && applySizePreset(p)}
                 disabled={!isSizeAllowed}
-                title={!isSizeAllowed ? 'Size presets are disabled for this shape' : `${p.name} (${p.w}×${p.h})`}
+                data-tooltip={!isSizeAllowed ? t('tipPresetDisabledShape') : t('tipPresetDims', { name: p.name, w: p.w, h: p.h })}
               >
                 <span className="tab-label">{p.name}</span>
                 {count > 0 && <span className="tab-badge">{count}</span>}

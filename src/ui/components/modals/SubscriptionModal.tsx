@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "../../../i18n";
 import type { FlooowUsageState } from "../../../types";
 import { isUnlimitedEntitlement, planShortName } from "../../../entitlementGate";
 import { usageRemainingTone } from "../../../planUsageTone";
@@ -78,7 +79,7 @@ export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
             type="button"
             className="subscription-modal-close-btn"
             onClick={onClose}
-            data-tooltip="Close"
+            data-tooltip={t('tipClose')}
           >
             {CLOSE_SVG}
           </button>

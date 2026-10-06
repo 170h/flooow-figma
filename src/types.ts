@@ -2,6 +2,8 @@ import type { FlooowUsageState } from './entitlementGate';
 
 export type { FlooowUsageState };
 
+export type AppLocale = 'ko' | 'en';
+
 export type WorkflowStatus =
   | 'draft'
   | 'wireframe'
@@ -382,7 +384,7 @@ export type PluginAction =
   | { type: 'CLOSE_PLUGIN' }
   | { type: 'NOTIFY'; message: string; level?: 'info' | 'success' | 'warning' | 'error' }
   | { type: 'RESIZE_WINDOW'; width?: number; height: number }
-  | { type: 'INIT' };
+  | { type: 'INIT'; locale?: AppLocale };
 
 // 연결된 커넥터 세부 정보 (방향 역전 여부 및 각 엔드포인트 마그넷)
 export interface ConnectedConnectorDetail {

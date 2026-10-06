@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { t } from "../../../i18n";
 
 // 피그마 UI3 공식 24×24px 닫기 SVG 아이콘
 const CLOSE_SVG = (
@@ -186,7 +187,7 @@ export function ConnectorColorModal({
             type="button"
             className="style-modal-close-btn"
             onClick={onClose}
-            data-tooltip="Close"
+            data-tooltip={t('tipClose')}
           >
             {CLOSE_SVG}
           </button>
@@ -214,7 +215,6 @@ export function ConnectorColorModal({
                     }}
                     data-color={item.color.toLowerCase()}
                     onClick={() => handleSelectPreset(item.color)}
-                    data-tooltip={item.color}
                   />
                 );
               })}
@@ -239,7 +239,6 @@ export function ConnectorColorModal({
                     }}
                     data-color={item.color.toLowerCase()}
                     onClick={() => handleSelectPreset(item.color)}
-                    data-tooltip={item.color}
                   />
                 );
               })}

@@ -32,6 +32,10 @@
       --color-text-ondark: #ffffff;
       --color-text-ondark-muted: rgba(255, 255, 255, 0.65);
 
+      /* 비활성 사유 칩 토큰 (Figma UI3 1027510:3045 — 라이트/다크 공통 고정) */
+      --color-notice-bg: #FFF1C2;
+      --color-notice-text: #681ABB;
+
       /* 플랜 & 사용량 액센트 (Plan & Usage 모달 전용) */
       --color-plan-pink: #FC9CE0;
       --color-plan-red: #E03E1A;
@@ -490,6 +494,7 @@
       color: var(--color-text-primary);
       line-height: 16px;
       user-select: none;
+      position: relative;
     }
 
     /* 비활성화된 섹션 타이틀 (UI3 ✦/text/default/secondary 토큰 적용) */
@@ -2529,6 +2534,13 @@
       transform: scale(1.08);
     }
 
+    /* 드롭다운 버튼·메뉴행 내부 칩은 별도 호버 효과 없음 (전체=드롭다운 메뉴 1개) */
+    .figma-dropdown-btn .figma-color-chip:hover,
+    .figma-dropdown-item .figma-color-chip:hover,
+    .terminal-ui3-item .figma-color-chip:hover {
+      transform: none;
+    }
+
     /* 피그마 UI3 공식 스트로크 컬러 아이콘 라인 (라이트: rgba(0,0,0,0.15), 다크: rgba(255,255,255,0.35)) */
     .stroke-color-icon .stroke-icon-line {
       stroke: var(--color-stroke-icon-line, rgba(0, 0, 0, 0.15)) !important;
@@ -4017,6 +4029,55 @@
       bottom: 100%;
       border-width: 0 5px 5px 5px;
       border-color: transparent transparent #222222 transparent;
+    }
+
+    /* 비활성 사유 인라인 칩 (Figma UI3 1027510:3045 — 노랑 배지 + 보라 텍스트) */
+    /* absolute 배치로 라인박스에 영향을 주지 않아 타이틀이 밀리지 않는다 */
+    .disabled-notice-chip {
+      position: absolute;
+      left: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--color-notice-bg);
+      border-radius: 2px;
+      padding: 2px 3px;
+      color: var(--color-notice-text);
+      font-size: 9px;
+      font-weight: var(--font-weight-default);
+      line-height: 14px;
+      white-space: nowrap;
+      animation: noticeIn 0.18s ease-out;
+      transition: opacity 0.2s ease;
+    }
+
+    .disabled-notice-chip.hiding {
+      opacity: 0;
+    }
+
+    .disabled-notice-tail {
+      position: absolute;
+      left: -5px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .disabled-notice-text {
+      display: inline-block;
+    }
+
+    @keyframes noticeIn {
+      0% {
+        opacity: 0;
+        transform: translate(-6px, -50%);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(0, -50%);
+      }
     }
 
     /* 피그마 디자인 선택 모달 검색창 */

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { t } from "../../../i18n";
 import {
   SCREEN_NODE_CONSTRAINTS,
   clampScreenWidth,
@@ -139,7 +140,7 @@ export function SizeModal({
         {/* 모달 헤더 */}
         <div className="size-modal-header">
           <span className="size-modal-title">{title}</span>
-          <button className="size-modal-close-btn" onClick={onClose} data-tooltip="Close">
+          <button className="size-modal-close-btn" onClick={onClose} data-tooltip={t('tipClose')}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z" fill="currentColor" />
             </svg>
@@ -230,7 +231,7 @@ export function SizeModal({
               <div
                 className={`size-dropdown-box${dropdownOpen ? ' active' : ''}`}
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                title="Select height mode"
+                data-tooltip={t('tipSizeMode')}
                 tabIndex={0}
                 style={{ cursor: 'pointer' }}
               >

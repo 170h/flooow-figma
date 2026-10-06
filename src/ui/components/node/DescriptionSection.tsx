@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { IcCopy, IcCheckLarge } from '../shared/icons';
+import { useDisabledNotice, DisabledNoticeChip } from '../shared/DisabledNotice';
+import { t } from '../../../i18n';
 import { Switch } from '../shared/Switch';
 import {
   type OptionSwitchState,
@@ -45,6 +47,9 @@ export function DescriptionSection() {
 
   const userActionLockRef = useRef<number>(0);
   const prevSelectedNodeIdRef = useRef<string | null>(null);
+
+  // 비활성 사유 칩 (클릭 시 잠시 표시)
+  const disabledNotice = useDisabledNotice();
 
   // Option Capability Matrix 기반 스위치 상태 산출
   const rawOptionState = useMemo(() => {
@@ -248,7 +253,7 @@ export function DescriptionSection() {
       (rawOptionState.supportedNodes.length === 1 ? rawOptionState.supportedNodes[0]?.description || '' : '');
 
     if (!val.trim()) {
-      showToast('복사할 설명이 없습니다.', 'warning');
+      showToast(t('descCopyEmpty'), 'warning');
       return;
     }
 
@@ -256,7 +261,7 @@ export function DescriptionSection() {
       setCopied(true);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => setCopied(false), 1800);
-      showToast('Description copied to clipboard!');
+      showToast(t('descCopied'));
     };
 
     if (navigator.clipboard) {
@@ -294,7 +299,11 @@ export function DescriptionSection() {
     : 'Add a description';
 
   return (
-    <div className="section-block" style={{ paddingBottom: isDescSectionOpen ? '12px' : '0px' }}>
+    <div
+      className="section-block"
+      style={{ paddingBottom: isDescSectionOpen ? '12px' : '0px' }}
+      onClick={effectiveState.disabled ? () => disabledNotice.flash() : undefined}
+    >
       <div className="section-header toggle-row">
         <span className={`section-title${effectiveState.disabled ? ' disabled' : ''}`}>
           Description
@@ -302,6 +311,12 @@ export function DescriptionSection() {
             <span className="section-mixed-label">
               (Mixed)
             </span>
+          )}
+          {effectiveState.disabled && disabledNotice.phase !== 'hidden' && (
+            <DisabledNoticeChip
+              text={t(effectiveState.isMixed ? 'noticeMixed' : 'noticeDescUnsupported')}
+              fading={disabledNotice.phase === 'fading'}
+            />
           )}
         </span>
         <div className="section-actions">
@@ -311,7 +326,7 @@ export function DescriptionSection() {
               id="btn-copy-desc"
               type="button"
               className={`btn-action-icon${copied ? ' copied' : ''}${!effectiveHasText ? ' disabled' : ''}`}
-              data-tooltip={copied ? 'Copied' : (effectiveHasText ? 'Copy' : 'No description entered')}
+              data-tooltip={copied ? t('tipCopied') : (effectiveHasText ? t('tipCopy') : t('tipNoDesc'))}
               disabled={!effectiveHasText}
               onClick={copyDescription}
             >
@@ -323,7 +338,7 @@ export function DescriptionSection() {
             checked={effectiveState.checked}
             isMixed={effectiveState.isMixed}
             disabled={effectiveState.disabled}
-            data-tooltip={effectiveState.disabled ? 'Description is disabled for this shape' : undefined}
+            data-tooltip={effectiveState.disabled ? t('tipDescDisabled') : undefined}
             onChange={handleToggle}
           />
         </div>

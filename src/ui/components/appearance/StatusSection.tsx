@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSelectionSummary } from '../../hooks/useSelectionSummary';
 import { Switch } from '../shared/Switch';
+import { useDisabledNotice, DisabledNoticeChip } from '../shared/DisabledNotice';
+import { t } from '../../../i18n';
 import {
   type WorkflowStatus,
   type OptionSwitchState,
@@ -44,6 +46,9 @@ export function StatusSection() {
 
   const userActionLockRef = React.useRef<number>(0);
   const prevSelectedNodeIdRef = React.useRef<string | null>(null);
+
+  // 비활성 사유 칩 (클릭 시 잠시 표시)
+  const disabledNotice = useDisabledNotice();
 
   const selectedStatus = nodeOptionState.status;
 
@@ -231,10 +236,17 @@ export function StatusSection() {
     <div
       className="section-block"
       style={{ paddingBottom: effectiveState.isOpen ? '12px' : '0px' }}
+      onClick={effectiveState.disabled ? () => disabledNotice.flash() : undefined}
     >
       <div className="section-header toggle-row">
         <span className={`section-title${effectiveState.disabled ? ' disabled' : ''}`}>
           Status
+          {effectiveState.disabled && disabledNotice.phase !== 'hidden' && (
+            <DisabledNoticeChip
+              text={t(effectiveState.isMixed ? 'noticeMixed' : 'noticeStatusUnsupported')}
+              fading={disabledNotice.phase === 'fading'}
+            />
+          )}
         </span>
         <Switch
           id="toggle-status"

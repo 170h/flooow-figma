@@ -23,6 +23,7 @@ import {
   type ComputeGizmoMagnetsInput,
 } from '../utils/gizmoState';
 import { orderFlowNodesForChain } from '../../chainOrder';
+import { t, getAppLocale } from '../../i18n';
 
 // ============================================================
 // 타입 정의
@@ -577,7 +578,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const endpointDraftRef = useRef<EndpointMagnetDraft>({});
   const setEndpointMagnetDraft = useCallback((side: 'source' | 'target', magnet: MagnetPosition) => {
     // ref를 동기적으로 갱신한다. 단일 커넥터는 클릭 직후 applyEndpointMagnetDraft를 호출하므로
-    // updater 내부 갱신(비동기 실행)으로는 늦다.
+    // updater 내부 갱신(렌더 시점 실행)으로는 늦다.
     const next = side === 'source'
       ? { ...endpointDraftRef.current, sourceMagnet: magnet }
       : { ...endpointDraftRef.current, targetMagnet: magnet };
@@ -1150,17 +1151,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const handleUndo = useCallback(() => {
     if (selectedNodesRef.current.length >= 2 && Object.keys(multiDraftRef.current).length > 0) {
       clearMultiDraft();
-      showToast('변경사항이 취소되었습니다.', 'info');
+      showToast(t('undoCancelled'), 'info');
       return;
     }
     if (Object.keys(connectorLabelDraftRef.current).length > 0) {
       clearConnectorLabelDraft();
-      showToast('변경사항이 취소되었습니다.', 'info');
+      showToast(t('undoCancelled'), 'info');
       return;
     }
     if (isGizmoDraftDirty(buildSelectionGizmoInput(selectedNodesRef.current, uiStateRef.current, endpointDraftRef.current))) {
       clearEndpointMagnetDraft();
-      showToast('변경사항이 취소되었습니다.', 'info');
+      showToast(t('undoCancelled'), 'info');
       return;
     }
     const snapshot = lastAppliedSnapshotRef.current;
@@ -1172,7 +1173,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             payload: snapshot.singlePayload,
           }
         }, '*');
-        showToast('작업이 되돌려졌습니다.', 'info');
+        showToast(t('undone'), 'info');
       } else if (snapshot.type === 'batch' && snapshot.batchItems && snapshot.batchItems.length > 0) {
         const patchGroups = new Map<string, { nodeIds: string[]; patch: NodePatchPayload }>();
         snapshot.batchItems.forEach(item => {
@@ -1192,7 +1193,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
           }, '*');
         });
-        showToast('작업이 되돌려졌습니다.', 'info');
+        showToast(t('undone'), 'info');
       } else if (snapshot.type === 'connector' && snapshot.connectorItems && snapshot.connectorItems.length > 0) {
         snapshot.connectorItems.forEach(item => {
           parent.postMessage({
@@ -1202,13 +1203,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
           }, '*');
         });
-        showToast('작업이 되돌려졌습니다.', 'info');
+        showToast(t('undone'), 'info');
       }
       setLastAppliedSnapshot(null);
       lastAppliedSnapshotRef.current = null;
     } else if (originalSelectedNodeRef.current && selectedNodesRef.current.length === 1) {
       revertSingleNodeForm(originalSelectedNodeRef.current);
-      showToast('변경사항이 취소되었습니다.', 'info');
+      showToast(t('undoCancelled'), 'info');
     }
   }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft]);
 
@@ -1316,7 +1317,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       rawTitle = isScreen ? 'Screen' : effectiveNodeType;
     }
     if (rawTitle.length > 32) {
-      showToast('제목은 최대 32자까지 입력할 수 있습니다.', 'warning');
+      showToast(t('titleMax32'), 'warning');
     }
     const title = rawTitle.slice(0, 32);
     const rawDesc = descEl?.value !== undefined ? descEl.value.trim() : '';
@@ -1422,7 +1423,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       sizeR: String(preset.radius ?? 0),
     });
     applyCurrentNodeState(preset.sizeMode);
-    showToast(`"${preset.name}" 사이즈가 추가되었습니다.`, 'success');
+    showToast(t('sizePresetAdded', { name: preset.name }), 'success');
   }, [sizePresets, savePresets, setSelectedSizePresetId, setNodeOptionState, setFormTextDraft, applyCurrentNodeState, showToast]);
 
   const updateSizePreset = useCallback((id: string, partial: Partial<SizePreset>) => {
@@ -1440,14 +1441,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (partial.h !== undefined) setFormTextDraft({ sizeH: String(partial.h) });
       applyCurrentNodeState(partial.sizeMode);
     }
-    showToast('사이즈가 업데이트되었습니다.', 'success');
+    showToast(t('sizeUpdated'), 'success');
   }, [sizePresets, savePresets, setNodeOptionState, setFormTextDraft, applyCurrentNodeState, showToast]);
 
   const deleteSizePreset = useCallback((id: string) => {
     const target = sizePresets.find((p) => p.id === id);
     const next = sizePresets.filter((p) => p.id !== id);
     savePresets(next);
-    showToast(`"${target?.name || '사이즈'}" 프리셋이 삭제되었습니다.`, 'info');
+    showToast(t('sizePresetDeleted', { name: target?.name || (getAppLocale() === 'en' ? 'Size' : '사이즈') }), 'info');
   }, [sizePresets, savePresets, showToast]);
 
   const addStylePreset = useCallback((preset: Omit<StylePreset, 'id'>) => {
@@ -1472,24 +1473,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       strokeWeight: preset.strokeWeight,
       strokeColor: preset.strokeColor,
     });
-    showToast(`스타일이 추가되었습니다.`, 'success');
+    showToast(t('styleAddedNew'), 'success');
   }, [stylePresets, saveStylePresets, setUIState, setNodeOptionState, applyCurrentNodeState, showToast]);
 
   const updateStylePreset = useCallback((id: string, partial: Partial<StylePreset>) => {
     const next = stylePresets.map((p) => (p.id === id ? { ...p, ...partial } : p));
     saveStylePresets(next);
-    showToast('스타일이 업데이트되었습니다.', 'success');
+    showToast(t('styleUpdated'), 'success');
   }, [stylePresets, saveStylePresets, showToast]);
 
   const deleteStylePreset = useCallback((id: string) => {
     const target = stylePresets.find((p) => p.id === id);
     if (target?.isDefault || DEFAULT_STYLE_PRESET_IDS.has(target?.id || '')) {
-      showToast('기본 스타일은 삭제할 수 없습니다.', 'warning');
+      showToast(t('styleDefaultNoDelete'), 'warning');
       return;
     }
     const next = stylePresets.filter((p) => p.id !== id);
     saveStylePresets(next);
-    showToast('스타일이 삭제되었습니다.', 'info');
+    showToast(t('styleDeleted'), 'info');
   }, [stylePresets, saveStylePresets, showToast]);
 
   const applyStatusToNode = useCallback((status?: string) => {
@@ -1772,7 +1773,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     if (nodes.length < 2) {
-      showToast('Select 2 or more nodes to connect.');
+      showToast(t('connectNeedTwo'));
       return;
     }
     const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
@@ -2036,7 +2037,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       rawTitle = defaultTitle;
     }
     if (rawTitle.length > 32) {
-      showToast('제목은 최대 32자까지 입력할 수 있습니다.', 'warning');
+      showToast(t('titleMax32'), 'warning');
     }
     const title = rawTitle.slice(0, 32);
     const isDescOn = Boolean(opts.descriptionOn);
@@ -2048,7 +2049,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let radius = opts.cornerRadius ?? 0;
     if (radius > 999) {
       radius = 999;
-      showToast('최대값은 999입니다.', 'warning');
+      showToast(t('max999'), 'warning');
     } else if (radius < 0) {
       radius = 0;
     }

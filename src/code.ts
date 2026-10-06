@@ -62,6 +62,7 @@ import {
   Box,
 } from './customConnector';
 import { orderNodesForChain, makePairKey, resolveCreatedPairMagnets } from './chainOrder';
+import { setAppLocale, t } from './i18n';
 import { countFlooowElements, type FlooowElementCount } from './elementCount';
 import {
   canCreateFlooowElements,
@@ -862,7 +863,7 @@ function approveNewElements(requestedCount: number): CreateGateResult {
 
 function notifyLimitReached(result: CreateGateResult): void {
   notify(
-    `Flooow element가 가득 찼습니다 (${result.currentCount}/${result.limit}). 기존 element를 삭제한 뒤 다시 시도해 주세요.`,
+    t('limitReached', { current: result.currentCount, limit: result.limit }),
     'warning'
   );
 }
@@ -2980,7 +2981,8 @@ function createShapeVectorNode(
   bgColor: RGB,
   strokeColor: RGB,
   strokeWeight: number,
-  branchVariant?: BranchVariant
+  branchVariant?: BranchVariant,
+  fillNone?: boolean
 ): VectorNode | FrameNode | null {
   const pathD = getShapeVectorData(nodeType, w, h, branchVariant);
   if (!pathD) return null;
@@ -2988,9 +2990,10 @@ function createShapeVectorNode(
   const bgHex = rgbToHexColor(bgColor);
   const strokeHex = rgbToHexColor(strokeColor);
   const sw = typeof strokeWeight === 'number' && strokeWeight >= 0 ? strokeWeight : 1.5;
+  const fillAttr = fillNone ? 'none' : bgHex;
   const strokeAttr = sw > 0 ? `stroke="${strokeHex}" stroke-width="${sw}"` : '';
 
-  const svgStr = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${pathD}" fill="${bgHex}" ${strokeAttr}/></svg>`;
+  const svgStr = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${pathD}" fill="${fillAttr}" ${strokeAttr}/></svg>`;
 
   try {
     const imported = figma.createNodeFromSvg(svgStr);
@@ -3000,6 +3003,18 @@ function createShapeVectorNode(
       targetNode = vector;
     }
     targetNode.name = 'ShapeVector';
+    // SVG import 기본값에 의존하지 않고 스트로크 상태를 명시한다.
+    // (무보더 벡터의 strokeWeight 기본값이 리딩·리싱크 경로에서 보더를 되살리는 문제 방지)
+    try {
+      if ('strokeWeight' in targetNode && typeof (targetNode as VectorNode).strokeWeight === 'number') {
+        (targetNode as VectorNode).strokeWeight = sw > 0 ? sw : 0;
+      }
+    } catch (_) {}
+    if (sw <= 0) {
+      try {
+        if ('strokes' in targetNode) (targetNode as VectorNode).strokes = [];
+      } catch (_) {}
+    }
     return targetNode;
   } catch (err) {
     console.error('createShapeVectorNode error:', err);
@@ -3019,9 +3034,10 @@ function attachShapeVectorNode(
   strokeColor: RGB,
   strokeWeight: number,
   insertAtBottom: boolean = false,
-  branchVariant?: BranchVariant
+  branchVariant?: BranchVariant,
+  fillNone?: boolean
 ): VectorNode | FrameNode | null {
-  const shape = createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight, branchVariant);
+  const shape = createShapeVectorNode(nodeType, w, h, bgColor, strokeColor, strokeWeight, branchVariant, fillNone);
   if (!shape) return null;
 
   const originalParent = shape.parent;
@@ -3175,7 +3191,7 @@ async function createFlowNode(payload: FlowNodePayload) {
         const strokeCol = payload.strokeColor
           ? hexToRgbColor(payload.strokeColor)
           : (branchVariant ? hexToRgbColor('#1E1E1E') : borderColor);
-        attachShapeVectorNode(card, nodeType, width, height, bgColor, strokeCol, cardStrokeWeight, false, branchVariant);
+        attachShapeVectorNode(card, nodeType, width, height, bgColor, strokeCol, cardStrokeWeight, false, branchVariant, isFillNone);
       }
 
       const titleText = figma.createText();
@@ -3430,9 +3446,9 @@ async function createFlowNode(payload: FlowNodePayload) {
     figma.viewport.scrollAndZoomIntoView([card]);
 
     handleSelectionChange();
-    notify(`[${title}] 노드가 생성되었습니다!`, 'success');
+    notify(t('nodeCreated', { title }), 'success');
   } catch (err) {
-    notify(`노드 생성 실패: ${String(err)}`, 'error');
+    notify(t('nodeCreateFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -3583,6 +3599,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     if (!vectorPathData) {
       if (cardStrokeWeight === 0) {
         card.strokes = [];
+        card.strokeWeight = 0;
       } else {
         const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : (existingStrokeColor || borderColor);
         card.strokes = [{ type: 'SOLID', color: strokeCol }];
@@ -3759,7 +3776,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     const strokeCol = patch.strokeColor
       ? hexToRgbColor(patch.strokeColor)
       : defaultStrokeCol;
-    attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant);
+    attachShapeVectorNode(card, nodeType, targetW, targetH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant, isFillNone);
   } else {
     if (existingShapeVector) {
       existingShapeVector.remove();
@@ -4154,7 +4171,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     if (isShapeNode) {
       const defaultStrokeCol = existingStrokeColor || (batchBranchVariant ? hexToRgbColor('#1E1E1E') : borderColor);
       const strokeCol = patch.strokeColor ? hexToRgbColor(patch.strokeColor) : defaultStrokeCol;
-      attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant);
+      attachShapeVectorNode(card, nodeType, finalW, finalH, bgColor, strokeCol, cardStrokeWeight, true, batchBranchVariant, isFillNone);
     }
   }
 
@@ -4273,7 +4290,7 @@ async function updateFlowNode(payload: UpdateNodePayload) {
 
     let flowNode = findFlowNode(rawNode) || (rawNode as FrameNode | ShapeWithTextNode | null);
     if (!flowNode) {
-      notify('수정할 노드를 찾을 수 없습니다. 캔버스에서 노드를 선택해 주세요.', 'warning');
+      notify(t('nodeNotFoundSelect'), 'warning');
       return;
     }
 
@@ -4289,9 +4306,9 @@ async function updateFlowNode(payload: UpdateNodePayload) {
     // selection 재할당을 절대 하지 않음 (다중/단일 선택 100% 보존)
     handleSelectionChange();
     const title = (flowNode as FrameNode).name || payload.title || '노드';
-    notify(`[${title}] 노드가 업데이트되었습니다!`, 'success');
+    notify(t('nodeUpdated', { title }), 'success');
   } catch (err) {
-    notify(`노드 수정 실패: ${String(err)}`, 'error');
+    notify(t('nodeUpdateFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -4344,10 +4361,10 @@ async function batchUpdateFlowNodes(nodeIds: string[], patch: NodePatchPayload) 
 
     handleSelectionChange();
     if (updatedCount > 0) {
-      notify(`${updatedCount}개 노드가 업데이트되었습니다!`, 'success');
+      notify(t('nodesBatchUpdated', { count: updatedCount }), 'success');
     }
   } catch (err) {
-    notify(`다중 노드 업데이트 실패: ${String(err)}`, 'error');
+    notify(t('nodesBatchUpdateFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -4461,6 +4478,8 @@ async function resizeNode(nodeId: string, width: number, height: number) {
       let curBgColor: RGB = { r: 1, g: 1, b: 1 };
       let curStrokeColor: RGB = { r: 0.15, g: 0.15, b: 0.18 };
       let curStrokeWeight = 1.5;
+      // fills가 비어 있으면 투명 상태이므로 재생성 때도 투명을 유지한다
+      const curFillNone = !('fills' in shapeVec && Array.isArray(shapeVec.fills) && shapeVec.fills.length > 0);
       if ('fills' in shapeVec && Array.isArray(shapeVec.fills) && shapeVec.fills.length > 0 && shapeVec.fills[0].type === 'SOLID') {
         curBgColor = shapeVec.fills[0].color;
       }
@@ -4474,7 +4493,7 @@ async function resizeNode(nodeId: string, width: number, height: number) {
       const frameBranchVariant = nType === 'Branch'
         ? normalizeBranchVariant(safeGetPluginData(frame, 'branch_variant'))
         : undefined;
-      attachShapeVectorNode(frame, nType, w, h, curBgColor, curStrokeColor, curStrokeWeight, true, frameBranchVariant);
+      attachShapeVectorNode(frame, nType, w, h, curBgColor, curStrokeColor, curStrokeWeight, true, frameBranchVariant, curFillNone);
     }
 
     // 상태 뱃지 탐색 및 패딩 동기화
@@ -4565,7 +4584,7 @@ async function connectPoints(payload: ConnectPointsPayload) {
     let targetNode = figma.getNodeById(payload.targetNodeId) as SceneNode | null;
 
     if (!sourceNode || !targetNode) {
-      notify('연결할 노드를 찾을 수 없습니다.', 'warning');
+      notify(t('connectNodesNotFound'), 'warning');
       return;
     }
 
@@ -4576,7 +4595,7 @@ async function connectPoints(payload: ConnectPointsPayload) {
     if (targetFlow) targetNode = targetFlow;
 
     if (sourceNode.id === targetNode.id) {
-      notify('서로 다른 두 노드를 선택하여 연결해 주세요.', 'warning');
+      notify(t('connectNeedTwoDifferent'), 'warning');
       return;
     }
 
@@ -4704,9 +4723,9 @@ async function connectPoints(payload: ConnectPointsPayload) {
 
     figma.currentPage.selection = [connector];
     handleSelectionChange();
-    notify(`연결 완료${payload.label ? ` (라벨: "${payload.label}")` : ''}`, 'success');
+    notify(payload.label ? t('connectDoneLabel', { label: payload.label }) : t('connectDone'), 'success');
   } catch (err) {
-    notify(`연결선 생성 실패: ${String(err)}`, 'error');
+    notify(t('connectCreateFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -4765,7 +4784,7 @@ async function autoConnectSelected(label?: string) {
   try {
     const rawSelection = [...figma.currentPage.selection];
     if (rawSelection.length < 2) {
-      notify('연결할 노드를 2개 이상 선택해 주세요.', 'warning');
+      notify(t('connectNeedTwoOrMore'), 'warning');
       return;
     }
 
@@ -4777,7 +4796,7 @@ async function autoConnectSelected(label?: string) {
     }
     let nodes = Array.from(nodesMap.values());
     if (nodes.length < 2) {
-      notify('서로 다른 노드를 2개 이상 선택해 주세요.', 'warning');
+      notify(t('connectNeedTwoDifferentOrMore'), 'warning');
       return;
     }
 
@@ -4809,7 +4828,7 @@ async function autoConnectSelected(label?: string) {
       const conn = await createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label);
       figma.currentPage.selection = [conn];
       handleSelectionChange();
-      notify(`칼각 직각 연결 완료${label ? ` (라벨: "${label}")` : ''}`, 'success');
+      notify(label ? t('autoConnectDoneLabel', { label }) : t('autoConnectDone'), 'success');
       return;
     }
 
@@ -4836,9 +4855,9 @@ async function autoConnectSelected(label?: string) {
 
     figma.currentPage.selection = createdConnectors;
     handleSelectionChange();
-    notify(`⚡ 총 ${nodes.length}개 노드가 칼각 직각 순차 연결되었습니다 (${createdConnectors.length}개 연결선).`, 'success');
+    notify(t('autoChainDone', { nodes: nodes.length, conns: createdConnectors.length }), 'success');
   } catch (err) {
-    notify(`순차 자동 연결 실패: ${String(err)}`, 'error');
+    notify(t('autoConnectFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -4868,7 +4887,7 @@ async function connectChain(payload: ConnectChainPayload) {
 
     // 3. 유효 node가 2개 미만이면 종료
     if (validNodes.length < 2) {
-      notify('연결할 노드를 2개 이상 선택해 주세요.', 'warning');
+      notify(t('connectNeedTwoOrMore'), 'warning');
       return;
     }
 
@@ -4986,18 +5005,18 @@ async function connectChain(payload: ConnectChainPayload) {
 
     // 결과 집계 및 Core 알림
     if (createdCount === 0 && skippedCount > 0) {
-      notify('모든 연결이 이미 존재합니다.', 'info');
+      notify(t('chainExistsAll'), 'info');
     } else if (createdCount > 0 && skippedCount > 0) {
-      notify(`${createdCount}개 연결 완료 (${skippedCount}개는 이미 연결됨)`, 'success');
+      notify(t('chainCreatedPartial', { created: createdCount, skipped: skippedCount }), 'success');
     } else if (createdCount > 0) {
-      notify(`${createdCount}개 연결 완료`, 'success');
+      notify(t('chainCreated', { created: createdCount }), 'success');
     }
 
     // Selection 처리: createSingleConnector는 selection을 변경하지 않으므로 기존 노드 선택이 유지됨.
     // 생성 완료 후 handleSelectionChange를 정확히 1회 호출하여 최신 체인 상태 동기화
     await handleSelectionChange();
   } catch (err) {
-    notify(`체인 연결 실패: ${String(err)}`, 'error');
+    notify(t('chainFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -5011,12 +5030,12 @@ async function updateConnectorLabel(connectorId: string, label: string) {
       hasLabel: trimmed !== '',
     });
     notify(
-      trimmed ? `선 중앙 텍스트가 "${trimmed}"(으)로 반영되었습니다!` : '선 중앙 텍스트가 지워졌습니다.',
+      trimmed ? t('connectorLabelSet', { label: trimmed }) : t('connectorLabelCleared'),
       'success'
     );
     handleSelectionChange();
   } catch (err) {
-    notify(`선 텍스트 수정 실패: ${String(err)}`, 'error');
+    notify(t('connectorLabelFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -5049,7 +5068,7 @@ async function updateConnectorProperties(payload: {
     }
 
     if (!node) {
-      notify('수정할 커넥터를 찾을 수 없습니다.', 'warning');
+      notify(t('connectorNotFound'), 'warning');
       return;
     }
 
@@ -5364,7 +5383,7 @@ async function updateConnectorProperties(payload: {
     handleSelectionChange();
   } catch (err) {
     console.error('[UPDATE_CONNECTOR_PROPERTIES failed]', err);
-    notify(`커넥터 수정 실패: ${String(err)}`, 'error');
+    notify(t('connectorUpdateFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -5376,12 +5395,12 @@ async function setConnectorLineType(connectorId?: string, lineType: 'ELBOWED' | 
       routingType: lineType === 'STRAIGHT' ? 'STRAIGHT' : 'ORTHOGONAL',
     });
     notify(
-      lineType === 'ELBOWED' ? '📐 연결선이 [직각(Elbowed)]으로 변경되었습니다.' : '📏 연결선이 [직선(Straight)]으로 변경되었습니다.',
+      lineType === 'ELBOWED' ? t('connectorLineElbowed') : t('connectorLineStraight'),
       'success'
     );
     handleSelectionChange();
   } catch (err) {
-    notify(`연결선 형태 변경 실패: ${String(err)}`, 'error');
+    notify(t('connectorLineTypeFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -5460,7 +5479,7 @@ function syncStatusList() {
 async function applyStatusToSelected(status?: WorkflowStatus | '') {
   const selection = figma.currentPage.selection;
   if (selection.length === 0) {
-    notify('상태를 지정할 요소를 1개 이상 선택해 주세요.', 'warning');
+    notify(t('statusNeedSelection'), 'warning');
     return;
   }
 
@@ -5635,9 +5654,9 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
   syncStatusList();
   handleSelectionChange();
   if (isRemove) {
-    notify(`${selection.length}개 노드의 상태 뱃지가 제거되었습니다.`, 'info');
+    notify(t('statusRemoved', { count: selection.length }), 'info');
   } else if (cfg) {
-    notify(`${selection.length}개 노드에 [${cfg.label}] 상태 뱃지가 부착되었습니다.`, 'success');
+    notify(t('statusAttached', { count: selection.length, label: cfg.label }), 'success');
   }
 }
 
@@ -5645,14 +5664,14 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
 async function applyElevationToSelected(level: number | null) {
   const selection = figma.currentPage.selection;
   if (selection.length === 0) {
-    notify('엘리베이션을 적용할 요소를 선택해 주세요.', 'warning');
+    notify(t('elevationNeedSelection'), 'warning');
     return;
   }
 
   for (const rawNode of selection) {
     let flowNode = findFlowNode(rawNode) || (rawNode as FrameNode | ShapeWithTextNode);
 
-    // Elevation 옵션을 지원하는 노드(Screen, Shape)에만 적용, 미지원 노드(FigmaObject, Bridge)는 건너뜀
+    // Elevation 옵션을 지원하는 노드(Screen, Shape, Bridge)에만 적용, 미지원 노드(FigmaObject)는 건너뜀
     if (!supportsOption(flowNode, 'elevation')) {
       continue;
     }
@@ -5684,9 +5703,9 @@ async function applyElevationToSelected(level: number | null) {
 
   handleSelectionChange();
   if (level === null || level === undefined) {
-    notify(`${selection.length}개 노드의 엘리베이션이 제거되었습니다.`, 'info');
+    notify(t('elevationRemoved', { count: selection.length }), 'info');
   } else {
-    notify(`${selection.length}개 노드에 Level ${level} 엘리베이션이 적용되었습니다.`, 'success');
+    notify(t('elevationApplied', { count: selection.length, level }), 'success');
   }
 }
 
@@ -6047,7 +6066,7 @@ async function addStepBadges(
 ) {
   const rawSelection = [...figma.currentPage.selection];
   if (rawSelection.length === 0) {
-    notify('스텝 번호를 매길 요소를 캔버스에서 선택해 주세요.', 'warning');
+    notify(t('stepNeedSelection'), 'warning');
     return;
   }
 
@@ -6076,14 +6095,14 @@ async function addStepBadges(
   }
 
   handleSelectionChange();
-  notify(`${selection.length}개 노드에 스텝 번호가 적용되었습니다.`, 'success');
+  notify(t('stepApplied', { count: selection.length }), 'success');
 }
 
 // 스텝 번호 제거 기능
 async function removeStepBadges() {
   const rawSelection = [...figma.currentPage.selection];
   if (rawSelection.length === 0) {
-    notify('스텝 번호를 제거할 요소를 캔버스에서 선택해 주세요.', 'warning');
+    notify(t('stepRemoveNeedSelection'), 'warning');
     return;
   }
 
@@ -6113,16 +6132,16 @@ async function removeStepBadges() {
 
   handleSelectionChange();
   if (removedCount > 0) {
-    notify(`${removedCount}개 노드의 스텝 번호가 제거되었습니다.`, 'info');
+    notify(t('stepRemoved', { count: removedCount }), 'info');
   } else {
-    notify('선택한 노드에 스텝 번호가 존재하지 않습니다.', 'info');
+    notify(t('stepNoneExist'), 'info');
   }
 }
 
 function focusFrame(nodeId: string) {
   const node = figma.getNodeById(nodeId);
   if (!node || !('x' in node)) {
-    notify('해당 노드를 찾을 수 없습니다.', 'warning');
+    notify(t('nodeGone'), 'warning');
     return;
   }
 
@@ -6193,7 +6212,7 @@ async function loadSavedSettings() {
 async function saveSettings(token: string, fileUrl: string) {
   await figma.clientStorage.setAsync('figma_token', token);
   await figma.clientStorage.setAsync('figma_file_url', fileUrl);
-  notify('피그마 연동 설정이 안전하게 저장되었습니다.', 'success');
+  notify(t('settingsSaved'), 'success');
 }
 
 // ----------------------------------------------------
@@ -6202,7 +6221,7 @@ async function saveSettings(token: string, fileUrl: string) {
 async function extractUI3Variables() {
   try {
     if (!('variables' in figma) || !figma.variables) {
-      notify('이 피그마 버전에서는 Variables API를 지원하지 않습니다.', 'warning');
+      notify(t('variablesUnsupported'), 'warning');
       return;
     }
 
@@ -6210,7 +6229,7 @@ async function extractUI3Variables() {
     const variables = await figma.variables.getLocalVariablesAsync();
 
     if (variables.length === 0) {
-      notify('현재 열린 파일에 등록된 로컬 변수(Variables)가 없습니다. UI3 Kit 파일 탭에서 실행해 주세요.', 'warning');
+      notify(t('variablesNoneLocal'), 'warning');
       return;
     }
 
@@ -6315,9 +6334,9 @@ async function extractUI3Variables() {
       collections: collections.map((c) => c.name),
     });
 
-    notify(`🎨 총 ${lightCount}개의 UI3 디자인 토큰이 추출되었습니다!`, 'success');
+    notify(t('tokensExtracted', { count: lightCount }), 'success');
   } catch (err) {
-    notify(`UI3 변수 추출 실패: ${String(err)}`, 'error');
+    notify(t('tokensFailed', { error: String(err) }), 'error');
   }
 }
 
@@ -6405,10 +6424,10 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       figma.closePlugin();
       break;
     case 'UNDO':
-      notify('캔버스에서 Cmd+Z (Mac) 또는 Ctrl+Z (Windows)로 작업을 되돌릴 수 있습니다.', 'info');
+      notify(t('undoHint'), 'info');
       break;
     case 'REDO':
-      notify('캔버스에서 Cmd+Shift+Z (Mac) 또는 Ctrl+Y (Windows)로 다시 실행할 수 있습니다.', 'info');
+      notify(t('redoHint'), 'info');
       break;
     case 'NOTIFY':
       notify(msg.message, msg.level);
@@ -6420,6 +6439,7 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       break;
     }
     case 'INIT':
+      setAppLocale(msg.locale);
       handleSelectionChange();
       syncStatusList();
       await loadSavedSettings();
@@ -6446,6 +6466,8 @@ async function fitTagCapsuleToTitle(card: FrameNode, rawTitle: string): Promise<
   let bg: RGB = { r: 1, g: 1, b: 1 };
   let stroke: RGB = hexToRgbColor('#1E1E1E');
   let strokeW = 1.5;
+  // fills가 비어 있으면 투명 상태이므로 재생성 때도 투명을 유지한다
+  const tagFillNone = !(shape && 'fills' in shape && Array.isArray(shape.fills) && shape.fills.length > 0);
   if (shape && 'fills' in shape && Array.isArray(shape.fills) && shape.fills[0]?.type === 'SOLID') {
     bg = shape.fills[0].color;
   }
@@ -6471,7 +6493,7 @@ async function fitTagCapsuleToTitle(card: FrameNode, rawTitle: string): Promise<
     card.minHeight = nextH;
     card.maxHeight = nextH;
     if (shape) shape.remove();
-    attachShapeVectorNode(card, 'Branch', nextW, nextH, bg, stroke, strokeW, true, 'TAG');
+    attachShapeVectorNode(card, 'Branch', nextW, nextH, bg, stroke, strokeW, true, 'TAG', tagFillNone);
   }
 
   const titleText = card.findOne(

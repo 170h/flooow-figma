@@ -4,6 +4,7 @@ import { getDefaultNodeTitle } from '../domain/nodeDomain';
 import { useFigmaMessage } from './hooks/useFigmaMessage';
 import { useAutoResize } from './hooks/useAutoResize';
 import { useSelectionSummary } from './hooks/useSelectionSummary';
+import { t } from '../i18n';
 
 import { NodePanel } from './components/node/NodePanel';
 import { AppearancePanel } from './components/appearance/AppearancePanel';
@@ -505,7 +506,7 @@ export function App() {
                     className={`btn-cta-primary${((isFigjamSelected && !isMultiFigjam) || (!isConnSel && usageBlocked)) ? ' disabled' : ''}`}
                     type="button"
                     disabled={(isFigjamSelected && !isMultiFigjam) || (!isConnSel && usageBlocked)}
-                    title={!isConnSel && usageBlocked ? 'Free limit reached (20 elements). Upgrade to create more.' : undefined}
+                    title={!isConnSel && usageBlocked ? t('tipQuotaBlocked') : undefined}
                     onClick={handleMainAction}
                   >
                     {isConnSel ? 'Apply' : 'Create Node'}
