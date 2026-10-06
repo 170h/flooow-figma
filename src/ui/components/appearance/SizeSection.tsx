@@ -624,7 +624,7 @@ export function SizeSection() {
         <div className="section-actions">
           <button
             className={`btn-action-icon${!isSizeAllowed ? ' disabled' : ''}`}
-            title={!isSizeAllowed ? 'Add size is disabled for this shape' : 'Add size'}
+            data-tooltip={!isSizeAllowed ? 'Add size is disabled for this shape' : 'Add size'}
             disabled={!isSizeAllowed}
             onClick={() => isSizeAllowed && setActiveModal('add-size')}
           >
@@ -633,7 +633,7 @@ export function SizeSection() {
           <button
             id="btn-size-more"
             className={`btn-action-icon btn-more-icon${isMoreDisabled ? ' disabled' : ''}`}
-            title={!isSizeAllowed ? 'Size options are disabled for this shape' : (isMoreDisabled ? '기본 프리셋은 수정 또는 삭제할 수 없습니다' : 'More options')}
+            data-tooltip={!isSizeAllowed ? 'Size options are disabled for this shape' : (isMoreDisabled ? 'Default presets cannot be edited or deleted' : 'More options')}
             disabled={isMoreDisabled}
             onClick={toggleSizeMoreMenu}
           >
@@ -644,8 +644,8 @@ export function SizeSection() {
 
       <div className="section-body">
         <div className="numeric-inputs-row">
-          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`}>
-            <span className="scrubber-label" data-tooltip="Width">W</span>
+          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`} data-tooltip="Width">
+            <span className="scrubber-label">W</span>
             <input
               type="number"
               id="input-size-w"
@@ -660,8 +660,8 @@ export function SizeSection() {
               onKeyDown={handleWKeyDown}
             />
           </div>
-          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`}>
-            <span className="scrubber-label" data-tooltip="Height">H</span>
+          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`} data-tooltip="Height">
+            <span className="scrubber-label">H</span>
             <input
               type="number"
               id="input-size-h"
@@ -676,8 +676,8 @@ export function SizeSection() {
               onKeyDown={handleHKeyDown}
             />
           </div>
-          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`}>
-            <svg data-tooltip="Corner radius" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z" fill="currentColor"/></svg>
+          <div className={`input-scrubber-box${!isSizeAllowed ? ' disabled' : ''}`} data-tooltip="Corner radius">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z" fill="currentColor"/></svg>
             <input
               type="number"
               id="input-size-radius"
@@ -703,7 +703,7 @@ export function SizeSection() {
               type="button"
               id="btn-size-mode-dropdown"
               className={`size-mode-dropdown-btn figma-dropdown-btn${dropdownOpen ? ' active' : ''}${!isSizeAllowed ? ' disabled' : ''}`}
-              title={!isSizeAllowed ? 'Size mode cannot be changed for this shape' : 'Select height mode'}
+              data-tooltip={!isSizeAllowed ? 'Size mode cannot be changed for this shape' : 'Select height mode'}
               disabled={!isSizeAllowed}
               onClick={toggleSizeModeDropdown}
             >

@@ -156,7 +156,7 @@ export function FillColorModal({
             type="button"
             className="style-modal-close-btn"
             onClick={handleCancel}
-            title="Close"
+            data-tooltip="Close"
           >
             {CLOSE_SVG}
           </button>
@@ -194,13 +194,6 @@ export function FillColorModal({
                     e.stopPropagation();
                     handleChipClick();
                   }}
-                  title={
-                    isFillMixed
-                      ? "Fill color (Mixed)"
-                      : isNone
-                        ? "배경 켜기"
-                        : "배경 끄기 (None)"
-                  }
                 />
               }
             />

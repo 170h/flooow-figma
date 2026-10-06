@@ -403,6 +403,7 @@ export function LabelSection() {
               type="text"
               id="input-conn-label"
               className="conn-label-input"
+              data-tooltip="Label text"
               placeholder={isTextMixed ? 'Mixed' : 'Add a label'}
               {...(isMultiConnector
                 ? { value: displayText }
@@ -425,14 +426,13 @@ export function LabelSection() {
             {/* 3행: [배경색 인풋] [보더색 인풋] [텍스트 정렬 세그먼트] */}
             <div className="style-inputs-row">
               {/* (1) Fill Color 컨트롤 박스 (Style 컴포넌트 규격) */}
-              <div className="style-input-box style-color-input-box">
+              <div className="style-input-box style-color-input-box" data-tooltip="Label fill color">
                 {/* 컬러 칩 (클릭 시 배경 투명 None 토글) */}
                 <FillColorIcon
                   color={isFillNone ? lastValidFillRef.current : (displayFill || fillColor)}
                   isNone={isFillNone}
                   isMixed={isFillMixed}
                   onClick={handleFillChipClick}
-                  title={isFillMixed ? 'Mixed' : (isFillNone ? '배경 켜기' : '배경 끄기 (None)')}
                 />
                 <input
                   type="text"
@@ -458,7 +458,6 @@ export function LabelSection() {
                 <button
                   type="button"
                   className="style-palette-action-btn"
-                  title="Fill color picker"
                   onClick={() => setActiveModal('label-fill-color')}
                 >
                   {PALETTE_ICON_SVG}
@@ -466,11 +465,11 @@ export function LabelSection() {
               </div>
 
               {/* (2) Stroke Color 컨트롤 박스 (Style 컴포넌트 규격) */}
-              <div className="style-input-box style-color-input-box">
+              <div className="style-input-box style-color-input-box" data-tooltip="Label stroke color">
                 <button
                   type="button"
                   className="style-stroke-btn"
-                  title={isStrokeMixed ? 'Mixed' : (isStrokeNone ? '보더 켜기' : '보더 끄기 (None)')}
+                  data-tooltip={isStrokeMixed ? 'Mixed stroke' : (isStrokeNone ? 'Show border' : 'Hide border')}
                   onClick={handleStrokeChipClick}
                 >
                   <StrokeColorIcon
@@ -503,7 +502,6 @@ export function LabelSection() {
                 <button
                   type="button"
                   className="style-palette-action-btn"
-                  title="Stroke color picker"
                   onClick={() => setActiveModal('label-stroke-color')}
                 >
                   {PALETTE_ICON_SVG}
@@ -515,7 +513,7 @@ export function LabelSection() {
                 <button
                   type="button"
                   className={`corner-btn${displayAlign === 'LEFT' ? ' active' : ''}`}
-                  title="Align left"
+                  data-tooltip="Align left"
                   onClick={() => handleAlignSelect('LEFT')}
                 >
                   <IcTextAlignLeft size={16} />
@@ -523,7 +521,7 @@ export function LabelSection() {
                 <button
                   type="button"
                   className={`corner-btn${displayAlign === 'CENTER' ? ' active' : ''}`}
-                  title="Align center"
+                  data-tooltip="Align center"
                   onClick={() => handleAlignSelect('CENTER')}
                 >
                   <IcTextAlignCenter size={16} />
@@ -531,7 +529,7 @@ export function LabelSection() {
                 <button
                   type="button"
                   className={`corner-btn${displayAlign === 'RIGHT' ? ' active' : ''}`}
-                  title="Align right"
+                  data-tooltip="Align right"
                   onClick={() => handleAlignSelect('RIGHT')}
                 >
                   <IcTextAlignRight size={16} />

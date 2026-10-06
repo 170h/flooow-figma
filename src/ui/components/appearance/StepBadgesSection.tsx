@@ -636,6 +636,9 @@ export function StepBadgesSection() {
           >
             {/* 좌측 Numeric Input */}
             <div
+              data-tooltip={
+                isMultiMode ? "Start Number" : "Number"
+              }
               style={{
                 width: "100px",
                 height: "28px",
@@ -651,9 +654,6 @@ export function StepBadgesSection() {
             >
               <svg
                 id="step-number-icon"
-                data-tooltip={
-                  isMultiMode ? "Start Number (Reset: 1)" : "Number (Reset: 1)"
-                }
                 width="24"
                 height="24"
                 viewBox="0 0 24 24"
@@ -722,7 +722,7 @@ export function StepBadgesSection() {
                   <button
                     key={c.pos}
                     type="button"
-                    title={c.title}
+                    data-tooltip={c.title}
                     onClick={() => handleCornerSelect(c.pos)}
                     className={`corner-btn${active ? " active" : ""}`}
                   >

@@ -32505,8 +32505,7 @@
     size = 14,
     className = "",
     style,
-    onClick,
-    title
+    onClick
   }) => {
     const formattedColor = color.startsWith("#") ? color : `#${color}`;
     const fillColor = isNone ? "none" : isMixed ? "#999999" : formattedColor;
@@ -32528,7 +32527,6 @@
           ...style
         },
         onClick,
-        title,
         children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
           "svg",
           {
@@ -32593,8 +32591,7 @@
     size = 14,
     className = "",
     style,
-    onClick,
-    title
+    onClick
   }) => {
     const formattedColor = color.startsWith("#") ? color : `#${color}`;
     return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
@@ -32616,7 +32613,6 @@
           ...style
         },
         onClick,
-        title,
         children: isNone && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
           "svg",
           {
@@ -32713,7 +32709,7 @@
         htmlFor: id,
         "data-state": isMixed ? "mixed" : checked ? "checked" : "unchecked",
         "data-tooltip": dataTooltip,
-        title,
+        title: dataTooltip ? void 0 : title,
         ...props,
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
@@ -32974,7 +32970,7 @@
               id: "btn-copy-desc",
               type: "button",
               className: `btn-action-icon${copied ? " copied" : ""}${!effectiveHasText ? " disabled" : ""}`,
-              title: copied ? "\uBCF5\uC0AC \uC644\uB8CC" : effectiveHasText ? "Copy" : "\uC785\uB825\uB41C \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+              "data-tooltip": copied ? "Copied" : effectiveHasText ? "Copy" : "No description entered",
               disabled: !effectiveHasText,
               onClick: copyDescription,
               children: copied ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(IcCheckLarge, {}) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(IcCopy, {})
@@ -34250,6 +34246,7 @@
                       /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
                         "div",
                         {
+                          "data-tooltip": isMultiMode ? "Start Number" : "Number",
                           style: {
                             width: "100px",
                             height: "28px",
@@ -34267,7 +34264,6 @@
                               "svg",
                               {
                                 id: "step-number-icon",
-                                "data-tooltip": isMultiMode ? "Start Number (Reset: 1)" : "Number (Reset: 1)",
                                 width: "24",
                                 height: "24",
                                 viewBox: "0 0 24 24",
@@ -34341,7 +34337,7 @@
                           "button",
                           {
                             type: "button",
-                            title: c.title,
+                            "data-tooltip": c.title,
                             onClick: () => handleCornerSelect(c.pos),
                             className: `corner-btn${active ? " active" : ""}`,
                             children: c.svg
@@ -35092,7 +35088,7 @@
             "button",
             {
               className: `btn-action-icon${!isSizeAllowed ? " disabled" : ""}`,
-              title: !isSizeAllowed ? "Add size is disabled for this shape" : "Add size",
+              "data-tooltip": !isSizeAllowed ? "Add size is disabled for this shape" : "Add size",
               disabled: !isSizeAllowed,
               onClick: () => isSizeAllowed && setActiveModal("add-size"),
               children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M12 6C12.2761 6 12.5 6.22386 12.5 6.5V11.5H17.5C17.7761 11.5 18 11.7239 18 12C18 12.2761 17.7761 12.5 17.5 12.5H12.5V17.5C12.5 17.7761 12.2761 18 12 18C11.7239 18 11.5 17.7761 11.5 17.5V12.5H6.5C6.22386 12.5 6 12.2761 6 12C6 11.7239 6.22386 11.5 6.5 11.5H11.5V6.5C11.5 6.22386 11.7239 6 12 6Z", fill: "currentColor" }) })
@@ -35103,7 +35099,7 @@
             {
               id: "btn-size-more",
               className: `btn-action-icon btn-more-icon${isMoreDisabled ? " disabled" : ""}`,
-              title: !isSizeAllowed ? "Size options are disabled for this shape" : isMoreDisabled ? "\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC218\uC815 \uB610\uB294 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4" : "More options",
+              "data-tooltip": !isSizeAllowed ? "Size options are disabled for this shape" : isMoreDisabled ? "Default presets cannot be edited or deleted" : "More options",
               disabled: isMoreDisabled,
               onClick: toggleSizeMoreMenu,
               children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: [
@@ -35117,8 +35113,8 @@
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "section-body", children: [
         /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "numeric-inputs-row", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `input-scrubber-box${!isSizeAllowed ? " disabled" : ""}`, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "scrubber-label", "data-tooltip": "Width", children: "W" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `input-scrubber-box${!isSizeAllowed ? " disabled" : ""}`, "data-tooltip": "Width", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "scrubber-label", children: "W" }),
             /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
               "input",
               {
@@ -35141,8 +35137,8 @@
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `input-scrubber-box${!isSizeAllowed ? " disabled" : ""}`, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "scrubber-label", "data-tooltip": "Height", children: "H" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `input-scrubber-box${!isSizeAllowed ? " disabled" : ""}`, "data-tooltip": "Height", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "scrubber-label", children: "H" }),
             /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
               "input",
               {
@@ -35165,8 +35161,8 @@
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `input-scrubber-box${!isSizeAllowed ? " disabled" : ""}`, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("svg", { "data-tooltip": "Corner radius", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z", fill: "currentColor" }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: `input-scrubber-box${!isSizeAllowed ? " disabled" : ""}`, "data-tooltip": "Corner radius", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9H12.5C11.7917 9 11.2902 9.00022 10.8984 9.03223C10.5126 9.06377 10.2769 9.12345 10.0918 9.21777C9.71554 9.40951 9.40951 9.71554 9.21777 10.0918C9.12345 10.2769 9.06377 10.5126 9.03223 10.8984C9.00022 11.2902 9 11.7917 9 12.5V15.5C9 15.7761 8.77614 16 8.5 16C8.22386 16 8 15.7761 8 15.5V12.5C8 11.8082 8.00003 11.2593 8.03613 10.8174C8.07272 10.3696 8.14901 9.98732 8.32715 9.6377C8.61472 9.07347 9.07347 8.61472 9.6377 8.32715C9.98732 8.14901 10.3696 8.07272 10.8174 8.03613C11.2593 8.00003 11.8082 8 12.5 8H15.5Z", fill: "currentColor" }) }),
             /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
               "input",
               {
@@ -35202,7 +35198,7 @@
                     type: "button",
                     id: "btn-size-mode-dropdown",
                     className: `size-mode-dropdown-btn figma-dropdown-btn${dropdownOpen ? " active" : ""}${!isSizeAllowed ? " disabled" : ""}`,
-                    title: !isSizeAllowed ? "Size mode cannot be changed for this shape" : "Select height mode",
+                    "data-tooltip": !isSizeAllowed ? "Size mode cannot be changed for this shape" : "Select height mode",
                     disabled: !isSizeAllowed,
                     onClick: toggleSizeModeDropdown,
                     children: [
@@ -35640,7 +35636,7 @@
             "button",
             {
               className: "btn-action-icon",
-              title: "Add style",
+              "data-tooltip": "Add style",
               onClick: () => setActiveModal("add-style"),
               children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "path",
@@ -35657,7 +35653,7 @@
               id: "btn-style-more",
               ref: btnMoreRef,
               className: `btn-action-icon btn-more-icon${isMoreDisabled ? " disabled" : ""}${contextMenuOpen && contextMenuTarget === "style" ? " active" : ""}`,
-              title: isMoreDisabled ? "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815 \uB610\uB294 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4" : "More options",
+              "data-tooltip": isMoreDisabled ? "Default styles cannot be edited or deleted" : "More options",
               disabled: isMoreDisabled,
               onClick: toggleStyleMoreMenu,
               children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: [
@@ -35671,15 +35667,14 @@
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "section-body", children: [
         /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "style-inputs-row", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "style-input-box style-color-input-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "style-input-box style-color-input-box", "data-tooltip": "Fill color", children: [
             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               FillColorIcon,
               {
                 color: effectiveFillColor,
                 isNone: isFillNone,
                 isMixed: isFillMixed,
-                onClick: handleFillChipClick,
-                title: isFillMixed ? "Fill color (Mixed)" : isFillNone ? "\uBC30\uACBD \uCF1C\uAE30" : "\uBC30\uACBD \uB044\uAE30 (None)"
+                onClick: handleFillChipClick
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
@@ -35706,19 +35701,18 @@
               {
                 type: "button",
                 className: "style-palette-action-btn",
-                title: "Fill color picker",
                 onClick: () => setActiveModal("fill-color"),
                 children: PALETTE_ICON_SVG
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "style-input-box style-color-input-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "style-input-box style-color-input-box", "data-tooltip": "Stroke color", children: [
             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               "button",
               {
                 type: "button",
                 className: "style-stroke-btn",
-                title: isStrokeMixed ? "Stroke color (Mixed)" : isStrokeNone ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)",
+                "data-tooltip": isStrokeMixed ? "Mixed stroke color" : isStrokeNone ? "Show border" : "Hide border",
                 onClick: handleStrokeIconClick,
                 children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                   StrokeColorIcon,
@@ -35755,19 +35749,18 @@
               {
                 type: "button",
                 className: "style-palette-action-btn",
-                title: "Stroke color picker",
                 onClick: () => setActiveModal("stroke-color"),
                 children: PALETTE_ICON_SVG
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "style-input-box style-weight-input-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "style-input-box style-weight-input-box", "data-tooltip": "Stroke width", children: [
             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               "button",
               {
                 type: "button",
                 className: "style-weight-action-btn",
-                title: isWeightMixed ? "Stroke width (Mixed)" : "Stroke width (Set default: 1.5)",
+                "data-tooltip": isWeightMixed ? "Mixed stroke width" : "Stroke width",
                 onClick: toggleStrokeWeight,
                 children: STROKE_WEIGHT_ICON_SVG
               }
@@ -35811,7 +35804,7 @@
               },
               "data-color": preset.fillColor,
               "data-style-id": preset.id,
-              title: `\uBC30\uACBD: ${preset.fillColor}${hasBorder ? `, \uBCF4\uB354: ${preset.strokeWeight}px ${preset.strokeColor}` : ", \uBCF4\uB354: \uC5C6\uC74C"}`,
+              "data-tooltip": `Background ${preset.fillColor}${hasBorder ? ` Border ${preset.strokeWeight}px ${preset.strokeColor}` : " No border"}`,
               onClick: () => selectStylePreset(preset),
               children: isPresetFillNone && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "svg",
@@ -36042,7 +36035,7 @@
               "div",
               {
                 className: `elevation-card elev-${level}${isSelected ? " selected" : ""}`,
-                title: `${label} (${desc})`,
+                "data-tooltip": `${label} ${desc}`,
                 "aria-label": `${label} (${desc})`,
                 onClick: () => selectElevation(level),
                 children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "elevation-inner-box" })
@@ -36738,10 +36731,10 @@
       multiNodeConnectors: uiState.multiNodeConnectors
     });
     const ROUTING_TYPES = [
-      { type: "ORTHOGONAL", title: "\uC9C1\uAC01 (Orthogonal)", svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
-      { type: "S_CURVE", title: "S\uC790 \uACE1\uC120 (S-curve)", svg: '<g clip-path="url(#clip_sc)"><path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
-      { type: "CURVED", title: "\uBD80\uB4DC\uB7EC\uC6B4 \uACE1\uC120 (Curve)", svg: '<g clip-path="url(#clip_cv)"><path d="M6.3999 18.1C6.1299 18.1 5.8999 17.88 5.8999 17.61C5.8999 17.33 6.1199 17.11 6.3999 17.1C10.4799 17.06 10.9599 14.69 11.5099 11.94C12.0699 9.17002 12.7099 6.02002 17.5899 5.90002H17.5999C17.8699 5.90002 18.0899 6.12002 18.0999 6.39002C18.0999 6.67002 17.8899 6.90002 17.6099 6.90002C13.5299 7.00002 13.0399 9.38002 12.4899 12.14C11.9299 14.91 11.2899 18.05 6.4099 18.1H6.3999Z" fill="currentColor"/></g><defs><clipPath id="clip_cv"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
-      { type: "STRAIGHT", title: "\uC9C1\uC120 (Straight)", svg: '<path d="M17.2714 6.02145C17.4667 5.82618 17.7832 5.82618 17.9785 6.02145C18.1737 6.21671 18.1737 6.53322 17.9785 6.72848L6.72848 17.9785C6.53322 18.1737 6.21671 18.1737 6.02145 17.9785C5.82618 17.7832 5.82618 17.4667 6.02145 17.2714L17.2714 6.02145Z" fill="currentColor"/>' }
+      { type: "ORTHOGONAL", title: "Orthogonal", svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
+      { type: "S_CURVE", title: "S-curve", svg: '<g clip-path="url(#clip_sc)"><path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
+      { type: "CURVED", title: "Curve", svg: '<g clip-path="url(#clip_cv)"><path d="M6.3999 18.1C6.1299 18.1 5.8999 17.88 5.8999 17.61C5.8999 17.33 6.1199 17.11 6.3999 17.1C10.4799 17.06 10.9599 14.69 11.5099 11.94C12.0699 9.17002 12.7099 6.02002 17.5899 5.90002H17.5999C17.8699 5.90002 18.0899 6.12002 18.0999 6.39002C18.0999 6.67002 17.8899 6.90002 17.6099 6.90002C13.5299 7.00002 13.0399 9.38002 12.4899 12.14C11.9299 14.91 11.2899 18.05 6.4099 18.1H6.3999Z" fill="currentColor"/></g><defs><clipPath id="clip_cv"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
+      { type: "STRAIGHT", title: "Straight", svg: '<path d="M17.2714 6.02145C17.4667 5.82618 17.7832 5.82618 17.9785 6.02145C18.1737 6.21671 18.1737 6.53322 17.9785 6.72848L6.72848 17.9785C6.53322 18.1737 6.21671 18.1737 6.02145 17.9785C5.82618 17.7832 5.82618 17.4667 6.02145 17.2714L17.2714 6.02145Z" fill="currentColor"/>' }
     ];
     return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: "section-title", children: [
@@ -36755,6 +36748,7 @@
               "div",
               {
                 className: "conn-color-input-box",
+                "data-tooltip": "Connector color",
                 onClick: () => {
                   hexInputRef.current?.focus();
                   hexInputRef.current?.select();
@@ -36770,7 +36764,6 @@
                       onClick: (e) => {
                         e.stopPropagation();
                       },
-                      title: isColorMixed ? "Mixed" : `Color: ${selectedColor}`,
                       children: isColorMixed && COLOR_MIXED_ICON
                     }
                   ),
@@ -36806,7 +36799,6 @@
                       type: "button",
                       id: "btn-conn-color-palette",
                       className: "conn-color-palette-btn",
-                      title: "Color wheel modal",
                       onClick: (e) => {
                         e.stopPropagation();
                         setStartTermPopupOpen(false);
@@ -36845,7 +36837,7 @@
               "button",
               {
                 className: `routing-btn${isActive ? " active" : ""}`,
-                title: r.title,
+                "data-tooltip": r.title,
                 onClick: () => selectRoutingType(r.type),
                 children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", dangerouslySetInnerHTML: { __html: r.svg } })
               },
@@ -36870,7 +36862,7 @@
                       className: `anchor-handle anchor-${pos.toLowerCase()}${isActive ? " active" : ""}${isMixed ? " mixed" : ""}`,
                       "data-node": "1",
                       "data-pos": pos,
-                      title: isMixed ? `Source ${pos} (Mixed)` : isActive ? `Source ${pos} (Active)` : `Source ${pos}`,
+                      "data-tooltip": isMixed ? `Source ${pos} Mixed` : isActive ? `Source ${pos} Active` : `Source ${pos}`,
                       onClick: () => selectAnchor(1, pos)
                     },
                     pos
@@ -36892,7 +36884,7 @@
                       className: `anchor-handle anchor-${pos.toLowerCase()}${isActive ? " active" : ""}${isMixed ? " mixed" : ""}`,
                       "data-node": "2",
                       "data-pos": pos,
-                      title: isMixed ? `Target ${pos} (Mixed)` : isActive ? `Target ${pos} (Active)` : `Target ${pos}`,
+                      "data-tooltip": isMixed ? `Target ${pos} Mixed` : isActive ? `Target ${pos} Active` : `Target ${pos}`,
                       onClick: () => selectAnchor(2, pos)
                     },
                     pos
@@ -36907,11 +36899,10 @@
           }
         ),
         /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { style: { display: "flex", gap: "6px" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "input-scrubber-box", style: { width: "70px" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "input-scrubber-box", style: { width: "70px" }, "data-tooltip": "Stroke width", children: [
             /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
               "svg",
               {
-                "data-tooltip": "Stroke width (Reset: 1.5)",
                 width: "24",
                 height: "24",
                 viewBox: "0 0 24 24",
@@ -36960,7 +36951,7 @@
                 "button",
                 {
                   className: `line-style-btn${isActive ? " active" : ""}`,
-                  title,
+                  "data-tooltip": title,
                   onClick: (e) => selectLinePattern(pattern, e.currentTarget),
                   children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("path", { d: path, fill: "currentColor" }) })
                 },
@@ -36971,7 +36962,7 @@
               "button",
               {
                 className: `line-style-btn${!isLinePatternMixed && selectedLinePattern === "DOTTED" ? " active" : ""}`,
-                title: "Dotted",
+                "data-tooltip": "Dotted",
                 onClick: (e) => selectLinePattern("DOTTED", e.currentTarget),
                 children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("g", { transform: "translate(5, 11.3)", children: [
                   /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("path", { d: "M0.7 0C0.31 0 0 0.31 0 0.7C0 1.09 0.31 1.4 0.7 1.4C1.09 1.4 1.4 1.09 1.4 0.7C1.4 0.31 1.09 0 0.7 0Z", fill: "currentColor" }),
@@ -36985,11 +36976,10 @@
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "terminal-offset-row", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "input-scrubber-box offset-start-box", style: { width: "70px" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "input-scrubber-box offset-start-box", style: { width: "70px" }, "data-tooltip": "Start offset", children: [
             /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
               "svg",
               {
-                "data-tooltip": "Start offset (Reset: 0)",
                 width: "24",
                 height: "24",
                 viewBox: "0 0 24 24",
@@ -37061,7 +37051,7 @@
                 type: "button",
                 id: "btn-start-terminal",
                 className: `figma-dropdown-btn${startTermPopupOpen ? " active" : ""}`,
-                title: "Start terminal",
+                "data-tooltip": "Start terminal",
                 style: { padding: "0 4px 0 6px" },
                 onClick: (e) => {
                   e.stopPropagation();
@@ -37118,6 +37108,7 @@
                       "div",
                       {
                         className: `terminal-ui3-item${isSelected ? " selected" : ""}`,
+                        "data-tooltip": opt.charAt(0) + opt.slice(1).toLowerCase(),
                         style: {
                           width: "100%",
                           height: "24px",
@@ -37159,7 +37150,7 @@
                 type: "button",
                 id: "btn-end-terminal",
                 className: `figma-dropdown-btn${endTermPopupOpen ? " active" : ""}`,
-                title: "End terminal",
+                "data-tooltip": "End terminal",
                 style: { padding: "0 4px 0 6px" },
                 onClick: (e) => {
                   e.stopPropagation();
@@ -37216,6 +37207,7 @@
                       "div",
                       {
                         className: `terminal-ui3-item${isSelected ? " selected" : ""}`,
+                        "data-tooltip": opt.charAt(0) + opt.slice(1).toLowerCase(),
                         style: {
                           width: "100%",
                           height: "24px",
@@ -37250,7 +37242,7 @@
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "input-scrubber-box offset-end-box", style: { width: "70px" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "input-scrubber-box offset-end-box", style: { width: "70px" }, "data-tooltip": "End offset", children: [
             /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
               "input",
               {
@@ -37308,7 +37300,6 @@
             /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
               "svg",
               {
-                "data-tooltip": "End offset (Reset: 0)",
                 width: "24",
                 height: "24",
                 viewBox: "0 0 24 24",
@@ -37724,6 +37715,7 @@
             type: "text",
             id: "input-conn-label",
             className: "conn-label-input",
+            "data-tooltip": "Label text",
             placeholder: isTextMixed ? "Mixed" : "Add a label",
             ...isMultiConnector ? { value: displayText } : { defaultValue: lastConnectorConfig.labelText || "" },
             onFocus: () => {
@@ -37743,15 +37735,14 @@
           }
         ),
         /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-inputs-row", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-input-box style-color-input-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-input-box style-color-input-box", "data-tooltip": "Label fill color", children: [
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
               FillColorIcon,
               {
                 color: isFillNone ? lastValidFillRef.current : displayFill || fillColor,
                 isNone: isFillNone,
                 isMixed: isFillMixed,
-                onClick: handleFillChipClick,
-                title: isFillMixed ? "Mixed" : isFillNone ? "\uBC30\uACBD \uCF1C\uAE30" : "\uBC30\uACBD \uB044\uAE30 (None)"
+                onClick: handleFillChipClick
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
@@ -37784,19 +37775,18 @@
               {
                 type: "button",
                 className: "style-palette-action-btn",
-                title: "Fill color picker",
                 onClick: () => setActiveModal("label-fill-color"),
                 children: PALETTE_ICON_SVG2
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-input-box style-color-input-box", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "style-input-box style-color-input-box", "data-tooltip": "Label stroke color", children: [
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
               "button",
               {
                 type: "button",
                 className: "style-stroke-btn",
-                title: isStrokeMixed ? "Mixed" : isStrokeNone ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)",
+                "data-tooltip": isStrokeMixed ? "Mixed stroke" : isStrokeNone ? "Show border" : "Hide border",
                 onClick: handleStrokeChipClick,
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
                   StrokeColorIcon,
@@ -37838,7 +37828,6 @@
               {
                 type: "button",
                 className: "style-palette-action-btn",
-                title: "Stroke color picker",
                 onClick: () => setActiveModal("label-stroke-color"),
                 children: PALETTE_ICON_SVG2
               }
@@ -37850,7 +37839,7 @@
               {
                 type: "button",
                 className: `corner-btn${displayAlign === "LEFT" ? " active" : ""}`,
-                title: "Align left",
+                "data-tooltip": "Align left",
                 onClick: () => handleAlignSelect("LEFT"),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(IcTextAlignLeft, { size: 16 })
               }
@@ -37860,7 +37849,7 @@
               {
                 type: "button",
                 className: `corner-btn${displayAlign === "CENTER" ? " active" : ""}`,
-                title: "Align center",
+                "data-tooltip": "Align center",
                 onClick: () => handleAlignSelect("CENTER"),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(IcTextAlignCenter, { size: 16 })
               }
@@ -37870,7 +37859,7 @@
               {
                 type: "button",
                 className: `corner-btn${displayAlign === "RIGHT" ? " active" : ""}`,
-                title: "Align right",
+                "data-tooltip": "Align right",
                 onClick: () => handleAlignSelect("RIGHT"),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(IcTextAlignRight, { size: 16 })
               }
@@ -37907,70 +37896,98 @@
   // src/ui/components/shared/Tooltip.tsx
   var import_react16 = __toESM(require_react());
   var import_jsx_runtime18 = __toESM(require_jsx_runtime());
+  var INITIAL_DELAY = 500;
+  var SWITCH_GRACE = 500;
   function FigmaTooltip() {
     const tooltipRef = (0, import_react16.useRef)(null);
     const showTimerRef = (0, import_react16.useRef)(null);
     const currentTargetRef = (0, import_react16.useRef)(null);
+    const lastHideAtRef = (0, import_react16.useRef)(0);
+    const isVisible = (0, import_react16.useCallback)(() => {
+      const tooltip = tooltipRef.current;
+      return Boolean(
+        tooltip && tooltip.style.display === "block" && tooltip.classList.contains("visible")
+      );
+    }, []);
+    const render = (0, import_react16.useCallback)((target, text) => {
+      const tooltip = tooltipRef.current;
+      if (!tooltip) return;
+      tooltip.textContent = text;
+      tooltip.style.display = "block";
+      tooltip.classList.remove("visible", "arrow-top");
+      const rect = target.getBoundingClientRect();
+      const tipRect = tooltip.getBoundingClientRect();
+      let top = rect.top - tipRect.height - 6;
+      let left = rect.left + rect.width / 2 - tipRect.width / 2;
+      if (top < 4) {
+        top = rect.bottom + 6;
+        tooltip.classList.add("arrow-top");
+      } else {
+        tooltip.classList.remove("arrow-top");
+      }
+      if (left < 6) left = 6;
+      if (left + tipRect.width > window.innerWidth - 6) {
+        left = window.innerWidth - tipRect.width - 6;
+      }
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+      void tooltip.offsetWidth;
+      tooltip.classList.add("visible");
+    }, []);
     const hide = (0, import_react16.useCallback)(() => {
       if (showTimerRef.current) {
         clearTimeout(showTimerRef.current);
         showTimerRef.current = null;
       }
+      const wasVisible = isVisible();
       currentTargetRef.current = null;
       const tooltip = tooltipRef.current;
       if (tooltip) {
         tooltip.classList.remove("visible", "arrow-top");
         tooltip.style.display = "none";
       }
-    }, []);
-    const show = (0, import_react16.useCallback)((target, text) => {
+      if (wasVisible) lastHideAtRef.current = Date.now();
+    }, [isVisible]);
+    const show = (0, import_react16.useCallback)((target, text, immediate) => {
       if (!text || !text.trim()) {
         hide();
         return;
       }
       if (showTimerRef.current) {
         clearTimeout(showTimerRef.current);
+        showTimerRef.current = null;
       }
       currentTargetRef.current = target;
+      if (immediate) {
+        render(target, text);
+        return;
+      }
       showTimerRef.current = setTimeout(() => {
         const tooltip = tooltipRef.current;
         if (!tooltip || currentTargetRef.current !== target) return;
-        tooltip.textContent = text;
-        tooltip.style.display = "block";
-        tooltip.classList.remove("visible", "arrow-top");
-        const rect = target.getBoundingClientRect();
-        const tipRect = tooltip.getBoundingClientRect();
-        let top = rect.top - tipRect.height - 6;
-        let left = rect.left + rect.width / 2 - tipRect.width / 2;
-        if (top < 4) {
-          top = rect.bottom + 6;
-          tooltip.classList.add("arrow-top");
-        } else {
-          tooltip.classList.remove("arrow-top");
-        }
-        if (left < 6) left = 6;
-        if (left + tipRect.width > window.innerWidth - 6) {
-          left = window.innerWidth - tipRect.width - 6;
-        }
-        tooltip.style.left = `${left}px`;
-        tooltip.style.top = `${top}px`;
-        void tooltip.offsetWidth;
-        tooltip.classList.add("visible");
-      }, 150);
-    }, [hide]);
+        render(target, text);
+      }, INITIAL_DELAY);
+    }, [hide, render]);
     (0, import_react16.useEffect)(() => {
+      const isEditableFocused = (scope) => {
+        const active = document.activeElement;
+        if (!active || active === document.body) return false;
+        const editable = active.matches?.("input, textarea, select") || active.getAttribute?.("contenteditable") === "true";
+        return Boolean(editable && scope.contains(active));
+      };
       const handleMouseOver = (e) => {
         const targetElement = e.target;
-        if (targetElement.matches?.("input, textarea, select")) {
-          hide();
-          return;
-        }
         const target = targetElement.closest?.("[data-tooltip]");
         if (!target) return;
         const text = target.getAttribute("data-tooltip");
         if (!text) return;
         if (currentTargetRef.current === target) return;
-        show(target, text);
+        if (isEditableFocused(target)) {
+          hide();
+          return;
+        }
+        const instant = isVisible() || Date.now() - lastHideAtRef.current < SWITCH_GRACE;
+        show(target, text, instant);
       };
       const handleMouseOut = (e) => {
         const target = e.target.closest?.("[data-tooltip]");
@@ -37979,16 +37996,28 @@
         if (related && target.contains(related)) {
           return;
         }
+        const relatedEl = related;
+        const next = relatedEl?.closest?.("[data-tooltip]");
+        if (next && next !== target) return;
         hide();
+      };
+      const handleFocusIn = (e) => {
+        const focused = e.target;
+        if (!focused) return;
+        if (focused.matches?.("input, textarea, select") || focused.getAttribute?.("contenteditable") === "true") {
+          hide();
+        }
       };
       document.addEventListener("mouseover", handleMouseOver);
       document.addEventListener("mouseout", handleMouseOut);
+      document.addEventListener("focusin", handleFocusIn);
       return () => {
         document.removeEventListener("mouseover", handleMouseOver);
         document.removeEventListener("mouseout", handleMouseOut);
+        document.removeEventListener("focusin", handleFocusIn);
         if (showTimerRef.current) clearTimeout(showTimerRef.current);
       };
-    }, [show, hide]);
+    }, [show, hide, isVisible]);
     return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
       "div",
       {
@@ -38162,7 +38191,7 @@
             children: [
               /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "size-modal-header", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("span", { className: "size-modal-title", children: title }),
-                /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("button", { className: "size-modal-close-btn", onClick: onClose, title: "Close", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("path", { d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z", fill: "currentColor" }) }) })
+                /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("button", { className: "size-modal-close-btn", onClick: onClose, "data-tooltip": "Close", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("path", { d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z", fill: "currentColor" }) }) })
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "size-modal-body", style: { overflow: "visible" }, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "phase-field-group", children: [
@@ -38498,7 +38527,7 @@
                         type: "button",
                         className: "size-modal-close-btn",
                         onClick: onClose,
-                        title: "Close",
+                        "data-tooltip": "Close",
                         style: {
                           background: "transparent",
                           border: "none",
@@ -38587,7 +38616,7 @@
                       {
                         type: "button",
                         onClick: loadDesignFrames,
-                        title: "Refresh frames from canvas",
+                        "data-tooltip": "Refresh frames from canvas",
                         style: {
                           background: "rgba(255, 255, 255, 0.05)",
                           border: "1px solid rgba(255, 255, 255, 0.12)",
@@ -39191,7 +39220,7 @@
     return /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { style: { display: "flex", flexDirection: "column", width: "100%" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "conn-color-input-row", children: [
         extraControlPosition === "left" && extraControl,
-        /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "conn-modal-hex-box", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)("div", { className: "conn-modal-hex-box", "data-tooltip": "Hex color", children: [
           customChip !== void 0 ? customChip : /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(
             "span",
             {
@@ -39229,7 +39258,6 @@
           {
             type: "button",
             className: `conn-modal-wheel-donut-btn${isWheelOpen ? " selected" : ""}`,
-            title: isWheelOpen ? "Hide color wheel" : "Show color wheel",
             onClick: toggleWheel,
             children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)("span", { className: "conn-modal-wheel-donut-icon" })
           }
@@ -39444,7 +39472,7 @@
                     type: "button",
                     className: "style-modal-close-btn",
                     onClick: onClose,
-                    title: "Close",
+                    "data-tooltip": "Close",
                     children: CLOSE_SVG
                   }
                 )
@@ -39521,8 +39549,7 @@
                               onClick: (e) => {
                                 e.stopPropagation();
                                 handleFillChipClick();
-                              },
-                              title: isFillMixed ? "Fill color (Mixed)" : isFillNone ? "\uBC30\uACBD \uCF1C\uAE30" : "\uBC30\uACBD \uB044\uAE30 (None)"
+                              }
                             }
                           )
                         }
@@ -39587,12 +39614,11 @@
                               onClick: (e) => {
                                 e.stopPropagation();
                                 setStrokeWeight((prev) => prev === 0 ? 1.5 : 0);
-                              },
-                              title: strokeWeight === 0 ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)"
+                              }
                             }
                           ),
                           extraControlPosition: "left",
-                          extraControl: /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "stroke-width-box", children: [
+                          extraControl: /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: "stroke-width-box", "data-tooltip": "Stroke width", children: [
                             /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
                               "span",
                               {
@@ -39787,7 +39813,7 @@
                     type: "button",
                     className: "style-modal-close-btn",
                     onClick: onClose,
-                    title: "Close",
+                    "data-tooltip": "Close",
                     children: CLOSE_SVG2
                   }
                 )
@@ -39806,7 +39832,7 @@
                       },
                       "data-color": item.color.toLowerCase(),
                       onClick: () => handleSelectPreset(item.color),
-                      title: item.color
+                      "data-tooltip": item.color
                     },
                     item.id
                   );
@@ -39823,7 +39849,7 @@
                       },
                       "data-color": item.color.toLowerCase(),
                       onClick: () => handleSelectPreset(item.color),
-                      title: item.color
+                      "data-tooltip": item.color
                     },
                     item.id
                   );
@@ -39920,7 +39946,7 @@
         className: `conn-preset-card${selected === item.color ? " selected" : ""}`,
         style: { backgroundColor: item.color },
         "data-color": item.color.toLowerCase(),
-        title: item.name ? `${item.name} ${item.color}` : item.color,
+        "data-tooltip": item.name ? `${item.name} ${item.color}` : item.color,
         onClick: () => onSelect(item.color.replace("#", ""))
       },
       item.id
@@ -40031,7 +40057,7 @@
                     type: "button",
                     className: "style-modal-close-btn",
                     onClick: handleCancel,
-                    title: "Close",
+                    "data-tooltip": "Close",
                     children: CLOSE_SVG3
                   }
                 )
@@ -40071,8 +40097,7 @@
                             onClick: (e) => {
                               e.stopPropagation();
                               handleChipClick();
-                            },
-                            title: isFillMixed ? "Fill color (Mixed)" : isNone ? "\uBC30\uACBD \uCF1C\uAE30" : "\uBC30\uACBD \uB044\uAE30 (None)"
+                            }
                           }
                         )
                       }
@@ -40240,7 +40265,7 @@
                     type: "button",
                     className: "style-modal-close-btn",
                     onClick: handleCancel,
-                    title: "Close",
+                    "data-tooltip": "Close",
                     children: CLOSE_SVG4
                   }
                 )
@@ -40277,12 +40302,11 @@
                             onClick: (e) => {
                               e.stopPropagation();
                               handleChipClick();
-                            },
-                            title: strokeWeight === 0 ? "\uBCF4\uB354 \uCF1C\uAE30" : "\uBCF4\uB354 \uB044\uAE30 (None)"
+                            }
                           }
                         ),
                         extraControlPosition: hideWeightControl ? void 0 : "left",
-                        extraControl: hideWeightControl ? void 0 : /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { className: "stroke-width-box", children: [
+                        extraControl: hideWeightControl ? void 0 : /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)("div", { className: "stroke-width-box", "data-tooltip": "Stroke width", children: [
                           /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
                             "span",
                             {
@@ -40461,7 +40485,7 @@
                     type: "button",
                     className: "subscription-modal-close-btn",
                     onClick: onClose,
-                    title: "Close",
+                    "data-tooltip": "Close",
                     children: CLOSE_SVG5
                   }
                 )

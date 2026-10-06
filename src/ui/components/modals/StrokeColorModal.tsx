@@ -212,7 +212,7 @@ export function StrokeColorModal({
             type="button"
             className="style-modal-close-btn"
             onClick={handleCancel}
-            title="Close"
+            data-tooltip="Close"
           >
             {CLOSE_SVG}
           </button>
@@ -247,13 +247,12 @@ export function StrokeColorModal({
                     e.stopPropagation();
                     handleChipClick();
                   }}
-                  title={strokeWeight === 0 ? "보더 켜기" : "보더 끄기 (None)"}
                 />
               }
               extraControlPosition={hideWeightControl ? undefined : "left"}
               extraControl={
                 hideWeightControl ? undefined : (
-                  <div className="stroke-width-box">
+                  <div className="stroke-width-box" data-tooltip="Stroke width">
                   <span
                     style={{
                       width: 24,

@@ -157,7 +157,7 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
             type="button"
             className="size-modal-close-btn"
             onClick={onClose}
-            title="Close"
+            data-tooltip="Close"
             style={{
               background: 'transparent',
               border: 'none',
@@ -235,7 +235,7 @@ export function FigmaDesignPickerModal({ onClose }: FigmaDesignPickerModalProps)
           <button
             type="button"
             onClick={loadDesignFrames}
-            title="Refresh frames from canvas"
+            data-tooltip="Refresh frames from canvas"
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.12)',

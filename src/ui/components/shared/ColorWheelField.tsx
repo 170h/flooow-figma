@@ -406,7 +406,7 @@ export function ColorWheelField({
       <div className="conn-color-input-row">
         {extraControlPosition === "left" && extraControl}
 
-        <div className="conn-modal-hex-box">
+        <div className="conn-modal-hex-box" data-tooltip="Hex color">
           {customChip !== undefined ? (
             customChip
           ) : (
@@ -443,7 +443,6 @@ export function ColorWheelField({
         <button
           type="button"
           className={`conn-modal-wheel-donut-btn${isWheelOpen ? " selected" : ""}`}
-          title={isWheelOpen ? "Hide color wheel" : "Show color wheel"}
           onClick={toggleWheel}
         >
           <span className="conn-modal-wheel-donut-icon" />

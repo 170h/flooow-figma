@@ -294,7 +294,6 @@ export const StrokeColorIcon = ({
   className = '',
   style,
   onClick,
-  title,
 }: {
   color?: string;
   isNone?: boolean;
@@ -303,7 +302,6 @@ export const StrokeColorIcon = ({
   className?: string;
   style?: React.CSSProperties;
   onClick?: (e: React.MouseEvent) => void;
-  title?: string;
 }) => {
   const formattedColor = color.startsWith('#') ? color : `#${color}`;
   const fillColor = isNone ? 'none' : isMixed ? '#999999' : formattedColor;
@@ -325,7 +323,6 @@ export const StrokeColorIcon = ({
         ...style,
       }}
       onClick={onClick}
-      title={title}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -393,7 +390,6 @@ export const FillColorIcon = ({
   className = '',
   style,
   onClick,
-  title,
 }: {
   color?: string;
   isNone?: boolean;
@@ -402,7 +398,6 @@ export const FillColorIcon = ({
   className?: string;
   style?: React.CSSProperties;
   onClick?: (e: React.MouseEvent) => void;
-  title?: string;
 }) => {
   const formattedColor = color.startsWith('#') ? color : `#${color}`;
 
@@ -428,7 +423,6 @@ export const FillColorIcon = ({
         ...style,
       }}
       onClick={onClick}
-      title={title}
     >
       {isNone && (
         <svg

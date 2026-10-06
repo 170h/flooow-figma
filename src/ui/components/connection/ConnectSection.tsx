@@ -816,10 +816,10 @@ export function ConnectSection() {
   });
 
   const ROUTING_TYPES = [
-    { type: 'ORTHOGONAL', title: '직각 (Orthogonal)', svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
-    { type: 'S_CURVE', title: 'S자 곡선 (S-curve)', svg: '<g clip-path="url(#clip_sc)"><path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
-    { type: 'CURVED', title: '부드러운 곡선 (Curve)', svg: '<g clip-path="url(#clip_cv)"><path d="M6.3999 18.1C6.1299 18.1 5.8999 17.88 5.8999 17.61C5.8999 17.33 6.1199 17.11 6.3999 17.1C10.4799 17.06 10.9599 14.69 11.5099 11.94C12.0699 9.17002 12.7099 6.02002 17.5899 5.90002H17.5999C17.8699 5.90002 18.0899 6.12002 18.0999 6.39002C18.0999 6.67002 17.8899 6.90002 17.6099 6.90002C13.5299 7.00002 13.0399 9.38002 12.4899 12.14C11.9299 14.91 11.2899 18.05 6.4099 18.1H6.3999Z" fill="currentColor"/></g><defs><clipPath id="clip_cv"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
-    { type: 'STRAIGHT', title: '직선 (Straight)', svg: '<path d="M17.2714 6.02145C17.4667 5.82618 17.7832 5.82618 17.9785 6.02145C18.1737 6.21671 18.1737 6.53322 17.9785 6.72848L6.72848 17.9785C6.53322 18.1737 6.21671 18.1737 6.02145 17.9785C5.82618 17.7832 5.82618 17.4667 6.02145 17.2714L17.2714 6.02145Z" fill="currentColor"/>' },
+    { type: 'ORTHOGONAL', title: 'Orthogonal', svg: '<g clip-path="url(#clip_orth)"><path d="M11.4999 18.1H5.8999V17.1H10.9999V6.40002C10.9999 6.12002 11.2199 5.90002 11.4999 5.90002H17.0999V6.90002H11.9999V17.6C11.9999 17.88 11.7799 18.1 11.4999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_orth"><rect width="11.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
+    { type: 'S_CURVE', title: 'S-curve', svg: '<g clip-path="url(#clip_sc)"><path d="M9.1999 18.1H6.3999C6.1199 18.1 5.8999 17.88 5.8999 17.6C5.8999 17.32 6.1199 17.1 6.3999 17.1H9.1999C10.4699 17.1 11.4999 16.07 11.4999 14.8V9.20002C11.4999 7.38002 12.9799 5.90002 14.7999 5.90002H17.5999C17.8799 5.90002 18.0999 6.12002 18.0999 6.40002C18.0999 6.68002 17.8799 6.90002 17.5999 6.90002H14.7999C13.5299 6.90002 12.4999 7.93002 12.4999 9.20002V14.8C12.4999 16.62 11.0199 18.1 9.1999 18.1Z" fill="currentColor"/></g><defs><clipPath id="clip_sc"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
+    { type: 'CURVED', title: 'Curve', svg: '<g clip-path="url(#clip_cv)"><path d="M6.3999 18.1C6.1299 18.1 5.8999 17.88 5.8999 17.61C5.8999 17.33 6.1199 17.11 6.3999 17.1C10.4799 17.06 10.9599 14.69 11.5099 11.94C12.0699 9.17002 12.7099 6.02002 17.5899 5.90002H17.5999C17.8699 5.90002 18.0899 6.12002 18.0999 6.39002C18.0999 6.67002 17.8899 6.90002 17.6099 6.90002C13.5299 7.00002 13.0399 9.38002 12.4899 12.14C11.9299 14.91 11.2899 18.05 6.4099 18.1H6.3999Z" fill="currentColor"/></g><defs><clipPath id="clip_cv"><rect width="12.2" height="12.2" fill="white" transform="translate(5.8999 5.90002)"/></clipPath></defs>' },
+    { type: 'STRAIGHT', title: 'Straight', svg: '<path d="M17.2714 6.02145C17.4667 5.82618 17.7832 5.82618 17.9785 6.02145C18.1737 6.21671 18.1737 6.53322 17.9785 6.72848L6.72848 17.9785C6.53322 18.1737 6.21671 18.1737 6.02145 17.9785C5.82618 17.7832 5.82618 17.4667 6.02145 17.2714L17.2714 6.02145Z" fill="currentColor"/>' },
   ];
 
   return (
@@ -843,6 +843,7 @@ export function ConnectSection() {
           <div className="conn-color-input-wrapper" id="wrap-conn-color">
             <div
               className="conn-color-input-box"
+              data-tooltip="Connector color"
               onClick={() => {
                 hexInputRef.current?.focus();
                 hexInputRef.current?.select();
@@ -858,7 +859,6 @@ export function ConnectSection() {
                   // 컬러칩은 색상 표시 전용 (클릭 시 컬러피커/입력 포커스 등 어떤 반응도 없음)
                   e.stopPropagation();
                 }}
-                title={isColorMixed ? 'Mixed' : `Color: ${selectedColor}`}
               >
                 {isColorMixed && COLOR_MIXED_ICON}
               </span>
@@ -893,7 +893,6 @@ export function ConnectSection() {
                 type="button"
                 id="btn-conn-color-palette"
                 className="conn-color-palette-btn"
-                title="Color wheel modal"
                 onClick={(e) => {
                   e.stopPropagation();
                   setStartTermPopupOpen(false);
@@ -929,7 +928,7 @@ export function ConnectSection() {
               return (
                 <button key={r.type}
                   className={`routing-btn${isActive ? ' active' : ''}`}
-                  title={r.title}
+                  data-tooltip={r.title}
                   onClick={() => selectRoutingType(r.type)}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" dangerouslySetInnerHTML={{ __html: r.svg }} />
                 </button>
@@ -954,7 +953,7 @@ export function ConnectSection() {
                   className={`anchor-handle anchor-${pos.toLowerCase()}${isActive ? ' active' : ''}${isMixed ? ' mixed' : ''}`}
                   data-node="1"
                   data-pos={pos}
-                  title={isMixed ? `Source ${pos} (Mixed)` : (isActive ? `Source ${pos} (Active)` : `Source ${pos}`)}
+                  data-tooltip={isMixed ? `Source ${pos} Mixed` : (isActive ? `Source ${pos} Active` : `Source ${pos}`)}
                   onClick={() => selectAnchor(1, pos)}
                 />
               );
@@ -975,7 +974,7 @@ export function ConnectSection() {
                   className={`anchor-handle anchor-${pos.toLowerCase()}${isActive ? ' active' : ''}${isMixed ? ' mixed' : ''}`}
                   data-node="2"
                   data-pos={pos}
-                  title={isMixed ? `Target ${pos} (Mixed)` : (isActive ? `Target ${pos} (Active)` : `Target ${pos}`)}
+                  data-tooltip={isMixed ? `Target ${pos} Mixed` : (isActive ? `Target ${pos} Active` : `Target ${pos}`)}
                   onClick={() => selectAnchor(2, pos)}
                 />
               );
@@ -989,9 +988,8 @@ export function ConnectSection() {
 
         {/* 두께 + 선 모양 */}
         <div style={{ display: 'flex', gap: '6px' }}>
-          <div className="input-scrubber-box" style={{ width: '70px' }}>
+          <div className="input-scrubber-box" style={{ width: '70px' }} data-tooltip="Stroke width">
             <svg
-              data-tooltip="Stroke width (Reset: 1.5)"
               width="24"
               height="24"
               viewBox="0 0 24 24"
@@ -1036,7 +1034,7 @@ export function ConnectSection() {
               return (
                 <button key={pattern}
                   className={`line-style-btn${isActive ? ' active' : ''}`}
-                  title={title}
+                  data-tooltip={title}
                   onClick={e => selectLinePattern(pattern, e.currentTarget)}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d={path} fill="currentColor"/></svg>
                 </button>
@@ -1044,7 +1042,7 @@ export function ConnectSection() {
             })}
             <button
               className={`line-style-btn${!isLinePatternMixed && selectedLinePattern === 'DOTTED' ? ' active' : ''}`}
-              title="Dotted"
+              data-tooltip="Dotted"
               onClick={e => selectLinePattern('DOTTED', e.currentTarget)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <g transform="translate(5, 11.3)">
@@ -1062,9 +1060,8 @@ export function ConnectSection() {
         {/* 단자 + 오프셋 */}
         <div className="terminal-offset-row">
           {/* 시작 오프셋 */}
-          <div className="input-scrubber-box offset-start-box" style={{ width: '70px' }}>
+          <div className="input-scrubber-box offset-start-box" style={{ width: '70px' }} data-tooltip="Start offset">
             <svg
-              data-tooltip="Start offset (Reset: 0)"
               width="24"
               height="24"
               viewBox="0 0 24 24"
@@ -1135,7 +1132,7 @@ export function ConnectSection() {
               type="button"
               id="btn-start-terminal"
               className={`figma-dropdown-btn${startTermPopupOpen ? ' active' : ''}`}
-              title="Start terminal"
+              data-tooltip="Start terminal"
               style={{ padding: '0 4px 0 6px' }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -1205,6 +1202,7 @@ export function ConnectSection() {
                     <div
                       key={opt}
                       className={`terminal-ui3-item${isSelected ? ' selected' : ''}`}
+                      data-tooltip={opt.charAt(0) + opt.slice(1).toLowerCase()}
                       style={{
                         width: '100%',
                         height: '24px',
@@ -1245,7 +1243,7 @@ export function ConnectSection() {
               type="button"
               id="btn-end-terminal"
               className={`figma-dropdown-btn${endTermPopupOpen ? ' active' : ''}`}
-              title="End terminal"
+              data-tooltip="End terminal"
               style={{ padding: '0 4px 0 6px' }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -1315,6 +1313,7 @@ export function ConnectSection() {
                     <div
                       key={opt}
                       className={`terminal-ui3-item${isSelected ? ' selected' : ''}`}
+                      data-tooltip={opt.charAt(0) + opt.slice(1).toLowerCase()}
                       style={{
                         width: '100%',
                         height: '24px',
@@ -1349,7 +1348,7 @@ export function ConnectSection() {
           </div>
 
           {/* 끝 오프셋 */}
-          <div className="input-scrubber-box offset-end-box" style={{ width: '70px' }}>
+          <div className="input-scrubber-box offset-end-box" style={{ width: '70px' }} data-tooltip="End offset">
             <input
               type="number"
               id="input-end-offset"
@@ -1403,7 +1402,6 @@ export function ConnectSection() {
               }}
             />
             <svg
-              data-tooltip="End offset (Reset: 0)"
               width="24"
               height="24"
               viewBox="0 0 24 24"

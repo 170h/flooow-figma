@@ -550,7 +550,7 @@ export function StyleSection() {
         <div className="section-actions">
           <button
             className="btn-action-icon"
-            title="Add style"
+            data-tooltip="Add style"
             onClick={() => setActiveModal("add-style")}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -564,9 +564,9 @@ export function StyleSection() {
             id="btn-style-more"
             ref={btnMoreRef}
             className={`btn-action-icon btn-more-icon${isMoreDisabled ? " disabled" : ""}${contextMenuOpen && contextMenuTarget === "style" ? " active" : ""}`}
-            title={
+            data-tooltip={
               isMoreDisabled
-                ? "기본 스타일은 수정 또는 삭제할 수 없습니다"
+                ? "Default styles cannot be edited or deleted"
                 : "More options"
             }
             disabled={isMoreDisabled}
@@ -585,20 +585,13 @@ export function StyleSection() {
         {/* 2. 피그마 UI3 공식 컨트롤 행 (Fill Color, Stroke Color, Stroke Weight) */}
         <div className="style-inputs-row">
           {/* (1) Fill Color 컨트롤 박스 */}
-          <div className="style-input-box style-color-input-box">
+          <div className="style-input-box style-color-input-box" data-tooltip="Fill color">
             {/* 컬러 칩 (클릭 시 배경 끄기/None 토글) */}
             <FillColorIcon
               color={effectiveFillColor}
               isNone={isFillNone}
               isMixed={isFillMixed}
               onClick={handleFillChipClick}
-              title={
-                isFillMixed
-                  ? "Fill color (Mixed)"
-                  : isFillNone
-                    ? "배경 켜기"
-                    : "배경 끄기 (None)"
-              }
             />
 
             {/* Hex 인풋 (None일 때 None 표시) */}
@@ -625,7 +618,6 @@ export function StyleSection() {
             <button
               type="button"
               className="style-palette-action-btn"
-              title="Fill color picker"
               onClick={() => setActiveModal("fill-color")}
             >
               {PALETTE_ICON_SVG}
@@ -633,17 +625,17 @@ export function StyleSection() {
           </div>
 
           {/* (2) Stroke Color 컨트롤 박스 */}
-          <div className="style-input-box style-color-input-box">
+          <div className="style-input-box style-color-input-box" data-tooltip="Stroke color">
             {/* 사용자 제공 공식 Stroke SVG 아이콘 버튼 (None 상태 시 대각선 표시 및 클릭 시 토글) */}
             <button
               type="button"
               className="style-stroke-btn"
-              title={
+              data-tooltip={
                 isStrokeMixed
-                  ? "Stroke color (Mixed)"
+                  ? "Mixed stroke color"
                   : isStrokeNone
-                    ? "보더 켜기"
-                    : "보더 끄기 (None)"
+                    ? "Show border"
+                    : "Hide border"
               }
               onClick={handleStrokeIconClick}
             >
@@ -679,7 +671,6 @@ export function StyleSection() {
             <button
               type="button"
               className="style-palette-action-btn"
-              title="Stroke color picker"
               onClick={() => setActiveModal("stroke-color")}
             >
               {PALETTE_ICON_SVG}
@@ -687,15 +678,15 @@ export function StyleSection() {
           </div>
 
           {/* (3) Stroke Weight 컨트롤 박스 */}
-          <div className="style-input-box style-weight-input-box">
+          <div className="style-input-box style-weight-input-box" data-tooltip="Stroke width">
             {/* 3선 스트로크 아이콘 버튼 */}
             <button
               type="button"
               className="style-weight-action-btn"
-              title={
+              data-tooltip={
                 isWeightMixed
-                  ? "Stroke width (Mixed)"
-                  : "Stroke width (Set default: 1.5)"
+                  ? "Mixed stroke width"
+                  : "Stroke width"
               }
               onClick={toggleStrokeWeight}
             >
@@ -754,7 +745,7 @@ export function StyleSection() {
                 }}
                 data-color={preset.fillColor}
                 data-style-id={preset.id}
-                title={`배경: ${preset.fillColor}${hasBorder ? `, 보더: ${preset.strokeWeight}px ${preset.strokeColor}` : ", 보더: 없음"}`}
+                data-tooltip={`Background ${preset.fillColor}${hasBorder ? ` Border ${preset.strokeWeight}px ${preset.strokeColor}` : " No border"}`}
                 onClick={() => selectStylePreset(preset)}
               >
                 {isPresetFillNone && (

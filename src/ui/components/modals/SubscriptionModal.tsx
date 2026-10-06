@@ -78,7 +78,7 @@ export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
             type="button"
             className="subscription-modal-close-btn"
             onClick={onClose}
-            title="Close"
+            data-tooltip="Close"
           >
             {CLOSE_SVG}
           </button>

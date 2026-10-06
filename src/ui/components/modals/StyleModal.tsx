@@ -232,7 +232,7 @@ export function StyleModal({
             type="button"
             className="style-modal-close-btn"
             onClick={onClose}
-            title="Close"
+            data-tooltip="Close"
           >
             {CLOSE_SVG}
           </button>
@@ -307,13 +307,6 @@ export function StyleModal({
                     e.stopPropagation();
                     handleFillChipClick();
                   }}
-                  title={
-                    isFillMixed
-                      ? "Fill color (Mixed)"
-                      : isFillNone
-                        ? "배경 켜기"
-                        : "배경 끄기 (None)"
-                  }
                 />
               }
             />
@@ -376,12 +369,11 @@ export function StyleModal({
                     e.stopPropagation();
                     setStrokeWeight((prev) => (prev === 0 ? 1.5 : 0));
                   }}
-                  title={strokeWeight === 0 ? "보더 켜기" : "보더 끄기 (None)"}
                 />
               }
               extraControlPosition="left"
               extraControl={
-                <div className="stroke-width-box">
+                <div className="stroke-width-box" data-tooltip="Stroke width">
                   <span
                     style={{
                       width: 24,

@@ -63,7 +63,7 @@ export function Switch({
       htmlFor={id}
       data-state={isMixed ? 'mixed' : (checked ? 'checked' : 'unchecked')}
       data-tooltip={dataTooltip}
-      title={title}
+      title={dataTooltip ? undefined : title}
       {...props}
     >
       <input

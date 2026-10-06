@@ -311,7 +311,7 @@ export function DescriptionSection() {
               id="btn-copy-desc"
               type="button"
               className={`btn-action-icon${copied ? ' copied' : ''}${!effectiveHasText ? ' disabled' : ''}`}
-              title={copied ? '복사 완료' : (effectiveHasText ? 'Copy' : '입력된 설명이 없습니다')}
+              data-tooltip={copied ? 'Copied' : (effectiveHasText ? 'Copy' : 'No description entered')}
               disabled={!effectiveHasText}
               onClick={copyDescription}
             >

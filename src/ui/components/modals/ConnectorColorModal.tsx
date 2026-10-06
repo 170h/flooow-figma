@@ -186,7 +186,7 @@ export function ConnectorColorModal({
             type="button"
             className="style-modal-close-btn"
             onClick={onClose}
-            title="Close"
+            data-tooltip="Close"
           >
             {CLOSE_SVG}
           </button>
@@ -214,7 +214,7 @@ export function ConnectorColorModal({
                     }}
                     data-color={item.color.toLowerCase()}
                     onClick={() => handleSelectPreset(item.color)}
-                    title={item.color}
+                    data-tooltip={item.color}
                   />
                 );
               })}
@@ -239,7 +239,7 @@ export function ConnectorColorModal({
                     }}
                     data-color={item.color.toLowerCase()}
                     onClick={() => handleSelectPreset(item.color)}
-                    title={item.color}
+                    data-tooltip={item.color}
                   />
                 );
               })}
