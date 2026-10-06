@@ -16,6 +16,18 @@ export function useFigmaMessage() {
 
   const handlerRef = useRef<((event: MessageEvent) => void) | null>(null);
   const prevNodeIdRef = useRef<string | null | undefined>(undefined);
+  // Startup critical path 분리용: 초기 usage 조회 1회성 지연 스케줄링 상태.
+  // INIT → handleSelectionChange 스캔이 먼저 끝나도록 첫 SELECTION_CHANGED 수신 후에
+  // GET_FLOOOW_USAGE를 예약한다 (document-wide scan 중복 실행 방지).
+  const usageRequestedRef = useRef(false);
+  const usageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const requestInitialUsage = () => {
+    if (usageRequestedRef.current) return;
+    usageRequestedRef.current = true;
+    // 초기 usage 1회 조회 (이후 생성 시 Core가 자동 push, polling 없음)
+    parent.postMessage({ pluginMessage: { type: 'GET_FLOOOW_USAGE' } }, '*');
+  };
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
@@ -24,6 +36,15 @@ export function useFigmaMessage() {
 
       switch (msg.type) {
         case 'SELECTION_CHANGED': {
+          // INIT 처리(선택 스캔)가 끝났다는 신호이므로, 초기 usage 조회를 이때 예약한다.
+          // 마운트 시 걸어둔 안전망 타이머가 있다면 취소하고 300ms 뒤 1회만 요청한다.
+          if (!usageRequestedRef.current) {
+            if (usageTimerRef.current !== null) {
+              clearTimeout(usageTimerRef.current);
+              usageTimerRef.current = null;
+            }
+            usageTimerRef.current = setTimeout(requestInitialUsage, 300);
+          }
           const {
             count,
             nodes,
@@ -120,17 +141,23 @@ export function useFigmaMessage() {
     window.addEventListener('message', handler);
 
     // 플러그인 초기화 메시지 전송 (UI 로케일 포함)
+    // 초기 usage 조회는 startup critical path(document-wide scan) 분리를 위해
+    // 여기서 즉시 요청하지 않고, 첫 SELECTION_CHANGED 수신 후에 예약한다.
+    // SELECTION_CHANGED가 오지 않는 경우를 위한 안전망으로 3초 뒤 1회 요청한다.
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('nodes') === '2') {
       // 개발 테스트 모드
     } else {
       parent.postMessage({ pluginMessage: { type: 'INIT', locale: setAppLocale(resolveAppLocale(navigator.language)) } }, '*');
-      // 초기 usage 1회 조회 (이후 생성 시 Core가 자동 push, polling 없음)
-      parent.postMessage({ pluginMessage: { type: 'GET_FLOOOW_USAGE' } }, '*');
+      usageTimerRef.current = setTimeout(requestInitialUsage, 3000);
     }
 
     return () => {
       window.removeEventListener('message', handler);
+      if (usageTimerRef.current !== null) {
+        clearTimeout(usageTimerRef.current);
+        usageTimerRef.current = null;
+      }
     };
   }, [handleSelectionChange, setUIState, setFlooowUsage]);
 }

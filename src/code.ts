@@ -1584,6 +1584,40 @@ function buildPairKeySet(nodeIds: string[]): Set<string> {
 }
 
 // 선택 영역 변경 감지 시 UI 갱신 (바탕화면 클릭 ➔ 빈 폼 / 노드 클릭 ➔ 상세 수정 폼)
+/**
+ * Startup 중복 스캔 coalesce 상태 (TOP 2).
+ * - 모듈-init `handleSelectionChange()`와 INIT 수신 `handleSelectionChange()`가
+ *   back-to-back으로 같은 page-wide scan을 반복하는 것만 막는다.
+ * - 일반 selectionchange / 생성 / 수정 / documentchange 경로의 handleSelectionChange는
+ *   이 가드를 거치지 않고 그대로 실행된다.
+ * - selection 최신값 보존: startupSyncDone 전에 selection이 바뀌면 skip하지 않고 실행한다.
+ */
+let startupSelectionSyncDone = false;
+let startupSelectionSnapshot: string | null = null;
+
+function captureSelectionSnapshot(): string {
+  try {
+    return figma.currentPage.selection.map((n) => n.id).sort().join(',');
+  } catch (_) {
+    return '';
+  }
+}
+
+/** Startup 1회차 실행 직후 스냅샷 기록 (INIT 중복 실행 판정용). */
+function markStartupSelectionSynced(): void {
+  startupSelectionSyncDone = true;
+  startupSelectionSnapshot = captureSelectionSnapshot();
+}
+
+/**
+ * INIT 수신 시 startup 중복 실행 여부 판정.
+ * - startup 1회차가 아직 끝나지 않았거나, 그 사이 selection이 바뀌었으면 실행한다.
+ * - 같은 selection에 대한 2회차 반복일 때만 true(skip)를 반환한다.
+ */
+function shouldSkipInitSelectionSync(): boolean {
+  if (!startupSelectionSyncDone) return false;
+  return captureSelectionSnapshot() === startupSelectionSnapshot;
+}
 /** 기즈모 카드에 보여줄 엔드포인트 타입. 플로우 노드가 아니면 FigJam object. */
 function gizmoEndpointTypeLabel(node: SceneNode | null): string {
   if (!node) return '';
@@ -6379,7 +6413,12 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       }
       case 'INIT':
         setAppLocale(msg.locale);
-        handleSelectionChange();
+        // Startup 중복 스캔 coalesce: 모듈-init 실행 직후 같은 selection에 대한
+        // INIT 2회차 반복일 때만 skip한다. selection이 바뀌었거나 1회차가 아직
+        // 끝나지 않았으면 정상 실행하여 최신 상태를 잃지 않는다.
+        if (!shouldSkipInitSelectionSync()) {
+          handleSelectionChange();
+        }
         break;
       default:
         // 알 수 없는 action 무음 무시 방지 — 진단 로그를 남긴다
@@ -6945,4 +6984,8 @@ figma.on('documentchange', async (event) => {
 
 // 최초 실행 시 현재 상태 동기화 및 커넥터 레지스트리 캐시 구축
 refreshConnectorRegistry();
-handleSelectionChange();
+handleSelectionChange().finally(() => {
+  // Startup 1회차 완료 표시 — 이후 INIT 수신의 중복 실행 판정에 사용한다.
+  // finally이므로 스캔 실패 시에도 이후 INIT가 정상 실행된다.
+  markStartupSelectionSynced();
+});

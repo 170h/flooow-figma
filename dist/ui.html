@@ -32408,12 +32408,26 @@
     } = useApp();
     const handlerRef = (0, import_react3.useRef)(null);
     const prevNodeIdRef = (0, import_react3.useRef)(void 0);
+    const usageRequestedRef = (0, import_react3.useRef)(false);
+    const usageTimerRef = (0, import_react3.useRef)(null);
+    const requestInitialUsage = () => {
+      if (usageRequestedRef.current) return;
+      usageRequestedRef.current = true;
+      parent.postMessage({ pluginMessage: { type: "GET_FLOOOW_USAGE" } }, "*");
+    };
     (0, import_react3.useEffect)(() => {
       const handler = (event) => {
         const msg = event.data?.pluginMessage;
         if (!msg) return;
         switch (msg.type) {
           case "SELECTION_CHANGED": {
+            if (!usageRequestedRef.current) {
+              if (usageTimerRef.current !== null) {
+                clearTimeout(usageTimerRef.current);
+                usageTimerRef.current = null;
+              }
+              usageTimerRef.current = setTimeout(requestInitialUsage, 300);
+            }
             const {
               count,
               nodes,
@@ -32498,10 +32512,14 @@
       if (urlParams.get("nodes") === "2") {
       } else {
         parent.postMessage({ pluginMessage: { type: "INIT", locale: setAppLocale(resolveAppLocale(navigator.language)) } }, "*");
-        parent.postMessage({ pluginMessage: { type: "GET_FLOOOW_USAGE" } }, "*");
+        usageTimerRef.current = setTimeout(requestInitialUsage, 3e3);
       }
       return () => {
         window.removeEventListener("message", handler);
+        if (usageTimerRef.current !== null) {
+          clearTimeout(usageTimerRef.current);
+          usageTimerRef.current = null;
+        }
       };
     }, [handleSelectionChange, setUIState, setFlooowUsage]);
   }

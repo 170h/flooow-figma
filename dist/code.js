@@ -3498,6 +3498,23 @@
     }
     return pairKeys;
   }
+  var startupSelectionSyncDone = false;
+  var startupSelectionSnapshot = null;
+  function captureSelectionSnapshot() {
+    try {
+      return figma.currentPage.selection.map((n) => n.id).sort().join(",");
+    } catch (_) {
+      return "";
+    }
+  }
+  function markStartupSelectionSynced() {
+    startupSelectionSyncDone = true;
+    startupSelectionSnapshot = captureSelectionSnapshot();
+  }
+  function shouldSkipInitSelectionSync() {
+    if (!startupSelectionSyncDone) return false;
+    return captureSelectionSnapshot() === startupSelectionSnapshot;
+  }
   function gizmoEndpointTypeLabel(node) {
     if (!node) return "";
     const isFlow = safeGetPluginData2(node, "is_flow_node") === "true" || Boolean(safeGetPluginData2(node, "node_type"));
@@ -7358,7 +7375,9 @@
         }
         case "INIT":
           setAppLocale(msg.locale);
-          handleSelectionChange();
+          if (!shouldSkipInitSelectionSync()) {
+            handleSelectionChange();
+          }
           break;
         default:
           console.warn("\uC54C \uC218 \uC5C6\uB294 PluginAction:", msg.type);
@@ -7761,5 +7780,7 @@
     }
   });
   refreshConnectorRegistry();
-  handleSelectionChange();
+  handleSelectionChange().finally(() => {
+    markStartupSelectionSynced();
+  });
 })();
