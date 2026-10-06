@@ -6610,46 +6610,6 @@
       figmaFrameId: node.getPluginData("figma_frame_id")
     });
   }
-  function collectStatusItems() {
-    try {
-      const nodes = figma.currentPage.findAll((node) => {
-        try {
-          if (!node) return false;
-          return Boolean(safeGetPluginData2(node, "workflow_status"));
-        } catch (_) {
-          return false;
-        }
-      });
-      return nodes.map((node) => {
-        const status = safeGetPluginData2(node, "workflow_status");
-        if (node.type === "FRAME" && safeGetPluginData2(node, "is_flow_node") === "true") {
-          const frame = node;
-          const statusBadge = frame.children.find(
-            (c) => safeGetPluginData2(c, "is_status_badge") === "true" || c.name === "StatusBadge"
-          );
-          if (statusBadge && statusBadge.y <= 0) {
-            statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-            statusBadge.x = frame.width - statusBadge.width - 10;
-            statusBadge.y = frame.height - statusBadge.height - 10;
-          }
-        }
-        const extracted = extractNodeText(node);
-        return {
-          id: node.id,
-          name: extracted.title || node.name,
-          status: status || "draft",
-          x: Math.round(node.x),
-          y: Math.round(node.y)
-        };
-      });
-    } catch (_) {
-      return [];
-    }
-  }
-  function syncStatusList() {
-    const items = collectStatusItems();
-    postToUI({ type: "STATUS_LIST_UPDATED", items });
-  }
   async function applyStatusToSelected(status) {
     const selection = figma.currentPage.selection;
     if (selection.length === 0) {
@@ -6795,7 +6755,6 @@
         }
       }
     }
-    syncStatusList();
     handleSelectionChange();
     if (isRemove) {
       notify(t("statusRemoved", { count: selection.length }), "info");
@@ -7196,15 +7155,6 @@
     }
     return items;
   }
-  async function loadSavedSettings() {
-    const token = await figma.clientStorage.getAsync("figma_token") || "";
-    const fileUrl = await figma.clientStorage.getAsync("figma_file_url") || "";
-    postToUI({
-      type: "SETTINGS_LOADED",
-      token,
-      fileUrl
-    });
-  }
   async function saveSettings(token, fileUrl) {
     await figma.clientStorage.setAsync("figma_token", token);
     await figma.clientStorage.setAsync("figma_file_url", fileUrl);
@@ -7307,119 +7257,115 @@
 `;
       cssDark += `}
 `;
-      const fullCss = `${cssLight}${darkCount > 0 ? cssDark : ""}`;
-      postToUI({
-        type: "UI3_VARIABLES_EXTRACTED",
-        css: fullCss,
-        count: lightCount,
-        collections: collections.map((c) => c.name)
-      });
       notify(t("tokensExtracted", { count: lightCount }), "success");
     } catch (err) {
       notify(t("tokensFailed", { error: String(err) }), "error");
     }
   }
   figma.ui.onmessage = async (msg) => {
-    switch (msg.type) {
-      case "CREATE_FLOW_NODE":
-        await runCreateExclusive(() => createFlowNode(msg.payload));
-        postFlooowUsage();
-        break;
-      case "UPDATE_FLOW_NODE":
-        await updateFlowNode(msg.payload);
-        break;
-      case "BATCH_UPDATE_FLOW_NODES":
-        await batchUpdateFlowNodes(msg.payload.nodeIds, msg.payload.patch);
-        break;
-      case "CONNECT_POINTS":
-        await runCreateExclusive(() => connectPoints(msg.payload));
-        postFlooowUsage();
-        break;
-      case "CONNECT_CHAIN":
-        await runCreateExclusive(() => connectChain(msg.payload));
-        postFlooowUsage();
-        break;
-      case "AUTO_CONNECT_SELECTED":
-        await runCreateExclusive(() => autoConnectSelected(msg.label));
-        postFlooowUsage();
-        break;
-      case "UPDATE_CONNECTOR_LABEL":
-        await updateConnectorLabel(msg.connectorId, msg.label);
-        break;
-      case "UPDATE_CONNECTOR_PROPERTIES":
-        await updateConnectorProperties(msg.payload);
-        break;
-      case "SET_CONNECTOR_LINE_TYPE":
-        await setConnectorLineType(msg.connectorId, msg.lineType);
-        break;
-      case "EXTRACT_UI3_VARIABLES":
-        await extractUI3Variables();
-        break;
-      case "TOGGLE_NODE_THEME":
-        await toggleNodeTheme(msg.nodeId);
-        break;
-      case "SET_STATUS":
-        await applyStatusToSelected(msg.status);
-        break;
-      case "SET_ELEVATION":
-        await applyElevationToSelected(msg.level);
-        break;
-      case "ADD_STEP_BADGES":
-        await addStepBadges(msg.startNumber || 1, msg.corner || "TOP_LEFT", msg.shape || "Square", msg.colorMode || "Style");
-        break;
-      case "REMOVE_STEP_BADGES":
-        await removeStepBadges();
-        break;
-      case "GET_STATUS_LIST":
-        syncStatusList();
-        break;
-      case "FOCUS_FRAME":
-        focusFrame(msg.nodeId);
-        break;
-      case "GET_DESIGN_FRAMES": {
-        const frames = getDesignFrames();
-        postToUI({
-          type: "DESIGN_FRAMES_LOADED",
-          frames
-        });
-        break;
+    try {
+      switch (msg.type) {
+        case "CREATE_FLOW_NODE":
+          await runCreateExclusive(() => createFlowNode(msg.payload));
+          postFlooowUsage();
+          break;
+        case "UPDATE_FLOW_NODE":
+          await updateFlowNode(msg.payload);
+          break;
+        case "BATCH_UPDATE_FLOW_NODES":
+          await batchUpdateFlowNodes(msg.payload.nodeIds, msg.payload.patch);
+          break;
+        case "CONNECT_POINTS":
+          await runCreateExclusive(() => connectPoints(msg.payload));
+          postFlooowUsage();
+          break;
+        case "CONNECT_CHAIN":
+          await runCreateExclusive(() => connectChain(msg.payload));
+          postFlooowUsage();
+          break;
+        case "AUTO_CONNECT_SELECTED":
+          await runCreateExclusive(() => autoConnectSelected(msg.label));
+          postFlooowUsage();
+          break;
+        case "UPDATE_CONNECTOR_LABEL":
+          await updateConnectorLabel(msg.connectorId, msg.label);
+          break;
+        case "UPDATE_CONNECTOR_PROPERTIES":
+          await updateConnectorProperties(msg.payload);
+          break;
+        case "SET_CONNECTOR_LINE_TYPE":
+          await setConnectorLineType(msg.connectorId, msg.lineType);
+          break;
+        case "EXTRACT_UI3_VARIABLES":
+          await extractUI3Variables();
+          break;
+        case "TOGGLE_NODE_THEME":
+          await toggleNodeTheme(msg.nodeId);
+          break;
+        case "SET_STATUS":
+          await applyStatusToSelected(msg.status);
+          break;
+        case "SET_ELEVATION":
+          await applyElevationToSelected(msg.level);
+          break;
+        case "ADD_STEP_BADGES":
+          await addStepBadges(msg.startNumber || 1, msg.corner || "TOP_LEFT", msg.shape || "Square", msg.colorMode || "Style");
+          break;
+        case "REMOVE_STEP_BADGES":
+          await removeStepBadges();
+          break;
+        case "GET_STATUS_LIST":
+          break;
+        case "FOCUS_FRAME":
+          focusFrame(msg.nodeId);
+          break;
+        case "GET_DESIGN_FRAMES": {
+          const frames = getDesignFrames();
+          postToUI({
+            type: "DESIGN_FRAMES_LOADED",
+            frames
+          });
+          break;
+        }
+        case "GET_FLOOOW_USAGE":
+          postFlooowUsage();
+          break;
+        case "RESIZE_NODE":
+          await resizeNode(msg.nodeId, msg.width, msg.height);
+          break;
+        case "SAVE_SETTINGS":
+          await saveSettings(msg.token, msg.fileUrl);
+          break;
+        case "LOAD_SETTINGS":
+          break;
+        case "CLOSE_PLUGIN":
+          figma.closePlugin();
+          break;
+        case "UNDO":
+          notify(t("undoHint"), "info");
+          break;
+        case "REDO":
+          notify(t("redoHint"), "info");
+          break;
+        case "NOTIFY":
+          notify(msg.message, msg.level);
+          break;
+        case "RESIZE_WINDOW": {
+          const targetW = msg.width || 360;
+          const targetH = Math.max(200, Math.min(1200, Math.round(msg.height)));
+          figma.ui.resize(targetW, targetH);
+          break;
+        }
+        case "INIT":
+          setAppLocale(msg.locale);
+          handleSelectionChange();
+          break;
+        default:
+          console.warn("\uC54C \uC218 \uC5C6\uB294 PluginAction:", msg.type);
+          break;
       }
-      case "GET_FLOOOW_USAGE":
-        postFlooowUsage();
-        break;
-      case "RESIZE_NODE":
-        await resizeNode(msg.nodeId, msg.width, msg.height);
-        break;
-      case "SAVE_SETTINGS":
-        await saveSettings(msg.token, msg.fileUrl);
-        break;
-      case "LOAD_SETTINGS":
-        await loadSavedSettings();
-        break;
-      case "CLOSE_PLUGIN":
-        figma.closePlugin();
-        break;
-      case "UNDO":
-        notify(t("undoHint"), "info");
-        break;
-      case "REDO":
-        notify(t("redoHint"), "info");
-        break;
-      case "NOTIFY":
-        notify(msg.message, msg.level);
-        break;
-      case "RESIZE_WINDOW": {
-        const targetW = msg.width || 360;
-        const targetH = Math.max(200, Math.min(1200, Math.round(msg.height)));
-        figma.ui.resize(targetW, targetH);
-        break;
-      }
-      case "INIT":
-        setAppLocale(msg.locale);
-        handleSelectionChange();
-        syncStatusList();
-        await loadSavedSettings();
-        break;
+    } catch (err) {
+      console.error("[PluginAction \uCC98\uB9AC \uC2E4\uD328]", msg.type, err);
     }
   };
   var internalLayoutNodeIds = /* @__PURE__ */ new Set();
@@ -7816,6 +7762,4 @@
   });
   refreshConnectorRegistry();
   handleSelectionChange();
-  syncStatusList();
-  loadSavedSettings();
 })();

@@ -30670,6 +30670,24 @@
     { id: "style-black", name: "Black", fillColor: "#000000", strokeWeight: 0, strokeColor: "#000000", isDefault: true }
   ];
   var DEFAULT_STYLE_PRESET_IDS = /* @__PURE__ */ new Set(["style-white", "style-black"]);
+  function matchStylePresetId(presets, fillColor, strokeWeight, strokeColor) {
+    if (!fillColor || strokeWeight === void 0) return null;
+    const matched = presets.find((p) => {
+      if (p.fillColor.toLowerCase() !== fillColor.toLowerCase()) return false;
+      if (p.strokeWeight !== strokeWeight) return false;
+      if (p.strokeWeight > 0 && strokeColor) {
+        if (p.strokeColor.toLowerCase() !== strokeColor.toLowerCase()) return false;
+      }
+      return true;
+    });
+    return matched ? matched.id : null;
+  }
+  var getCurrentUITheme = () => {
+    if (typeof document !== "undefined" && (document.documentElement.classList.contains("figma-dark") || document.body.classList.contains("figma-dark") || document.querySelector('[data-theme="dark"]'))) {
+      return "dark";
+    }
+    return "light";
+  };
   function normalizeTerminal(term, fallback = "NONE") {
     if (!term || term === "BAR" || term === "SQUARE") return fallback;
     return term;
@@ -30781,13 +30799,6 @@
     const [selectedNodes, setSelectedNodes] = (0, import_react2.useState)([]);
     const [isConnectorSelected, setIsConnectorSelected] = (0, import_react2.useState)(false);
     const [currentTab, setCurrentTabState] = (0, import_react2.useState)("node");
-    const [activeAppearanceSection, setActiveAppearanceSection] = (0, import_react2.useState)(null);
-    const userActionLockRef = (0, import_react2.useRef)(0);
-    const prevSelectedNodeIdRef = (0, import_react2.useRef)(null);
-    const setActiveAppearanceSectionWithLock = (0, import_react2.useCallback)((section) => {
-      userActionLockRef.current = Date.now();
-      setActiveAppearanceSection(section);
-    }, []);
     const [uiState, setUIStateRaw] = (0, import_react2.useState)(DEFAULT_UI_STATE);
     const [nodeOptionState, setNodeOptionStateRaw] = (0, import_react2.useState)(DEFAULT_NODE_OPTION_STATE);
     const [formTextDraft, setFormTextDraftRaw] = (0, import_react2.useState)(DEFAULT_FORM_TEXT_DRAFT);
@@ -31077,36 +31088,31 @@
       if (!origNode || !actualNode) return false;
       const isConn = Boolean(origNode.isConnector || origNode.nodeType === "CONNECTOR");
       if (isConn) {
-        const labelToggleEl = document.getElementById("toggle-conn-label");
-        const labelInputEl = document.getElementById("input-conn-label");
-        const currentHasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
-        const currentLabel = currentHasLabel ? labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || "").trim() : "";
+        const currentHasLabel = Boolean(lastConnectorConfigRef.current.labelOn);
+        const currentLabel = currentHasLabel ? (lastConnectorConfigRef.current.labelText || "").trim() : "";
         const origHasLabel = origNode.connectorLabelOn !== void 0 ? origNode.connectorLabelOn : Boolean(origNode.connectorLabel);
         const origLabel = (origNode.connectorLabel || "").trim();
         if (currentHasLabel !== origHasLabel) return true;
         if (currentHasLabel && currentLabel !== origLabel) return true;
-        const colorEl = document.getElementById("conn-line-color");
-        const currentColor2 = (colorEl?.value || uiStateRef.current.selectedConnectorColor || "#000000").toUpperCase();
-        const origColor = (origNode.connectorColorHex || "#000000").toUpperCase();
+        const currentColor2 = (uiStateRef.current.selectedConnectorColor || lastConnectorConfigRef.current.connectorColorInput || DEFAULT_CONNECTOR_COLOR).toUpperCase();
+        const origColor = (origNode.connectorColorHex || DEFAULT_CONNECTOR_COLOR).toUpperCase();
         if (currentColor2 !== origColor) return true;
-        const weightEl = document.getElementById("input-stroke-weight");
-        const currentWeight = weightEl?.value ? parseFloat(weightEl.value) : 1.5;
+        const currentWeightStr = lastConnectorConfigRef.current.strokeWeightInput;
+        const currentWeight = currentWeightStr ? parseFloat(currentWeightStr) : 1.5;
         const origWeight = origNode.connectorStrokeWeight ?? 1.5;
         if (Math.abs(currentWeight - origWeight) > 0.01) return true;
-        const startTermEl = document.getElementById("select-start-terminal");
-        const endTermEl = document.getElementById("select-end-terminal");
-        const currentStartTerm = startTermEl?.value || "NONE";
+        const currentStartTerm = lastConnectorConfigRef.current.startTerminalInput || "NONE";
         const origStartTerm = normalizeTerminal(origNode.connectorStartTerminal, "NONE");
         if (currentStartTerm !== origStartTerm) return true;
-        const currentEndTerm = endTermEl?.value || "ARROW";
+        const currentEndTerm = lastConnectorConfigRef.current.endTerminalInput || "ARROW";
         const origEndTerm = normalizeTerminal(origNode.connectorEndTerminal, "ARROW");
         if (currentEndTerm !== origEndTerm) return true;
-        const startOffEl = document.getElementById("input-start-offset");
-        const endOffEl = document.getElementById("input-end-offset");
-        const currentStartOff = startOffEl?.value ? parseFloat(startOffEl.value) : 0;
+        const currentStartOffStr = lastConnectorConfigRef.current.startOffsetInput;
+        const currentStartOff = currentStartOffStr ? parseFloat(currentStartOffStr) : 0;
         const origStartOff = origNode.connectorStartOffset ?? 0;
         if (Math.abs(currentStartOff - origStartOff) > 0.01) return true;
-        const currentEndOff = endOffEl?.value ? parseFloat(endOffEl.value) : 0;
+        const currentEndOffStr = lastConnectorConfigRef.current.endOffsetInput;
+        const currentEndOff = currentEndOffStr ? parseFloat(currentEndOffStr) : 0;
         const origEndOff = origNode.connectorEndOffset ?? 0;
         if (Math.abs(currentEndOff - origEndOff) > 0.01) return true;
         const currentRouting = uiStateRef.current.selectedRoutingType || "ORTHOGONAL";
@@ -31244,7 +31250,15 @@
           labelBoxStyle: orig.connectorLabelBoxStyle || "BOX",
           labelAlign: orig.connectorLabelAlign || "CENTER",
           labelFillColor: labelFillIsDefault(orig.connectorLabelFillColor, orig.connectorColorHex) ? DEFAULT_LABEL_FILL : orig.connectorLabelFillColor || DEFAULT_LABEL_FILL,
-          labelStrokeColor: labelStrokeFollowsConnector(orig.connectorLabelStrokeColor, orig.connectorColorHex) ? orig.connectorColorHex || DEFAULT_CONNECTOR_COLOR : orig.connectorLabelStrokeColor || orig.connectorColorHex || DEFAULT_CONNECTOR_COLOR
+          labelStrokeColor: labelStrokeFollowsConnector(orig.connectorLabelStrokeColor, orig.connectorColorHex) ? orig.connectorColorHex || DEFAULT_CONNECTOR_COLOR : orig.connectorLabelStrokeColor || orig.connectorColorHex || DEFAULT_CONNECTOR_COLOR,
+          // payload truth 브릿지도 복원값과 일치시킨다 (위 DOM 쓰기와 동일값; hex가 없으면 DOM도 그대로이므로 생략)
+          ...orig.connectorColorHex ? { connectorColorInput: orig.connectorColorHex } : {},
+          // payload truth 브릿지도 복원값과 일치시킨다 (위 DOM 쓰기와 동일값)
+          strokeWeightInput: String(orig.connectorStrokeWeight ?? 1.5),
+          startTerminalInput: normalizeTerminal(orig.connectorStartTerminal, "NONE"),
+          endTerminalInput: normalizeTerminal(orig.connectorEndTerminal, "ARROW"),
+          startOffsetInput: String(orig.connectorStartOffset ?? 0),
+          endOffsetInput: String(orig.connectorEndOffset ?? 0)
         });
         triggerFormChange();
         return;
@@ -31323,6 +31337,36 @@
       const snapshot = lastAppliedSnapshotRef.current;
       if (snapshot) {
         if (snapshot.type === "single" && snapshot.singlePayload) {
+          const sp = snapshot.singlePayload;
+          isApplyingSingleRef.current = true;
+          const undoTargetSelected = (selectedNodesRef.current || []).some((n) => n && n.id === sp.nodeId);
+          if (undoTargetSelected) {
+            const restoredFill = sp.colorHex ?? nodeOptionStateRef.current.fillColor;
+            setNodeOptionState({
+              fillColor: restoredFill,
+              width: sp.width ?? nodeOptionStateRef.current.width,
+              height: sp.height ?? nodeOptionStateRef.current.height,
+              cornerRadius: sp.cornerRadius ?? nodeOptionStateRef.current.cornerRadius,
+              elevationOn: sp.elevation !== void 0 && sp.elevation !== null,
+              elevation: sp.elevation ?? nodeOptionStateRef.current.elevation,
+              singleLinkOn: Boolean(sp.figmaLink),
+              singleLinkUrl: sp.figmaLink || ""
+            });
+            const undoStyleId = matchStylePresetId(
+              stylePresets,
+              restoredFill,
+              nodeOptionStateRef.current.strokeWeight,
+              nodeOptionStateRef.current.strokeColor
+            );
+            setSelectedStylePresetId(undoStyleId);
+            setUIState({ selectedStylePresetId: undoStyleId });
+            setFormTextDraft({
+              sizeW: sp.width !== void 0 ? String(sp.width) : formTextDraftRef.current.sizeW,
+              sizeH: sp.height !== void 0 ? String(sp.height) : formTextDraftRef.current.sizeH,
+              sizeR: sp.cornerRadius !== void 0 ? String(sp.cornerRadius) : formTextDraftRef.current.sizeR,
+              linkUrl: sp.figmaLink || ""
+            });
+          }
           parent.postMessage({
             pluginMessage: {
               type: "UPDATE_FLOW_NODE",
@@ -31367,7 +31411,7 @@
         revertSingleNodeForm(originalSelectedNodeRef.current);
         showToast(t("undoCancelled"), "info");
       }
-    }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft]);
+    }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft, setNodeOptionState, setFormTextDraft, stylePresets]);
     const lastResizeHeightRef = (0, import_react2.useRef)(0);
     const resizeTimerRef = (0, import_react2.useRef)(null);
     const autoResizeWindow = (0, import_react2.useCallback)(() => {
@@ -31581,8 +31625,12 @@
       }
       const next = stylePresets.filter((p) => p.id !== id);
       saveStylePresets(next);
+      if (selectedStylePresetId === id) {
+        setSelectedStylePresetId(null);
+        setUIState({ selectedStylePresetId: null });
+      }
       showToast(t("styleDeleted"), "info");
-    }, [stylePresets, saveStylePresets, showToast]);
+    }, [stylePresets, saveStylePresets, showToast, selectedStylePresetId, setUIState]);
     const applyStatusToNode = (0, import_react2.useCallback)((status) => {
       const nodes = selectedNodesRef.current;
       if (!nodes || nodes.length === 0) return;
@@ -31659,28 +31707,18 @@
       };
       setLastAppliedSnapshot(newSnapshot);
       lastAppliedSnapshotRef.current = newSnapshot;
-      const labelToggleEl = document.getElementById("toggle-conn-label");
-      const labelInputEl = document.getElementById("input-conn-label");
-      const colorEl = document.getElementById("conn-line-color");
-      const weightEl = document.getElementById("input-stroke-weight");
-      const startTermEl = document.getElementById("select-start-terminal");
-      const endTermEl = document.getElementById("select-end-terminal");
-      const startOffEl = document.getElementById("input-start-offset");
-      const endOffEl = document.getElementById("input-end-offset");
-      const hasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
-      const label = hasLabel ? labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || "").trim() : "";
-      const colorRaw = colorEl?.value;
+      const hasLabel = Boolean(lastConnectorConfigRef.current.labelOn);
+      const label = hasLabel ? (lastConnectorConfigRef.current.labelText || "").trim() : "";
+      const colorRaw = lastConnectorConfigRef.current.connectorColorInput;
       const color = colorRaw && colorRaw.trim() ? colorRaw : void 0;
-      const weightStr = weightEl?.value;
+      const weightStr = lastConnectorConfigRef.current.strokeWeightInput;
       const weight = weightStr && weightStr.trim() !== "" ? parseFloat(weightStr) : void 0;
-      const startTermRaw = startTermEl?.value;
+      const startTermRaw = lastConnectorConfigRef.current.startTerminalInput;
       const startTerm = startTermRaw && startTermRaw !== "MIXED" ? startTermRaw : void 0;
-      const endTermRaw = endTermEl?.value;
+      const endTermRaw = lastConnectorConfigRef.current.endTerminalInput;
       const endTerm = endTermRaw && endTermRaw !== "MIXED" ? endTermRaw : void 0;
-      const startOffStr = startOffEl?.value;
-      const startOffset = typeof customStartOffset === "number" ? customStartOffset : startOffStr !== void 0 && startOffStr !== null && startOffStr.trim() !== "" ? parseFloat(startOffStr) : void 0;
-      const endOffStr = endOffEl?.value;
-      const endOffset = typeof customEndOffset === "number" ? customEndOffset : endOffStr !== void 0 && endOffStr !== null && endOffStr.trim() !== "" ? parseFloat(endOffStr) : void 0;
+      const startOffset = typeof customStartOffset === "number" ? customStartOffset : lastConnectorConfigRef.current.startOffsetInput !== void 0 && lastConnectorConfigRef.current.startOffsetInput !== null && lastConnectorConfigRef.current.startOffsetInput.trim() !== "" ? parseFloat(lastConnectorConfigRef.current.startOffsetInput) : void 0;
+      const endOffset = typeof customEndOffset === "number" ? customEndOffset : lastConnectorConfigRef.current.endOffsetInput !== void 0 && lastConnectorConfigRef.current.endOffsetInput !== null && lastConnectorConfigRef.current.endOffsetInput.trim() !== "" ? parseFloat(lastConnectorConfigRef.current.endOffsetInput) : void 0;
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
       const endpointDraftNow = includeMagnets ? endpointDraftRef.current : {};
       const magnetPatches = includeMagnets ? buildEndpointMagnetPatches(
@@ -31719,8 +31757,8 @@
               connectorId: node.id,
               colorHex: color,
               strokeWeight: weight,
-              strokePattern: selectedLinePattern,
-              routingType: selectedRoutingType,
+              strokePattern: selectedLinePattern === "MIXED" ? void 0 : selectedLinePattern,
+              routingType: selectedRoutingType === "MIXED" ? void 0 : selectedRoutingType,
               startTerminal: startTerm,
               endTerminal: endTerm,
               startOffset,
@@ -31747,28 +31785,18 @@
       ) : [];
       const magnetPatchById = new Map(magnetPatches.map((patch) => [patch.id, patch]));
       const hasEndpointDraft = Boolean(includeMagnets && (endpointDraftNow.sourceMagnet || endpointDraftNow.targetMagnet));
-      const labelToggleEl = document.getElementById("toggle-conn-label");
-      const labelInputEl = document.getElementById("input-conn-label");
-      const colorEl = document.getElementById("conn-line-color");
-      const weightEl = document.getElementById("input-stroke-weight");
-      const startTermEl = document.getElementById("select-start-terminal");
-      const endTermEl = document.getElementById("select-end-terminal");
-      const startOffEl = document.getElementById("input-start-offset");
-      const endOffEl = document.getElementById("input-end-offset");
-      const hasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
-      const label = hasLabel ? labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || "").trim() : "";
-      const colorRaw = colorEl?.value;
+      const hasLabel = Boolean(lastConnectorConfigRef.current.labelOn);
+      const label = hasLabel ? (lastConnectorConfigRef.current.labelText || "").trim() : "";
+      const colorRaw = lastConnectorConfigRef.current.connectorColorInput;
       const color = colorRaw && colorRaw.trim() ? colorRaw : void 0;
-      const weightStr = weightEl?.value;
+      const weightStr = lastConnectorConfigRef.current.strokeWeightInput;
       const weight = weightStr && weightStr.trim() !== "" ? parseFloat(weightStr) : void 0;
-      const startTermRaw = startTermEl?.value;
+      const startTermRaw = lastConnectorConfigRef.current.startTerminalInput;
       const startTerm = startTermRaw && startTermRaw !== "MIXED" ? startTermRaw : void 0;
-      const endTermRaw = endTermEl?.value;
+      const endTermRaw = lastConnectorConfigRef.current.endTerminalInput;
       const endTerm = endTermRaw && endTermRaw !== "MIXED" ? endTermRaw : void 0;
-      const startOffStr = startOffEl?.value;
-      const startOffset = typeof customStartOffset === "number" ? customStartOffset : startOffStr && startOffStr.trim() !== "" ? parseFloat(startOffStr) : void 0;
-      const endOffStr = endOffEl?.value;
-      const endOffset = typeof customEndOffset === "number" ? customEndOffset : endOffStr && endOffStr.trim() !== "" ? parseFloat(endOffStr) : void 0;
+      const startOffset = typeof customStartOffset === "number" ? customStartOffset : lastConnectorConfigRef.current.startOffsetInput && lastConnectorConfigRef.current.startOffsetInput.trim() !== "" ? parseFloat(lastConnectorConfigRef.current.startOffsetInput) : void 0;
+      const endOffset = typeof customEndOffset === "number" ? customEndOffset : lastConnectorConfigRef.current.endOffsetInput && lastConnectorConfigRef.current.endOffsetInput.trim() !== "" ? parseFloat(lastConnectorConfigRef.current.endOffsetInput) : void 0;
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
       conns.forEach((conn) => {
         const magnetPatch = magnetPatchById.get(conn.id);
@@ -31780,8 +31808,8 @@
               isReversed: conn.isReversed,
               colorHex: color,
               strokeWeight: weight,
-              strokePattern: selectedLinePattern,
-              routingType: selectedRoutingType,
+              strokePattern: selectedLinePattern === "MIXED" ? void 0 : selectedLinePattern,
+              routingType: selectedRoutingType === "MIXED" ? void 0 : selectedRoutingType,
               startTerminal: startTerm,
               endTerminal: endTerm,
               startOffset,
@@ -31824,26 +31852,17 @@
         showToast(t("connectNeedTwo"));
         return;
       }
-      const labelToggleEl = document.getElementById("toggle-conn-label");
-      const labelInputEl = document.getElementById("input-conn-label");
-      const colorEl = document.getElementById("conn-line-color");
-      const weightEl = document.getElementById("input-stroke-weight");
-      const startTermEl = document.getElementById("select-start-terminal");
-      const endTermEl = document.getElementById("select-end-terminal");
-      const startOffEl = document.getElementById("input-start-offset");
-      const endOffEl = document.getElementById("input-end-offset");
-      const linkToggleEl = document.getElementById("toggle-conn-link");
-      const linkUrlEl = document.getElementById("input-conn-link-url");
-      const label = labelToggleEl?.checked ? labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || "").trim() : "";
-      const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || "#000000";
-      const weight = parseFloat(weightEl?.value || "1.5") || 1.5;
-      const startTerm = startTermEl?.value || "NONE";
-      const endTerm = endTermEl?.value || "ARROW";
-      const startOff = parseFloat(startOffEl?.value || "0") || 0;
-      const endOff = parseFloat(endOffEl?.value || "0") || 0;
-      const isLinkOn = linkToggleEl ? linkToggleEl.checked : lastConnectorConfigRef.current.linkOn || false;
-      const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : lastConnectorConfigRef.current.linkUrl || "";
+      const isLinkOn = lastConnectorConfigRef.current.linkOn || false;
+      const rawLinkUrl = (lastConnectorConfigRef.current.linkUrl || "").trim();
       const figmaLink = isLinkOn ? rawLinkUrl : "";
+      const label = lastConnectorConfigRef.current.labelOn ? (lastConnectorConfigRef.current.labelText || "").trim() : "";
+      const colorMirror = lastConnectorConfigRef.current.connectorColorInput;
+      const color = colorMirror && colorMirror.trim() || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
+      const weight = parseFloat(lastConnectorConfigRef.current.strokeWeightInput || "1.5") || 1.5;
+      const startTerm = lastConnectorConfigRef.current.startTerminalInput || "NONE";
+      const endTerm = lastConnectorConfigRef.current.endTerminalInput || "ARROW";
+      const startOff = parseFloat(lastConnectorConfigRef.current.startOffsetInput || "0") || 0;
+      const endOff = parseFloat(lastConnectorConfigRef.current.endOffsetInput || "0") || 0;
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
       const createDraft = endpointDraftRef.current;
       const labelBoxStyle = lastConnectorConfigRef.current.labelBoxStyle || "BOX";
@@ -32103,6 +32122,14 @@
             payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: nodes[0]?.theme || "light", figmaLink: figmaUrl, nodeType: targetNodeType, colorHex: nodeOptionStateRef.current.fillColor, elevation: finalElevation }
           }
         }, "*");
+        const appliedStyleId = matchStylePresetId(
+          stylePresets,
+          nodeOptionStateRef.current.fillColor,
+          targetNode.strokeWeight,
+          targetNode.strokeColorHex
+        );
+        setSelectedStylePresetId(appliedStyleId);
+        setUIState({ selectedStylePresetId: appliedStyleId });
       } else if (nodes.length >= 2) {
         return;
       } else {
@@ -32119,7 +32146,7 @@
               width: w,
               height: h,
               cornerRadius: radius,
-              theme: "light",
+              theme: getCurrentUITheme(),
               figmaLink: figmaUrl,
               nodeType: targetNodeType,
               branchVariant: targetNodeType === "Branch" ? storedBranchVariant : void 0,
@@ -32137,7 +32164,7 @@
           }
         }, "*");
       }
-    }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, setNodeOptionState, showToast]);
+    }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, setNodeOptionState, setUIState, setSelectedStylePresetId, showToast, stylePresets]);
     const handleSelectionChange = (0, import_react2.useCallback)((count, nodes, meta) => {
       if (isApplyingMultiDraftRef.current) {
         if (applyTimeoutRef.current !== null) {
@@ -32223,6 +32250,10 @@
         setCurrentTab("connection");
       } else if (count === 0) {
         setCurrentTab("node");
+        if (isSelectionChanged) {
+          setNodeOptionState({ ...DEFAULT_NODE_OPTION_STATE });
+          setFormTextDraft({ ...DEFAULT_FORM_TEXT_DRAFT });
+        }
       } else {
         const targetTab = lastNodeTabRef.current || "node";
         setCurrentTab(targetTab);
@@ -32263,53 +32294,33 @@
             branchVariant: nodeTypeVal === "Branch" ? normalizeBranchVariant(first.branchVariant) : nodeOptionStateRef.current.branchVariant
           };
           setNodeOptionState(nodeOptionsUpdates);
-          const matchedPreset = stylePresets.find((p) => {
-            const matchFill = p.fillColor.toLowerCase() === fillColor.toLowerCase();
-            if (!matchFill) return false;
-            if (p.strokeWeight !== strokeWeight) return false;
-            if (p.strokeWeight > 0 && strokeColor) {
-              if (p.strokeColor.toLowerCase() !== strokeColor.toLowerCase()) return false;
-            }
-            return true;
-          });
-          const matchedId = matchedPreset ? matchedPreset.id : null;
+          const matchedId = matchStylePresetId(stylePresets, fillColor, strokeWeight, strokeColor);
           setSelectedStylePresetId(matchedId);
           setUIState({ selectedStylePresetId: matchedId });
+        } else if (isSelectionChanged) {
+          const flowNodesForPreset = nodes.filter((n) => n && Boolean(n.isFlowNode));
+          let nextPresetId = null;
+          if (nodes.length === 0) {
+            nextPresetId = null;
+          } else if (flowNodesForPreset.length >= 2) {
+            const ids = flowNodesForPreset.map(
+              (n) => matchStylePresetId(stylePresets, n.fillColorHex || void 0, n.strokeWeight, n.strokeColorHex || void 0)
+            );
+            nextPresetId = ids.every((id) => id !== null && id === ids[0]) ? ids[0] : null;
+          } else {
+            nextPresetId = null;
+          }
+          setSelectedStylePresetId(nextPresetId);
+          setUIState({ selectedStylePresetId: nextPresetId });
         }
       }
-      const isUserLocked = Date.now() - userActionLockRef.current < 600;
-      const currentNodeId = nodes.length === 1 ? nodes[0]?.id : nodes.length > 1 ? "MULTI" : null;
-      const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
-      prevSelectedNodeIdRef.current = currentNodeId;
-      if (!isUserLocked || isDifferentNode) {
-        if (nodes.length > 0) {
-          const flowNodes = nodes.filter((n) => n && n.isFlowNode);
-          const hasAnyElevation = flowNodes.some(
-            (n) => n.elevation !== void 0 && n.elevation !== null ? n.elevation >= 0 : Boolean(n.elevationOn)
-          );
-          if (hasAnyElevation) {
-            setActiveAppearanceSection("elevation");
-          } else {
-            setActiveAppearanceSection(null);
-          }
-        } else {
-          const hasElevation = Boolean(nodeOptionStateRef.current.elevationOn);
-          if (hasElevation) {
-            setActiveAppearanceSection("elevation");
-          } else {
-            setActiveAppearanceSection(null);
-          }
-        }
-      }
-    }, [closeAllPopovers, setCurrentTab, setNodeOptionState, setUIState, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft]);
+    }, [closeAllPopovers, setCurrentTab, setNodeOptionState, setUIState, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft, stylePresets]);
     const value = {
       selectedNodes,
       setSelectedNodes,
       isConnectorSelected,
       currentTab,
       setCurrentTab,
-      activeAppearanceSection,
-      setActiveAppearanceSection: setActiveAppearanceSectionWithLock,
       uiState,
       setUIState,
       nodeOptionState,
@@ -32391,7 +32402,6 @@
   function useFigmaMessage() {
     const {
       handleSelectionChange,
-      setCurrentTab,
       setUIState,
       setDesignFrames,
       setFlooowUsage
@@ -32469,10 +32479,6 @@
             }
             break;
           }
-          case "INIT_DONE":
-          case "READY": {
-            break;
-          }
           case "DESIGN_FRAMES_LOADED": {
             setDesignFrames(msg.frames || []);
             break;
@@ -32481,11 +32487,8 @@
             if (msg.usage) setFlooowUsage(msg.usage);
             break;
           }
-          case "SWITCH_TAB": {
-            if (msg.tab) setCurrentTab(msg.tab);
-            break;
-          }
           default:
+            console.warn("\uC54C \uC218 \uC5C6\uB294 Core \uBA54\uC2DC\uC9C0:", msg?.type);
             break;
         }
       };
@@ -32500,7 +32503,7 @@
       return () => {
         window.removeEventListener("message", handler);
       };
-    }, [handleSelectionChange, setCurrentTab, setUIState, setFlooowUsage]);
+    }, [handleSelectionChange, setUIState, setFlooowUsage]);
   }
 
   // src/ui/hooks/useSelectionSummary.ts
@@ -33511,6 +33514,7 @@
     const cachedUrlRef = (0, import_react9.useRef)("");
     const userActionLockRef = (0, import_react9.useRef)(0);
     const prevSelectedNodeIdRef = (0, import_react9.useRef)(null);
+    const linkCommitRef = (0, import_react9.useRef)(null);
     const disabledNotice = useDisabledNotice();
     const inputRef = (0, import_react9.useRef)(null);
     const rawOptionState = (0, import_react9.useMemo)(() => {
@@ -33606,6 +33610,7 @@
       prevSelectedNodeIdRef.current = currentNodeId;
       if (isDifferentNode) {
         setIsOn(null);
+        linkCommitRef.current = null;
       }
       const isInputFocused = document.activeElement === inputRef.current;
       if (!isDifferentNode && (isInputFocused || selectedNodes.length > 0)) {
@@ -33651,6 +33656,11 @@
     const displayUrl = isLinkDrafted ? multiDraft.figmaLink ?? "" : isLinkValueMixed ? "" : url;
     function commitUrl(currentRawUrl) {
       const trimmed = currentRawUrl.trim();
+      const linkScopeId = selectedNodes.length === 1 ? selectedNodes[0]?.id || "NONE" : selectedNodes.length > 1 ? "MULTI" : "NONE";
+      const canonical = trimmed ? normalizeUrl(trimmed) : "";
+      const linkKey = `${linkScopeId}:${canonical || "EMPTY"}`;
+      if (linkCommitRef.current === linkKey) return;
+      linkCommitRef.current = linkKey;
       if (!trimmed) {
         setUrl("");
         cachedUrlRef.current = "";
@@ -33708,6 +33718,7 @@
       }
       if (!checked) {
         cachedUrlRef.current = url;
+        linkCommitRef.current = null;
         setNodeOptionState({ singleLinkOn: false, singleLinkUrl: url });
         setTimeout(() => {
           applyCurrentNodeState(void 0, void 0, {
@@ -33749,6 +33760,7 @@
       e.stopPropagation();
       setUrl("");
       cachedUrlRef.current = "";
+      linkCommitRef.current = null;
       if (selectedNodes.length >= 2) {
         updateMultiDraft({
           figmaLink: "",
@@ -34309,6 +34321,7 @@
     const [isOpen, setIsOpen] = (0, import_react11.useState)(null);
     const userActionLockRef = (0, import_react11.useRef)(0);
     const prevSelectedNodeIdRef = (0, import_react11.useRef)(null);
+    const badgeCommitRef = (0, import_react11.useRef)(null);
     const disabledNotice = useDisabledNotice();
     const [colorDropdownOpen, setColorDropdownOpen] = (0, import_react11.useState)(false);
     const stepNumText = formTextDraft.stepNum;
@@ -34420,6 +34433,7 @@
       prevSelectedNodeIdRef.current = currentNodeId;
       if (isDifferentNode) {
         setIsOpen(null);
+        badgeCommitRef.current = null;
       }
       if (selectedNodes.length === 0) {
         setIsMixed(false);
@@ -34580,6 +34594,9 @@
         }
         const parsed = parseInt(stepNumText, 10);
         const val2 = isNaN(parsed) || parsed < 1 ? 1 : parsed;
+        const badgeKey = `MULTI:${val2}:${selectedBadgeCorner}:${selectedBadgeShape}:${selectedBadgeColorMode}`;
+        if (badgeCommitRef.current === badgeKey) return;
+        badgeCommitRef.current = badgeKey;
         setIsMixed(false);
         setStepNumText(String(val2));
         updateMultiDraft({ badgeNumber: val2 });
@@ -34587,6 +34604,10 @@
       }
       setIsMixed(false);
       const val = getNumberValue();
+      const singleId = selectedNodes[0]?.id || "NONE";
+      const singleKey = `${singleId}:${val}:${selectedBadgeCorner}:${selectedBadgeShape}:${selectedBadgeColorMode}`;
+      if (badgeCommitRef.current === singleKey) return;
+      badgeCommitRef.current = singleKey;
       setStepNumText(String(val));
       setNodeOptionState({ stepNumber: val });
       if (isSectionOpen && !isMultiMode) {
@@ -35139,7 +35160,8 @@
       multiDraft,
       updateMultiDraft,
       formTextDraft,
-      setFormTextDraft
+      setFormTextDraft,
+      canUndo
     } = useApp();
     const summary = useSelectionSummary();
     const isSizeAllowed = (() => {
@@ -35167,6 +35189,20 @@
       r: false
     });
     const pendingSizeRef = import_react12.default.useRef(null);
+    const sizeCommitRef = import_react12.default.useRef(null);
+    function alreadyCommittedSize(key) {
+      if (sizeCommitRef.current === key) return true;
+      sizeCommitRef.current = key;
+      return false;
+    }
+    const prevCanUndoRef = import_react12.default.useRef(canUndo);
+    import_react12.default.useEffect(() => {
+      if (prevCanUndoRef.current && !canUndo) {
+        pendingSizeRef.current = null;
+        sizeCommitRef.current = null;
+      }
+      prevCanUndoRef.current = canUndo;
+    }, [canUndo]);
     const widthInput = formTextDraft.sizeW;
     const heightInput = formTextDraft.sizeH;
     const radiusInput = formTextDraft.sizeR;
@@ -35233,6 +35269,7 @@
       if (isDifferentNode) {
         lastSelectedNodeIdRef.current = currentNodeId;
         pendingSizeRef.current = null;
+        sizeCommitRef.current = null;
       }
       if (!isDifferentNode && Date.now() - userActionLockRef.current < 600) {
         return;
@@ -35343,12 +35380,14 @@
       userActionLockRef.current = Date.now();
       setSelectedSizePresetId(null);
       if (selectedNodes.length >= 2) {
+        if (alreadyCommittedSize(`MULTI:W:${validW}`)) return;
         updateMultiDraft({ width: validW, sizeMode: "fixed" });
         return;
       }
       const curH = parseInt(heightInput, 10) || nodeOptionState.height || 90;
       const curR = parseInt(radiusInput, 10) || (nodeOptionState.cornerRadius ?? 0);
       const targetNodeId = selectedNodes[0]?.id || "NONE";
+      if (alreadyCommittedSize(`${targetNodeId}:${validW}:${curH}:${curR}:fixed`)) return;
       pendingSizeRef.current = {
         nodeId: targetNodeId,
         width: validW,
@@ -35404,12 +35443,14 @@
       userActionLockRef.current = Date.now();
       setSelectedSizePresetId(null);
       if (selectedNodes.length >= 2) {
+        if (alreadyCommittedSize(`MULTI:H:${validH}`)) return;
         updateMultiDraft({ height: validH, sizeMode: "fixed" });
         return;
       }
       const curW = parseInt(widthInput, 10) || nodeOptionState.width || 250;
       const curR = parseInt(radiusInput, 10) || (nodeOptionState.cornerRadius ?? 0);
       const targetNodeId = selectedNodes[0]?.id || "NONE";
+      if (alreadyCommittedSize(`${targetNodeId}:${curW}:${validH}:${curR}:fixed`)) return;
       pendingSizeRef.current = {
         nodeId: targetNodeId,
         width: curW,
@@ -35464,12 +35505,15 @@
       userActionLockRef.current = Date.now();
       setSelectedSizePresetId(null);
       if (selectedNodes.length >= 2) {
+        if (alreadyCommittedSize(`MULTI:R:${validR}`)) return;
         updateMultiDraft({ cornerRadius: validR });
         return;
       }
       const curW = parseInt(widthInput, 10) || nodeOptionState.width || 250;
       const curH = parseInt(heightInput, 10) || nodeOptionState.height || 90;
       const targetNodeId = selectedNodes[0]?.id || "NONE";
+      const modeArg = currentSizeMode === "mixed" ? "mixed" : currentSizeMode;
+      if (alreadyCommittedSize(`${targetNodeId}:${curW}:${curH}:${validR}:${modeArg}`)) return;
       pendingSizeRef.current = {
         nodeId: targetNodeId,
         width: curW,
@@ -35578,11 +35622,6 @@
       }
       if (mode !== "mixed") {
         setNodeOptionState({ sizeMode: mode });
-      }
-      const hiddenInput = document.getElementById("select-size-mode");
-      if (hiddenInput) {
-        hiddenInput.value = mode;
-        hiddenInput.dispatchEvent(new Event("change"));
       }
       setSelectedSizePresetId(null);
       setDropdownOpen(false);
@@ -35872,6 +35911,15 @@
     const [fillInput, setFillInput] = (0, import_react13.useState)("");
     const [strokeInput, setStrokeInput] = (0, import_react13.useState)("");
     const [weightInput, setWeightInput] = (0, import_react13.useState)("");
+    const styleCommitRef = (0, import_react13.useRef)(null);
+    const styleScopeId = selectedNodes.length === 1 ? selectedNodes[0]?.id || "NONE" : selectedNodes.length > 1 ? "MULTI" : "NONE";
+    const prevStyleScopeRef = (0, import_react13.useRef)(styleScopeId);
+    (0, import_react13.useEffect)(() => {
+      if (prevStyleScopeRef.current !== styleScopeId) {
+        prevStyleScopeRef.current = styleScopeId;
+        styleCommitRef.current = null;
+      }
+    }, [styleScopeId]);
     (0, import_react13.useEffect)(() => {
       if (isFillMixed) {
         setFillInput("");
@@ -35937,6 +35985,9 @@
     const applyFillColor = (0, import_react13.useCallback)(
       (newColorHex) => {
         const formatted = newColorHex.startsWith("#") ? newColorHex : `#${newColorHex}`;
+        const styleKey = `${styleScopeId}:fill:${formatted.toUpperCase()}`;
+        if (styleCommitRef.current === styleKey) return;
+        styleCommitRef.current = styleKey;
         if (selectedNodes.length >= 2) {
           updateMultiDraft({ colorHex: formatted });
           return;
@@ -35947,6 +35998,9 @@
       [selectedNodes, updateMultiDraft, setNodeOptionState, applyCurrentNodeState]
     );
     const applyFillNone = (0, import_react13.useCallback)(() => {
+      const styleKey = `${styleScopeId}:fill:None`;
+      if (styleCommitRef.current === styleKey) return;
+      styleCommitRef.current = styleKey;
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ colorHex: "None" });
         return;
@@ -35965,6 +36019,9 @@
       }
     };
     const applyStrokeNone = (0, import_react13.useCallback)(() => {
+      const styleKey = `${styleScopeId}:stroke:none`;
+      if (styleCommitRef.current === styleKey) return;
+      styleCommitRef.current = styleKey;
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ strokeWeight: 0 });
         return;
@@ -35976,6 +36033,9 @@
       (newStrokeHex, explicitWeight) => {
         const formatted = newStrokeHex.startsWith("#") ? newStrokeHex : `#${newStrokeHex}`;
         const targetWeight = explicitWeight !== void 0 ? explicitWeight : effectiveStrokeWeight > 0 ? effectiveStrokeWeight : 1.5;
+        const styleKey = `${styleScopeId}:stroke:${formatted.toUpperCase()}:${targetWeight}`;
+        if (styleCommitRef.current === styleKey) return;
+        styleCommitRef.current = styleKey;
         if (selectedNodes.length >= 2) {
           updateMultiDraft({ strokeColor: formatted, strokeWeight: targetWeight });
           return;
@@ -36000,6 +36060,9 @@
     const applyStrokeWeight = (0, import_react13.useCallback)(
       (newWeight) => {
         const validWeight = Math.max(0, Math.round(newWeight * 10) / 10);
+        const styleKey = `${styleScopeId}:strokeWeight:${validWeight}`;
+        if (styleCommitRef.current === styleKey) return;
+        styleCommitRef.current = styleKey;
         if (selectedNodes.length >= 2) {
           updateMultiDraft({ strokeWeight: validWeight });
           return;
@@ -36383,8 +36446,6 @@
       nodeOptionState,
       setNodeOptionState,
       applyElevationToNodes,
-      activeAppearanceSection,
-      setActiveAppearanceSection,
       autoResizeWindow,
       selectedNodes,
       multiDraft,
@@ -36435,7 +36496,7 @@
       return computeOptionSwitchState(
         selectedNodes,
         "elevation",
-        (n) => Boolean(n.elevation !== void 0 && n.elevation !== null ? n.elevation >= 0 : n.elevationOn)
+        (n) => Boolean(n.elevation !== void 0 && n.elevation !== null || n.elevationOn)
       );
     }, [selectedNodes, nodeOptionState.nodeType, nodeOptionState.elevation, nodeOptionState.elevationOn]);
     const isTypeDrafted = multiDraft.nodeType !== void 0;
@@ -36493,11 +36554,9 @@
       setIsOpen(checked);
       if (selectedNodes.length >= 2) {
         if (checked) {
-          setActiveAppearanceSection("elevation");
           const targetLevel = typeof currentLevel === "number" ? currentLevel : 0;
           updateMultiDraft({ elevation: targetLevel });
         } else {
-          setActiveAppearanceSection(null);
           updateMultiDraft({ elevation: null });
         }
         requestAnimationFrame(() => {
@@ -36509,12 +36568,10 @@
         return;
       }
       if (checked) {
-        setActiveAppearanceSection("elevation");
         setNodeOptionState({ elevationOn: true });
         const targetLevel = typeof currentLevel === "number" ? currentLevel : 0;
         applyElevationToNodes(targetLevel);
       } else {
-        setActiveAppearanceSection(null);
         setNodeOptionState({ elevationOn: false });
         applyElevationToNodes(null);
       }
@@ -36525,7 +36582,6 @@
     function selectElevation(level) {
       if (effectiveState.disabled) return;
       setIsOpen(true);
-      setActiveAppearanceSection("elevation");
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ elevation: level });
         requestAnimationFrame(() => {
@@ -36657,6 +36713,8 @@
     const {
       uiState,
       setUIState,
+      setLastConnectorConfig,
+      lastConnectorConfig,
       setActiveModal,
       connectorDirty,
       markConnectorDirty,
@@ -36688,18 +36746,39 @@
     });
     const [startTermPopupOpen, setStartTermPopupOpen] = (0, import_react15.useState)(false);
     const [endTermPopupOpen, setEndTermPopupOpen] = (0, import_react15.useState)(false);
-    const [startTermVal, setStartTermVal] = (0, import_react15.useState)("NONE");
-    const [endTermVal, setEndTermVal] = (0, import_react15.useState)("ARROW");
+    const [startTermVal, setStartTermValState] = (0, import_react15.useState)("NONE");
+    const [endTermVal, setEndTermValState] = (0, import_react15.useState)("ARROW");
     const [isColorMixed, setIsColorMixed] = (0, import_react15.useState)(false);
     const [isWeightMixed, setIsWeightMixed] = (0, import_react15.useState)(false);
-    const [weightInput, setWeightInput] = (0, import_react15.useState)("1.5");
-    const [startOffsetInput, setStartOffsetInput] = (0, import_react15.useState)("0");
-    const [endOffsetInput, setEndOffsetInput] = (0, import_react15.useState)("0");
+    const [weightInput, setWeightInputState] = (0, import_react15.useState)("1.5");
+    const [startOffsetInput, setStartOffsetInputState] = (0, import_react15.useState)("0");
+    const [endOffsetInput, setEndOffsetInputState] = (0, import_react15.useState)("0");
     const [isStartOffsetMixed, setIsStartOffsetMixed] = (0, import_react15.useState)(false);
     const [isEndOffsetMixed, setIsEndOffsetMixed] = (0, import_react15.useState)(false);
+    const setStartTermVal = (v) => {
+      setStartTermValState(v);
+      setLastConnectorConfig({ startTerminalInput: v });
+    };
+    const setEndTermVal = (v) => {
+      setEndTermValState(v);
+      setLastConnectorConfig({ endTerminalInput: v });
+    };
+    const setWeightInput = (v) => {
+      setWeightInputState(v);
+      setLastConnectorConfig({ strokeWeightInput: v });
+    };
+    const setStartOffsetInput = (v) => {
+      setStartOffsetInputState(v);
+      setLastConnectorConfig({ startOffsetInput: v });
+    };
+    const setEndOffsetInput = (v) => {
+      setEndOffsetInputState(v);
+      setLastConnectorConfig({ endOffsetInput: v });
+    };
     const userActionTimestampRef = (0, import_react15.useRef)(0);
     const prevSelectionKeyRef = (0, import_react15.useRef)("");
     const lastSyncedSelectionColorRef = (0, import_react15.useRef)(null);
+    const weightCommitRef = (0, import_react15.useRef)(null);
     const offsetDebounceRef = (0, import_react15.useRef)(null);
     (0, import_react15.useEffect)(() => {
       return () => {
@@ -36722,13 +36801,17 @@
       const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
       return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
     };
-    const [selectedColor, setSelectedColor] = (0, import_react15.useState)(() => {
+    const [selectedColor, setSelectedColorState] = (0, import_react15.useState)(() => {
       if (selectedConnectorColor) return selectedConnectorColor.toUpperCase();
       if (activeStylePreset) {
         return getPresetLineColor2(activeStylePreset);
       }
       return "#000000";
     });
+    const setSelectedColor = (v) => {
+      setSelectedColorState(v);
+      setLastConnectorConfig({ connectorColorInput: v });
+    };
     const [hexInput, setHexInput] = (0, import_react15.useState)(() => {
       if (selectedConnectorColor) return selectedConnectorColor.replace("#", "").toUpperCase();
       if (activeStylePreset) {
@@ -36773,6 +36856,7 @@
       const isDifferentSelection = currentSelectionKey !== prevSelectionKeyRef.current;
       if (isDifferentSelection) {
         prevSelectionKeyRef.current = currentSelectionKey;
+        weightCommitRef.current = null;
         const firstConn = selectedNodes.find((n) => n && n.isConnector);
         lastSyncedSelectionColorRef.current = firstConn?.connectorColorHex ? firstConn.connectorColorHex.toUpperCase() : null;
       }
@@ -36795,6 +36879,11 @@
           setHexInput(hex.replace("#", ""));
           const colSel = document.getElementById("conn-line-color");
           if (colSel) colSel.value = hex;
+        } else {
+          setSelectedColor("");
+          setHexInput("");
+          const colSel = document.getElementById("conn-line-color");
+          if (colSel) colSel.value = "";
         }
         const weightEl = document.getElementById("input-stroke-weight");
         if (typeof node?.connectorStrokeWeight === "number") {
@@ -36813,9 +36902,13 @@
         }
         if (node?.connectorRoutingType) {
           setUIState({ selectedRoutingType: node.connectorRoutingType });
+        } else {
+          setUIState({ selectedRoutingType: "ORTHOGONAL" });
         }
         if (node?.connectorStrokePattern) {
           setUIState({ selectedLinePattern: node.connectorStrokePattern });
+        } else {
+          setUIState({ selectedLinePattern: "SOLID" });
         }
         if (!isUserActionRecent && node?.connectorSourceMagnet && node?.connectorTargetMagnet) {
           setUIState({
@@ -36856,6 +36949,7 @@
           const colSel = document.getElementById("conn-line-color");
           if (colSel) colSel.value = hex;
         } else if (summary.connectorColor.isMixed) {
+          setSelectedColor("");
           setHexInput("");
         }
         const isConnWeightMixed = Boolean(summary.connectorStrokeWeight.isMixed);
@@ -36878,9 +36972,13 @@
         }
         if (!summary.connectorRoutingType.isMixed && summary.connectorRoutingType.value) {
           setUIState({ selectedRoutingType: summary.connectorRoutingType.value });
+        } else if (summary.connectorRoutingType.isMixed) {
+          setUIState({ selectedRoutingType: "MIXED" });
         }
         if (!summary.connectorStrokePattern.isMixed && summary.connectorStrokePattern.value) {
           setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
+        } else if (summary.connectorStrokePattern.isMixed) {
+          setUIState({ selectedLinePattern: "MIXED" });
         }
         if (!isUserActionRecent) {
           if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
@@ -36941,6 +37039,17 @@
           const endSel = document.getElementById("select-end-terminal");
           if (endSel) endSel.value = "ARROW";
         }
+        if (selectedRoutingType === "MIXED") {
+          setUIState({ selectedRoutingType: "ORTHOGONAL" });
+        }
+        if (selectedLinePattern === "MIXED") {
+          setUIState({ selectedLinePattern: "SOLID" });
+        }
+        if (selectedColor === "") {
+          const fallbackColor = (selectedConnectorColor || "#000000").toUpperCase();
+          setSelectedColor(fallbackColor);
+          setHexInput(fallbackColor.replace("#", ""));
+        }
         const weightEl = document.getElementById("input-stroke-weight");
         if (weightEl && weightEl.placeholder === "Mixed") {
           weightEl.placeholder = "";
@@ -36987,7 +37096,38 @@
       summary.color.isMixed,
       summary.color.value,
       selectedNodes,
+      selectedRoutingType,
+      selectedLinePattern,
       setUIState
+    ]);
+    (0, import_react15.useEffect)(() => {
+      const cfg = lastConnectorConfig;
+      if (cfg.strokeWeightInput !== void 0 && cfg.strokeWeightInput !== weightInput) {
+        setWeightInputState(cfg.strokeWeightInput);
+      }
+      if (cfg.startTerminalInput !== void 0 && cfg.startTerminalInput !== startTermVal) {
+        setStartTermValState(cfg.startTerminalInput);
+      }
+      if (cfg.endTerminalInput !== void 0 && cfg.endTerminalInput !== endTermVal) {
+        setEndTermValState(cfg.endTerminalInput);
+      }
+      if (cfg.startOffsetInput !== void 0 && cfg.startOffsetInput !== startOffsetInput) {
+        setStartOffsetInputState(cfg.startOffsetInput);
+      }
+      if (cfg.endOffsetInput !== void 0 && cfg.endOffsetInput !== endOffsetInput) {
+        setEndOffsetInputState(cfg.endOffsetInput);
+      }
+      if (cfg.connectorColorInput !== void 0 && cfg.connectorColorInput !== selectedColor) {
+        setSelectedColorState(cfg.connectorColorInput);
+        setHexInput(cfg.connectorColorInput.replace("#", ""));
+      }
+    }, [
+      lastConnectorConfig.strokeWeightInput,
+      lastConnectorConfig.startTerminalInput,
+      lastConnectorConfig.endTerminalInput,
+      lastConnectorConfig.startOffsetInput,
+      lastConnectorConfig.endOffsetInput,
+      lastConnectorConfig.connectorColorInput
     ]);
     (0, import_react15.useEffect)(() => {
       if (selectedConnectorColor) {
@@ -37100,6 +37240,14 @@
       if (selectEl) selectEl.value = formatted;
       setTimeout(() => markConnectorDirty(), 0);
     }
+    const commitStrokeWeightInput = () => {
+      const selectionKey = selectedNodes.map((n) => n.id).sort().join(",");
+      const weightKey = `${selectionKey}:weight:${isWeightMixed ? "MIXED" : weightInput}`;
+      if (weightCommitRef.current === weightKey) return;
+      weightCommitRef.current = weightKey;
+      clampAndSyncStrokeWeight();
+      markConnectorDirty();
+    };
     const clampAndSyncStrokeWeight = () => {
       if (!isWeightMixed && weightInput.trim() !== "") {
         const parsed = parseFloat(weightInput);
@@ -37470,14 +37618,10 @@
                 },
                 onFocus: (e) => e.currentTarget.select(),
                 onClick: (e) => e.currentTarget.select(),
-                onBlur: () => {
-                  clampAndSyncStrokeWeight();
-                  markConnectorDirty();
-                },
+                onBlur: commitStrokeWeightInput,
                 onKeyDown: (e) => {
                   if (e.key === "Enter") {
-                    clampAndSyncStrokeWeight();
-                    markConnectorDirty();
+                    commitStrokeWeightInput();
                   }
                 }
               }
@@ -38102,15 +38246,30 @@
       autoResizeWindow();
       setTimeout(() => markConnectorDirty(), 0);
     }
-    function clampToInputWidth(el) {
-      while (el.value.length > 0 && el.scrollWidth > el.clientWidth) {
-        el.value = el.value.slice(0, -1);
+    function clampText(value, maxLength) {
+      if (maxLength <= 0) return "";
+      return value.length > maxLength ? value.slice(0, maxLength) : value;
+    }
+    function measureFittingLength(el, raw) {
+      const prev = el.value;
+      try {
+        el.value = raw;
+        let end = raw.length;
+        while (end > 0 && el.scrollWidth > el.clientWidth) {
+          end -= 1;
+          el.value = raw.slice(0, end);
+        }
+        return end;
+      } finally {
+        el.value = prev;
       }
     }
     function handleInput(e) {
       const nativeEvt = e.nativeEvent;
       if (!nativeEvt.isComposing) {
-        clampToInputWidth(e.currentTarget);
+        const raw = e.currentTarget.value;
+        const clamped = clampText(raw, measureFittingLength(e.currentTarget, raw));
+        if (clamped !== raw) e.currentTarget.value = clamped;
       }
       const val = e.currentTarget.value;
       if (isMultiConnector) {
@@ -38269,7 +38428,9 @@
             },
             onInput: handleInput,
             onCompositionEnd: (e) => {
-              clampToInputWidth(e.currentTarget);
+              const raw = e.currentTarget.value;
+              const clamped = clampText(raw, measureFittingLength(e.currentTarget, raw));
+              if (clamped !== raw) e.currentTarget.value = clamped;
               handleInput(e);
             },
             spellCheck: false,

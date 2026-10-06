@@ -225,6 +225,14 @@ export interface LastConnectorConfig {
   labelStrokeColor?: string;
   linkOn: boolean;
   linkUrl: string;
+  // 커넥터 payload truth 브릿지 (ConnectSection 로컬 state 미러, 원시 문자열 그대로 보관).
+  // AppContext 적용 함수가 DOM 대신 이 값을 읽는다. 정규화(''/'MIXED' → undefined)는 읽기 측에서 수행.
+  strokeWeightInput?: string;
+  startTerminalInput?: string;
+  endTerminalInput?: string;
+  startOffsetInput?: string;
+  endOffsetInput?: string;
+  connectorColorInput?: string;
 }
 
 export interface UIState {
@@ -844,45 +852,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const isConn = Boolean(origNode.isConnector || origNode.nodeType === 'CONNECTOR');
     if (isConn) {
-      // 1. Label
-      const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
-      const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
-      const currentHasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
-      const currentLabel = currentHasLabel ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || '').trim()) : '';
+      // 1. Label (lastConnectorConfig가 truth: 토글·입력 시점에 동기 기록됨)
+      const currentHasLabel = Boolean(lastConnectorConfigRef.current.labelOn);
+      const currentLabel = currentHasLabel ? (lastConnectorConfigRef.current.labelText || '').trim() : '';
       const origHasLabel = origNode.connectorLabelOn !== undefined ? origNode.connectorLabelOn : Boolean(origNode.connectorLabel);
       const origLabel = (origNode.connectorLabel || '').trim();
       if (currentHasLabel !== origHasLabel) return true;
       if (currentHasLabel && currentLabel !== origLabel) return true;
 
-      // 2. Color
-      const colorEl = document.getElementById('conn-line-color') as HTMLSelectElement | null;
-      const currentColor = (colorEl?.value || uiStateRef.current.selectedConnectorColor || '#000000').toUpperCase();
-      const origColor = (origNode.connectorColorHex || '#000000').toUpperCase();
+      // 2. Color (state 우선: hidden input은 selectedColor 미러)
+      const currentColor = (uiStateRef.current.selectedConnectorColor || lastConnectorConfigRef.current.connectorColorInput || DEFAULT_CONNECTOR_COLOR).toUpperCase();
+      const origColor = (origNode.connectorColorHex || DEFAULT_CONNECTOR_COLOR).toUpperCase();
       if (currentColor !== origColor) return true;
 
-      // 3. Weight
-      const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-      const currentWeight = weightEl?.value ? parseFloat(weightEl.value) : 1.5;
+      // 3. Weight (미러 원시 문자열, 기존과 동일 정규화)
+      const currentWeightStr = lastConnectorConfigRef.current.strokeWeightInput;
+      const currentWeight = currentWeightStr ? parseFloat(currentWeightStr) : 1.5;
       const origWeight = origNode.connectorStrokeWeight ?? 1.5;
       if (Math.abs(currentWeight - origWeight) > 0.01) return true;
 
-      // 4. Terminals
-      const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-      const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-      const currentStartTerm = startTermEl?.value || 'NONE';
+      // 4. Terminals (미러 원시 문자열, 기존과 동일 정규화)
+      const currentStartTerm = lastConnectorConfigRef.current.startTerminalInput || 'NONE';
       const origStartTerm = normalizeTerminal(origNode.connectorStartTerminal, 'NONE');
       if (currentStartTerm !== origStartTerm) return true;
-      const currentEndTerm = endTermEl?.value || 'ARROW';
+      const currentEndTerm = lastConnectorConfigRef.current.endTerminalInput || 'ARROW';
       const origEndTerm = normalizeTerminal(origNode.connectorEndTerminal, 'ARROW');
       if (currentEndTerm !== origEndTerm) return true;
 
-      // 5. Offsets
-      const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
-      const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
-      const currentStartOff = startOffEl?.value ? parseFloat(startOffEl.value) : 0;
+      // 5. Offsets (미러 원시 문자열, 기존과 동일 정규화)
+      const currentStartOffStr = lastConnectorConfigRef.current.startOffsetInput;
+      const currentStartOff = currentStartOffStr ? parseFloat(currentStartOffStr) : 0;
       const origStartOff = origNode.connectorStartOffset ?? 0;
       if (Math.abs(currentStartOff - origStartOff) > 0.01) return true;
-      const currentEndOff = endOffEl?.value ? parseFloat(endOffEl.value) : 0;
+      const currentEndOffStr = lastConnectorConfigRef.current.endOffsetInput;
+      const currentEndOff = currentEndOffStr ? parseFloat(currentEndOffStr) : 0;
       const origEndOff = origNode.connectorEndOffset ?? 0;
       if (Math.abs(currentEndOff - origEndOff) > 0.01) return true;
 
@@ -1078,6 +1081,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         labelStrokeColor: labelStrokeFollowsConnector(orig.connectorLabelStrokeColor, orig.connectorColorHex)
           ? (orig.connectorColorHex || DEFAULT_CONNECTOR_COLOR)
           : (orig.connectorLabelStrokeColor || orig.connectorColorHex || DEFAULT_CONNECTOR_COLOR),
+        // payload truth 브릿지도 복원값과 일치시킨다 (위 DOM 쓰기와 동일값; hex가 없으면 DOM도 그대로이므로 생략)
+        ...(orig.connectorColorHex ? { connectorColorInput: orig.connectorColorHex } : {}),
+        // payload truth 브릿지도 복원값과 일치시킨다 (위 DOM 쓰기와 동일값)
+        strokeWeightInput: String(orig.connectorStrokeWeight ?? 1.5),
+        startTerminalInput: normalizeTerminal(orig.connectorStartTerminal, 'NONE'),
+        endTerminalInput: normalizeTerminal(orig.connectorEndTerminal, 'ARROW'),
+        startOffsetInput: String(orig.connectorStartOffset ?? 0),
+        endOffsetInput: String(orig.connectorEndOffset ?? 0),
       });
 
       triggerFormChange();
@@ -1623,35 +1634,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLastAppliedSnapshot(newSnapshot);
     lastAppliedSnapshotRef.current = newSnapshot;
 
-    const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
-    const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
-    const colorEl = document.getElementById('conn-line-color') as HTMLSelectElement | null;
-    const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-    const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-    const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-    const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
-    const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
-
-    const hasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
-    const label = hasLabel ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || '').trim()) : '';
-    const colorRaw = colorEl?.value;
+    const hasLabel = Boolean(lastConnectorConfigRef.current.labelOn);
+    const label = hasLabel ? (lastConnectorConfigRef.current.labelText || '').trim() : '';
+    // color는 ConnectSection 로컬 state 미러(lastConnectorConfig ref)에서 읽는다 (DOM read 제거).
+    // 정규화(빈 값 → undefined)는 기존과 동일.
+    const colorRaw = lastConnectorConfigRef.current.connectorColorInput;
     const color = colorRaw && colorRaw.trim() ? colorRaw : undefined;
-    const weightStr = weightEl?.value;
+    // weight/terminal/offset은 ConnectSection 로컬 state 미러(lastConnectorConfig ref)에서 읽는다 (DOM read 제거).
+    // 정규화(''/'MIXED' → undefined)와 custom offset 우선순위는 기존과 동일.
+    const weightStr = lastConnectorConfigRef.current.strokeWeightInput;
     const weight = weightStr && weightStr.trim() !== '' ? parseFloat(weightStr) : undefined;
-    const startTermRaw = startTermEl?.value;
+    const startTermRaw = lastConnectorConfigRef.current.startTerminalInput;
     const startTerm = startTermRaw && startTermRaw !== 'MIXED' ? (startTermRaw as ConnectorTerminalType) : undefined;
-    const endTermRaw = endTermEl?.value;
+    const endTermRaw = lastConnectorConfigRef.current.endTerminalInput;
     const endTerm = endTermRaw && endTermRaw !== 'MIXED' ? (endTermRaw as ConnectorTerminalType) : undefined;
 
-    const startOffStr = startOffEl?.value;
     const startOffset = typeof customStartOffset === 'number'
       ? customStartOffset
-      : (startOffStr !== undefined && startOffStr !== null && startOffStr.trim() !== '' ? parseFloat(startOffStr) : undefined);
+      : ((lastConnectorConfigRef.current.startOffsetInput !== undefined && lastConnectorConfigRef.current.startOffsetInput !== null && lastConnectorConfigRef.current.startOffsetInput.trim() !== '') ? parseFloat(lastConnectorConfigRef.current.startOffsetInput) : undefined);
 
-    const endOffStr = endOffEl?.value;
     const endOffset = typeof customEndOffset === 'number'
       ? customEndOffset
-      : (endOffStr !== undefined && endOffStr !== null && endOffStr.trim() !== '' ? parseFloat(endOffStr) : undefined);
+      : ((lastConnectorConfigRef.current.endOffsetInput !== undefined && lastConnectorConfigRef.current.endOffsetInput !== null && lastConnectorConfigRef.current.endOffsetInput.trim() !== '') ? parseFloat(lastConnectorConfigRef.current.endOffsetInput) : undefined);
 
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
     // BUG-1: liveApply(즉시 적용) 경로에서는 endpointDraft magnet을 전송하지 않는다.
@@ -1696,8 +1700,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             connectorId: node.id,
             colorHex: color,
             strokeWeight: weight,
-            strokePattern: selectedLinePattern,
-            routingType: selectedRoutingType,
+            strokePattern: selectedLinePattern === 'MIXED' ? undefined : selectedLinePattern,
+            routingType: selectedRoutingType === 'MIXED' ? undefined : selectedRoutingType,
             startTerminal: startTerm,
             endTerminal: endTerm,
             startOffset,
@@ -1731,33 +1735,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const magnetPatchById = new Map(magnetPatches.map((patch) => [patch.id, patch]));
     const hasEndpointDraft = Boolean(includeMagnets && (endpointDraftNow.sourceMagnet || endpointDraftNow.targetMagnet));
 
-    const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
-    const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
-    const colorEl = document.getElementById('conn-line-color') as HTMLInputElement | null;
-    const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-    const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-    const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-    const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
-    const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
-
-    const hasLabel = labelToggleEl ? labelToggleEl.checked : Boolean(lastConnectorConfigRef.current.labelOn);
-    const label = hasLabel ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || '').trim()) : '';
-    const colorRaw = colorEl?.value;
+    const hasLabel = Boolean(lastConnectorConfigRef.current.labelOn);
+    const label = hasLabel ? (lastConnectorConfigRef.current.labelText || '').trim() : '';
+    // color는 ConnectSection 로컬 state 미러(lastConnectorConfig ref)에서 읽는다 (DOM read 제거).
+    // 정규화(빈 값 → undefined)는 기존과 동일.
+    const colorRaw = lastConnectorConfigRef.current.connectorColorInput;
     const color = colorRaw && colorRaw.trim() ? colorRaw : undefined;
-    const weightStr = weightEl?.value;
+    // weight/terminal/offset은 ConnectSection 로컬 state 미러(lastConnectorConfig ref)에서 읽는다 (DOM read 제거).
+    // 정규화(''/'MIXED' → undefined)와 custom offset 우선순위는 기존과 동일.
+    const weightStr = lastConnectorConfigRef.current.strokeWeightInput;
     const weight = weightStr && weightStr.trim() !== '' ? parseFloat(weightStr) : undefined;
-    const startTermRaw = startTermEl?.value;
+    const startTermRaw = lastConnectorConfigRef.current.startTerminalInput;
     const startTerm = startTermRaw && startTermRaw !== 'MIXED' ? (startTermRaw as ConnectorTerminalType) : undefined;
-    const endTermRaw = endTermEl?.value;
+    const endTermRaw = lastConnectorConfigRef.current.endTerminalInput;
     const endTerm = endTermRaw && endTermRaw !== 'MIXED' ? (endTermRaw as ConnectorTerminalType) : undefined;
-    const startOffStr = startOffEl?.value;
     const startOffset = typeof customStartOffset === 'number'
       ? customStartOffset
-      : (startOffStr && startOffStr.trim() !== '' ? parseFloat(startOffStr) : undefined);
-    const endOffStr = endOffEl?.value;
+      : ((lastConnectorConfigRef.current.startOffsetInput && lastConnectorConfigRef.current.startOffsetInput.trim() !== '') ? parseFloat(lastConnectorConfigRef.current.startOffsetInput) : undefined);
     const endOffset = typeof customEndOffset === 'number'
       ? customEndOffset
-      : (endOffStr && endOffStr.trim() !== '' ? parseFloat(endOffStr) : undefined);
+      : ((lastConnectorConfigRef.current.endOffsetInput && lastConnectorConfigRef.current.endOffsetInput.trim() !== '') ? parseFloat(lastConnectorConfigRef.current.endOffsetInput) : undefined);
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
 
     conns.forEach((conn) => {
@@ -1770,8 +1767,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             isReversed: conn.isReversed,
             colorHex: color,
             strokeWeight: weight,
-            strokePattern: selectedLinePattern,
-            routingType: selectedRoutingType,
+            strokePattern: selectedLinePattern === 'MIXED' ? undefined : selectedLinePattern,
+            routingType: selectedRoutingType === 'MIXED' ? undefined : selectedRoutingType,
             startTerminal: startTerm,
             endTerminal: endTerm,
             startOffset,
@@ -1822,29 +1819,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       showToast(t('connectNeedTwo'));
       return;
     }
-    const labelToggleEl = document.getElementById('toggle-conn-label') as HTMLInputElement | null;
-    const labelInputEl = document.getElementById('input-conn-label') as HTMLInputElement | null;
-    const colorEl = document.getElementById('conn-line-color') as HTMLSelectElement | null;
-    const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
-    const startTermEl = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
-    const endTermEl = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
-    const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
-    const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
-    const linkToggleEl = document.getElementById('toggle-conn-link') as HTMLInputElement | null;
-    const linkUrlEl = document.getElementById('input-conn-link-url') as HTMLInputElement | null;
-
-    const label = labelToggleEl?.checked
-      ? (labelInputEl ? labelInputEl.value.trim() : (lastConnectorConfigRef.current.labelText || '').trim())
-      : '';
-    const color = colorEl?.value?.trim() || uiStateRef.current.selectedConnectorColor || '#000000';
-    const weight = parseFloat(weightEl?.value || '1.5') || 1.5;
-    const startTerm = startTermEl?.value || 'NONE';
-    const endTerm = endTermEl?.value || 'ARROW';
-    const startOff = parseFloat(startOffEl?.value || '0') || 0;
-    const endOff = parseFloat(endOffEl?.value || '0') || 0;
-    const isLinkOn = linkToggleEl ? linkToggleEl.checked : (lastConnectorConfigRef.current.linkOn || false);
-    const rawLinkUrl = linkUrlEl ? linkUrlEl.value.trim() : (lastConnectorConfigRef.current.linkUrl || '');
+    // link on/url은 LinkSection 로컬 state와 동기 기록되는 config에서 읽는다 (DOM read 제거).
+    // OFF → '', ON + empty → '', ON + URL → trimmed URL (기존 semantics 동일).
+    const isLinkOn = lastConnectorConfigRef.current.linkOn || false;
+    const rawLinkUrl = (lastConnectorConfigRef.current.linkUrl || '').trim();
     const figmaLink = isLinkOn ? rawLinkUrl : '';
+
+    const label = lastConnectorConfigRef.current.labelOn
+      ? (lastConnectorConfigRef.current.labelText || '').trim()
+      : ''; // label on/text는 lastConnectorConfig에서 읽는다 (DOM read 제거, 게이트·trim 동일).
+    // color는 ConnectSection 로컬 state 미러(hidden controlled와 동일값)에서 읽는다 (DOM read 제거).
+    // 우선순위(mirror → uiState → 기본값)와 .trim() semantics는 기존과 동일.
+    const colorMirror = lastConnectorConfigRef.current.connectorColorInput;
+    const color = (colorMirror && colorMirror.trim()) || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
+    // weight/terminal/offset은 ConnectSection 로컬 state 미러에서 읽는다 (DOM read 제거, 정규화·기본값 동일).
+    const weight = parseFloat(lastConnectorConfigRef.current.strokeWeightInput || '1.5') || 1.5;
+    const startTerm = lastConnectorConfigRef.current.startTerminalInput || 'NONE';
+    const endTerm = lastConnectorConfigRef.current.endTerminalInput || 'ARROW';
+    const startOff = parseFloat(lastConnectorConfigRef.current.startOffsetInput || '0') || 0;
+    const endOff = parseFloat(lastConnectorConfigRef.current.endOffsetInput || '0') || 0;
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
     // BUG-3: 신규 생성 시 endpointDraft를 신규 connector magnet으로 사용한다 (Draft 우선, 없으면 uiState).
     const createDraft = endpointDraftRef.current;

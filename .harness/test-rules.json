@@ -1,0 +1,19 @@
+{
+  "notes": "test/*.test.mjs 전체가 package.json scripts.test에서 실행되는지 검증. known_excluded에 등록된 것만 KNOWN, 나머지는 NEW.",
+  "test_dir": "test",
+  "package_test_script": "test",
+  "runners": {
+    "node": [
+      "chainOrder.test.mjs",
+      "gizmoState.test.mjs",
+      "connectButton.test.mjs",
+      "elementCount.test.mjs",
+      "entitlementGate.test.mjs",
+      "subscriptionStatus.test.mjs",
+      "planUsageTone.test.mjs",
+      "flooowUsage.test.mjs"
+    ],
+    "esbuild": ["i18n.test.mjs", "magnetKeep.test.mjs"]
+  },
+  "known_excluded": []
+}

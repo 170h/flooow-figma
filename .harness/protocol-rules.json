@@ -3,7 +3,8 @@
   "ui_to_core": {
     "union": "PluginAction",
     "core_switch_file": "src/code.ts",
-    "known_unhandled": ["CREATE_CONNECTORS", "CREATE_TEMPLATE"]
+    "known_unhandled": ["CREATE_CONNECTORS", "CREATE_TEMPLATE"],
+    "known_missing_default_warn": ["src/code.ts"]
   },
   "core_to_ui": {
     "union": "CoreToUIMessage",
@@ -15,7 +16,9 @@
       "UI3_VARIABLES_EXTRACTED",
       "SETTINGS_LOADED",
       "TOAST"
-    ]
+    ],
+    "known_undeclared_sent": [],
+    "known_silent_default": ["src/ui/hooks/useFigmaMessage.ts"]
   },
   "no_op_actions": ["UNDO", "REDO"],
   "round_trip": {

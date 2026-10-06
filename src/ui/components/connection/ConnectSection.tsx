@@ -96,6 +96,8 @@ export function ConnectSection() {
   const {
     uiState,
     setUIState,
+    setLastConnectorConfig,
+    lastConnectorConfig,
     setActiveModal,
     connectorDirty,
     markConnectorDirty,
@@ -133,23 +135,49 @@ export function ConnectSection() {
   const [endTermPopupOpen, setEndTermPopupOpen] = useState(false);
 
   // 드롭다운 선택 값 상태
-  const [startTermVal, setStartTermVal] = useState<ConnectorTerminalType>('NONE');
-  const [endTermVal, setEndTermVal] = useState<ConnectorTerminalType>('ARROW');
+  const [startTermVal, setStartTermValState] = useState<ConnectorTerminalType>('NONE');
+  const [endTermVal, setEndTermValState] = useState<ConnectorTerminalType>('ARROW');
 
   // 다중 선택 시 Mixed 상태
   const [isColorMixed, setIsColorMixed] = useState(false);
   const [isWeightMixed, setIsWeightMixed] = useState(false);
-  const [weightInput, setWeightInput] = useState<string>('1.5');
+  const [weightInput, setWeightInputState] = useState<string>('1.5');
 
   // 오프셋 상태
-  const [startOffsetInput, setStartOffsetInput] = useState<string>('0');
-  const [endOffsetInput, setEndOffsetInput] = useState<string>('0');
+  const [startOffsetInput, setStartOffsetInputState] = useState<string>('0');
+  const [endOffsetInput, setEndOffsetInputState] = useState<string>('0');
   const [isStartOffsetMixed, setIsStartOffsetMixed] = useState(false);
   const [isEndOffsetMixed, setIsEndOffsetMixed] = useState(false);
+
+  // payload truth 브릿지: 아래 setter는 로컬 state와 함께 AppContext 공유 ref에
+  // 원시값을 동기 기록한다. AppContext 적용 함수가 DOM 대신 이 ref를 읽으므로,
+  // microtask liveApply 시점에도 값이 신선하다. 정규화는 읽기 측 기존 로직 그대로.
+  const setStartTermVal = (v: ConnectorTerminalType) => {
+    setStartTermValState(v);
+    setLastConnectorConfig({ startTerminalInput: v });
+  };
+  const setEndTermVal = (v: ConnectorTerminalType) => {
+    setEndTermValState(v);
+    setLastConnectorConfig({ endTerminalInput: v });
+  };
+  const setWeightInput = (v: string) => {
+    setWeightInputState(v);
+    setLastConnectorConfig({ strokeWeightInput: v });
+  };
+  const setStartOffsetInput = (v: string) => {
+    setStartOffsetInputState(v);
+    setLastConnectorConfig({ startOffsetInput: v });
+  };
+  const setEndOffsetInput = (v: string) => {
+    setEndOffsetInputState(v);
+    setLastConnectorConfig({ endOffsetInput: v });
+  };
 
   const userActionTimestampRef = useRef<number>(0);
   const prevSelectionKeyRef = useRef<string>('');
   const lastSyncedSelectionColorRef = useRef<string | null>(null);
+  // Enter 직후 blur 중복 커밋 방지: 두께 입력 마지막 확정 키
+  const weightCommitRef = useRef<string | null>(null);
 
   // 오프셋 실시간 입력 디바운스 타이머
   const offsetDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -181,13 +209,19 @@ export function ConnectSection() {
     return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
   };
 
-  const [selectedColor, setSelectedColor] = useState<string>(() => {
+  const [selectedColor, setSelectedColorState] = useState<string>(() => {
     if (selectedConnectorColor) return selectedConnectorColor.toUpperCase();
     if (activeStylePreset) {
       return getPresetLineColor(activeStylePreset);
     }
     return '#000000';
   });
+  // payload truth 브릿지: 로컬 state와 함께 AppContext 공유 ref에 원시값을 동기 기록한다.
+  // hidden input이 controlled 미러이므로 ref와 DOM은 항상 일치한다.
+  const setSelectedColor = (v: string) => {
+    setSelectedColorState(v);
+    setLastConnectorConfig({ connectorColorInput: v });
+  };
   const [hexInput, setHexInput] = useState<string>(() => {
     if (selectedConnectorColor) return selectedConnectorColor.replace('#', '').toUpperCase();
     if (activeStylePreset) {
@@ -270,6 +304,12 @@ export function ConnectSection() {
         setHexInput(hex.replace('#', ''));
         const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
         if (colSel) colSel.value = hex;
+      } else {
+        // 색상값이 없는 단일 커넥터: 직전 값을 추정 전송하지 않고 비워 유지(undefined)한다
+        setSelectedColor('');
+        setHexInput('');
+        const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+        if (colSel) colSel.value = '';
       }
       const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
       if (typeof node?.connectorStrokeWeight === 'number') {
@@ -288,9 +328,13 @@ export function ConnectSection() {
       }
       if (node?.connectorRoutingType) {
         setUIState({ selectedRoutingType: node.connectorRoutingType });
+      } else {
+        setUIState({ selectedRoutingType: 'ORTHOGONAL' });
       }
       if (node?.connectorStrokePattern) {
         setUIState({ selectedLinePattern: node.connectorStrokePattern });
+      } else {
+        setUIState({ selectedLinePattern: 'SOLID' });
       }
       if (!isUserActionRecent && node?.connectorSourceMagnet && node?.connectorTargetMagnet) {
         setUIState({
@@ -334,7 +378,7 @@ export function ConnectSection() {
       const endSel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
       if (endSel) endSel.value = endVal;
 
-      // 2. 컬러
+      // 2. 컬러 (Mixed면 hidden 미러까지 비워 payload가 undefined=유지가 되도록)
       setIsColorMixed(summary.connectorColor.isMixed);
       if (!summary.connectorColor.isMixed && summary.connectorColor.value) {
         const hex = summary.connectorColor.value.toUpperCase();
@@ -343,6 +387,7 @@ export function ConnectSection() {
         const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
         if (colSel) colSel.value = hex;
       } else if (summary.connectorColor.isMixed) {
+        setSelectedColor('');
         setHexInput('');
       }
 
@@ -366,14 +411,18 @@ export function ConnectSection() {
         }
       }
 
-      // 4. 라우팅
+      // 4. 라우팅 (Mixed면 'MIXED' 센티널 → Apply에서 undefined=유지, 단자 MIXED와 동일 규약)
       if (!summary.connectorRoutingType.isMixed && summary.connectorRoutingType.value) {
         setUIState({ selectedRoutingType: summary.connectorRoutingType.value });
+      } else if (summary.connectorRoutingType.isMixed) {
+        setUIState({ selectedRoutingType: 'MIXED' });
       }
 
-      // 5. 선 스타일
+      // 5. 선 스타일 (라우팅과 동일 규약)
       if (!summary.connectorStrokePattern.isMixed && summary.connectorStrokePattern.value) {
         setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
+      } else if (summary.connectorStrokePattern.isMixed) {
+        setUIState({ selectedLinePattern: 'MIXED' });
       }
 
       // 6. 마그넷 위치
@@ -443,6 +492,19 @@ export function ConnectSection() {
         const endSel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
         if (endSel) endSel.value = 'ARROW';
       }
+      // 라우팅/선 스타일이 MIXED로 남아 신규 연결 생성에 유입되지 않도록 기본값으로 복원
+      if (selectedRoutingType === 'MIXED') {
+        setUIState({ selectedRoutingType: 'ORTHOGONAL' });
+      }
+      if (selectedLinePattern === 'MIXED') {
+        setUIState({ selectedLinePattern: 'SOLID' });
+      }
+      // Mixed에서 비워진 컬러는 생성 기본값(마지막 사용 색)으로 복원 (신규 연결 UX 유지)
+      if (selectedColor === '') {
+        const fallbackColor = (selectedConnectorColor || '#000000').toUpperCase();
+        setSelectedColor(fallbackColor);
+        setHexInput(fallbackColor.replace('#', ''));
+      }
 
       const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
       if (weightEl && weightEl.placeholder === 'Mixed') {
@@ -492,7 +554,41 @@ export function ConnectSection() {
     summary.color.isMixed,
     summary.color.value,
     selectedNodes,
+    selectedRoutingType,
+    selectedLinePattern,
     setUIState
+  ]);
+
+  // revert 등 외부에서 lastConnectorConfig 미러만 갱신된 경우 로컬을 추종한다.
+  // 사용자 입력은 wrapper가 양쪽을 동시 갱신하므로 여기까지 오지 않는다.
+  useEffect(() => {
+    const cfg = lastConnectorConfig;
+    if (cfg.strokeWeightInput !== undefined && cfg.strokeWeightInput !== weightInput) {
+      setWeightInputState(cfg.strokeWeightInput);
+    }
+    if (cfg.startTerminalInput !== undefined && cfg.startTerminalInput !== startTermVal) {
+      setStartTermValState(cfg.startTerminalInput as ConnectorTerminalType);
+    }
+    if (cfg.endTerminalInput !== undefined && cfg.endTerminalInput !== endTermVal) {
+      setEndTermValState(cfg.endTerminalInput as ConnectorTerminalType);
+    }
+    if (cfg.startOffsetInput !== undefined && cfg.startOffsetInput !== startOffsetInput) {
+      setStartOffsetInputState(cfg.startOffsetInput);
+    }
+    if (cfg.endOffsetInput !== undefined && cfg.endOffsetInput !== endOffsetInput) {
+      setEndOffsetInputState(cfg.endOffsetInput);
+    }
+    if (cfg.connectorColorInput !== undefined && cfg.connectorColorInput !== selectedColor) {
+      setSelectedColorState(cfg.connectorColorInput);
+      setHexInput(cfg.connectorColorInput.replace('#', ''));
+    }
+  }, [
+    lastConnectorConfig.strokeWeightInput,
+    lastConnectorConfig.startTerminalInput,
+    lastConnectorConfig.endTerminalInput,
+    lastConnectorConfig.startOffsetInput,
+    lastConnectorConfig.endOffsetInput,
+    lastConnectorConfig.connectorColorInput,
   ]);
 
   // AppContext의 selectedConnectorColor가 변경되면(모달에서 Save 등) 동기화

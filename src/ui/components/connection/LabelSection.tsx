@@ -225,13 +225,30 @@ export function LabelSection() {
   }
 
   /**
-   * 라벨 최대 글자수 = 입력필드에 한 줄로 보이는 폭까지.
-   * 텍스트가 입력필드 폭을 넘으면(scrollWidth > clientWidth) 넘치지 않을 때까지 끝 글자를 잘라냄.
-   * (글자 폭을 직접 반영하므로 한글/영문 폭 차이도 자동 대응, IME 조합 중에는 호출하지 않음)
+   * 라벨 최대 글자수 = 입력필드에 한 줄로 보이는 폭까지. 순수 계산 함수.
+   * 폭 측정 결과로 전달된 maxLength까지만 남기고 DOM에는 건드리지 않는다.
    */
-  function clampToInputWidth(el: HTMLInputElement) {
-    while (el.value.length > 0 && el.scrollWidth > el.clientWidth) {
-      el.value = el.value.slice(0, -1);
+  function clampText(value: string, maxLength: number): string {
+    if (maxLength <= 0) return '';
+    return value.length > maxLength ? value.slice(0, maxLength) : value;
+  }
+
+  /**
+   * 입력 엘리먼트의 현재 표시폭에 들어가는 최대 글자수를 측정한다.
+   * 측정 중 DOM 값을 변경하지 않는다 (시도한 값은 반드시 원복).
+   */
+  function measureFittingLength(el: HTMLInputElement, raw: string): number {
+    const prev = el.value;
+    try {
+      el.value = raw;
+      let end = raw.length;
+      while (end > 0 && el.scrollWidth > el.clientWidth) {
+        end -= 1;
+        el.value = raw.slice(0, end);
+      }
+      return end;
+    } finally {
+      el.value = prev;
     }
   }
 
@@ -239,7 +256,10 @@ export function LabelSection() {
     const nativeEvt = e.nativeEvent as InputEvent;
     // IME 조합 중에는 글자가 확정되지 않았으므로 조합 종료(onCompositionEnd) 시점에 제한 적용
     if (!nativeEvt.isComposing) {
-      clampToInputWidth(e.currentTarget);
+      const raw = e.currentTarget.value;
+      const clamped = clampText(raw, measureFittingLength(e.currentTarget, raw));
+      // 확정값 1회 표시 동기화 (uncontrolled 유지, truth는 아래 state 기록)
+      if (clamped !== raw) e.currentTarget.value = clamped;
     }
     const val = e.currentTarget.value;
     if (isMultiConnector) {
@@ -417,7 +437,9 @@ export function LabelSection() {
               onInput={handleInput}
               onCompositionEnd={e => {
                 // 한글 등 IME 조합이 끝난 뒤 폭 제한 적용 후 변경 내용 반영
-                clampToInputWidth(e.currentTarget);
+                const raw = e.currentTarget.value;
+                const clamped = clampText(raw, measureFittingLength(e.currentTarget, raw));
+                if (clamped !== raw) e.currentTarget.value = clamped;
                 handleInput(e);
               }}
               spellCheck={false}

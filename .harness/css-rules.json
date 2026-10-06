@@ -1,0 +1,73 @@
+{
+  "css_source": "src/ui/styles.css",
+  "notes": "zero 모드: 1건이라도 발견되면 NEW. tracked 모드: known_count까지는 KNOWN(기존 잔재), 초과분은 NEW.",
+  "rules": [
+    {
+      "id": "legacy-blue-0d99ff",
+      "desc": "레거시 프라이머리 fallback #0d99ff (현행 #8C4CF6으로 통일됨, 재도입 금지)",
+      "regex": "#0d99ff",
+      "flags": "i",
+      "mode": "zero"
+    },
+    {
+      "id": "legacy-blue-008ae6",
+      "desc": "레거시 프라이머리 hover fallback #008ae6 (현행 #7B3CE3으로 통일됨, 재도입 금지)",
+      "regex": "#008ae6",
+      "flags": "i",
+      "mode": "zero"
+    },
+    {
+      "id": "overflow-important",
+      "desc": "!important를 이용한 overflow 강제 (M-08 해소 상태 유지)",
+      "regex": "overflow[^;{}]*!important",
+      "flags": "i",
+      "mode": "zero"
+    },
+    {
+      "id": "theme-dark-class",
+      "desc": "구 .theme-dark 선택자 (제거됨, 재도입 금지)",
+      "regex": "\\.theme-dark",
+      "flags": "",
+      "mode": "zero"
+    },
+    {
+      "id": "phase-picker-residue",
+      "desc": "phase-color-picker-box 잔재 (M-07 해소 상태 유지)",
+      "regex": "phase-color-picker-box",
+      "flags": "",
+      "mode": "zero"
+    },
+    {
+      "id": "placeholder-mixed",
+      "desc": "placeholder=\"Mixed\" 속성 선택자 (취약 선택자, M-04 — 기존 잔재는 KNOWN, 신규 추가는 NEW)",
+      "regex": "\\[placeholder=\"Mixed\"",
+      "flags": "i",
+      "mode": "tracked",
+      "known_count": 43
+    },
+    {
+      "id": "data-color-white",
+      "desc": "data-color=\"#ffffff\" 정확한 hex 결합 선택자 (M-04 — 기존 잔재는 KNOWN, 신규 추가는 NEW)",
+      "regex": "\\[data-color=\"#ffffff\"\\]",
+      "flags": "i",
+      "mode": "tracked",
+      "known_count": 8
+    },
+    {
+      "id": "has-selector",
+      "desc": ":has() 선택자 (webview 지원 의존, M-04 — 기존 잔재는 KNOWN, 신규 추가는 NEW)",
+      "regex": ":has\\(",
+      "flags": "",
+      "mode": "tracked",
+      "known_count": 26
+    },
+    {
+      "id": "legacy-theme-selectors",
+      "desc": "다크모드 선택자 4체계 혼용 (M-01 — body.figma-dark / body.figma-dark-auto / .figma-dark / [data-theme=\"dark\"], 기존 잔재는 KNOWN, 신규 추가는 NEW)",
+      "regex": "body\\.figma-dark-auto|body\\.figma-dark(?![-\\w])|(?<![\\w\\-.])(\\.figma-dark\\b)|\\[data-theme=\"dark\"\\]",
+      "flags": "",
+      "mode": "tracked",
+      "known_count": 125
+    }
+  ]
+}

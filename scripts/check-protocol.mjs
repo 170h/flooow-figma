@@ -2,9 +2,11 @@
 /**
  * check-protocol.mjs — G3 프로토콜 계약 검증 게이트
  *
- * 검증 대상 (3자 일치 + 발신 사이트 대조):
+ * 검증 대상 (3자 일치 + 발신 사이트 대조 + dispatcher default):
  *   [UI→Core]  PluginAction union (types.ts) ↔ code.ts switch ↔ UI 발신 사이트
  *   [Core→UI]  CoreToUIMessage union (types.ts) ↔ UI 수신 switch ↔ Core 발신 사이트
+ *              + Core 발신이나 union에 없는 타입 (undeclared_sent_core)
+ *   [default]  Core switch default/warn 누락, UI 수신 switch silent default
  *
  * 대응: INV-03/04, R-08/R-09
  *
@@ -122,8 +124,60 @@ function extractSwitchCases(source, switchMarker) {
 }
 
 /**
- * `parent.postMessage(...)` 호출 내 `type: 'X'` 추출 (UI→Core 발신 사이트).
+ * `switch (msg.type) { ... }` 블록 문자열 자체를 반환.
+ * extractSwitchCases와 동일한 중괄호 카운팅 방식을 재사용한다.
  */
+function extractSwitchBlock(source, switchMarker) {
+  const startIdx = source.indexOf(switchMarker);
+  if (startIdx === -1) {
+    throw new Error(`switch 미발견: ${switchMarker}`);
+  }
+
+  let i = startIdx + switchMarker.length;
+  while (i < source.length && source[i] !== "{") i++;
+  if (i >= source.length) {
+    throw new Error(`switch { 미발견: ${switchMarker}`);
+  }
+
+  let depth = 0;
+  let endIdx = -1;
+  for (; i < source.length; i++) {
+    const ch = source[i];
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        endIdx = i;
+        break;
+      }
+    }
+  }
+
+  if (endIdx === -1) {
+    throw new Error(`switch 블록 끝 미발견: ${switchMarker}`);
+  }
+
+  return source.slice(startIdx, endIdx + 1);
+}
+
+/**
+ * switch 블록의 default 분기 존재 여부와 warn(경고/로깅) 포함 여부를 분석.
+ * 주석을 제거한 뒤 판정하여 주석 속 단어를 오인하지 않는다.
+ * warn 인정 패턴: console.warn/error, notify/postToUI/figma.notify 호출, throw
+ */
+function analyzeDefault(switchBlock) {
+  const code = switchBlock
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/[^\n]*/g, "");
+  const dm = /\bdefault\s*:/.exec(code);
+  if (!dm) return { hasDefault: false, hasWarn: false };
+  const tail = code.slice(dm.index);
+  const hasWarn =
+    /console\.(warn|error)|figma\.notify|postToUI\s*\(|notify\s*\(|throw\b/i.test(
+      tail,
+    );
+  return { hasDefault: true, hasWarn };
+}
 function extractPostMessageTypes(source) {
   const types = new Set();
   const regex = /parent\.postMessage\s*\(/g;
@@ -217,12 +271,32 @@ function main() {
   const undeclaredReceived = setDiff(uiReceiveCases, coreToUITypes); // receive - union
   const unsent = setDiff(coreToUITypes, coreSendTypes); // union - send
   const unreceived = setDiff(coreToUITypes, uiReceiveCases); // union - receive
+  const undeclaredSentCore = setDiff(coreSendTypes, coreToUITypes); // send - union (Core 발신이나 union에 없음)
+
+  // dispatcher default/warn 분석 (주석 제거 후 판정, 기존 brace-count 파서 재사용)
+  const coreBlock = extractSwitchBlock(coreSource, "switch (msg.type)");
+  const uiBlock = extractSwitchBlock(uiReceiveSource, "switch (msg.type)");
+  const coreDefault = analyzeDefault(coreBlock);
+  const uiDefault = analyzeDefault(uiBlock);
+  const coreSwitchFile = rules.ui_to_core.core_switch_file;
+  const uiReceiveFile = rules.core_to_ui.ui_receive_file;
+  // Core switch에 명시적 default+warn이 없으면 dispatcher blind spot (알 수 없는 action 무음 무시)
+  const coreDefaultViol =
+    !coreDefault.hasDefault || !coreDefault.hasWarn ? [coreSwitchFile] : [];
+  // UI 수신 switch의 default가 조용히 break만 하면 알 수 없는 message 무음 폐기
+  const uiSilentViol =
+    uiDefault.hasDefault && !uiDefault.hasWarn ? [uiReceiveFile] : [];
+  const uiMissingViol = !uiDefault.hasDefault ? [uiReceiveFile] : [];
 
   // 6. 분류 (KNOWN / NEW)
   const knownUnhandled = rules.ui_to_core.known_unhandled || [];
   const knownUndeclared = rules.core_to_ui.known_undeclared || [];
   const knownUnsent = rules.core_to_ui.known_unsent || [];
   const knownUnreceived = rules.core_to_ui.known_unreceived || [];
+  const knownUndeclaredSent = rules.core_to_ui.known_undeclared_sent || [];
+  const knownMissingDefaultWarn =
+    rules.ui_to_core.known_missing_default_warn || [];
+  const knownSilentDefault = rules.core_to_ui.known_silent_default || [];
 
   const classify = (items, knownList) => {
     const known = items.filter((x) => knownList.includes(x));
@@ -236,6 +310,10 @@ function main() {
   const r4 = classify(undeclaredReceived, knownUndeclared);
   const r5 = classify(unsent, knownUnsent);
   const r6 = classify(unreceived, knownUnreceived); // TOAST는 unsent+unreceived 중복
+  const r7 = classify(undeclaredSentCore, knownUndeclaredSent);
+  const r8 = classify(coreDefaultViol, knownMissingDefaultWarn);
+  const r9 = classify(uiSilentViol, knownSilentDefault);
+  const r10 = classify(uiMissingViol, []); // UI default 자체가 없으면 항상 NEW
 
   // 7. 리포트
   const L = [];
@@ -269,6 +347,10 @@ function main() {
   report("UI 수신 union 미선언 (undeclared_received)", r4);
   report("union에서 Core 미발신 (unsent)", r5);
   report("union에서 UI 미수신 (unreceived)", r6);
+  report("Core 발신이나 union에 없음 (undeclared_sent_core)", r7);
+  report("Core switch default/warn 누락 (무음 무시 위험)", r8);
+  report("UI 수신 switch silent default (조용한 폐기)", r9);
+  report("UI 수신 switch default 자체 누락", r10);
   L.push("");
 
   const allKnown = [
@@ -278,8 +360,23 @@ function main() {
     r4.known,
     r5.known,
     r6.known,
+    r7.known,
+    r8.known,
+    r9.known,
+    r10.known,
   ].flat();
-  const allNew = [r1.neu, r2.neu, r3.neu, r4.neu, r5.neu, r6.neu].flat();
+  const allNew = [
+    r1.neu,
+    r2.neu,
+    r3.neu,
+    r4.neu,
+    r5.neu,
+    r6.neu,
+    r7.neu,
+    r8.neu,
+    r9.neu,
+    r10.neu,
+  ].flat();
 
   L.push("=== Summary ===");
   L.push(`  KNOWN 위반 (예상된, protocol-rules.json 등록): ${allKnown.length}`);
