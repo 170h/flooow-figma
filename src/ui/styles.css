@@ -318,6 +318,12 @@
       user-select: none;
     }
 
+    .figjam-empty-card.is-error {
+      padding: 0 24px;
+      text-align: center;
+      line-height: 18px;
+    }
+
     .multi-selection-indicator {
       display: none;
       align-items: center;
@@ -3026,6 +3032,19 @@
       align-items: center;
       gap: 6px;
       min-width: 0;
+      min-height: 36px;
+    }
+
+    .footer-plan-spinner {
+      width: 16px;
+      height: 16px;
+      box-sizing: border-box;
+      border-radius: 50%;
+      border: 1.5px solid color-mix(in srgb, currentColor 28%, transparent);
+      border-top-color: currentColor;
+      color: var(--color-text-secondary);
+      animation: usageSpin 0.7s linear infinite;
+      flex: 0 0 auto;
     }
 
     .footer-left.footer-clickable {
@@ -3101,6 +3120,14 @@
       height: 32px;
       padding: 4px 12px;
       border-radius: 5px;
+    }
+
+    .app-footer .create-node-plus {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+      display: block;
+      color: inherit;
     }
 
     .app-footer .btn-ghost:disabled {
@@ -4894,6 +4921,30 @@
       font-weight: var(--font-weight-strong, 550);
       line-height: 16px;
       color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
+    }
+
+    .subscription-usage-state.is-scanning {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
+    }
+
+    .subscription-usage-spinner {
+      width: 12px;
+      height: 12px;
+      box-sizing: border-box;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      border-top-color: currentColor;
+      animation: usageSpin 0.7s linear infinite;
+      flex: 0 0 auto;
+    }
+
+    @keyframes usageSpin {
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .subscription-usage-state.is-calm {

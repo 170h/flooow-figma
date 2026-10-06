@@ -831,7 +831,7 @@ export function ConnectSection() {
 
   const gizmoTypeLabel = (node?: NodeInfo | null): string => {
     if (!node) return '';
-    if (!node.isFlowNode) return 'FigJam object';
+    if (!node.isFlowNode) return 'Figma object';
     const flowType = normalizeNodeType(node.flowNodeType || node.nodeType);
     if (flowType === 'Branch') {
       return BRANCH_VARIANT_LABELS[normalizeBranchVariant(node.branchVariant)];
@@ -1543,14 +1543,9 @@ export function ConnectSection() {
             isConnectDisabled = !connectorDirty;
           } else if (selectedNodes.length < 2) {
             isConnectDisabled = true;
-          } else if (selectedNodes.length === 2) {
-            // 2개 노드: 기즈모 없이도 거리 기준 최적 단자로 연결 가능
-            isConnectDisabled = usageBlocked;
           } else {
-            // 3개 이상: Start와 End anchor가 모두 선택 완료되어야 활성화
-            const hasStart = Boolean(effectiveSource);
-            const hasEnd = Boolean(effectiveTarget);
-            isConnectDisabled = (!hasStart || !hasEnd) || usageBlocked;
+            // 2개 이상: 기즈모가 없으면 각 쌍의 최단 단자로 연결한다.
+            isConnectDisabled = usageBlocked;
           }
 
           let statusText = 'Select 2+ nodes to connect';
@@ -1567,15 +1562,9 @@ export function ConnectSection() {
           } else if (selectedNodes.length > 2) {
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
-            if (!hasStart && !hasEnd) {
-              statusText = 'Select Start & End anchors';
-            } else if (!hasStart) {
-              statusText = 'Select Start anchor';
-            } else if (!hasEnd) {
-              statusText = 'Select End anchor';
-            } else {
-              statusText = `${selectedNodes.length} nodes ready to connect`;
-            }
+            statusText = hasStart && hasEnd
+              ? `${selectedNodes.length} nodes ready to connect`
+              : 'Ready — anchors follow node distance';
           }
 
           return (

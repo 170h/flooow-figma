@@ -50,6 +50,7 @@ import {
   refreshConnectorRegistry,
   syncConnectorsForMovedNodes,
   getOptimalMagnetPair,
+  sceneNodePageBox,
   copyConnectorData,
   getLabelPlacement,
   readPrevLabelVertical,
@@ -66,11 +67,25 @@ import { countFlooowElements, type FlooowElementCount } from './elementCount';
 import {
   canCreateFlooowElements,
   assembleFlooowUsage,
+  isUnlimitedEntitlement,
   normalizePaymentStatus,
   type CreateEntitlement,
   type CreateGateResult,
   type FlooowUsageState,
 } from './entitlementGate';
+
+// [FLOOOW-STARTUP] 계측 전용 로그 (startup freeze 정지 지점 추적용, 로직 변경 없음)
+const STARTUP_T0: number =
+  typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+function slog(label: string): void {
+  try {
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    console.log(`[FLOOOW-STARTUP] ${label} +${Math.round(now - STARTUP_T0)}ms`);
+  } catch (_) {
+    // 계측 로그 실패는 본 로직에 영향 없음
+  }
+}
 
 // RGB 객체를 6자리 HEX 문자열로 변환하는 헬퍼
 function rgbToHexColor(rgb: RGB): string {
@@ -88,12 +103,14 @@ function normalizeConnectorTerminal(term: string | undefined, defaultTerm: Conne
 }
 
 // 플러그인 UI 창 열기 (Figma 신규 디자인 규격 360px 폭 및 라이트 테마 대응)
+slog('01 showUI:start');
 figma.showUI(__html__, {
   width: 360,
   height: 486,
   themeColors: true,
   title: 'Flooow',
 });
+slog('02 showUI:done');
 
 // ============================================================
 // 피그마 UI3 공식 규격 엘레베이션 효과 (Figma Node 2012:307470)
@@ -459,20 +476,35 @@ function getElevationEffects(level: number, isDark = false): Effect[] {
 }
 
 /**
- * 배경색 명도에 따른 타이틀 및 디스크립션 텍스트 Paint 생성 헬퍼
- * - 기본적으로 배경색의 명도에 따라 검정 혹은 화이트
- * - 타이틀: 완전한 검정({ r: 0, g: 0, b: 0 }) 또는 화이트({ r: 1, g: 1, b: 1 })
- * - 디스크립션: 동일한 검정/화이트 베이스에 알파값(opacity)으로 명도를 부드럽게 낮춤
+ * FigJam 텍스트 팔레트의 Black / White.
+ * Black은 #000000이 아니라 #1E1E1E다. 0x1E/255가 아니면 FigJam이 커스텀 색으로 취급한다.
  */
-function getTextFillsByBackground(bgColor: RGB, isDarkTheme = false): {
+const FIGMA_TEXT_BLACK: RGB = { r: 0x1e / 255, g: 0x1e / 255, b: 0x1e / 255 };
+const FIGMA_TEXT_WHITE: RGB = { r: 1, g: 1, b: 1 };
+
+/** 부모에 붙은 뒤 기본 텍스트 스타일이 색을 덮어쓰지 않도록 다시 지정한다. */
+function applyFigmaTextFill(text: TextNode, fill: SolidPaint): void {
+  try {
+    if (text.fillStyleId) text.fillStyleId = '';
+  } catch (_) {}
+  text.fills = [fill];
+}
+
+/**
+ * 스타일 채움색 명도에 따른 타이틀 및 디스크립션 텍스트 Paint.
+ * 노드 테마(light/dark)는 보지 않는다.
+ * - 밝은 채움: FigJam Black #1E1E1E. 어두운 채움: White #FFFFFF
+ * - 디스크립션: 같은 베이스에 알파값(opacity)으로 명도를 부드럽게 낮춤
+ */
+function getTextFillsByBackground(bgColor: RGB): {
   titleFill: SolidPaint;
   descFill: SolidPaint;
   isBgDark: boolean;
 } {
   const luminance = 0.299 * bgColor.r + 0.587 * bgColor.g + 0.114 * bgColor.b;
-  const isBgDark = isDarkTheme || luminance < 0.5;
+  const isBgDark = luminance < 0.5;
 
-  const baseColor: RGB = isBgDark ? { r: 1, g: 1, b: 1 } : { r: 0, g: 0, b: 0 };
+  const baseColor: RGB = isBgDark ? FIGMA_TEXT_WHITE : FIGMA_TEXT_BLACK;
   const descOpacity = isBgDark ? 0.7 : 0.6;
 
   return {
@@ -765,7 +797,9 @@ function findFlowNode(node: BaseNode | null): (FrameNode | ShapeWithTextNode) | 
 
 // 캔버스 내 플로우 노드 개수 확인 (태그 자동 넘버링: p1, p2, p3...)
 function getNextFlowTag(): string {
+  slog('20 getNextFlowTag:start');
   try {
+    slog('21 getNextFlowTag:findAll:start');
     const flowNodes = figma.currentPage.findAll((node) => {
       try {
         if (!node) return false;
@@ -775,31 +809,526 @@ function getNextFlowTag(): string {
         return false;
       }
     });
-    return `p${flowNodes.length + 1}`;
+    slog(`22 getNextFlowTag:findAll:done count=${flowNodes.length}`);
+    const tag = `p${flowNodes.length + 1}`;
+    slog(`23 getNextFlowTag:done tag=${tag}`);
+    return tag;
   } catch (_) {
+    slog('23 getNextFlowTag:done tag=p1 (fallback)');
     return 'p1';
   }
 }
 
-// Document 전체 기준 실제 Flooow element 수 (Nodes + Connectors) — Step 1 live recount
-// - selection 무관(figma.root 전체 탐색), 저장 카운터 미사용
-// - entitlement/payment/limit 미포함 (향후 create gate에서 재사용)
-function getFlooowElementCount(): FlooowElementCount {
-  const allNodes = figma.root.findAll(() => true);
-  return countFlooowElements(allNodes);
+// ---------------------------------------------------------------------------
+// Usage session / project index (FigJam과 동일)
+// - startup과 생성·삭제 갱신에서는 figma.root.findAll()을 호출하지 않는다.
+// - full scan은 Free 생성 제한(approveNewElements)과 Free Usage refresh에서만 한다.
+// - Pro/Dev는 저장된 usage index/cache만 반환한다. entitlement 확인은 findAll을 타지 않는다.
+// - 삭제된 노드는 pluginData를 읽을 수 없으므로, 세션에서 추적 중인 top-level id만 차감한다.
+// ---------------------------------------------------------------------------
+
+const USAGE_INDEX_KEY = 'flooow_usage_index';
+const USAGE_TRACK_KEY = 'flooow_usage_track';
+const USAGE_FILE_ID_KEY = 'flooow_usage_file_id';
+/** 문서 노드 id는 모든 파일에서 '0:0'이라 프로젝트 키로 쓸 수 없다. */
+const LEGACY_SHARED_PROJECT_ID = '0:0';
+
+let sessionNodes = 0;
+let sessionConnectors = 0;
+/** 이번 세션에서 정체를 확인한 top-level id. 없는 id의 DELETE는 무시한다. */
+const trackedNodes = new Set<string>();
+const trackedConnectors = new Set<string>();
+/** true면 id 집합이 현재 프로젝트의 완전한 목록이다. 부분 집합은 저장하지 않는다. */
+let trackComplete = false;
+/** clientStorage index 한 프로젝트 값. 예전 저장분은 숫자(합계)만 있을 수 있다. */
+type UsageIndexEntry = { nodes: number; connectors: number };
+
+/** Pro/Dev 모달이 프로젝트별 index 합계를 보고 있는 동안만 true. */
+let showIndexedTotal = false;
+let indexSumCache: FlooowElementCount | null = null;
+/** 모달이 연 뒤 생성·삭제가 clientStorage 왕복 전에 합계를 고칠 때 쓰는 사본. */
+let loadedUsageIndex: Record<string, UsageIndexEntry> | null = null;
+let usageIndexChain: Promise<void> = Promise.resolve();
+
+function sessionElementCount(): FlooowElementCount {
+  return {
+    nodes: sessionNodes,
+    connectors: sessionConnectors,
+    total: sessionNodes + sessionConnectors,
+  };
 }
 
-// Core Usage 단일 API (Step 3): live recount 기반 사용량 + 생성 가능 상태.
-// - delta/카운터 저장 없음. 호출 시점의 document 실측 + Gate 정책 합성.
-function getFlooowUsage(): FlooowUsageState {
-  return assembleFlooowUsage(getFlooowElementCount(), getCreateEntitlement());
+function isRemovedSceneNode(node: BaseNode | RemovedNode): node is RemovedNode {
+  return 'removed' in node && node.removed === true;
 }
 
-function postFlooowUsage(): void {
+/** elementCount와 같은 규칙으로 top-level Flooow element를 가린다. 라벨·untagged native는 제외. */
+function classifyTrackedElement(node: BaseNode | null): { id: string; kind: 'node' | 'connector' } | null {
+  if (!node || node.type === 'PAGE' || node.type === 'DOCUMENT') return null;
+  if (isRemovedSceneNode(node)) return null;
+  const conn = findConnectorNode(node);
+  if (conn) {
+    if (conn.name === 'ConnectorLabel' || safeGetPluginData(conn, 'is_connector_label') === 'true') {
+      return null;
+    }
+    const tagged =
+      safeGetPluginData(conn, 'is_custom_connector') === 'true' ||
+      safeGetPluginData(conn, 'is_flow_connector') === 'true';
+    if (!tagged) return null;
+    return { id: conn.id, kind: 'connector' };
+  }
+  const flow = findFlowNode(node);
+  if (!flow) return null;
+  return { id: flow.id, kind: 'node' };
+}
+
+/** 현재 프로젝트 개수를 Figma 파일(document pluginData)에 남긴다. clientStorage와 별개다. */
+function persistTrack(): void {
+  const count = sessionElementCount();
+  const payload: {
+    nodes: number;
+    connectors: number;
+    total: number;
+    complete: boolean;
+    n?: string[];
+    c?: string[];
+  } = {
+    nodes: count.nodes,
+    connectors: count.connectors,
+    total: count.total,
+    complete: trackComplete,
+  };
+  if (trackComplete) {
+    payload.n = [...trackedNodes];
+    payload.c = [...trackedConnectors];
+  }
+  try {
+    figma.root.setPluginData(USAGE_TRACK_KEY, JSON.stringify(payload));
+  } catch (_) {
+    /* document pluginData를 쓸 수 없으면 세션 메모리만 유지 */
+  }
+}
+
+function restoreTrackFromRoot(): boolean {
+  let raw = '';
+  try {
+    raw = figma.root.getPluginData(USAGE_TRACK_KEY) || '';
+  } catch (_) {
+    return false;
+  }
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as {
+      n?: unknown;
+      c?: unknown;
+      nodes?: unknown;
+      connectors?: unknown;
+      total?: unknown;
+      complete?: unknown;
+    };
+    const idList = (value: unknown): string[] =>
+      Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+    const asCount = (value: unknown): number | null =>
+      typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null;
+
+    const hasIdList = Array.isArray(parsed.n) || Array.isArray(parsed.c);
+    const complete = parsed.complete === true || (parsed.complete == null && hasIdList);
+    if (complete && hasIdList) {
+      const nodes = idList(parsed.n);
+      const connectors = idList(parsed.c);
+      trackedNodes.clear();
+      trackedConnectors.clear();
+      for (const id of nodes) trackedNodes.add(id);
+      for (const id of connectors) trackedConnectors.add(id);
+      sessionNodes = trackedNodes.size;
+      sessionConnectors = trackedConnectors.size;
+      trackComplete = true;
+      return true;
+    }
+
+    const total = asCount(parsed.total);
+    const nodes = asCount(parsed.nodes);
+    const connectors = asCount(parsed.connectors);
+    if (total == null && nodes == null) return false;
+    trackedNodes.clear();
+    trackedConnectors.clear();
+    sessionNodes = nodes ?? total ?? 0;
+    sessionConnectors = connectors ?? 0;
+    trackComplete = false;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function usageIndexEntry(nodes: number, connectors: number): UsageIndexEntry {
+  return {
+    nodes: Math.max(0, Math.floor(nodes)),
+    connectors: Math.max(0, Math.floor(connectors)),
+  };
+}
+
+function sameUsageIndexEntry(a: UsageIndexEntry, b: UsageIndexEntry): boolean {
+  return a.nodes === b.nodes && a.connectors === b.connectors;
+}
+
+/** 숫자만 있는 예전 항목은 합계를 노드에 둔다. 그 파일을 다시 열면 노드/커넥터로 나뉜다. */
+function parseUsageIndexEntry(value: unknown): UsageIndexEntry | null {
+  const asCount = (n: unknown): number | null =>
+    typeof n === 'number' && Number.isFinite(n) ? Math.max(0, Math.floor(n)) : null;
+  if (typeof value === 'number') {
+    const total = asCount(value);
+    return total != null && total > 0 ? usageIndexEntry(total, 0) : null;
+  }
+  if (!value || typeof value !== 'object') return null;
+  const rec = value as { nodes?: unknown; connectors?: unknown; total?: unknown };
+  const nodes = asCount(rec.nodes);
+  const connectors = asCount(rec.connectors);
+  if (nodes == null && connectors == null) {
+    const total = asCount(rec.total);
+    return total != null && total > 0 ? usageIndexEntry(total, 0) : null;
+  }
+  const entry = usageIndexEntry(nodes ?? 0, connectors ?? 0);
+  return entry.nodes + entry.connectors > 0 ? entry : null;
+}
+
+function logUsage(label: string, detail: Record<string, unknown>): void {
+  try {
+    console.log(`[FLOOOW-USAGE] ${label}`, detail);
+  } catch (_) {
+    /* 진단 로그 실패는 합산에 영향 없음 */
+  }
+}
+
+async function readUsageIndex(): Promise<Record<string, UsageIndexEntry>> {
+  const raw = await figma.clientStorage.getAsync(USAGE_INDEX_KEY);
+  const index: Record<string, UsageIndexEntry> = {};
+  const dropped: string[] = [];
+  if (raw && typeof raw === 'object') {
+    for (const [projectId, value] of Object.entries(raw as Record<string, unknown>)) {
+      const entry = parseUsageIndexEntry(value);
+      if (entry) index[projectId] = entry;
+      else dropped.push(projectId);
+    }
+  }
+  logUsage('index:read', {
+    file: figma.root.name,
+    projectId: usageProjectId(),
+    fileKey: figma.fileKey ?? null,
+    rawType: raw == null ? 'empty' : typeof raw,
+    raw,
+    parsed: index,
+    dropped,
+  });
+  return index;
+}
+
+function sumUsageIndex(index: Record<string, UsageIndexEntry>): FlooowElementCount {
+  let nodes = 0;
+  let connectors = 0;
+  for (const entry of Object.values(index)) {
+    nodes += entry.nodes;
+    connectors += entry.connectors;
+  }
+  return { nodes, connectors, total: nodes + connectors };
+}
+
+function rememberUsageIndex(index: Record<string, UsageIndexEntry>): void {
+  loadedUsageIndex = index;
+  indexSumCache = sumUsageIndex(index);
+}
+
+/** 파일마다 다른 키. fileKey가 없으면 이 문서 pluginData에 만든 id를 쓴다. */
+function usageProjectId(): string {
+  const fileKey = figma.fileKey;
+  if (fileKey) return fileKey;
+  try {
+    const stored = figma.root.getPluginData(USAGE_FILE_ID_KEY);
+    if (stored && stored !== LEGACY_SHARED_PROJECT_ID) return stored;
+    const created = `file-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    figma.root.setPluginData(USAGE_FILE_ID_KEY, created);
+    return created;
+  } catch (_) {
+    return LEGACY_SHARED_PROJECT_ID;
+  }
+}
+
+/** 0이면 해당 프로젝트 키를 지운다. 다른 프로젝트 항목은 읽기만 한다. */
+async function commitUsageIndex(
+  projectId: string,
+  count: FlooowElementCount
+): Promise<Record<string, UsageIndexEntry>> {
+  const index = await readUsageIndex();
+  let changed = false;
+  if (projectId !== LEGACY_SHARED_PROJECT_ID && LEGACY_SHARED_PROJECT_ID in index) {
+    delete index[LEGACY_SHARED_PROJECT_ID];
+    changed = true;
+  }
+  const entry = usageIndexEntry(count.nodes, count.connectors);
+  if (entry.nodes + entry.connectors === 0) {
+    if (projectId in index) {
+      delete index[projectId];
+      changed = true;
+    }
+  } else if (!index[projectId] || !sameUsageIndexEntry(index[projectId], entry)) {
+    index[projectId] = entry;
+    changed = true;
+  }
+  if (!changed) return index;
+  await figma.clientStorage.setAsync(USAGE_INDEX_KEY, index);
+  logUsage('index:write', {
+    file: figma.root.name,
+    projectId,
+    fileKey: figma.fileKey ?? null,
+    wrote: entry.nodes + entry.connectors === 0 ? null : entry,
+    index,
+  });
+  return index;
+}
+
+function enqueueUsageIndex(count: FlooowElementCount): void {
+  const projectId = usageProjectId();
+  usageIndexChain = usageIndexChain
+    .then(() => commitUsageIndex(projectId, count))
+    .then((index) => {
+      if (showIndexedTotal) rememberUsageIndex(index);
+    })
+    .catch((err) => {
+      console.error('[FLOOOW-USAGE] index:write:failed', err);
+    });
+}
+
+function postFlooowUsage(refresh = false): void {
+  const entitlement = getCreateEntitlement();
+  const usage = assembleFlooowUsage(sessionElementCount(), entitlement);
+  const appliedSum = Boolean(showIndexedTotal && isUnlimitedEntitlement(entitlement) && indexSumCache);
+  if (appliedSum && indexSumCache) {
+    usage.nodes = indexSumCache.nodes;
+    usage.connectors = indexSumCache.connectors;
+    usage.total = indexSumCache.total;
+  }
+  logUsage('post', {
+    file: figma.root.name,
+    projectId: usageProjectId(),
+    refresh,
+    entitlement,
+    showIndexedTotal,
+    appliedSum,
+    session: sessionElementCount(),
+    indexSum: indexSumCache,
+    posted: { nodes: usage.nodes, connectors: usage.connectors, total: usage.total },
+  });
   postToUI({
     type: 'FLOOOW_USAGE',
-    usage: getFlooowUsage(),
+    usage,
+    refresh: refresh || undefined,
   });
+}
+
+function postFlooowPlanIssue(error: 'retryable' | 'blocked'): void {
+  // usage는 메시지 형식용이다. UI는 error가 있으면 이 값을 구독 상태로 쓰지 않는다.
+  postToUI({
+    type: 'FLOOOW_USAGE',
+    usage: assembleFlooowUsage({ nodes: 0, connectors: 0, total: 0 }, 'FREE'),
+    error,
+  });
+}
+
+/** startup: 저장해 둔 id 또는 이 프로젝트의 index 값만 복원한다. root.findAll() 없음. */
+async function restoreUsageSession(): Promise<void> {
+  if (restoreTrackFromRoot()) {
+    logUsage('restore:track', {
+      file: figma.root.name,
+      projectId: usageProjectId(),
+      session: sessionElementCount(),
+      trackComplete,
+    });
+    enqueueUsageIndex(sessionElementCount());
+    return;
+  }
+  try {
+    const index = await readUsageIndex();
+    const cached = index[usageProjectId()];
+    if (cached) {
+      trackedNodes.clear();
+      trackedConnectors.clear();
+      sessionNodes = cached.nodes;
+      sessionConnectors = cached.connectors;
+      trackComplete = false;
+    }
+    logUsage('restore:index', {
+      file: figma.root.name,
+      projectId: usageProjectId(),
+      cached: cached ?? null,
+      session: sessionElementCount(),
+    });
+  } catch (err) {
+    console.error('[FLOOOW-USAGE] restore:failed', err);
+  }
+}
+
+function forgetTracked(id: string): boolean {
+  if (trackedNodes.delete(id)) {
+    sessionNodes = Math.max(0, sessionNodes - 1);
+    return true;
+  }
+  if (trackedConnectors.delete(id)) {
+    sessionConnectors = Math.max(0, sessionConnectors - 1);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * 그룹으로 승격된 커넥터는 top id만 남긴다.
+ * 직전에 센 자식 id를 여기서 빼야 replacement·group 생성이 두 번 증가하지 않는다.
+ */
+function forgetWrappedConnectors(created: SceneNode, topId: string): boolean {
+  if (!('findAll' in created)) return false;
+  let changed = false;
+  let descendants: ReadonlyArray<SceneNode> = [];
+  try {
+    descendants = created.findAll(() => true);
+  } catch (_) {
+    return false;
+  }
+  for (const descendant of descendants) {
+    if (descendant.id === topId) continue;
+    if (trackedConnectors.delete(descendant.id)) {
+      sessionConnectors = Math.max(0, sessionConnectors - 1);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+/** 이미 추적 중인 id는 다시 더하지 않는다. */
+function trackSceneNode(node: SceneNode): boolean {
+  const classified = classifyTrackedElement(node);
+  if (!classified) return false;
+  // 자식이 만들어질 때 이미 있는 부모를 다시 세지 않는다. top-level 생성만 반영한다.
+  if (classified.id !== node.id) return false;
+  if (classified.kind === 'connector') {
+    const collapsed = forgetWrappedConnectors(node, classified.id);
+    if (trackedConnectors.has(classified.id)) return collapsed;
+    trackedConnectors.add(classified.id);
+    sessionConnectors += 1;
+    return true;
+  }
+  if (trackedNodes.has(classified.id)) return false;
+  trackedNodes.add(classified.id);
+  sessionNodes += 1;
+  return true;
+}
+
+function publishUsageChange(_delta: number): void {
+  persistTrack();
+  const count = sessionElementCount();
+  const projectId = usageProjectId();
+  if (showIndexedTotal && loadedUsageIndex) {
+    if (count.total === 0) delete loadedUsageIndex[projectId];
+    else loadedUsageIndex[projectId] = usageIndexEntry(count.nodes, count.connectors);
+    indexSumCache = sumUsageIndex(loadedUsageIndex);
+  }
+  enqueueUsageIndex(count);
+  postFlooowUsage(false);
+}
+
+/**
+ * 현재 프로젝트만 fresh scan.
+ * Free 생성 제한과 Free Usage refresh 전용.
+ * startup / selection / documentchange / Pro·Dev에서는 호출하지 않는다.
+ */
+function scanCurrentProject(): FlooowElementCount {
+  const allNodes = figma.root.findAll(() => true);
+  const count = countFlooowElements(allNodes);
+  const nodes = new Set<string>();
+  const connectors = new Set<string>();
+  for (const node of allNodes) {
+    const classified = classifyTrackedElement(node);
+    if (!classified) continue;
+    if (classified.kind === 'node') nodes.add(classified.id);
+    else connectors.add(classified.id);
+  }
+  trackedNodes.clear();
+  trackedConnectors.clear();
+  for (const id of nodes) trackedNodes.add(id);
+  for (const id of connectors) trackedConnectors.add(id);
+  sessionNodes = count.nodes;
+  sessionConnectors = count.connectors;
+  trackComplete = true;
+  persistTrack();
+  return count;
+}
+
+/** Pro/Dev 모달 refresh: 저장 index와 세션 cache만 합친다. root.findAll() 없음. */
+async function publishUnlimitedUsageFromCache(): Promise<void> {
+  const projectId = usageProjectId();
+  const session = sessionElementCount();
+  logUsage('sum:start', {
+    file: figma.root.name,
+    projectId,
+    session,
+    trackComplete,
+    entitlement: getCreateEntitlement(),
+  });
+  const pending = usageIndexChain.then(async () => {
+    const index =
+      session.total > 0 || trackComplete
+        ? await commitUsageIndex(projectId, session)
+        : await readUsageIndex();
+    showIndexedTotal = true;
+    rememberUsageIndex(index);
+    logUsage('sum:done', {
+      file: figma.root.name,
+      projectId,
+      index,
+      sum: indexSumCache,
+    });
+  });
+  usageIndexChain = pending.then(
+    () => undefined,
+    () => undefined
+  );
+  try {
+    await pending;
+  } catch (err) {
+    console.error('[FLOOOW-USAGE] sum:failed', err);
+  }
+  postFlooowUsage(true);
+}
+
+async function refreshUsageFromScan(): Promise<void> {
+  const projectId = usageProjectId();
+  const entitlement = getCreateEntitlement();
+  if (isUnlimitedEntitlement(entitlement)) {
+    await publishUnlimitedUsageFromCache();
+    return;
+  }
+  let count: FlooowElementCount;
+  try {
+    count = scanCurrentProject();
+  } catch (err) {
+    console.error('[usage refresh 실패]', err);
+    postFlooowUsage(true);
+    return;
+  }
+  const pending = usageIndexChain.then(async () => {
+    const index = await commitUsageIndex(projectId, count);
+    showIndexedTotal = isUnlimitedEntitlement(entitlement);
+    rememberUsageIndex(index);
+    postFlooowUsage(true);
+  });
+  usageIndexChain = pending.then(
+    () => undefined,
+    () => undefined
+  );
+  try {
+    await pending;
+  } catch (err) {
+    console.error('[usage index 실패]', err);
+    postFlooowUsage(true);
+  }
 }
 
 // 개발 빌드 판별. setPaymentStatusInDevelopment는 개발 모드에서만 성공한다.
@@ -849,14 +1378,24 @@ function runCreateExclusive<T>(task: () => Promise<T> | T): Promise<T> {
   return run;
 }
 
-// Live recount + 정책 승인 (동기). 반드시 runCreateExclusive 내부에서 호출한다.
+// 생성 승인. Free만 현재 프로젝트를 fresh scan해서 20개 제한을 본다.
+// Pro/Dev는 count를 계산하지 않고 바로 허용한다.
 function approveNewElements(requestedCount: number): CreateGateResult {
-  // Usage 단일 합성 경로를 경유한다 (recount·entitlement 중복 구현 금지).
-  const usage = getFlooowUsage();
+  const entitlement = getCreateEntitlement();
+  if (isUnlimitedEntitlement(entitlement)) {
+    return canCreateFlooowElements({
+      currentCount: 0,
+      requestedCount,
+      entitlement,
+    });
+  }
+  const count = scanCurrentProject();
+  enqueueUsageIndex(count);
+  postFlooowUsage(false);
   return canCreateFlooowElements({
-    currentCount: usage.total,
+    currentCount: count.total,
     requestedCount,
-    entitlement: usage.entitlement,
+    entitlement,
   });
 }
 
@@ -1618,13 +2157,13 @@ function shouldSkipInitSelectionSync(): boolean {
   if (!startupSelectionSyncDone) return false;
   return captureSelectionSnapshot() === startupSelectionSnapshot;
 }
-/** 기즈모 카드에 보여줄 엔드포인트 타입. 플로우 노드가 아니면 FigJam object. */
+/** 기즈모 카드에 보여줄 엔드포인트 타입. 플로우 노드가 아니면 Figma object. */
 function gizmoEndpointTypeLabel(node: SceneNode | null): string {
   if (!node) return '';
   const isFlow =
     safeGetPluginData(node, 'is_flow_node') === 'true' ||
     Boolean(safeGetPluginData(node, 'node_type'));
-  if (!isFlow) return 'FigJam object';
+  if (!isFlow) return 'Figma object';
   const flowType = normalizeNodeType(safeGetPluginData(node, 'node_type') || 'Screen');
   if (flowType === 'Branch') {
     return BRANCH_VARIANT_LABELS[normalizeBranchVariant(safeGetPluginData(node, 'branch_variant'))];
@@ -1633,8 +2172,12 @@ function gizmoEndpointTypeLabel(node: SceneNode | null): string {
 }
 
 async function handleSelectionChange() {
+  slog('10 handleSelectionChange:start');
+  slog('11 loadRequiredFonts:start');
   await loadRequiredFonts();
+  slog('12 loadRequiredFonts:done');
   const rawSelection = figma.currentPage.selection;
+  slog(`13 selection:resolved count=${rawSelection.length}`);
 
   // 1. 커넥터 및 플로우 노드 정확 매핑 (자식/선/라벨 클릭 시에도 정확한 최상위 엔티티로 매핑)
   const resolvedNodesMap = new Map<string, SceneNode>();
@@ -2146,6 +2689,7 @@ async function handleSelectionChange() {
       connectedConnectorIds,
       connectedConnectors,
     });
+    slog('14 handleSelectionChange:done branch=2nodes');
     return;
   } else if (uniqueNodes.length >= 3) {
     // 3개 이상 노드 선택 시: 순차 체인 기준 인접 Pair 검사 및 상태 집계
@@ -2255,6 +2799,7 @@ async function handleSelectionChange() {
       chainMissingPairs,
       multiNodeConnectors,
     });
+    slog('14 handleSelectionChange:done branch=3plus');
     return;
   }
 
@@ -2276,6 +2821,7 @@ async function handleSelectionChange() {
     connectedConnectorIds: [],
     connectedConnectors: [],
   });
+  slog('14 handleSelectionChange:done branch=default');
 }
 
 figma.on('selectionchange', handleSelectionChange);
@@ -2459,19 +3005,22 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
     const targetFont: FontName = { family: 'Inter', style: 'Bold' };
     const targetSize = 13;
 
-    // 테마 및 배경색에 따른 타이틀 글자 색상 결정
-    let isDark = false;
+    // 스타일 채움색만으로 타이틀 글자색을 정한다. node_theme은 쓰지 않는다.
     let bgColor: RGB = { r: 1, g: 1, b: 1 };
-    if (flowNode && 'getPluginData' in flowNode) {
-      isDark = flowNode.getPluginData('node_theme') === 'dark';
-    }
     if (flowNode && 'fills' in flowNode) {
       const fNode = flowNode as FrameNode;
       if (Array.isArray(fNode.fills) && fNode.fills.length > 0 && fNode.fills[0].type === 'SOLID') {
         bgColor = fNode.fills[0].color;
+      } else if ('children' in fNode) {
+        const shape = fNode.children.find(
+          (c) => c.name === 'ShapeVector' || c.name === 'DiamondShape'
+        );
+        if (shape && 'fills' in shape && Array.isArray(shape.fills) && shape.fills[0]?.type === 'SOLID') {
+          bgColor = shape.fills[0].color;
+        }
       }
     }
-    const { titleFill } = getTextFillsByBackground(bgColor, isDark);
+    const { titleFill } = getTextFillsByBackground(bgColor);
 
     // 1. 필요한 폰트 사전 로드
     try {
@@ -2682,7 +3231,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   if (Array.isArray(shape.fills) && shape.fills.length > 0 && shape.fills[0].type === 'SOLID') {
     bgColor = shape.fills[0].color;
   }
-  const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+  const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor);
   const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
   const card = figma.createFrame();
@@ -2735,7 +3284,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   titleText.fontSize = 13;
   titleText.lineHeight = { value: 18, unit: 'PIXELS' };
   titleText.characters = title;
-  titleText.fills = [titleFill];
+  applyFigmaTextFill(titleText, titleFill);
   titleText.textAlignHorizontal = 'LEFT';
   titleText.textAlignVertical = 'TOP';
   titleText.textAutoResize = 'HEIGHT';
@@ -2746,6 +3295,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   titleText.layoutAlign = 'STRETCH';
 
   card.appendChild(headerRow);
+  applyFigmaTextFill(titleText, titleFill);
 
   // 상태 뱃지 복원 (타이틀과 독립하여 카드 우하단에 위치)
   if (status && STATUS_CONFIG[status]) {
@@ -2793,10 +3343,11 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   descText.fontSize = 11;
   descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: 'PIXELS' };
   descText.characters = desc;
-  descText.fills = [descFill];
+  applyFigmaTextFill(descText, descFill);
   descText.textAlignHorizontal = 'LEFT';
   descText.setPluginData('node_role', 'desc');
   card.appendChild(descText);
+  applyFigmaTextFill(descText, descFill);
 
   descText.layoutAlign = 'STRETCH';
   descText.textAutoResize = 'HEIGHT';
@@ -3151,13 +3702,9 @@ async function createFlowNode(payload: FlowNodePayload) {
     } else if (!isFillNone && branchVariant) {
       bgColor = hexToRgbColor(getBranchVariantDefaultFill(branchVariant));
     }
-    const { titleFill, descFill, isBgDark } = isFillNone
-      ? {
-          titleFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } } as SolidPaint,
-          descFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 } as SolidPaint,
-          isBgDark: isDark,
-        }
-      : getTextFillsByBackground(bgColor, isDark);
+    const { titleFill, descFill, isBgDark } = getTextFillsByBackground(
+      isFillNone ? { r: 1, g: 1, b: 1 } : bgColor
+    );
 
     const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
@@ -3233,7 +3780,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       titleText.fontSize = 13;
       titleText.lineHeight = { value: showBranchTitle ? 22 : 18, unit: 'PIXELS' };
       titleText.characters = showBranchTitle || !branchVariant ? title : '';
-      titleText.fills = [titleFill];
+      applyFigmaTextFill(titleText, titleFill);
       titleText.textAlignHorizontal = 'CENTER';
       titleText.textAlignVertical = 'CENTER';
       titleText.layoutAlign = 'STRETCH';
@@ -3244,6 +3791,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       );
       titleText.setPluginData('node_role', 'title');
       card.appendChild(titleText);
+      applyFigmaTextFill(titleText, titleFill);
     } else {
       // Screen 노드: 상단 헤더 + 설명문 레이아웃
       const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
@@ -3282,7 +3830,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       titleText.fontSize = 13;
       titleText.lineHeight = { value: 18, unit: 'PIXELS' };
       titleText.characters = title;
-      titleText.fills = [titleFill];
+      applyFigmaTextFill(titleText, titleFill);
       titleText.textAutoResize = 'HEIGHT';
 
       if (isCreateFit) {
@@ -3317,6 +3865,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       titleText.layoutAlign = 'STRETCH';
 
       card.appendChild(headerRow);
+      applyFigmaTextFill(titleText, titleFill);
 
       // 4. 설명 텍스트 (11px Regular 고정) - 설명이 있는 경우에만 생성
       if (description) {
@@ -3326,10 +3875,11 @@ async function createFlowNode(payload: FlowNodePayload) {
         descText.fontSize = 11;
         descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: 'PIXELS' };
         descText.characters = description;
-        descText.fills = [descFill];
+        applyFigmaTextFill(descText, descFill);
         descText.textAlignHorizontal = 'LEFT';
         descText.setPluginData('node_role', 'desc');
         card.appendChild(descText);
+        applyFigmaTextFill(descText, descFill);
 
         descText.layoutAlign = 'STRETCH';
         const descStrokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 0) * 2;
@@ -3577,13 +4127,9 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     }
   }
 
-  const { titleFill, descFill, isBgDark } = isFillNone
-    ? {
-        titleFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } } as SolidPaint,
-        descFill: { type: 'SOLID', color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 } as SolidPaint,
-        isBgDark: isDark,
-      }
-    : getTextFillsByBackground(bgColor, isDark);
+  const { titleFill, descFill, isBgDark } = getTextFillsByBackground(
+    isFillNone ? { r: 1, g: 1, b: 1 } : bgColor
+  );
 
   const borderColor: RGB = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
 
@@ -3869,7 +4415,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     await safeSetCharacters(titleText, (batchBranchVariant && !showBranchTitle) ? '' : effectiveTitle);
     const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
     if (!hasExistingTitleFill || patch.colorHex) {
-      titleText.fills = [titleFill];
+      applyFigmaTextFill(titleText, titleFill);
     }
   } else {
     let headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
@@ -3915,7 +4461,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     try { titleText.maxHeight = null; } catch (_) {}
     const hasExistingTitleFill = titleText.fills === figma.mixed || (Array.isArray(titleText.fills) && titleText.fills.length > 0);
     if (!hasExistingTitleFill || patch.colorHex) {
-      titleText.fills = [titleFill];
+      applyFigmaTextFill(titleText, titleFill);
     }
   }
 
@@ -3965,7 +4511,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
 
     const hasExistingDescFill = descText.fills === figma.mixed || (Array.isArray(descText.fills) && descText.fills.length > 0);
     if (!hasExistingDescFill || patch.colorHex) {
-      descText.fills = [descFill];
+      applyFigmaTextFill(descText, descFill);
     }
 
     if (isNewDesc || descText.parent !== card) {
@@ -4704,18 +5250,8 @@ async function connectPoints(payload: ConnectPointsPayload) {
     const hasExplicitMagnets = Boolean(sourceMagnet && targetMagnet);
     if (!sourceMagnet || !targetMagnet) {
       const optimal = getOptimalMagnetPair(
-        {
-          x: sourceNode.x,
-          y: sourceNode.y,
-          width: sourceNode.width,
-          height: sourceNode.height,
-        },
-        {
-          x: targetNode.x,
-          y: targetNode.y,
-          width: targetNode.width,
-          height: targetNode.height,
-        }
+        sceneNodePageBox(sourceNode),
+        sceneNodePageBox(targetNode)
       );
       sourceMagnet = optimal.sourceMagnet;
       targetMagnet = optimal.targetMagnet;
@@ -4744,10 +5280,12 @@ async function connectPoints(payload: ConnectPointsPayload) {
     // 기즈모 수동 지정으로 생성되면 수동 고정 + 앵커를 기록한다. 자동 생성은 기록하지 않는다.
     if (hasExplicitMagnets) {
       try {
+        const sourceBox = sceneNodePageBox(sourceNode);
+        const targetBox = sceneNodePageBox(targetNode);
         const baseDx =
-          targetNode.x + targetNode.width / 2 - (sourceNode.x + sourceNode.width / 2);
+          targetBox.x + targetBox.width / 2 - (sourceBox.x + sourceBox.width / 2);
         const baseDy =
-          targetNode.y + targetNode.height / 2 - (sourceNode.y + sourceNode.height / 2);
+          targetBox.y + targetBox.height / 2 - (sourceBox.y + sourceBox.height / 2);
         connector.setPluginData('is_manual_magnet', 'true');
         connector.setPluginData('manual_base_dx', String(baseDx));
         connector.setPluginData('manual_base_dy', String(baseDy));
@@ -4852,8 +5390,8 @@ async function autoConnectSelected(label?: string) {
       const targetNode = nodes[1];
 
       const optimal = getOptimalMagnetPair(
-        { x: sourceNode.x, y: sourceNode.y, width: sourceNode.width, height: sourceNode.height },
-        { x: targetNode.x, y: targetNode.y, width: targetNode.width, height: targetNode.height }
+        sceneNodePageBox(sourceNode),
+        sceneNodePageBox(targetNode)
       );
       const sourceMagnet = optimal.sourceMagnet;
       const targetMagnet = optimal.targetMagnet;
@@ -4874,8 +5412,8 @@ async function autoConnectSelected(label?: string) {
 
       // 자동 체인이므로 getOptimalMagnetPair로 최단 쌍을 고른다 (수동 고정 없음).
       const optimal = getOptimalMagnetPair(
-        { x: src.x, y: src.y, width: src.width, height: src.height },
-        { x: tgt.x, y: tgt.y, width: tgt.width, height: tgt.height }
+        sceneNodePageBox(src),
+        sceneNodePageBox(tgt)
       );
       const srcMagnet = optimal.sourceMagnet;
       const tgtMagnet = optimal.targetMagnet;
@@ -4981,18 +5519,8 @@ async function connectChain(payload: ConnectChainPayload) {
       const pKey = makePairKey(srcNode.id, tgtNode.id);
 
       // 새 Pair 생성: getOptimalMagnetPair로 최적 마그넷 계산
-      const srcBox: Box = {
-        x: srcNode.x,
-        y: srcNode.y,
-        width: srcNode.width,
-        height: srcNode.height,
-      };
-      const tgtBox: Box = {
-        x: tgtNode.x,
-        y: tgtNode.y,
-        width: tgtNode.width,
-        height: tgtNode.height,
-      };
+      const srcBox: Box = sceneNodePageBox(srcNode);
+      const tgtBox: Box = sceneNodePageBox(tgtNode);
       const optimal = getOptimalMagnetPair(srcBox, tgtBox);
       const createdMagnets = resolveCreatedPairMagnets(
         createdIndex,
@@ -5271,8 +5799,8 @@ async function updateConnectorProperties(payload: {
         let midPoint: { x: number; y: number } | null = null;
 
         if (sourceNode && targetNode) {
-          const srcBox: Box = { x: sourceNode.x, y: sourceNode.y, width: sourceNode.width, height: sourceNode.height };
-          const tgtBox: Box = { x: targetNode.x, y: targetNode.y, width: targetNode.width, height: targetNode.height };
+          const srcBox: Box = sceneNodePageBox(sourceNode);
+          const tgtBox: Box = sceneNodePageBox(targetNode);
           const sourceMagnet = effectiveStartMagnet || (safeGetPluginData(connectorRootNode, 'source_magnet') as MagnetPosition) || 'RIGHT';
           const targetMagnet = effectiveEndMagnet || (safeGetPluginData(connectorRootNode, 'target_magnet') as MagnetPosition) || 'LEFT';
           const routingType: ConnectorRoutingType =
@@ -6320,7 +6848,6 @@ figma.ui.onmessage = async (msg: PluginAction) => {
     switch (msg.type) {
       case 'CREATE_FLOW_NODE':
         await runCreateExclusive(() => createFlowNode(msg.payload));
-        postFlooowUsage();
         break;
       case 'UPDATE_FLOW_NODE':
         await updateFlowNode(msg.payload);
@@ -6330,15 +6857,12 @@ figma.ui.onmessage = async (msg: PluginAction) => {
         break;
       case 'CONNECT_POINTS':
         await runCreateExclusive(() => connectPoints(msg.payload));
-        postFlooowUsage();
         break;
       case 'CONNECT_CHAIN':
         await runCreateExclusive(() => connectChain(msg.payload));
-        postFlooowUsage();
         break;
       case 'AUTO_CONNECT_SELECTED':
         await runCreateExclusive(() => autoConnectSelected(msg.label));
-        postFlooowUsage();
         break;
       case 'UPDATE_CONNECTOR_LABEL':
         await updateConnectorLabel(msg.connectorId, msg.label);
@@ -6382,7 +6906,19 @@ figma.ui.onmessage = async (msg: PluginAction) => {
         break;
       }
       case 'GET_FLOOOW_USAGE':
-        postFlooowUsage();
+        logUsage('request', {
+          file: figma.root.name,
+          projectId: usageProjectId(),
+          refresh: Boolean(msg.refresh),
+          entitlement: getCreateEntitlement(),
+        });
+        try {
+          if (msg.refresh) await refreshUsageFromScan();
+          else postFlooowUsage(false);
+        } catch (err) {
+          console.error('[FLOOOW-USAGE] request:failed', err);
+          postFlooowPlanIssue('retryable');
+        }
         break;
       case 'RESIZE_NODE':
         await resizeNode(msg.nodeId, msg.width, msg.height);
@@ -6412,13 +6948,26 @@ figma.ui.onmessage = async (msg: PluginAction) => {
         break;
       }
       case 'INIT':
+        slog('50 INIT:received');
         setAppLocale(msg.locale);
         // Startup 중복 스캔 coalesce: 모듈-init 실행 직후 같은 selection에 대한
         // INIT 2회차 반복일 때만 skip한다. selection이 바뀌었거나 1회차가 아직
         // 끝나지 않았으면 정상 실행하여 최신 상태를 잃지 않는다.
         if (!shouldSkipInitSelectionSync()) {
+          slog('51 INIT:handleSelectionChange:start');
           handleSelectionChange();
+          slog('52 INIT:handleSelectionChange:dispatched');
+        } else {
+          slog('51 INIT:handleSelectionChange:skipped (startup coalesce)');
         }
+        try {
+          await restoreUsageSession();
+          postFlooowUsage(false);
+        } catch (err) {
+          console.error('[FLOOOW-USAGE] restore:failed', err);
+          postFlooowPlanIssue('blocked');
+        }
+        slog('53 INIT:handled');
         break;
       default:
         // 알 수 없는 action 무음 무시 방지 — 진단 로그를 남긴다
@@ -6492,15 +7041,26 @@ figma.on('documentchange', async (event) => {
   let connectorSelectionChanged = false;
   let flowNodePropertyChanged = false;
   let shouldUpdateSelectionOnMove = false;
+  const usageBefore = sessionElementCount().total;
+  let usageTouched = false;
 
   for (const change of event.documentChanges) {
+    if (change.type === 'DELETE') {
+      if (forgetTracked(change.id)) usageTouched = true;
+    }
+
     if (change.type === 'CREATE') {
-      const createdNode = figma.getNodeById(change.id) as SceneNode | null;
-      if (
-        createdNode &&
-        (createdNode.type === 'CONNECTOR' || safeGetPluginData(createdNode, 'is_custom_connector') === 'true')
-      ) {
-        registerConnectorInRegistry(createdNode);
+      const createdNode = !isRemovedSceneNode(change.node)
+        ? change.node
+        : (figma.getNodeById(change.id) as SceneNode | null);
+      if (createdNode && !isRemovedSceneNode(createdNode)) {
+        if (trackSceneNode(createdNode)) usageTouched = true;
+        if (
+          createdNode.type === 'CONNECTOR' ||
+          safeGetPluginData(createdNode, 'is_custom_connector') === 'true'
+        ) {
+          registerConnectorInRegistry(createdNode);
+        }
       }
     }
 
@@ -6980,12 +7540,22 @@ figma.on('documentchange', async (event) => {
     // 피그잼 캔버스에서 변경된 커넥터/플로우 노드 설정값(또는 Undo 실행)을 UI 창에 실시간 연동
     handleSelectionChange();
   }
+
+  if (usageTouched) {
+    const usageDelta = sessionElementCount().total - usageBefore;
+    if (usageDelta !== 0) publishUsageChange(usageDelta);
+    else persistTrack();
+  }
 });
 
 // 최초 실행 시 현재 상태 동기화 및 커넥터 레지스트리 캐시 구축
+slog('03 refreshConnectorRegistry:start');
 refreshConnectorRegistry();
+slog('04 refreshConnectorRegistry:done');
+slog('05 moduleInit:handleSelectionChange:start');
 handleSelectionChange().finally(() => {
   // Startup 1회차 완료 표시 — 이후 INIT 수신의 중복 실행 판정에 사용한다.
   // finally이므로 스캔 실패 시에도 이후 INIT가 정상 실행된다.
+  slog('06 moduleInit:handleSelectionChange:settled');
   markStartupSelectionSynced();
 });

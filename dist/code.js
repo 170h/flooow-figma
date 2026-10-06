@@ -312,6 +312,13 @@
   }
 
   // src/customConnector.ts
+  function sceneNodePageBox(node) {
+    const bounds = node.absoluteBoundingBox;
+    if (bounds) {
+      return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+    }
+    return { x: node.x, y: node.y, width: node.width, height: node.height };
+  }
   function parseHexColor(hex) {
     if (!hex) return { r: 0.9, g: 0.1, b: 0.2 };
     const clean = hex.replace("#", "").trim();
@@ -847,18 +854,8 @@
     return false;
   }
   async function createOrthogonalVectorConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, options = {}) {
-    const srcBox = {
-      x: sourceNode.x,
-      y: sourceNode.y,
-      width: sourceNode.width,
-      height: sourceNode.height
-    };
-    const tgtBox = {
-      x: targetNode.x,
-      y: targetNode.y,
-      width: targetNode.width,
-      height: targetNode.height
-    };
+    const srcBox = sceneNodePageBox(sourceNode);
+    const tgtBox = sceneNodePageBox(targetNode);
     const pStart = getMagnetPoint(srcBox, sourceMagnet);
     const pEnd = getMagnetPoint(tgtBox, targetMagnet);
     const routingType = options.routingType || "ORTHOGONAL";
@@ -891,9 +888,8 @@
       y: p.y - minY
     }));
     const vector = figma.createVector();
-    vector.x = minX;
-    vector.y = minY;
     vector.resize(width, height);
+    setNodeAbsoluteXY(vector, minX, minY);
     const net = buildVectorNetwork(
       localPoints,
       routingType,
@@ -1352,18 +1348,8 @@
       const sourceNode = figma.getNodeById(start.endpointNodeId);
       const targetNode = figma.getNodeById(end.endpointNodeId);
       if (!sourceNode || !targetNode) return;
-      const srcBox = {
-        x: sourceNode.x,
-        y: sourceNode.y,
-        width: sourceNode.width,
-        height: sourceNode.height
-      };
-      const tgtBox = {
-        x: targetNode.x,
-        y: targetNode.y,
-        width: targetNode.width,
-        height: targetNode.height
-      };
+      const srcBox = sceneNodePageBox(sourceNode);
+      const tgtBox = sceneNodePageBox(targetNode);
       const routingType = conn.connectorLineType === "STRAIGHT" ? "STRAIGHT" : "ORTHOGONAL";
       const wasManual = safeGetPluginData(conn, MANUAL_MAGNET_FLAG_KEY) === "true";
       const baseDxRaw = safeGetPluginData(conn, MANUAL_BASE_DX_KEY);
@@ -1453,18 +1439,8 @@
       vector = rootNode;
     }
     if (!vector) return;
-    const srcBox = {
-      x: sourceNode.x,
-      y: sourceNode.y,
-      width: sourceNode.width,
-      height: sourceNode.height
-    };
-    const tgtBox = {
-      x: targetNode.x,
-      y: targetNode.y,
-      width: targetNode.width,
-      height: targetNode.height
-    };
+    const srcBox = sceneNodePageBox(sourceNode);
+    const tgtBox = sceneNodePageBox(targetNode);
     const routingType = safeGetPluginData(rootNode, "connector_routing") || safeGetPluginData(vector, "connector_routing") || "ORTHOGONAL";
     const startOffset = typeof explicitStartOffset === "number" ? explicitStartOffset : parseFloat(
       safeGetPluginData(rootNode, "start_offset") || safeGetPluginData(vector, "start_offset") || "0"
@@ -2151,7 +2127,22 @@
   }
 
   // src/elementCount.ts
+  var COUNT_T0 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+  function clog(label) {
+    try {
+      const now = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+      if (typeof console !== "undefined" && typeof console.log === "function") {
+        console.log(`[FLOOOW-COUNT] ${label} +${Math.round(now - COUNT_T0)}ms`);
+      }
+    } catch (_) {
+    }
+  }
+  var countFindTopConnectorCalls = 0;
+  var countFindTopFlowCalls = 0;
+  var countReadPluginDataCalls = 0;
+  var countAncestorSteps = 0;
   function readPluginData(node, key) {
+    countReadPluginDataCalls++;
     try {
       if (node && typeof node.getPluginData === "function") {
         return node.getPluginData(key) || "";
@@ -2167,12 +2158,15 @@
     return readPluginData(node, "is_connector_label") === "true" || node != null && node.name === "ConnectorLabel";
   }
   function findTopConnectorNode(node) {
+    countFindTopConnectorCalls++;
     let curr = node;
     while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
+      countAncestorSteps++;
       if (curr.type === "CONNECTOR" || isTaggedConnector(curr)) {
         let top = curr;
         let parentScan = curr.parent;
         while (parentScan && parentScan.type !== "PAGE" && parentScan.type !== "DOCUMENT") {
+          countAncestorSteps++;
           if (parentScan.type === "CONNECTOR" || isTaggedConnector(parentScan)) {
             top = parentScan;
           }
@@ -2185,10 +2179,12 @@
     return null;
   }
   function findTopFlowNode(node) {
+    countFindTopFlowCalls++;
     if (!node) return null;
     if (findTopConnectorNode(node)) return null;
     let curr = node;
     while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
+      countAncestorSteps++;
       if (readPluginData(curr, "is_flow_node") === "true" || Boolean(readPluginData(curr, "node_type"))) {
         return curr;
       }
@@ -2200,8 +2196,21 @@
     const nodeIds = /* @__PURE__ */ new Set();
     const connectorIds = /* @__PURE__ */ new Set();
     const includeNative = options?.includeNativeConnectors === true;
+    const totalNodes = allNodes.length;
+    countFindTopConnectorCalls = 0;
+    countFindTopFlowCalls = 0;
+    countReadPluginDataCalls = 0;
+    countAncestorSteps = 0;
+    clog(`start nodes=${totalNodes}`);
+    let processed = 0;
+    let nextMilestone = 1e4;
     for (const n of allNodes) {
       if (!n) continue;
+      processed++;
+      if (processed >= nextMilestone) {
+        clog(`progress ${processed}/${totalNodes}`);
+        nextMilestone += 1e4;
+      }
       const connTop = findTopConnectorNode(n);
       if (connTop) {
         if (isConnectorLabel(connTop)) continue;
@@ -2219,11 +2228,17 @@
         nodeIds.add(flowTop.id);
       }
     }
-    return {
+    clog(`iteration:done processed=${processed}/${totalNodes}`);
+    clog(
+      `counters findTopConnector=${countFindTopConnectorCalls} findTopFlow=${countFindTopFlowCalls} readPluginData=${countReadPluginDataCalls} ancestorSteps=${countAncestorSteps}`
+    );
+    const result = {
       nodes: nodeIds.size,
       connectors: connectorIds.size,
       total: nodeIds.size + connectorIds.size
     };
+    clog(`done nodes=${result.nodes} connectors=${result.connectors} total=${result.total}`);
+    return result;
   }
 
   // src/entitlementGate.ts
@@ -2276,6 +2291,14 @@
   }
 
   // src/code.ts
+  var STARTUP_T0 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+  function slog(label) {
+    try {
+      const now = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+      console.log(`[FLOOOW-STARTUP] ${label} +${Math.round(now - STARTUP_T0)}ms`);
+    } catch (_) {
+    }
+  }
   function rgbToHexColor(rgb) {
     const toHex = (c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, "0");
     return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`.toUpperCase();
@@ -2287,12 +2310,14 @@
     }
     return defaultTerm;
   }
+  slog("01 showUI:start");
   figma.showUI(__html__, {
     width: 360,
     height: 486,
     themeColors: true,
     title: "Flooow"
   });
+  slog("02 showUI:done");
   var ELEVATION_EFFECTS_LIGHT = {
     // E100 (Shapes): 0 0 0.5px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15)
     0: [
@@ -2636,10 +2661,19 @@
   function getElevationEffects(level, isDark = false) {
     return isDark ? ELEVATION_EFFECTS_DARK[level] || ELEVATION_EFFECTS_LIGHT[level] || [] : ELEVATION_EFFECTS_LIGHT[level] || [];
   }
-  function getTextFillsByBackground(bgColor, isDarkTheme = false) {
+  var FIGMA_TEXT_BLACK = { r: 30 / 255, g: 30 / 255, b: 30 / 255 };
+  var FIGMA_TEXT_WHITE = { r: 1, g: 1, b: 1 };
+  function applyFigmaTextFill(text, fill) {
+    try {
+      if (text.fillStyleId) text.fillStyleId = "";
+    } catch (_) {
+    }
+    text.fills = [fill];
+  }
+  function getTextFillsByBackground(bgColor) {
     const luminance = 0.299 * bgColor.r + 0.587 * bgColor.g + 0.114 * bgColor.b;
-    const isBgDark = isDarkTheme || luminance < 0.5;
-    const baseColor = isBgDark ? { r: 1, g: 1, b: 1 } : { r: 0, g: 0, b: 0 };
+    const isBgDark = luminance < 0.5;
+    const baseColor = isBgDark ? FIGMA_TEXT_WHITE : FIGMA_TEXT_BLACK;
     const descOpacity = isBgDark ? 0.7 : 0.6;
     return {
       titleFill: {
@@ -2831,7 +2865,9 @@
     return null;
   }
   function getNextFlowTag() {
+    slog("20 getNextFlowTag:start");
     try {
+      slog("21 getNextFlowTag:findAll:start");
       const flowNodes = figma.currentPage.findAll((node) => {
         try {
           if (!node) return false;
@@ -2841,23 +2877,432 @@
           return false;
         }
       });
-      return `p${flowNodes.length + 1}`;
+      slog(`22 getNextFlowTag:findAll:done count=${flowNodes.length}`);
+      const tag = `p${flowNodes.length + 1}`;
+      slog(`23 getNextFlowTag:done tag=${tag}`);
+      return tag;
     } catch (_) {
+      slog("23 getNextFlowTag:done tag=p1 (fallback)");
       return "p1";
     }
   }
-  function getFlooowElementCount() {
-    const allNodes = figma.root.findAll(() => true);
-    return countFlooowElements(allNodes);
+  var USAGE_INDEX_KEY = "flooow_usage_index";
+  var USAGE_TRACK_KEY = "flooow_usage_track";
+  var USAGE_FILE_ID_KEY = "flooow_usage_file_id";
+  var LEGACY_SHARED_PROJECT_ID = "0:0";
+  var sessionNodes = 0;
+  var sessionConnectors = 0;
+  var trackedNodes = /* @__PURE__ */ new Set();
+  var trackedConnectors = /* @__PURE__ */ new Set();
+  var trackComplete = false;
+  var showIndexedTotal = false;
+  var indexSumCache = null;
+  var loadedUsageIndex = null;
+  var usageIndexChain = Promise.resolve();
+  function sessionElementCount() {
+    return {
+      nodes: sessionNodes,
+      connectors: sessionConnectors,
+      total: sessionNodes + sessionConnectors
+    };
   }
-  function getFlooowUsage() {
-    return assembleFlooowUsage(getFlooowElementCount(), getCreateEntitlement());
+  function isRemovedSceneNode(node) {
+    return "removed" in node && node.removed === true;
   }
-  function postFlooowUsage() {
+  function classifyTrackedElement(node) {
+    if (!node || node.type === "PAGE" || node.type === "DOCUMENT") return null;
+    if (isRemovedSceneNode(node)) return null;
+    const conn = findConnectorNode(node);
+    if (conn) {
+      if (conn.name === "ConnectorLabel" || safeGetPluginData2(conn, "is_connector_label") === "true") {
+        return null;
+      }
+      const tagged = safeGetPluginData2(conn, "is_custom_connector") === "true" || safeGetPluginData2(conn, "is_flow_connector") === "true";
+      if (!tagged) return null;
+      return { id: conn.id, kind: "connector" };
+    }
+    const flow = findFlowNode(node);
+    if (!flow) return null;
+    return { id: flow.id, kind: "node" };
+  }
+  function persistTrack() {
+    const count = sessionElementCount();
+    const payload = {
+      nodes: count.nodes,
+      connectors: count.connectors,
+      total: count.total,
+      complete: trackComplete
+    };
+    if (trackComplete) {
+      payload.n = [...trackedNodes];
+      payload.c = [...trackedConnectors];
+    }
+    try {
+      figma.root.setPluginData(USAGE_TRACK_KEY, JSON.stringify(payload));
+    } catch (_) {
+    }
+  }
+  function restoreTrackFromRoot() {
+    let raw = "";
+    try {
+      raw = figma.root.getPluginData(USAGE_TRACK_KEY) || "";
+    } catch (_) {
+      return false;
+    }
+    if (!raw) return false;
+    try {
+      const parsed = JSON.parse(raw);
+      const idList = (value) => Array.isArray(value) ? value.filter((id) => typeof id === "string") : [];
+      const asCount = (value) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null;
+      const hasIdList = Array.isArray(parsed.n) || Array.isArray(parsed.c);
+      const complete = parsed.complete === true || parsed.complete == null && hasIdList;
+      if (complete && hasIdList) {
+        const nodes2 = idList(parsed.n);
+        const connectors2 = idList(parsed.c);
+        trackedNodes.clear();
+        trackedConnectors.clear();
+        for (const id of nodes2) trackedNodes.add(id);
+        for (const id of connectors2) trackedConnectors.add(id);
+        sessionNodes = trackedNodes.size;
+        sessionConnectors = trackedConnectors.size;
+        trackComplete = true;
+        return true;
+      }
+      const total = asCount(parsed.total);
+      const nodes = asCount(parsed.nodes);
+      const connectors = asCount(parsed.connectors);
+      if (total == null && nodes == null) return false;
+      trackedNodes.clear();
+      trackedConnectors.clear();
+      sessionNodes = nodes ?? total ?? 0;
+      sessionConnectors = connectors ?? 0;
+      trackComplete = false;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+  function usageIndexEntry(nodes, connectors) {
+    return {
+      nodes: Math.max(0, Math.floor(nodes)),
+      connectors: Math.max(0, Math.floor(connectors))
+    };
+  }
+  function sameUsageIndexEntry(a, b) {
+    return a.nodes === b.nodes && a.connectors === b.connectors;
+  }
+  function parseUsageIndexEntry(value) {
+    const asCount = (n) => typeof n === "number" && Number.isFinite(n) ? Math.max(0, Math.floor(n)) : null;
+    if (typeof value === "number") {
+      const total = asCount(value);
+      return total != null && total > 0 ? usageIndexEntry(total, 0) : null;
+    }
+    if (!value || typeof value !== "object") return null;
+    const rec = value;
+    const nodes = asCount(rec.nodes);
+    const connectors = asCount(rec.connectors);
+    if (nodes == null && connectors == null) {
+      const total = asCount(rec.total);
+      return total != null && total > 0 ? usageIndexEntry(total, 0) : null;
+    }
+    const entry = usageIndexEntry(nodes ?? 0, connectors ?? 0);
+    return entry.nodes + entry.connectors > 0 ? entry : null;
+  }
+  function logUsage(label, detail) {
+    try {
+      console.log(`[FLOOOW-USAGE] ${label}`, detail);
+    } catch (_) {
+    }
+  }
+  async function readUsageIndex() {
+    const raw = await figma.clientStorage.getAsync(USAGE_INDEX_KEY);
+    const index = {};
+    const dropped = [];
+    if (raw && typeof raw === "object") {
+      for (const [projectId, value] of Object.entries(raw)) {
+        const entry = parseUsageIndexEntry(value);
+        if (entry) index[projectId] = entry;
+        else dropped.push(projectId);
+      }
+    }
+    logUsage("index:read", {
+      file: figma.root.name,
+      projectId: usageProjectId(),
+      fileKey: figma.fileKey ?? null,
+      rawType: raw == null ? "empty" : typeof raw,
+      raw,
+      parsed: index,
+      dropped
+    });
+    return index;
+  }
+  function sumUsageIndex(index) {
+    let nodes = 0;
+    let connectors = 0;
+    for (const entry of Object.values(index)) {
+      nodes += entry.nodes;
+      connectors += entry.connectors;
+    }
+    return { nodes, connectors, total: nodes + connectors };
+  }
+  function rememberUsageIndex(index) {
+    loadedUsageIndex = index;
+    indexSumCache = sumUsageIndex(index);
+  }
+  function usageProjectId() {
+    const fileKey = figma.fileKey;
+    if (fileKey) return fileKey;
+    try {
+      const stored = figma.root.getPluginData(USAGE_FILE_ID_KEY);
+      if (stored && stored !== LEGACY_SHARED_PROJECT_ID) return stored;
+      const created = `file-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      figma.root.setPluginData(USAGE_FILE_ID_KEY, created);
+      return created;
+    } catch (_) {
+      return LEGACY_SHARED_PROJECT_ID;
+    }
+  }
+  async function commitUsageIndex(projectId, count) {
+    const index = await readUsageIndex();
+    let changed = false;
+    if (projectId !== LEGACY_SHARED_PROJECT_ID && LEGACY_SHARED_PROJECT_ID in index) {
+      delete index[LEGACY_SHARED_PROJECT_ID];
+      changed = true;
+    }
+    const entry = usageIndexEntry(count.nodes, count.connectors);
+    if (entry.nodes + entry.connectors === 0) {
+      if (projectId in index) {
+        delete index[projectId];
+        changed = true;
+      }
+    } else if (!index[projectId] || !sameUsageIndexEntry(index[projectId], entry)) {
+      index[projectId] = entry;
+      changed = true;
+    }
+    if (!changed) return index;
+    await figma.clientStorage.setAsync(USAGE_INDEX_KEY, index);
+    logUsage("index:write", {
+      file: figma.root.name,
+      projectId,
+      fileKey: figma.fileKey ?? null,
+      wrote: entry.nodes + entry.connectors === 0 ? null : entry,
+      index
+    });
+    return index;
+  }
+  function enqueueUsageIndex(count) {
+    const projectId = usageProjectId();
+    usageIndexChain = usageIndexChain.then(() => commitUsageIndex(projectId, count)).then((index) => {
+      if (showIndexedTotal) rememberUsageIndex(index);
+    }).catch((err) => {
+      console.error("[FLOOOW-USAGE] index:write:failed", err);
+    });
+  }
+  function postFlooowUsage(refresh = false) {
+    const entitlement = getCreateEntitlement();
+    const usage = assembleFlooowUsage(sessionElementCount(), entitlement);
+    const appliedSum = Boolean(showIndexedTotal && isUnlimitedEntitlement(entitlement) && indexSumCache);
+    if (appliedSum && indexSumCache) {
+      usage.nodes = indexSumCache.nodes;
+      usage.connectors = indexSumCache.connectors;
+      usage.total = indexSumCache.total;
+    }
+    logUsage("post", {
+      file: figma.root.name,
+      projectId: usageProjectId(),
+      refresh,
+      entitlement,
+      showIndexedTotal,
+      appliedSum,
+      session: sessionElementCount(),
+      indexSum: indexSumCache,
+      posted: { nodes: usage.nodes, connectors: usage.connectors, total: usage.total }
+    });
     postToUI({
       type: "FLOOOW_USAGE",
-      usage: getFlooowUsage()
+      usage,
+      refresh: refresh || void 0
     });
+  }
+  function postFlooowPlanIssue(error) {
+    postToUI({
+      type: "FLOOOW_USAGE",
+      usage: assembleFlooowUsage({ nodes: 0, connectors: 0, total: 0 }, "FREE"),
+      error
+    });
+  }
+  async function restoreUsageSession() {
+    if (restoreTrackFromRoot()) {
+      logUsage("restore:track", {
+        file: figma.root.name,
+        projectId: usageProjectId(),
+        session: sessionElementCount(),
+        trackComplete
+      });
+      enqueueUsageIndex(sessionElementCount());
+      return;
+    }
+    try {
+      const index = await readUsageIndex();
+      const cached = index[usageProjectId()];
+      if (cached) {
+        trackedNodes.clear();
+        trackedConnectors.clear();
+        sessionNodes = cached.nodes;
+        sessionConnectors = cached.connectors;
+        trackComplete = false;
+      }
+      logUsage("restore:index", {
+        file: figma.root.name,
+        projectId: usageProjectId(),
+        cached: cached ?? null,
+        session: sessionElementCount()
+      });
+    } catch (err) {
+      console.error("[FLOOOW-USAGE] restore:failed", err);
+    }
+  }
+  function forgetTracked(id) {
+    if (trackedNodes.delete(id)) {
+      sessionNodes = Math.max(0, sessionNodes - 1);
+      return true;
+    }
+    if (trackedConnectors.delete(id)) {
+      sessionConnectors = Math.max(0, sessionConnectors - 1);
+      return true;
+    }
+    return false;
+  }
+  function forgetWrappedConnectors(created, topId) {
+    if (!("findAll" in created)) return false;
+    let changed = false;
+    let descendants = [];
+    try {
+      descendants = created.findAll(() => true);
+    } catch (_) {
+      return false;
+    }
+    for (const descendant of descendants) {
+      if (descendant.id === topId) continue;
+      if (trackedConnectors.delete(descendant.id)) {
+        sessionConnectors = Math.max(0, sessionConnectors - 1);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+  function trackSceneNode(node) {
+    const classified = classifyTrackedElement(node);
+    if (!classified) return false;
+    if (classified.id !== node.id) return false;
+    if (classified.kind === "connector") {
+      const collapsed = forgetWrappedConnectors(node, classified.id);
+      if (trackedConnectors.has(classified.id)) return collapsed;
+      trackedConnectors.add(classified.id);
+      sessionConnectors += 1;
+      return true;
+    }
+    if (trackedNodes.has(classified.id)) return false;
+    trackedNodes.add(classified.id);
+    sessionNodes += 1;
+    return true;
+  }
+  function publishUsageChange(_delta) {
+    persistTrack();
+    const count = sessionElementCount();
+    const projectId = usageProjectId();
+    if (showIndexedTotal && loadedUsageIndex) {
+      if (count.total === 0) delete loadedUsageIndex[projectId];
+      else loadedUsageIndex[projectId] = usageIndexEntry(count.nodes, count.connectors);
+      indexSumCache = sumUsageIndex(loadedUsageIndex);
+    }
+    enqueueUsageIndex(count);
+    postFlooowUsage(false);
+  }
+  function scanCurrentProject() {
+    const allNodes = figma.root.findAll(() => true);
+    const count = countFlooowElements(allNodes);
+    const nodes = /* @__PURE__ */ new Set();
+    const connectors = /* @__PURE__ */ new Set();
+    for (const node of allNodes) {
+      const classified = classifyTrackedElement(node);
+      if (!classified) continue;
+      if (classified.kind === "node") nodes.add(classified.id);
+      else connectors.add(classified.id);
+    }
+    trackedNodes.clear();
+    trackedConnectors.clear();
+    for (const id of nodes) trackedNodes.add(id);
+    for (const id of connectors) trackedConnectors.add(id);
+    sessionNodes = count.nodes;
+    sessionConnectors = count.connectors;
+    trackComplete = true;
+    persistTrack();
+    return count;
+  }
+  async function publishUnlimitedUsageFromCache() {
+    const projectId = usageProjectId();
+    const session = sessionElementCount();
+    logUsage("sum:start", {
+      file: figma.root.name,
+      projectId,
+      session,
+      trackComplete,
+      entitlement: getCreateEntitlement()
+    });
+    const pending = usageIndexChain.then(async () => {
+      const index = session.total > 0 || trackComplete ? await commitUsageIndex(projectId, session) : await readUsageIndex();
+      showIndexedTotal = true;
+      rememberUsageIndex(index);
+      logUsage("sum:done", {
+        file: figma.root.name,
+        projectId,
+        index,
+        sum: indexSumCache
+      });
+    });
+    usageIndexChain = pending.then(
+      () => void 0,
+      () => void 0
+    );
+    try {
+      await pending;
+    } catch (err) {
+      console.error("[FLOOOW-USAGE] sum:failed", err);
+    }
+    postFlooowUsage(true);
+  }
+  async function refreshUsageFromScan() {
+    const projectId = usageProjectId();
+    const entitlement = getCreateEntitlement();
+    if (isUnlimitedEntitlement(entitlement)) {
+      await publishUnlimitedUsageFromCache();
+      return;
+    }
+    let count;
+    try {
+      count = scanCurrentProject();
+    } catch (err) {
+      console.error("[usage refresh \uC2E4\uD328]", err);
+      postFlooowUsage(true);
+      return;
+    }
+    const pending = usageIndexChain.then(async () => {
+      const index = await commitUsageIndex(projectId, count);
+      showIndexedTotal = isUnlimitedEntitlement(entitlement);
+      rememberUsageIndex(index);
+      postFlooowUsage(true);
+    });
+    usageIndexChain = pending.then(
+      () => void 0,
+      () => void 0
+    );
+    try {
+      await pending;
+    } catch (err) {
+      console.error("[usage index \uC2E4\uD328]", err);
+      postFlooowUsage(true);
+    }
   }
   var figmaPluginDevelopment = null;
   function isFigmaPluginDevelopment() {
@@ -2894,11 +3339,21 @@
     return run;
   }
   function approveNewElements(requestedCount) {
-    const usage = getFlooowUsage();
+    const entitlement = getCreateEntitlement();
+    if (isUnlimitedEntitlement(entitlement)) {
+      return canCreateFlooowElements({
+        currentCount: 0,
+        requestedCount,
+        entitlement
+      });
+    }
+    const count = scanCurrentProject();
+    enqueueUsageIndex(count);
+    postFlooowUsage(false);
     return canCreateFlooowElements({
-      currentCount: usage.total,
+      currentCount: count.total,
       requestedCount,
-      entitlement: usage.entitlement
+      entitlement
     });
   }
   function notifyLimitReached(result) {
@@ -3518,7 +3973,7 @@
   function gizmoEndpointTypeLabel(node) {
     if (!node) return "";
     const isFlow = safeGetPluginData2(node, "is_flow_node") === "true" || Boolean(safeGetPluginData2(node, "node_type"));
-    if (!isFlow) return "FigJam object";
+    if (!isFlow) return "Figma object";
     const flowType = normalizeNodeType(safeGetPluginData2(node, "node_type") || "Screen");
     if (flowType === "Branch") {
       return BRANCH_VARIANT_LABELS[normalizeBranchVariant(safeGetPluginData2(node, "branch_variant"))];
@@ -3526,8 +3981,12 @@
     return flowType;
   }
   async function handleSelectionChange() {
+    slog("10 handleSelectionChange:start");
+    slog("11 loadRequiredFonts:start");
     await loadRequiredFonts();
+    slog("12 loadRequiredFonts:done");
     const rawSelection = figma.currentPage.selection;
+    slog(`13 selection:resolved count=${rawSelection.length}`);
     const resolvedNodesMap = /* @__PURE__ */ new Map();
     for (const node of rawSelection) {
       const connNode = findConnectorNode(node);
@@ -3958,6 +4417,7 @@
         connectedConnectorIds,
         connectedConnectors
       });
+      slog("14 handleSelectionChange:done branch=2nodes");
       return;
     } else if (uniqueNodes.length >= 3) {
       const orderedNodeIds = uniqueNodes.map((n) => n.id);
@@ -4055,6 +4515,7 @@
         chainMissingPairs,
         multiNodeConnectors
       });
+      slog("14 handleSelectionChange:done branch=3plus");
       return;
     }
     postToUI({
@@ -4075,6 +4536,7 @@
       connectedConnectorIds: [],
       connectedConnectors: []
     });
+    slog("14 handleSelectionChange:done branch=default");
   }
   figma.on("selectionchange", handleSelectionChange);
   async function safeSetCharacters(textNode, newText) {
@@ -4152,18 +4614,21 @@
     try {
       const targetFont = { family: "Inter", style: "Bold" };
       const targetSize = 13;
-      let isDark = false;
       let bgColor = { r: 1, g: 1, b: 1 };
-      if (flowNode && "getPluginData" in flowNode) {
-        isDark = flowNode.getPluginData("node_theme") === "dark";
-      }
       if (flowNode && "fills" in flowNode) {
         const fNode = flowNode;
         if (Array.isArray(fNode.fills) && fNode.fills.length > 0 && fNode.fills[0].type === "SOLID") {
           bgColor = fNode.fills[0].color;
+        } else if ("children" in fNode) {
+          const shape = fNode.children.find(
+            (c) => c.name === "ShapeVector" || c.name === "DiamondShape"
+          );
+          if (shape && "fills" in shape && Array.isArray(shape.fills) && shape.fills[0]?.type === "SOLID") {
+            bgColor = shape.fills[0].color;
+          }
         }
       }
-      const { titleFill } = getTextFillsByBackground(bgColor, isDark);
+      const { titleFill } = getTextFillsByBackground(bgColor);
       try {
         await Promise.all([
           figma.loadFontAsync(targetFont),
@@ -4409,7 +4874,7 @@
     if (Array.isArray(shape.fills) && shape.fills.length > 0 && shape.fills[0].type === "SOLID") {
       bgColor = shape.fills[0].color;
     }
-    const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor, isDark);
+    const { titleFill, descFill, isBgDark } = getTextFillsByBackground(bgColor);
     const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
     const card = figma.createFrame();
     card.name = title;
@@ -4456,7 +4921,7 @@
     titleText.fontSize = 13;
     titleText.lineHeight = { value: 18, unit: "PIXELS" };
     titleText.characters = title;
-    titleText.fills = [titleFill];
+    applyFigmaTextFill(titleText, titleFill);
     titleText.textAlignHorizontal = "LEFT";
     titleText.textAlignVertical = "TOP";
     titleText.textAutoResize = "HEIGHT";
@@ -4466,6 +4931,7 @@
     headerRow.appendChild(titleText);
     titleText.layoutAlign = "STRETCH";
     card.appendChild(headerRow);
+    applyFigmaTextFill(titleText, titleFill);
     if (status && STATUS_CONFIG[status]) {
       const cfg = STATUS_CONFIG[status];
       const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, bgColor, isDark);
@@ -4507,10 +4973,11 @@
     descText.fontSize = 11;
     descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: "PIXELS" };
     descText.characters = desc;
-    descText.fills = [descFill];
+    applyFigmaTextFill(descText, descFill);
     descText.textAlignHorizontal = "LEFT";
     descText.setPluginData("node_role", "desc");
     card.appendChild(descText);
+    applyFigmaTextFill(descText, descFill);
     descText.layoutAlign = "STRETCH";
     descText.textAutoResize = "HEIGHT";
     await updateDescTextTruncation(card, descText, height, desc);
@@ -4783,11 +5250,9 @@
       } else if (!isFillNone && branchVariant) {
         bgColor = hexToRgbColor(getBranchVariantDefaultFill(branchVariant));
       }
-      const { titleFill, descFill, isBgDark } = isFillNone ? {
-        titleFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } },
-        descFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 },
-        isBgDark: isDark
-      } : getTextFillsByBackground(bgColor, isDark);
+      const { titleFill, descFill, isBgDark } = getTextFillsByBackground(
+        isFillNone ? { r: 1, g: 1, b: 1 } : bgColor
+      );
       const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
       const card = figma.createFrame();
       card.name = title;
@@ -4841,7 +5306,7 @@
         titleText.fontSize = 13;
         titleText.lineHeight = { value: showBranchTitle ? 22 : 18, unit: "PIXELS" };
         titleText.characters = showBranchTitle || !branchVariant ? title : "";
-        titleText.fills = [titleFill];
+        applyFigmaTextFill(titleText, titleFill);
         titleText.textAlignHorizontal = "CENTER";
         titleText.textAlignVertical = "CENTER";
         titleText.layoutAlign = "STRETCH";
@@ -4852,6 +5317,7 @@
         );
         titleText.setPluginData("node_role", "title");
         card.appendChild(titleText);
+        applyFigmaTextFill(titleText, titleFill);
       } else {
         const hasStatus = Boolean(payload.status && STATUS_CONFIG[payload.status]);
         const hasLink = Boolean(payload.figmaLink && payload.figmaLink.trim());
@@ -4883,7 +5349,7 @@
         titleText.fontSize = 13;
         titleText.lineHeight = { value: 18, unit: "PIXELS" };
         titleText.characters = title;
-        titleText.fills = [titleFill];
+        applyFigmaTextFill(titleText, titleFill);
         titleText.textAutoResize = "HEIGHT";
         if (isCreateFit) {
           effectiveCreateW = await calculateScreenFitWidth(
@@ -4914,6 +5380,7 @@
         headerRow.appendChild(titleText);
         titleText.layoutAlign = "STRETCH";
         card.appendChild(headerRow);
+        applyFigmaTextFill(titleText, titleFill);
         if (description) {
           const descText = figma.createText();
           descText.name = "DescText";
@@ -4921,10 +5388,11 @@
           descText.fontSize = 11;
           descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: "PIXELS" };
           descText.characters = description;
-          descText.fills = [descFill];
+          applyFigmaTextFill(descText, descFill);
           descText.textAlignHorizontal = "LEFT";
           descText.setPluginData("node_role", "desc");
           card.appendChild(descText);
+          applyFigmaTextFill(descText, descFill);
           descText.layoutAlign = "STRETCH";
           const descStrokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 0) * 2;
           const descAvailW = Math.max(10, effectiveCreateW - card.paddingLeft - card.paddingRight - descStrokeOffset);
@@ -5104,11 +5572,9 @@
         }
       }
     }
-    const { titleFill, descFill, isBgDark } = isFillNone ? {
-      titleFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 } },
-      descFill: { type: "SOLID", color: isDark ? { r: 1, g: 1, b: 1 } : { r: 0.1, g: 0.1, b: 0.1 }, opacity: 0.6 },
-      isBgDark: isDark
-    } : getTextFillsByBackground(bgColor, isDark);
+    const { titleFill, descFill, isBgDark } = getTextFillsByBackground(
+      isFillNone ? { r: 1, g: 1, b: 1 } : bgColor
+    );
     const borderColor = isBgDark ? { r: 0.28, g: 0.28, b: 0.3 } : { r: 0.15, g: 0.15, b: 0.18 };
     const vectorPathData = getShapeVectorData(nodeType, card.width, card.height, batchBranchVariant);
     if (patch.colorHex !== void 0) {
@@ -5346,7 +5812,7 @@
       await safeSetCharacters(titleText, batchBranchVariant && !showBranchTitle ? "" : effectiveTitle);
       const hasExistingTitleFill = titleText.fills === figma.mixed || Array.isArray(titleText.fills) && titleText.fills.length > 0;
       if (!hasExistingTitleFill || patch.colorHex) {
-        titleText.fills = [titleFill];
+        applyFigmaTextFill(titleText, titleFill);
       }
     } else {
       let headerRow = card.children.find(isHeaderFrame);
@@ -5393,7 +5859,7 @@
       }
       const hasExistingTitleFill = titleText.fills === figma.mixed || Array.isArray(titleText.fills) && titleText.fills.length > 0;
       if (!hasExistingTitleFill || patch.colorHex) {
-        titleText.fills = [titleFill];
+        applyFigmaTextFill(titleText, titleFill);
       }
     }
     let descText = card.children.find(
@@ -5440,7 +5906,7 @@
       }
       const hasExistingDescFill = descText.fills === figma.mixed || Array.isArray(descText.fills) && descText.fills.length > 0;
       if (!hasExistingDescFill || patch.colorHex) {
-        descText.fills = [descFill];
+        applyFigmaTextFill(descText, descFill);
       }
       if (isNewDesc || descText.parent !== card) {
         card.appendChild(descText);
@@ -6070,18 +6536,8 @@
       const hasExplicitMagnets = Boolean(sourceMagnet && targetMagnet);
       if (!sourceMagnet || !targetMagnet) {
         const optimal = getOptimalMagnetPair(
-          {
-            x: sourceNode.x,
-            y: sourceNode.y,
-            width: sourceNode.width,
-            height: sourceNode.height
-          },
-          {
-            x: targetNode.x,
-            y: targetNode.y,
-            width: targetNode.width,
-            height: targetNode.height
-          }
+          sceneNodePageBox(sourceNode),
+          sceneNodePageBox(targetNode)
         );
         sourceMagnet = optimal.sourceMagnet;
         targetMagnet = optimal.targetMagnet;
@@ -6107,8 +6563,10 @@
       );
       if (hasExplicitMagnets) {
         try {
-          const baseDx = targetNode.x + targetNode.width / 2 - (sourceNode.x + sourceNode.width / 2);
-          const baseDy = targetNode.y + targetNode.height / 2 - (sourceNode.y + sourceNode.height / 2);
+          const sourceBox = sceneNodePageBox(sourceNode);
+          const targetBox = sceneNodePageBox(targetNode);
+          const baseDx = targetBox.x + targetBox.width / 2 - (sourceBox.x + sourceBox.width / 2);
+          const baseDy = targetBox.y + targetBox.height / 2 - (sourceBox.y + sourceBox.height / 2);
           connector.setPluginData("is_manual_magnet", "true");
           connector.setPluginData("manual_base_dx", String(baseDx));
           connector.setPluginData("manual_base_dy", String(baseDy));
@@ -6178,8 +6636,8 @@
         const sourceNode = nodes[0];
         const targetNode = nodes[1];
         const optimal = getOptimalMagnetPair(
-          { x: sourceNode.x, y: sourceNode.y, width: sourceNode.width, height: sourceNode.height },
-          { x: targetNode.x, y: targetNode.y, width: targetNode.width, height: targetNode.height }
+          sceneNodePageBox(sourceNode),
+          sceneNodePageBox(targetNode)
         );
         const sourceMagnet = optimal.sourceMagnet;
         const targetMagnet = optimal.targetMagnet;
@@ -6194,8 +6652,8 @@
         const src = nodes[i];
         const tgt = nodes[i + 1];
         const optimal = getOptimalMagnetPair(
-          { x: src.x, y: src.y, width: src.width, height: src.height },
-          { x: tgt.x, y: tgt.y, width: tgt.width, height: tgt.height }
+          sceneNodePageBox(src),
+          sceneNodePageBox(tgt)
         );
         const srcMagnet = optimal.sourceMagnet;
         const tgtMagnet = optimal.targetMagnet;
@@ -6265,18 +6723,8 @@
         const tgtNode = pair.tgtNode;
         const i = pair.pairIndex;
         const pKey = makePairKey(srcNode.id, tgtNode.id);
-        const srcBox = {
-          x: srcNode.x,
-          y: srcNode.y,
-          width: srcNode.width,
-          height: srcNode.height
-        };
-        const tgtBox = {
-          x: tgtNode.x,
-          y: tgtNode.y,
-          width: tgtNode.width,
-          height: tgtNode.height
-        };
+        const srcBox = sceneNodePageBox(srcNode);
+        const tgtBox = sceneNodePageBox(tgtNode);
         const optimal = getOptimalMagnetPair(srcBox, tgtBox);
         const createdMagnets = resolveCreatedPairMagnets(
           createdIndex,
@@ -6465,8 +6913,8 @@
         let isVerticalSegment = false;
         let midPoint = null;
         if (sourceNode && targetNode) {
-          const srcBox = { x: sourceNode.x, y: sourceNode.y, width: sourceNode.width, height: sourceNode.height };
-          const tgtBox = { x: targetNode.x, y: targetNode.y, width: targetNode.width, height: targetNode.height };
+          const srcBox = sceneNodePageBox(sourceNode);
+          const tgtBox = sceneNodePageBox(targetNode);
           const sourceMagnet = effectiveStartMagnet || safeGetPluginData2(connectorRootNode, "source_magnet") || "RIGHT";
           const targetMagnet = effectiveEndMagnet || safeGetPluginData2(connectorRootNode, "target_magnet") || "LEFT";
           const routingType = payload.routingType || safeGetPluginData2(connectorRootNode, "connector_routing") || "ORTHOGONAL";
@@ -7284,7 +7732,6 @@
       switch (msg.type) {
         case "CREATE_FLOW_NODE":
           await runCreateExclusive(() => createFlowNode(msg.payload));
-          postFlooowUsage();
           break;
         case "UPDATE_FLOW_NODE":
           await updateFlowNode(msg.payload);
@@ -7294,15 +7741,12 @@
           break;
         case "CONNECT_POINTS":
           await runCreateExclusive(() => connectPoints(msg.payload));
-          postFlooowUsage();
           break;
         case "CONNECT_CHAIN":
           await runCreateExclusive(() => connectChain(msg.payload));
-          postFlooowUsage();
           break;
         case "AUTO_CONNECT_SELECTED":
           await runCreateExclusive(() => autoConnectSelected(msg.label));
-          postFlooowUsage();
           break;
         case "UPDATE_CONNECTOR_LABEL":
           await updateConnectorLabel(msg.connectorId, msg.label);
@@ -7345,7 +7789,19 @@
           break;
         }
         case "GET_FLOOOW_USAGE":
-          postFlooowUsage();
+          logUsage("request", {
+            file: figma.root.name,
+            projectId: usageProjectId(),
+            refresh: Boolean(msg.refresh),
+            entitlement: getCreateEntitlement()
+          });
+          try {
+            if (msg.refresh) await refreshUsageFromScan();
+            else postFlooowUsage(false);
+          } catch (err) {
+            console.error("[FLOOOW-USAGE] request:failed", err);
+            postFlooowPlanIssue("retryable");
+          }
           break;
         case "RESIZE_NODE":
           await resizeNode(msg.nodeId, msg.width, msg.height);
@@ -7374,10 +7830,23 @@
           break;
         }
         case "INIT":
+          slog("50 INIT:received");
           setAppLocale(msg.locale);
           if (!shouldSkipInitSelectionSync()) {
+            slog("51 INIT:handleSelectionChange:start");
             handleSelectionChange();
+            slog("52 INIT:handleSelectionChange:dispatched");
+          } else {
+            slog("51 INIT:handleSelectionChange:skipped (startup coalesce)");
           }
+          try {
+            await restoreUsageSession();
+            postFlooowUsage(false);
+          } catch (err) {
+            console.error("[FLOOOW-USAGE] restore:failed", err);
+            postFlooowPlanIssue("blocked");
+          }
+          slog("53 INIT:handled");
           break;
         default:
           console.warn("\uC54C \uC218 \uC5C6\uB294 PluginAction:", msg.type);
@@ -7437,11 +7906,19 @@
     let connectorSelectionChanged = false;
     let flowNodePropertyChanged = false;
     let shouldUpdateSelectionOnMove = false;
+    const usageBefore = sessionElementCount().total;
+    let usageTouched = false;
     for (const change of event.documentChanges) {
+      if (change.type === "DELETE") {
+        if (forgetTracked(change.id)) usageTouched = true;
+      }
       if (change.type === "CREATE") {
-        const createdNode = figma.getNodeById(change.id);
-        if (createdNode && (createdNode.type === "CONNECTOR" || safeGetPluginData2(createdNode, "is_custom_connector") === "true")) {
-          registerConnectorInRegistry(createdNode);
+        const createdNode = !isRemovedSceneNode(change.node) ? change.node : figma.getNodeById(change.id);
+        if (createdNode && !isRemovedSceneNode(createdNode)) {
+          if (trackSceneNode(createdNode)) usageTouched = true;
+          if (createdNode.type === "CONNECTOR" || safeGetPluginData2(createdNode, "is_custom_connector") === "true") {
+            registerConnectorInRegistry(createdNode);
+          }
         }
       }
       if (change.type === "PROPERTY_CHANGE") {
@@ -7778,9 +8255,18 @@
     } else if (connectorSelectionChanged || flowNodePropertyChanged) {
       handleSelectionChange();
     }
+    if (usageTouched) {
+      const usageDelta = sessionElementCount().total - usageBefore;
+      if (usageDelta !== 0) publishUsageChange(usageDelta);
+      else persistTrack();
+    }
   });
+  slog("03 refreshConnectorRegistry:start");
   refreshConnectorRegistry();
+  slog("04 refreshConnectorRegistry:done");
+  slog("05 moduleInit:handleSelectionChange:start");
   handleSelectionChange().finally(() => {
+    slog("06 moduleInit:handleSelectionChange:settled");
     markStartupSelectionSynced();
   });
 })();

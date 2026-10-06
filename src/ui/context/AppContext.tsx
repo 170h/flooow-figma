@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
-import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload, ConnectorLabelBoxStyle, ConnectorLabelAlign, FlooowUsageState } from '../../types';
+import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload, ConnectorLabelBoxStyle, ConnectorLabelAlign, FlooowUsageState, PlanLoadIssue } from '../../types';
 import {
   NODE_TYPE_SHAPE_SPECS,
   normalizeNodeType,
@@ -22,7 +22,7 @@ import {
   isGizmoDraftDirty,
   type ComputeGizmoMagnetsInput,
 } from '../utils/gizmoState';
-import { orderFlowNodesForChain } from '../../chainOrder';
+import { orderNodesForChain } from '../../chainOrder';
 import { t, getAppLocale } from '../../i18n';
 
 // ============================================================
@@ -311,10 +311,16 @@ export interface AppContextValue {
   setDesignFrames: React.Dispatch<React.SetStateAction<DesignFrameItem[]>>;
   loadDesignFrames: () => void;
 
-  // Flooow usage (Core live recount 기반, 표시용)
+  // Flooow usage (Core 세션/index. 표시용)
   flooowUsage: FlooowUsageState | null;
   setFlooowUsage: React.Dispatch<React.SetStateAction<FlooowUsageState | null>>;
+  usageCounting: boolean;
+  setUsageCounting: (counting: boolean) => void;
   requestFlooowUsage: () => void;
+  /** null이면 로딩 또는 정상. retryable은 Refresh, blocked는 Figma 쪽 중단. */
+  planIssue: PlanLoadIssue | null;
+  setPlanIssue: React.Dispatch<React.SetStateAction<PlanLoadIssue | null>>;
+  retryPlanLoad: () => void;
 
   // 핵심 함수들
   sizePresets: SizePreset[];
@@ -540,8 +546,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedStylePresetId, setSelectedStylePresetId] = useState<string | null>('style-white');
   const [designFrames, setDesignFrames] = useState<DesignFrameItem[]>([]);
 
-  // Flooow usage (Core live recount 기반, 표시용 — 저장 카운터 아님)
+  // Flooow usage. startup은 캐시만 받고, refresh 요청일 때만 Core가 현재 프로젝트를 다시 센다.
   const [flooowUsage, setFlooowUsage] = useState<FlooowUsageState | null>(null);
+  const [usageCounting, setUsageCounting] = useState(false);
+  const [planIssue, setPlanIssue] = useState<PlanLoadIssue | null>(null);
+
+  useEffect(() => {
+    if (flooowUsage || planIssue) return;
+    const timer = window.setTimeout(() => setPlanIssue('retryable'), 8000);
+    return () => window.clearTimeout(timer);
+  }, [flooowUsage, planIssue]);
+
+  const retryPlanLoad = useCallback(() => {
+    setPlanIssue(null);
+    setFlooowUsage(null);
+    setUsageCounting(false);
+    parent.postMessage({ pluginMessage: { type: 'GET_FLOOOW_USAGE' } }, '*');
+  }, []);
 
   // 다중 선택 편집용 임시 저장소 (Multi Node Draft)
   const [multiDraft, setMultiDraftRaw] = useState<MultiNodeDraft>({});
@@ -737,7 +758,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const requestFlooowUsage = useCallback(() => {
-    parent.postMessage({ pluginMessage: { type: 'GET_FLOOOW_USAGE' } }, '*');
+    setUsageCounting(true);
+    parent.postMessage({ pluginMessage: { type: 'GET_FLOOOW_USAGE', refresh: true } }, '*');
   }, []);
 
   // 사이즈 프리셋 상태 관리 (기본값 및 로컬스토리지 영속화)
@@ -1880,22 +1902,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     } else {
-      // 3개 이상: CONNECT_CHAIN 대상은 Flow Node만. 필터 후 공간 정렬한다.
-      // Flow Node만 선택된 경우는 Core가 이미 정렬한 orderedNodeIds를 그대로 쓴다.
-      const flowNodes = nodes.filter((n) => n && n.isFlowNode);
-      const selectionIsFlowOnly = flowNodes.length === nodes.length;
-      const orderedIds = selectionIsFlowOnly && uiStateRef.current.orderedNodeIds && uiStateRef.current.orderedNodeIds.length === nodes.length
-        ? uiStateRef.current.orderedNodeIds
-        : selectionIsFlowOnly
-          ? nodes.map((n) => n.id)
-          : orderFlowNodesForChain(flowNodes.map((n) => ({
-              id: n.id,
-              x: n.x ?? 0,
-              y: n.y ?? 0,
-              width: n.width ?? 0,
-              height: n.height ?? 0,
-              isFlowNode: true,
-            }))).map((n) => n.id);
+      // 3개 이상: Flow Node와 Figma 오브젝트를 함께 공간 정렬해 연결한다.
+      // Core가 이미 같은 집합을 정렬해 둔 경우는 그 순서를 쓴다.
+      const connectable = nodes.filter((n) => n && !n.isConnector);
+      const orderedFromCore = uiStateRef.current.orderedNodeIds;
+      const coreMatches = Boolean(
+        orderedFromCore
+        && orderedFromCore.length === connectable.length
+        && connectable.every((n) => orderedFromCore.includes(n.id))
+      );
+      const orderedIds = coreMatches && orderedFromCore
+        ? orderedFromCore
+        : orderNodesForChain(connectable.map((n) => ({
+            id: n.id,
+            x: n.x ?? 0,
+            y: n.y ?? 0,
+            width: n.width ?? 0,
+            height: n.height ?? 0,
+          }))).map((n) => n.id);
 
       parent.postMessage({
         pluginMessage: {
@@ -2423,7 +2447,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadDesignFrames,
     flooowUsage,
     setFlooowUsage,
+    usageCounting,
+    setUsageCounting,
     requestFlooowUsage,
+    planIssue,
+    setPlanIssue,
+    retryPlanLoad,
     sizePresets,
     addSizePreset,
     updateSizePreset,

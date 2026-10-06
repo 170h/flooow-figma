@@ -324,6 +324,12 @@
       user-select: none;
     }
 
+    .figjam-empty-card.is-error {
+      padding: 0 24px;
+      text-align: center;
+      line-height: 18px;
+    }
+
     .multi-selection-indicator {
       display: none;
       align-items: center;
@@ -3032,6 +3038,19 @@
       align-items: center;
       gap: 6px;
       min-width: 0;
+      min-height: 36px;
+    }
+
+    .footer-plan-spinner {
+      width: 16px;
+      height: 16px;
+      box-sizing: border-box;
+      border-radius: 50%;
+      border: 1.5px solid color-mix(in srgb, currentColor 28%, transparent);
+      border-top-color: currentColor;
+      color: var(--color-text-secondary);
+      animation: usageSpin 0.7s linear infinite;
+      flex: 0 0 auto;
     }
 
     .footer-left.footer-clickable {
@@ -3107,6 +3126,14 @@
       height: 32px;
       padding: 4px 12px;
       border-radius: 5px;
+    }
+
+    .app-footer .create-node-plus {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+      display: block;
+      color: inherit;
     }
 
     .app-footer .btn-ghost:disabled {
@@ -4900,6 +4927,30 @@
       font-weight: var(--font-weight-strong, 550);
       line-height: 16px;
       color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
+    }
+
+    .subscription-usage-state.is-scanning {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--color-plan-text, rgba(255, 255, 255, 0.7));
+    }
+
+    .subscription-usage-spinner {
+      width: 12px;
+      height: 12px;
+      box-sizing: border-box;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      border-top-color: currentColor;
+      animation: usageSpin 0.7s linear infinite;
+      flex: 0 0 auto;
+    }
+
+    @keyframes usageSpin {
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .subscription-usage-state.is-calm {
@@ -7457,7 +7508,7 @@
           var HostPortal = 4;
           var HostComponent = 5;
           var HostText = 6;
-          var Fragment5 = 7;
+          var Fragment6 = 7;
           var Mode = 8;
           var ContextConsumer = 9;
           var ContextProvider = 10;
@@ -8614,7 +8665,7 @@
                 return "DehydratedFragment";
               case ForwardRef:
                 return getWrappedName$1(type, type.render, "ForwardRef");
-              case Fragment5:
+              case Fragment6:
                 return "Fragment";
               case HostComponent:
                 return type;
@@ -17043,7 +17094,7 @@
               }
             }
             function updateFragment2(returnFiber, current2, fragment, lanes, key) {
-              if (current2 === null || current2.tag !== Fragment5) {
+              if (current2 === null || current2.tag !== Fragment6) {
                 var created = createFiberFromFragment(fragment, returnFiber.mode, lanes, key);
                 created.return = returnFiber;
                 return created;
@@ -17446,7 +17497,7 @@
                 if (child.key === key) {
                   var elementType = element.type;
                   if (elementType === REACT_FRAGMENT_TYPE) {
-                    if (child.tag === Fragment5) {
+                    if (child.tag === Fragment6) {
                       deleteRemainingChildren(returnFiber, child.sibling);
                       var existing = useFiber(child, element.props.children);
                       existing.return = returnFiber;
@@ -22922,7 +22973,7 @@
                 var _resolvedProps2 = workInProgress2.elementType === type ? _unresolvedProps2 : resolveDefaultProps(type, _unresolvedProps2);
                 return updateForwardRef(current2, workInProgress2, type, _resolvedProps2, renderLanes2);
               }
-              case Fragment5:
+              case Fragment6:
                 return updateFragment(current2, workInProgress2, renderLanes2);
               case Mode:
                 return updateMode(current2, workInProgress2, renderLanes2);
@@ -23194,7 +23245,7 @@
               case SimpleMemoComponent:
               case FunctionComponent:
               case ForwardRef:
-              case Fragment5:
+              case Fragment6:
               case Mode:
               case Profiler:
               case ContextConsumer:
@@ -27455,7 +27506,7 @@
             return fiber;
           }
           function createFiberFromFragment(elements, mode, lanes, key) {
-            var fiber = createFiber(Fragment5, elements, key, mode);
+            var fiber = createFiber(Fragment6, elements, key, mode);
             fiber.lanes = lanes;
             return fiber;
           }
@@ -30331,9 +30382,6 @@
     }
     return result;
   }
-  function orderFlowNodesForChain(nodes) {
-    return orderNodesForChain(nodes.filter((node) => node.isFlowNode === true));
-  }
 
   // src/i18n.ts
   var activeLocale = "ko";
@@ -30812,6 +30860,19 @@
     const [selectedStylePresetId, setSelectedStylePresetId] = (0, import_react2.useState)("style-white");
     const [designFrames, setDesignFrames] = (0, import_react2.useState)([]);
     const [flooowUsage, setFlooowUsage] = (0, import_react2.useState)(null);
+    const [usageCounting, setUsageCounting] = (0, import_react2.useState)(false);
+    const [planIssue, setPlanIssue] = (0, import_react2.useState)(null);
+    (0, import_react2.useEffect)(() => {
+      if (flooowUsage || planIssue) return;
+      const timer = window.setTimeout(() => setPlanIssue("retryable"), 8e3);
+      return () => window.clearTimeout(timer);
+    }, [flooowUsage, planIssue]);
+    const retryPlanLoad = (0, import_react2.useCallback)(() => {
+      setPlanIssue(null);
+      setFlooowUsage(null);
+      setUsageCounting(false);
+      parent.postMessage({ pluginMessage: { type: "GET_FLOOOW_USAGE" } }, "*");
+    }, []);
     const [multiDraft, setMultiDraftRaw] = (0, import_react2.useState)({});
     const multiDraftRef = (0, import_react2.useRef)({});
     const multiDraftSelectionRef = (0, import_react2.useRef)([]);
@@ -30965,7 +31026,8 @@
       parent.postMessage({ pluginMessage: { type: "GET_DESIGN_FRAMES" } }, "*");
     }, []);
     const requestFlooowUsage = (0, import_react2.useCallback)(() => {
-      parent.postMessage({ pluginMessage: { type: "GET_FLOOOW_USAGE" } }, "*");
+      setUsageCounting(true);
+      parent.postMessage({ pluginMessage: { type: "GET_FLOOOW_USAGE", refresh: true } }, "*");
     }, []);
     const [sizePresets, setSizePresets] = (0, import_react2.useState)(() => {
       try {
@@ -31900,15 +31962,17 @@
           }
         }, "*");
       } else {
-        const flowNodes = nodes.filter((n) => n && n.isFlowNode);
-        const selectionIsFlowOnly = flowNodes.length === nodes.length;
-        const orderedIds = selectionIsFlowOnly && uiStateRef.current.orderedNodeIds && uiStateRef.current.orderedNodeIds.length === nodes.length ? uiStateRef.current.orderedNodeIds : selectionIsFlowOnly ? nodes.map((n) => n.id) : orderFlowNodesForChain(flowNodes.map((n) => ({
+        const connectable = nodes.filter((n) => n && !n.isConnector);
+        const orderedFromCore = uiStateRef.current.orderedNodeIds;
+        const coreMatches = Boolean(
+          orderedFromCore && orderedFromCore.length === connectable.length && connectable.every((n) => orderedFromCore.includes(n.id))
+        );
+        const orderedIds = coreMatches && orderedFromCore ? orderedFromCore : orderNodesForChain(connectable.map((n) => ({
           id: n.id,
           x: n.x ?? 0,
           y: n.y ?? 0,
           width: n.width ?? 0,
-          height: n.height ?? 0,
-          isFlowNode: true
+          height: n.height ?? 0
         }))).map((n) => n.id);
         parent.postMessage({
           pluginMessage: {
@@ -32348,7 +32412,12 @@
       loadDesignFrames,
       flooowUsage,
       setFlooowUsage,
+      usageCounting,
+      setUsageCounting,
       requestFlooowUsage,
+      planIssue,
+      setPlanIssue,
+      retryPlanLoad,
       sizePresets,
       addSizePreset,
       updateSizePreset,
@@ -32399,35 +32468,29 @@
 
   // src/ui/hooks/useFigmaMessage.ts
   var import_react3 = __toESM(require_react());
+  function isReadyUsage(value) {
+    if (!value || typeof value !== "object") return false;
+    const usage = value;
+    const entitlement = usage.entitlement;
+    return typeof usage.nodes === "number" && typeof usage.connectors === "number" && typeof usage.total === "number" && typeof usage.limit === "number" && typeof usage.canCreate === "boolean" && (entitlement === "FREE" || entitlement === "PAID_ACTIVE" || entitlement === "DEV_ACTIVE");
+  }
   function useFigmaMessage() {
     const {
       handleSelectionChange,
       setUIState,
       setDesignFrames,
-      setFlooowUsage
+      setFlooowUsage,
+      setUsageCounting,
+      setPlanIssue
     } = useApp();
     const handlerRef = (0, import_react3.useRef)(null);
     const prevNodeIdRef = (0, import_react3.useRef)(void 0);
-    const usageRequestedRef = (0, import_react3.useRef)(false);
-    const usageTimerRef = (0, import_react3.useRef)(null);
-    const requestInitialUsage = () => {
-      if (usageRequestedRef.current) return;
-      usageRequestedRef.current = true;
-      parent.postMessage({ pluginMessage: { type: "GET_FLOOOW_USAGE" } }, "*");
-    };
     (0, import_react3.useEffect)(() => {
       const handler = (event) => {
         const msg = event.data?.pluginMessage;
         if (!msg) return;
         switch (msg.type) {
           case "SELECTION_CHANGED": {
-            if (!usageRequestedRef.current) {
-              if (usageTimerRef.current !== null) {
-                clearTimeout(usageTimerRef.current);
-                usageTimerRef.current = null;
-              }
-              usageTimerRef.current = setTimeout(requestInitialUsage, 300);
-            }
             const {
               count,
               nodes,
@@ -32498,7 +32561,17 @@
             break;
           }
           case "FLOOOW_USAGE": {
-            if (msg.usage) setFlooowUsage(msg.usage);
+            if (msg.error === "blocked") {
+              setPlanIssue("blocked");
+              setFlooowUsage(null);
+            } else if (msg.error === "retryable" || !isReadyUsage(msg.usage)) {
+              setPlanIssue("retryable");
+              setFlooowUsage(null);
+            } else {
+              setFlooowUsage(msg.usage);
+              setPlanIssue(null);
+            }
+            if (msg.refresh) setUsageCounting(false);
             break;
           }
           default:
@@ -32512,16 +32585,11 @@
       if (urlParams.get("nodes") === "2") {
       } else {
         parent.postMessage({ pluginMessage: { type: "INIT", locale: setAppLocale(resolveAppLocale(navigator.language)) } }, "*");
-        usageTimerRef.current = setTimeout(requestInitialUsage, 3e3);
       }
       return () => {
         window.removeEventListener("message", handler);
-        if (usageTimerRef.current !== null) {
-          clearTimeout(usageTimerRef.current);
-          usageTimerRef.current = null;
-        }
       };
-    }, [handleSelectionChange, setUIState, setFlooowUsage]);
+    }, [handleSelectionChange, setUIState, setFlooowUsage, setUsageCounting, setPlanIssue]);
   }
 
   // src/ui/hooks/useSelectionSummary.ts
@@ -37353,7 +37421,7 @@
     }
     const gizmoTypeLabel = (node) => {
       if (!node) return "";
-      if (!node.isFlowNode) return "FigJam object";
+      if (!node.isFlowNode) return "Figma object";
       const flowType = normalizeNodeType(node.flowNodeType || node.nodeType);
       if (flowType === "Branch") {
         return BRANCH_VARIANT_LABELS[normalizeBranchVariant(node.branchVariant)];
@@ -38029,12 +38097,8 @@
             isConnectDisabled = !connectorDirty;
           } else if (selectedNodes.length < 2) {
             isConnectDisabled = true;
-          } else if (selectedNodes.length === 2) {
-            isConnectDisabled = usageBlocked;
           } else {
-            const hasStart = Boolean(effectiveSource);
-            const hasEnd = Boolean(effectiveTarget);
-            isConnectDisabled = !hasStart || !hasEnd || usageBlocked;
+            isConnectDisabled = usageBlocked;
           }
           let statusText = "Select 2+ nodes to connect";
           if (isAllConnectors) {
@@ -38048,15 +38112,7 @@
           } else if (selectedNodes.length > 2) {
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
-            if (!hasStart && !hasEnd) {
-              statusText = "Select Start & End anchors";
-            } else if (!hasStart) {
-              statusText = "Select Start anchor";
-            } else if (!hasEnd) {
-              statusText = "Select End anchor";
-            } else {
-              statusText = `${selectedNodes.length} nodes ready to connect`;
-            }
+            statusText = hasStart && hasEnd ? `${selectedNodes.length} nodes ready to connect` : "Ready \u2014 anchors follow node distance";
           }
           return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
             "div",
@@ -41159,7 +41215,7 @@
       fill: "currentColor"
     }
   ) });
-  function SubscriptionModal({ usage, onClose }) {
+  function SubscriptionModal({ usage, scanning = false, onClose }) {
     const paidByEntitlement = isUnlimitedEntitlement(usage?.entitlement);
     const subscriptionStatus = paidByEntitlement && typeof usage?.periodEndsAt === "number" && typeof usage.autoRenew === "boolean" ? formatSubscriptionStatus({
       autoRenew: usage.autoRenew,
@@ -41220,19 +41276,22 @@
                 /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: `subscription-usage-section${isPaid ? " is-pro" : ""}`, children: [
                   /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "subscription-usage-label-row", children: [
                     /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-section-label", children: "Usage" }),
-                    /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: `subscription-usage-state is-${usageTone}`, children: isPaid ? "Unlimited" : limitReached ? "Limit reached" : `${remaining} remaining` })
+                    /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: `subscription-usage-state is-${scanning ? "scanning" : usageTone}`, children: scanning ? /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)(import_jsx_runtime29.Fragment, { children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-usage-spinner", "aria-hidden": "true" }),
+                      "Counting\u2026"
+                    ] }) : isPaid ? "Unlimited" : limitReached ? "Limit reached" : `${remaining} remaining` })
                   ] }),
                   /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "subscription-stat-box", children: [
                     /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "subscription-stat", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-stat-value", children: nodes }),
+                      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-stat-value", children: scanning ? "\u2026" : nodes }),
                       /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-stat-label", children: "Node" })
                     ] }),
                     /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "subscription-stat", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-stat-value", children: connectors }),
+                      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-stat-value", children: scanning ? "\u2026" : connectors }),
                       /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-stat-label", children: "Connector" })
                     ] }),
                     /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "subscription-stat total", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-stat-value", children: total }),
+                      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-stat-value", children: scanning ? "\u2026" : total }),
                       /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("span", { className: "subscription-stat-label", children: "Total" })
                     ] })
                   ] })
@@ -41314,7 +41373,11 @@
       endpointDirty,
       connectorLabelDraft,
       updateConnectorLabelDraft,
-      flooowUsage
+      flooowUsage,
+      usageCounting,
+      requestFlooowUsage,
+      planIssue,
+      retryPlanLoad
     } = useApp();
     const handleAddSizeSave = (0, import_react26.useCallback)((preset) => {
       addSizePreset(preset);
@@ -41352,6 +41415,16 @@
     (0, import_react26.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
+    const nodeLayoutKey = [
+      nodeOptionState.nodeType,
+      nodeOptionState.branchVariant ?? "",
+      multiDraft.nodeType ?? "",
+      multiDraft.branchVariant ?? "",
+      selectedNodes.map((n) => `${n?.flowNodeType ?? ""}:${n?.branchVariant ?? ""}`).join(",")
+    ].join("|");
+    (0, import_react26.useEffect)(() => {
+      autoResizeWindow();
+    }, [nodeLayoutKey, autoResizeWindow]);
     (0, import_react26.useEffect)(() => {
       autoResizeWindow();
     }, [isSingleFigjam, isMultiFigjam, autoResizeWindow]);
@@ -41425,15 +41498,15 @@
     }, []);
     function renderTitleBanner() {
       if (isSingleFigjam) {
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "figjam-title-label", children: "Figjam object" });
+        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "figjam-title-label", children: "Figma object" });
       }
       if (isMixedNodeAndFigjam) {
         const nodeLabel = flooowCount === 1 ? "1 Node" : `${flooowCount} Nodes`;
-        const figjamLabel = figjamObjectCount === 1 ? "1 FigJam object" : `${figjamObjectCount} FigJam objects`;
+        const figjamLabel = figjamObjectCount === 1 ? "1 Figma object" : `${figjamObjectCount} Figma objects`;
         return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { id: "multi-selection-text", children: `${nodeLabel} and ${figjamLabel} selected` }) });
       }
       if (isMultiFigjam) {
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figjam objects selected` }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figma objects selected` }) });
       }
       if (isSingleConn) {
         return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
@@ -41480,9 +41553,10 @@
         activeNodeId
       ) });
     }
+    const planLoading = flooowUsage === null && planIssue === null;
     return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, onInput: triggerFormChange, onChange: triggerFormChange, children: [
       /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "title-banner", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "segmented-control", role: "tablist", children: TABS.map((tab) => {
+      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: `segmented-control${planLoading || planIssue ? " disabled" : ""}`, role: "tablist", children: TABS.map((tab) => {
         const isConnectionDisabled = isSingleFigjam || !isConnSel && nodeCount < 2;
         const isAppearanceDisabled = isFigjamSelected || isMixedNodeAndFigjam || nodeCount === 0 || isConnSel;
         const isNodeDisabled = isFigjamSelected || isMixedNodeAndFigjam || isConnSel;
@@ -41493,7 +41567,7 @@
           {
             id: `tab-btn-${tab.id}`,
             className: `tab-btn${isActive ? " active" : ""}${isDisabled ? " disabled" : ""}`,
-            disabled: isDisabled,
+            disabled: isDisabled || planLoading || planIssue !== null,
             role: "tab",
             onClick: () => switchTab(tab.id),
             children: tab.label
@@ -41502,7 +41576,7 @@
         );
       }) }) }),
       /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("hr", { className: "section-divider" }),
-      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("main", { className: "tab-panels", children: isSingleFigjam ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "figjam-empty-card", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { children: "Select a Flooow node" }) }) : /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("main", { className: "tab-panels", children: planLoading ? null : planIssue ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "figjam-empty-card is-error", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { children: planIssue === "blocked" ? "Figma didn't respond, so Flooow can't edit this file right now." : "Couldn't load your plan. Refresh to try again." }) }) : isSingleFigjam ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "figjam-empty-card", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { children: "Select a Flooow node" }) }) : /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
         /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
           "section",
           {
@@ -41535,17 +41609,20 @@
         const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected && !isMixedNodeAndFigjam;
         const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
         const unlimited = isUnlimitedEntitlement(flooowUsage?.entitlement);
-        const planBadgeText = flooowUsage === null ? "\u2026" : `${planShortName(flooowUsage.entitlement)} Plan`;
+        const planBadgeText = flooowUsage === null ? "" : `${planShortName(flooowUsage.entitlement)} Plan`;
         const limitReached = usageBlocked && !unlimited;
-        const meterText = flooowUsage === null ? "Loading\u2026" : unlimited ? "Unlimited elements" : limitReached ? "Limit reached in this project" : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
+        const meterText = flooowUsage === null ? "" : unlimited ? "Unlimited elements" : limitReached ? "Limit reached in this project" : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
         return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("footer", { className: "app-footer", children: [
           /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
             "div",
             {
-              className: "footer-left footer-clickable",
-              onClick: () => setActiveModal("subscription"),
-              title: "Plan & Usage",
-              children: /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "footer-plan-block", children: [
+              className: `footer-left${planLoading ? "" : " footer-clickable"}`,
+              onClick: planLoading || planIssue ? void 0 : () => {
+                setActiveModal("subscription");
+                requestFlooowUsage();
+              },
+              title: planLoading || planIssue ? void 0 : "Plan & Usage",
+              children: planLoading ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { className: "footer-plan-spinner", role: "status", "aria-label": "Loading plan" }) : planIssue ? null : /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "footer-plan-block", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "footer-plan-row", children: [
                   /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { className: `footer-plan-title${unlimited ? " paid" : ""}`, children: planBadgeText }),
                   /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { className: `footer-plan-chevron${unlimited ? " paid" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(IcChevronRight, {}) })
@@ -41561,7 +41638,7 @@
               ] })
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "footer-right", children: nodeCount === 1 ? null : isMultiFlow || isMultiConn ? (
+          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "footer-right", children: planLoading ? null : planIssue ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("button", { className: "btn-ghost", type: "button", onClick: retryPlanLoad, children: "Refresh" }) : nodeCount === 1 ? null : isMultiFlow || isMultiConn ? (
             /* 노드 복수 선택·커넥터만 복수 선택: Undo(초안 취소) + Apply to All */
             /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
               /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
@@ -41609,7 +41686,10 @@
                   disabled: isFigjamSelected && !isMultiFigjam || !isConnSel && usageBlocked,
                   title: !isConnSel && usageBlocked ? t("tipQuotaBlocked") : void 0,
                   onClick: handleMainAction,
-                  children: isConnSel ? "Apply" : "Create Node"
+                  children: isConnSel ? "Apply" : /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { className: "create-node-plus", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M8 3.25c.331 0 .6.269.6.6v3.55H12.15a.6.6 0 0 1 0 1.2H8.6V12.15a.6.6 0 0 1-1.2 0V8.6H3.85a.6.6 0 0 1 0-1.2h3.55V3.85c0-.331.269-.6.6-.6Z", fill: "currentColor" }) }),
+                    "Create Node"
+                  ] })
                 }
               )
             ] })
@@ -41799,6 +41879,7 @@
         SubscriptionModal,
         {
           usage: flooowUsage,
+          scanning: usageCounting,
           onClose: () => setActiveModal("none")
         }
       ),

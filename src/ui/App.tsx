@@ -85,6 +85,10 @@ export function App() {
     connectorLabelDraft,
     updateConnectorLabelDraft,
     flooowUsage,
+    usageCounting,
+    requestFlooowUsage,
+    planIssue,
+    retryPlanLoad,
   } = useApp();
 
   // SizeModal onSave 핸들러 (매 렌더마다 새 함수 생성 방지)
@@ -144,6 +148,18 @@ export function App() {
   useEffect(() => {
     autoResizeWindow();
   }, [currentTab, autoResizeWindow]);
+
+  // 타입 변경으로 섹션이 접혀도 패널 박스만으로는 줄어든 높이가 안 잡히는 경우가 있다.
+  const nodeLayoutKey = [
+    nodeOptionState.nodeType,
+    nodeOptionState.branchVariant ?? '',
+    multiDraft.nodeType ?? '',
+    multiDraft.branchVariant ?? '',
+    selectedNodes.map((n) => `${n?.flowNodeType ?? ''}:${n?.branchVariant ?? ''}`).join(','),
+  ].join('|');
+  useEffect(() => {
+    autoResizeWindow();
+  }, [nodeLayoutKey, autoResizeWindow]);
 
   // FigJam 오브젝트 선택/해제 시 autoResize
   // isSingleFigjam/isMultiFigjam 변화 시 .tab-panel들이 DOM에서 교체되어
@@ -258,14 +274,14 @@ export function App() {
     if (isSingleFigjam) {
       return (
         <div className="figjam-title-label">
-          Figjam object
+          Figma object
         </div>
       );
     }
     // 0-1b. 노드 + 피그잼 오브젝트: Connection 전용 인디케이터
     if (isMixedNodeAndFigjam) {
       const nodeLabel = flooowCount === 1 ? '1 Node' : `${flooowCount} Nodes`;
-      const figjamLabel = figjamObjectCount === 1 ? '1 FigJam object' : `${figjamObjectCount} FigJam objects`;
+      const figjamLabel = figjamObjectCount === 1 ? '1 Figma object' : `${figjamObjectCount} Figma objects`;
       return (
         <div id="multi-selection-indicator" className="multi-selection-indicator" style={{ width: '100%', display: 'flex' }}>
           <span id="multi-selection-text">{`${nodeLabel} and ${figjamLabel} selected`}</span>
@@ -276,7 +292,7 @@ export function App() {
     if (isMultiFigjam) {
       return (
         <div id="multi-selection-indicator" className="multi-selection-indicator" style={{ width: '100%', display: 'flex' }}>
-          <span id="multi-selection-text">{`${nodeCount} Figjam objects selected`}</span>
+          <span id="multi-selection-text">{`${nodeCount} Figma objects selected`}</span>
         </div>
       );
     }
@@ -337,6 +353,8 @@ export function App() {
     );
   }
 
+  const planLoading = flooowUsage === null && planIssue === null;
+
   return (
     <div id="plugin-root" onClick={handleRootClick} onInput={triggerFormChange} onChange={triggerFormChange}>
       {/* 1. 타이틀 배너 */}
@@ -348,7 +366,7 @@ export function App() {
 
       {/* 2. 메인 탭 세그먼트 컨트롤 */}
       <nav className="main-tabs-wrapper">
-        <div className="segmented-control" role="tablist">
+        <div className={`segmented-control${planLoading || planIssue ? ' disabled' : ''}`} role="tablist">
           {TABS.map(tab => {
             const isConnectionDisabled =
               isSingleFigjam ||
@@ -374,7 +392,7 @@ export function App() {
                 key={tab.id}
                 id={`tab-btn-${tab.id}`}
                 className={`tab-btn${isActive ? ' active' : ''}${isDisabled ? ' disabled' : ''}`}
-                disabled={isDisabled}
+                disabled={isDisabled || planLoading || planIssue !== null}
                 role="tab"
                 onClick={() => switchTab(tab.id)}
               >
@@ -389,7 +407,15 @@ export function App() {
 
       {/* 3. 탭 패널들 — 피그잼 단일 오브젝트 선택 시 Select a Flooow node 그레이 카드만 노출 */}
       <main className="tab-panels">
-        {isSingleFigjam ? (
+        {planLoading ? null : planIssue ? (
+          <div className="figjam-empty-card is-error">
+            <span>
+              {planIssue === 'blocked'
+                ? "Figma didn't respond, so Flooow can't edit this file right now."
+                : "Couldn't load your plan. Refresh to try again."}
+            </span>
+          </div>
+        ) : isSingleFigjam ? (
           <div className="figjam-empty-card">
             <span>Select a Flooow node</span>
           </div>
@@ -429,11 +455,11 @@ export function App() {
         const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
         const unlimited = isUnlimitedEntitlement(flooowUsage?.entitlement);
         const planBadgeText = flooowUsage === null
-          ? '…'
+          ? ''
           : `${planShortName(flooowUsage.entitlement)} Plan`;
         const limitReached = usageBlocked && !unlimited;
         const meterText = flooowUsage === null
-          ? 'Loading…'
+          ? ''
           : unlimited
             ? 'Unlimited elements'
             : limitReached
@@ -442,31 +468,42 @@ export function App() {
 
         return (
           <footer className="app-footer">
-            {/* 왼쪽: 플랜 타이틀 + 사용량 (클릭 시 Plan & Usage 모달) */}
+            {/* 왼쪽: 구독 정보 로딩 중에는 플랜 묶음 대신 스피너 */}
             <div
-              className="footer-left footer-clickable"
-              onClick={() => setActiveModal('subscription')}
-              title="Plan & Usage"
+              className={`footer-left${planLoading ? '' : ' footer-clickable'}`}
+              onClick={planLoading || planIssue ? undefined : () => {
+                setActiveModal('subscription');
+                requestFlooowUsage();
+              }}
+              title={planLoading || planIssue ? undefined : 'Plan & Usage'}
             >
-              <div className="footer-plan-block">
-                <div className="footer-plan-row">
-                  <span className={`footer-plan-title${unlimited ? ' paid' : ''}`}>{planBadgeText}</span>
-                  <span className={`footer-plan-chevron${unlimited ? ' paid' : ''}`}>
-                    <IcChevronRight />
+              {planLoading ? (
+                <span className="footer-plan-spinner" role="status" aria-label="Loading plan" />
+              ) : planIssue ? null : (
+                <div className="footer-plan-block">
+                  <div className="footer-plan-row">
+                    <span className={`footer-plan-title${unlimited ? ' paid' : ''}`}>{planBadgeText}</span>
+                    <span className={`footer-plan-chevron${unlimited ? ' paid' : ''}`}>
+                      <IcChevronRight />
+                    </span>
+                  </div>
+                  <span
+                    className={`footer-usage-meter${limitReached ? ' limit-reached' : ''}`}
+                    title={meterText}
+                  >
+                    {meterText}
                   </span>
                 </div>
-                <span
-                  className={`footer-usage-meter${limitReached ? ' limit-reached' : ''}`}
-                  title={meterText}
-                >
-                  {meterText}
-                </span>
-              </div>
+              )}
             </div>
 
             {/* 오른쪽: 선택 상태에 따른 액션 버튼 (단일 선택 시 버튼 없음) */}
             <div className="footer-right">
-              {nodeCount === 1 ? null : isMultiFlow || isMultiConn ? (
+              {planLoading ? null : planIssue ? (
+                <button className="btn-ghost" type="button" onClick={retryPlanLoad}>
+                  Refresh
+                </button>
+              ) : nodeCount === 1 ? null : isMultiFlow || isMultiConn ? (
                 /* 노드 복수 선택·커넥터만 복수 선택: Undo(초안 취소) + Apply to All */
                 <>
                   <button
@@ -509,7 +546,14 @@ export function App() {
                     title={!isConnSel && usageBlocked ? t('tipQuotaBlocked') : undefined}
                     onClick={handleMainAction}
                   >
-                    {isConnSel ? 'Apply' : 'Create Node'}
+                    {isConnSel ? 'Apply' : (
+                      <>
+                        <svg className="create-node-plus" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                          <path d="M8 3.25c.331 0 .6.269.6.6v3.55H12.15a.6.6 0 0 1 0 1.2H8.6V12.15a.6.6 0 0 1-1.2 0V8.6H3.85a.6.6 0 0 1 0-1.2h3.55V3.85c0-.331.269-.6.6-.6Z" fill="currentColor" />
+                        </svg>
+                        Create Node
+                      </>
+                    )}
                   </button>
                 </>
               )}
@@ -737,6 +781,7 @@ export function App() {
       {activeModal === 'subscription' && (
         <SubscriptionModal
           usage={flooowUsage}
+          scanning={usageCounting}
           onClose={() => setActiveModal('none')}
         />
       )}

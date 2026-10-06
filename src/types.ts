@@ -340,7 +340,7 @@ export type PluginAction =
   | { type: 'GET_STATUS_LIST' }
   | { type: 'FOCUS_FRAME'; nodeId: string }
   | { type: 'GET_DESIGN_FRAMES' }
-  | { type: 'GET_FLOOOW_USAGE' }
+  | { type: 'GET_FLOOOW_USAGE'; refresh?: boolean }
   | { type: 'RESIZE_NODE'; nodeId: string; width: number; height: number }
   | {
       type: 'UPDATE_CONNECTOR_PROPERTIES';
@@ -480,7 +480,16 @@ export type CoreToUIMessage =
   | {
       type: 'FLOOOW_USAGE';
       usage: FlooowUsageState;
+      /** true면 현재 프로젝트 fresh scan 결과. 모달 로딩을 끝낸다. */
+      refresh?: boolean;
+      /**
+       * retryable: 다시 요청하면 풀릴 수 있는 지연·실패.
+       * blocked: Figma API가 응답하지 않아 편집을 열 수 없는 경우.
+       */
+      error?: PlanLoadIssue;
     };
+
+export type PlanLoadIssue = 'retryable' | 'blocked';
 
 
 

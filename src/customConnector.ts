@@ -24,6 +24,15 @@ export interface Box {
   height: number;
 }
 
+/** 부모 로컬 좌표가 아니라 캔버스 절대 박스. 중첩된 Figma 오브젝트도 페이지 위 커넥터와 맞는다. */
+export function sceneNodePageBox(node: SceneNode): Box {
+  const bounds = node.absoluteBoundingBox;
+  if (bounds) {
+    return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+  }
+  return { x: node.x, y: node.y, width: node.width, height: node.height };
+}
+
 export interface ConnectorOptions {
   strokeWeight?: number;
   strokeColor?: RGB;
@@ -856,18 +865,8 @@ export async function createOrthogonalVectorConnector(
   targetMagnet: MagnetPosition,
   options: ConnectorOptions = {}
 ): Promise<VectorNode | GroupNode> {
-  const srcBox: Box = {
-    x: sourceNode.x,
-    y: sourceNode.y,
-    width: sourceNode.width,
-    height: sourceNode.height,
-  };
-  const tgtBox: Box = {
-    x: targetNode.x,
-    y: targetNode.y,
-    width: targetNode.width,
-    height: targetNode.height,
-  };
+  const srcBox = sceneNodePageBox(sourceNode);
+  const tgtBox = sceneNodePageBox(targetNode);
 
   const pStart = getMagnetPoint(srcBox, sourceMagnet);
   const pEnd = getMagnetPoint(tgtBox, targetMagnet);
@@ -913,9 +912,8 @@ export async function createOrthogonalVectorConnector(
 
   // 피그마 VectorNode 생성
   const vector = figma.createVector();
-  vector.x = minX;
-  vector.y = minY;
   vector.resize(width, height);
+  setNodeAbsoluteXY(vector, minX, minY);
 
   // Circle, Diamond, Arrow 단자는 피그마 네이티브 StrokeCap으로 단일 VectorNode에 직접 렌더링
   const net = buildVectorNetwork(
@@ -1554,18 +1552,8 @@ export function optimizeNativeConnector(conn: ConnectorNode) {
     const targetNode = figma.getNodeById(end.endpointNodeId) as SceneNode | null;
     if (!sourceNode || !targetNode) return;
 
-    const srcBox: Box = {
-      x: sourceNode.x,
-      y: sourceNode.y,
-      width: sourceNode.width,
-      height: sourceNode.height,
-    };
-    const tgtBox: Box = {
-      x: targetNode.x,
-      y: targetNode.y,
-      width: targetNode.width,
-      height: targetNode.height,
-    };
+    const srcBox = sceneNodePageBox(sourceNode);
+    const tgtBox = sceneNodePageBox(targetNode);
 
     const routingType: ConnectorRoutingType = conn.connectorLineType === 'STRAIGHT' ? 'STRAIGHT' : 'ORTHOGONAL';
     const wasManual = safeGetPluginData(conn, MANUAL_MAGNET_FLAG_KEY) === 'true';
@@ -1693,18 +1681,8 @@ export async function updateOrthogonalVectorConnector(
 
   if (!vector) return;
 
-  const srcBox: Box = {
-    x: sourceNode.x,
-    y: sourceNode.y,
-    width: sourceNode.width,
-    height: sourceNode.height,
-  };
-  const tgtBox: Box = {
-    x: targetNode.x,
-    y: targetNode.y,
-    width: targetNode.width,
-    height: targetNode.height,
-  };
+  const srcBox = sceneNodePageBox(sourceNode);
+  const tgtBox = sceneNodePageBox(targetNode);
 
   // 라우팅·오프셋을 먼저 읽는다. 드래그 시 magnet 유지 여부는 이 경로의 관통 여부로 판단한다.
   const routingType: ConnectorRoutingType =

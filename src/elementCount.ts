@@ -36,7 +36,29 @@ export interface FlooowCountOptions {
   includeNativeConnectors?: boolean;
 }
 
+// [FLOOOW-COUNT] 계측 전용 (startup freeze 병목 추적용, 판정 로직 변경 없음)
+// - console/performance 접근은 try/catch + typeof 가드로 감싸 Node 테스트 환경에서도 안전.
+// - 개별 node 로그 금지, 10k 구간 progress + 누적 counter만 기록.
+const COUNT_T0: number =
+  typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+function clog(label: string): void {
+  try {
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    if (typeof console !== 'undefined' && typeof console.log === 'function') {
+      console.log(`[FLOOOW-COUNT] ${label} +${Math.round(now - COUNT_T0)}ms`);
+    }
+  } catch (_) {
+    // 계측 로그 실패는 본 로직에 영향 없음
+  }
+}
+let countFindTopConnectorCalls = 0;
+let countFindTopFlowCalls = 0;
+let countReadPluginDataCalls = 0;
+let countAncestorSteps = 0;
+
 function readPluginData(node: CountableNode | null, key: string): string {
+  countReadPluginDataCalls++;
   try {
     if (node && typeof node.getPluginData === 'function') {
       return node.getPluginData(key) || '';
@@ -63,12 +85,15 @@ function isConnectorLabel(node: CountableNode | null): boolean {
 
 // findConnectorNode 대응 (최상위 커넥터 승격 포함)
 function findTopConnectorNode(node: CountableNode | null): CountableNode | null {
+  countFindTopConnectorCalls++;
   let curr: CountableNode | null = node;
   while (curr && curr.type !== 'PAGE' && curr.type !== 'DOCUMENT') {
+    countAncestorSteps++;
     if (curr.type === 'CONNECTOR' || isTaggedConnector(curr)) {
       let top: CountableNode = curr;
       let parentScan: CountableNode | null = curr.parent;
       while (parentScan && parentScan.type !== 'PAGE' && parentScan.type !== 'DOCUMENT') {
+        countAncestorSteps++;
         if (parentScan.type === 'CONNECTOR' || isTaggedConnector(parentScan)) {
           top = parentScan;
         }
@@ -83,10 +108,12 @@ function findTopConnectorNode(node: CountableNode | null): CountableNode | null 
 
 // findFlowNode 대응 (커넥터 패밀리 우선 제외)
 function findTopFlowNode(node: CountableNode | null): CountableNode | null {
+  countFindTopFlowCalls++;
   if (!node) return null;
   if (findTopConnectorNode(node)) return null;
   let curr: CountableNode | null = node;
   while (curr && curr.type !== 'PAGE' && curr.type !== 'DOCUMENT') {
+    countAncestorSteps++;
     if (
       readPluginData(curr, 'is_flow_node') === 'true' ||
       Boolean(readPluginData(curr, 'node_type'))
@@ -111,9 +138,24 @@ export function countFlooowElements(
   const nodeIds = new Set<string>();
   const connectorIds = new Set<string>();
   const includeNative = options?.includeNativeConnectors === true;
+  const totalNodes = allNodes.length;
 
+  // 호출별 누적 counter 초기화 (계측 전용, 판정값과 무관)
+  countFindTopConnectorCalls = 0;
+  countFindTopFlowCalls = 0;
+  countReadPluginDataCalls = 0;
+  countAncestorSteps = 0;
+  clog(`start nodes=${totalNodes}`);
+
+  let processed = 0;
+  let nextMilestone = 10000;
   for (const n of allNodes) {
     if (!n) continue;
+    processed++;
+    if (processed >= nextMilestone) {
+      clog(`progress ${processed}/${totalNodes}`);
+      nextMilestone += 10000;
+    }
     const connTop = findTopConnectorNode(n);
     if (connTop) {
       if (isConnectorLabel(connTop)) continue;
@@ -132,9 +174,18 @@ export function countFlooowElements(
     }
   }
 
-  return {
+  clog(`iteration:done processed=${processed}/${totalNodes}`);
+  clog(
+    `counters findTopConnector=${countFindTopConnectorCalls} ` +
+      `findTopFlow=${countFindTopFlowCalls} ` +
+      `readPluginData=${countReadPluginDataCalls} ancestorSteps=${countAncestorSteps}`
+  );
+
+  const result = {
     nodes: nodeIds.size,
     connectors: connectorIds.size,
     total: nodeIds.size + connectorIds.size,
   };
+  clog(`done nodes=${result.nodes} connectors=${result.connectors} total=${result.total}`);
+  return result;
 }

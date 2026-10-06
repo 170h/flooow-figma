@@ -17,6 +17,7 @@ const CLOSE_SVG = (
 
 export interface SubscriptionModalProps {
   usage: FlooowUsageState | null;
+  scanning?: boolean;
   onClose: () => void;
 }
 
@@ -28,7 +29,7 @@ export interface SubscriptionModalProps {
  * - 구독 일정(periodEndsAt, autoRenew)이 있을 때만 갱신/만료 문구를 만든다.
  *   7일 이하는 연도를 붙이지 않는다. 자동갱신 꺼짐 + 기간 종료는 Free로 보여 준다.
  */
-export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
+export function SubscriptionModal({ usage, scanning = false, onClose }: SubscriptionModalProps) {
   const paidByEntitlement = isUnlimitedEntitlement(usage?.entitlement);
   const subscriptionStatus =
     paidByEntitlement &&
@@ -116,25 +117,32 @@ export function SubscriptionModal({ usage, onClose }: SubscriptionModalProps) {
           <div className={`subscription-usage-section${isPaid ? " is-pro" : ""}`}>
             <div className="subscription-usage-label-row">
               <span className="subscription-section-label">Usage</span>
-              <span className={`subscription-usage-state is-${usageTone}`}>
-                {isPaid
-                  ? "Unlimited"
-                  : limitReached
-                    ? "Limit reached"
-                    : `${remaining} remaining`}
+              <span className={`subscription-usage-state is-${scanning ? "scanning" : usageTone}`}>
+                {scanning ? (
+                  <>
+                    <span className="subscription-usage-spinner" aria-hidden="true" />
+                    Counting…
+                  </>
+                ) : isPaid ? (
+                  "Unlimited"
+                ) : limitReached ? (
+                  "Limit reached"
+                ) : (
+                  `${remaining} remaining`
+                )}
               </span>
             </div>
             <div className="subscription-stat-box">
               <div className="subscription-stat">
-                <span className="subscription-stat-value">{nodes}</span>
+                <span className="subscription-stat-value">{scanning ? "…" : nodes}</span>
                 <span className="subscription-stat-label">Node</span>
               </div>
               <div className="subscription-stat">
-                <span className="subscription-stat-value">{connectors}</span>
+                <span className="subscription-stat-value">{scanning ? "…" : connectors}</span>
                 <span className="subscription-stat-label">Connector</span>
               </div>
               <div className="subscription-stat total">
-                <span className="subscription-stat-value">{total}</span>
+                <span className="subscription-stat-value">{scanning ? "…" : total}</span>
                 <span className="subscription-stat-label">Total</span>
               </div>
             </div>
