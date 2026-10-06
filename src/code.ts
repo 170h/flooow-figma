@@ -1,6 +1,5 @@
 import type {
   WorkflowStatus,
-  FrameStatusItem,
   PluginAction,
   CoreToUIMessage,
   FlowNodePayload,
@@ -5432,48 +5431,6 @@ async function toggleNodeTheme(nodeId: string) {
 // ----------------------------------------------------
 // 5. 상태 뱃지 및 설정 저장
 // ----------------------------------------------------
-function collectStatusItems(): FrameStatusItem[] {
-  try {
-    const nodes = figma.currentPage.findAll((node) => {
-      try {
-        if (!node) return false;
-        return Boolean(safeGetPluginData(node, 'workflow_status'));
-      } catch (_) {
-        return false;
-      }
-    });
-
-    return nodes.map((node) => {
-      const status = safeGetPluginData(node, 'workflow_status') as WorkflowStatus;
-      if (node.type === 'FRAME' && safeGetPluginData(node, 'is_flow_node') === 'true') {
-        const frame = node as FrameNode;
-        const statusBadge = frame.children.find(
-          (c) => safeGetPluginData(c, 'is_status_badge') === 'true' || c.name === 'StatusBadge'
-        ) as FrameNode | undefined;
-        if (statusBadge && statusBadge.y <= 0) {
-          statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
-          statusBadge.x = frame.width - statusBadge.width - 10;
-          statusBadge.y = frame.height - statusBadge.height - 10;
-        }
-      }
-      const extracted = extractNodeText(node);
-      return {
-        id: node.id,
-        name: extracted.title || node.name,
-        status: status || 'draft',
-        x: Math.round(node.x),
-        y: Math.round(node.y),
-      };
-    });
-  } catch (_) {
-    return [];
-  }
-}
-
-function syncStatusList() {
-  const items = collectStatusItems();
-  postToUI({ type: 'STATUS_LIST_UPDATED', items });
-}
 
 // 상태 뱃지 적용 또는 제거 (노드 카드 우하단에 독립된 절대 위치로 부착)
 async function applyStatusToSelected(status?: WorkflowStatus | '') {
@@ -5651,7 +5608,6 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
     }
   }
 
-  syncStatusList();
   handleSelectionChange();
   if (isRemove) {
     notify(t('statusRemoved', { count: selection.length }), 'info');
@@ -6199,16 +6155,6 @@ function getDesignFrames(): DesignFrameItem[] {
   return items;
 }
 
-async function loadSavedSettings() {
-  const token = (await figma.clientStorage.getAsync('figma_token')) || '';
-  const fileUrl = (await figma.clientStorage.getAsync('figma_file_url')) || '';
-  postToUI({
-    type: 'SETTINGS_LOADED',
-    token,
-    fileUrl,
-  });
-}
-
 async function saveSettings(token: string, fileUrl: string) {
   await figma.clientStorage.setAsync('figma_token', token);
   await figma.clientStorage.setAsync('figma_file_url', fileUrl);
@@ -6325,15 +6271,7 @@ async function extractUI3Variables() {
     cssLight += `}\n`;
     cssDark += `}\n`;
 
-    const fullCss = `${cssLight}${darkCount > 0 ? cssDark : ''}`;
-
-    postToUI({
-      type: 'UI3_VARIABLES_EXTRACTED',
-      css: fullCss,
-      count: lightCount,
-      collections: collections.map((c) => c.name),
-    });
-
+    // UI 수신 제거됨(dead message 정리) — 추출 결과는 현재 UI로 전달하지 않음
     notify(t('tokensExtracted', { count: lightCount }), 'success');
   } catch (err) {
     notify(t('tokensFailed', { error: String(err) }), 'error');
@@ -6344,106 +6282,113 @@ async function extractUI3Variables() {
 // UI 메시지 수신 라우터
 // ----------------------------------------------------
 figma.ui.onmessage = async (msg: PluginAction) => {
-  switch (msg.type) {
-    case 'CREATE_FLOW_NODE':
-      await runCreateExclusive(() => createFlowNode(msg.payload));
-      postFlooowUsage();
-      break;
-    case 'UPDATE_FLOW_NODE':
-      await updateFlowNode(msg.payload);
-      break;
-    case 'BATCH_UPDATE_FLOW_NODES':
-      await batchUpdateFlowNodes(msg.payload.nodeIds, msg.payload.patch);
-      break;
-    case 'CONNECT_POINTS':
-      await runCreateExclusive(() => connectPoints(msg.payload));
-      postFlooowUsage();
-      break;
-    case 'CONNECT_CHAIN':
-      await runCreateExclusive(() => connectChain(msg.payload));
-      postFlooowUsage();
-      break;
-    case 'AUTO_CONNECT_SELECTED':
-      await runCreateExclusive(() => autoConnectSelected(msg.label));
-      postFlooowUsage();
-      break;
-    case 'UPDATE_CONNECTOR_LABEL':
-      await updateConnectorLabel(msg.connectorId, msg.label);
-      break;
-    case 'UPDATE_CONNECTOR_PROPERTIES':
-      await updateConnectorProperties(msg.payload);
-      break;
-    case 'SET_CONNECTOR_LINE_TYPE':
-      await setConnectorLineType(msg.connectorId, msg.lineType);
-      break;
-    case 'EXTRACT_UI3_VARIABLES':
-      await extractUI3Variables();
-      break;
-    case 'TOGGLE_NODE_THEME':
-      await toggleNodeTheme(msg.nodeId);
-      break;
-    case 'SET_STATUS':
-      await applyStatusToSelected(msg.status);
-      break;
-    case 'SET_ELEVATION':
-      await applyElevationToSelected(msg.level);
-      break;
-    case 'ADD_STEP_BADGES':
-      await addStepBadges(msg.startNumber || 1, msg.corner || 'TOP_LEFT', msg.shape || 'Square', msg.colorMode || 'Style');
-      break;
-    case 'REMOVE_STEP_BADGES':
-      await removeStepBadges();
-      break;
-    case 'GET_STATUS_LIST':
-      syncStatusList();
-      break;
-    case 'FOCUS_FRAME':
-      focusFrame(msg.nodeId);
-      break;
-    case 'GET_DESIGN_FRAMES': {
-      const frames = getDesignFrames();
-      postToUI({
-        type: 'DESIGN_FRAMES_LOADED',
-        frames,
-      });
-      break;
+  try {
+    switch (msg.type) {
+      case 'CREATE_FLOW_NODE':
+        await runCreateExclusive(() => createFlowNode(msg.payload));
+        postFlooowUsage();
+        break;
+      case 'UPDATE_FLOW_NODE':
+        await updateFlowNode(msg.payload);
+        break;
+      case 'BATCH_UPDATE_FLOW_NODES':
+        await batchUpdateFlowNodes(msg.payload.nodeIds, msg.payload.patch);
+        break;
+      case 'CONNECT_POINTS':
+        await runCreateExclusive(() => connectPoints(msg.payload));
+        postFlooowUsage();
+        break;
+      case 'CONNECT_CHAIN':
+        await runCreateExclusive(() => connectChain(msg.payload));
+        postFlooowUsage();
+        break;
+      case 'AUTO_CONNECT_SELECTED':
+        await runCreateExclusive(() => autoConnectSelected(msg.label));
+        postFlooowUsage();
+        break;
+      case 'UPDATE_CONNECTOR_LABEL':
+        await updateConnectorLabel(msg.connectorId, msg.label);
+        break;
+      case 'UPDATE_CONNECTOR_PROPERTIES':
+        await updateConnectorProperties(msg.payload);
+        break;
+      case 'SET_CONNECTOR_LINE_TYPE':
+        await setConnectorLineType(msg.connectorId, msg.lineType);
+        break;
+      case 'EXTRACT_UI3_VARIABLES':
+        await extractUI3Variables();
+        break;
+      case 'TOGGLE_NODE_THEME':
+        await toggleNodeTheme(msg.nodeId);
+        break;
+      case 'SET_STATUS':
+        await applyStatusToSelected(msg.status);
+        break;
+      case 'SET_ELEVATION':
+        await applyElevationToSelected(msg.level);
+        break;
+      case 'ADD_STEP_BADGES':
+        await addStepBadges(msg.startNumber || 1, msg.corner || 'TOP_LEFT', msg.shape || 'Square', msg.colorMode || 'Style');
+        break;
+      case 'REMOVE_STEP_BADGES':
+        await removeStepBadges();
+        break;
+      case 'GET_STATUS_LIST':
+        // 상태 목록 UI push 제거됨(dead message 정리) — 현재 UI에서 요청하지 않음
+        break;
+      case 'FOCUS_FRAME':
+        focusFrame(msg.nodeId);
+        break;
+      case 'GET_DESIGN_FRAMES': {
+        const frames = getDesignFrames();
+        postToUI({
+          type: 'DESIGN_FRAMES_LOADED',
+          frames,
+        });
+        break;
+      }
+      case 'GET_FLOOOW_USAGE':
+        postFlooowUsage();
+        break;
+      case 'RESIZE_NODE':
+        await resizeNode(msg.nodeId, msg.width, msg.height);
+        break;
+      case 'SAVE_SETTINGS':
+        await saveSettings(msg.token, msg.fileUrl);
+        break;
+      case 'LOAD_SETTINGS':
+        // 저장 설정 UI push 제거됨(dead message 정리) — 현재 UI에서 요청하지 않음
+        break;
+      case 'CLOSE_PLUGIN':
+        figma.closePlugin();
+        break;
+      case 'UNDO':
+        notify(t('undoHint'), 'info');
+        break;
+      case 'REDO':
+        notify(t('redoHint'), 'info');
+        break;
+      case 'NOTIFY':
+        notify(msg.message, msg.level);
+        break;
+      case 'RESIZE_WINDOW': {
+        const targetW = msg.width || 360;
+        const targetH = Math.max(200, Math.min(1200, Math.round(msg.height)));
+        figma.ui.resize(targetW, targetH);
+        break;
+      }
+      case 'INIT':
+        setAppLocale(msg.locale);
+        handleSelectionChange();
+        break;
+      default:
+        // 알 수 없는 action 무음 무시 방지 — 진단 로그를 남긴다
+        console.warn('알 수 없는 PluginAction:', (msg as { type?: string }).type);
+        break;
     }
-    case 'GET_FLOOOW_USAGE':
-      postFlooowUsage();
-      break;
-    case 'RESIZE_NODE':
-      await resizeNode(msg.nodeId, msg.width, msg.height);
-      break;
-    case 'SAVE_SETTINGS':
-      await saveSettings(msg.token, msg.fileUrl);
-      break;
-    case 'LOAD_SETTINGS':
-      await loadSavedSettings();
-      break;
-    case 'CLOSE_PLUGIN':
-      figma.closePlugin();
-      break;
-    case 'UNDO':
-      notify(t('undoHint'), 'info');
-      break;
-    case 'REDO':
-      notify(t('redoHint'), 'info');
-      break;
-    case 'NOTIFY':
-      notify(msg.message, msg.level);
-      break;
-    case 'RESIZE_WINDOW': {
-      const targetW = msg.width || 360;
-      const targetH = Math.max(200, Math.min(1200, Math.round(msg.height)));
-      figma.ui.resize(targetW, targetH);
-      break;
-    }
-    case 'INIT':
-      setAppLocale(msg.locale);
-      handleSelectionChange();
-      syncStatusList();
-      await loadSavedSettings();
-      break;
+  } catch (err) {
+    // 라우터 경계: 개별 핸들러의 예상 못한 throw가 dispatch 전체를 중단시키지 않도록 한다
+    console.error('[PluginAction 처리 실패]', (msg as { type?: string }).type, err);
   }
 };
 
@@ -6998,8 +6943,6 @@ figma.on('documentchange', async (event) => {
   }
 });
 
-// 최초 실행 시 현재 상태 동기화, 커넥터 레지스트리 캐시 구축 및 설정 로드
+// 최초 실행 시 현재 상태 동기화 및 커넥터 레지스트리 캐시 구축
 refreshConnectorRegistry();
 handleSelectionChange();
-syncStatusList();
-loadSavedSettings();

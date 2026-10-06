@@ -31,8 +31,6 @@ export function ElevationSection() {
     nodeOptionState,
     setNodeOptionState,
     applyElevationToNodes,
-    activeAppearanceSection,
-    setActiveAppearanceSection,
     autoResizeWindow,
     selectedNodes,
     multiDraft,
@@ -90,7 +88,7 @@ export function ElevationSection() {
     return computeOptionSwitchState(
       selectedNodes,
       'elevation',
-      (n) => Boolean(n.elevation !== undefined && n.elevation !== null ? n.elevation >= 0 : n.elevationOn)
+      (n) => Boolean((n.elevation !== undefined && n.elevation !== null) || n.elevationOn)
     );
   }, [selectedNodes, nodeOptionState.nodeType, nodeOptionState.elevation, nodeOptionState.elevationOn]);
 
@@ -169,11 +167,9 @@ export function ElevationSection() {
     setIsOpen(checked);
     if (selectedNodes.length >= 2) {
       if (checked) {
-        setActiveAppearanceSection('elevation');
         const targetLevel = typeof currentLevel === 'number' ? currentLevel : 0;
         updateMultiDraft({ elevation: targetLevel });
       } else {
-        setActiveAppearanceSection(null);
         updateMultiDraft({ elevation: null });
       }
       requestAnimationFrame(() => {
@@ -187,12 +183,10 @@ export function ElevationSection() {
     }
 
     if (checked) {
-      setActiveAppearanceSection('elevation');
       setNodeOptionState({ elevationOn: true });
       const targetLevel = typeof currentLevel === 'number' ? currentLevel : 0;
       applyElevationToNodes(targetLevel);
     } else {
-      setActiveAppearanceSection(null);
       setNodeOptionState({ elevationOn: false });
       applyElevationToNodes(null);
     }
@@ -204,7 +198,6 @@ export function ElevationSection() {
   function selectElevation(level: number) {
     if (effectiveState.disabled) return;
     setIsOpen(true);
-    setActiveAppearanceSection('elevation');
 
     if (selectedNodes.length >= 2) {
       updateMultiDraft({ elevation: level });

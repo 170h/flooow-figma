@@ -84,6 +84,7 @@ export function SizeSection() {
     updateMultiDraft,
     formTextDraft,
     setFormTextDraft,
+    canUndo,
   } = useApp();
 
   const summary = useSelectionSummary();
@@ -135,6 +136,24 @@ export function SizeSection() {
     height?: number;
     cornerRadius?: number;
   } | null>(null);
+
+  // Enter 직후 blur 중복 커밋 방지: 마지막 커밋 payload 키 (동일 값 재커밋 스킵)
+  const sizeCommitRef = React.useRef<string | null>(null);
+  function alreadyCommittedSize(key: string) {
+    if (sizeCommitRef.current === key) return true;
+    sizeCommitRef.current = key;
+    return false;
+  }
+
+  // Undo 등으로 적용 스냅샷이 소진되면 stale pending/가드를 해제해 복원 에코를 받아들인다
+  const prevCanUndoRef = React.useRef(canUndo);
+  React.useEffect(() => {
+    if (prevCanUndoRef.current && !canUndo) {
+      pendingSizeRef.current = null;
+      sizeCommitRef.current = null;
+    }
+    prevCanUndoRef.current = canUndo;
+  }, [canUndo]);
 
   // 미확정 입력 텍스트는 AppContext 단일 소유(formTextDraft).
   // controlled input 표시값이자 dirty 감지 원천이다.
@@ -218,6 +237,7 @@ export function SizeSection() {
     if (isDifferentNode) {
       lastSelectedNodeIdRef.current = currentNodeId;
       pendingSizeRef.current = null; // 다른 노드로 선택 변경 시 pending 클리어
+      sizeCommitRef.current = null; // 선택 변경 시 커밋 가드 리셋
     }
 
     // 사용자 조작 직후 600ms 이내에는 동일 노드에 대해 비동기 selection sync로 로컬 입력이 되돌려지거나 깜박이지 않도록 차단
@@ -349,6 +369,7 @@ export function SizeSection() {
     setSelectedSizePresetId(null);
 
     if (selectedNodes.length >= 2) {
+      if (alreadyCommittedSize(`MULTI:W:${validW}`)) return;
       updateMultiDraft({ width: validW, sizeMode: 'fixed' });
       return;
     }
@@ -356,6 +377,7 @@ export function SizeSection() {
     const curH = parseInt(heightInput, 10) || nodeOptionState.height || 90;
     const curR = parseInt(radiusInput, 10) || (nodeOptionState.cornerRadius ?? 0);
     const targetNodeId = selectedNodes[0]?.id || 'NONE';
+    if (alreadyCommittedSize(`${targetNodeId}:${validW}:${curH}:${curR}:fixed`)) return;
 
     pendingSizeRef.current = {
       nodeId: targetNodeId,
@@ -417,6 +439,7 @@ export function SizeSection() {
     setSelectedSizePresetId(null);
 
     if (selectedNodes.length >= 2) {
+      if (alreadyCommittedSize(`MULTI:H:${validH}`)) return;
       updateMultiDraft({ height: validH, sizeMode: 'fixed' });
       return;
     }
@@ -424,6 +447,7 @@ export function SizeSection() {
     const curW = parseInt(widthInput, 10) || nodeOptionState.width || 250;
     const curR = parseInt(radiusInput, 10) || (nodeOptionState.cornerRadius ?? 0);
     const targetNodeId = selectedNodes[0]?.id || 'NONE';
+    if (alreadyCommittedSize(`${targetNodeId}:${curW}:${validH}:${curR}:fixed`)) return;
 
     pendingSizeRef.current = {
       nodeId: targetNodeId,
@@ -484,6 +508,7 @@ export function SizeSection() {
     setSelectedSizePresetId(null);
 
     if (selectedNodes.length >= 2) {
+      if (alreadyCommittedSize(`MULTI:R:${validR}`)) return;
       updateMultiDraft({ cornerRadius: validR });
       return;
     }
@@ -491,6 +516,8 @@ export function SizeSection() {
     const curW = parseInt(widthInput, 10) || nodeOptionState.width || 250;
     const curH = parseInt(heightInput, 10) || nodeOptionState.height || 90;
     const targetNodeId = selectedNodes[0]?.id || 'NONE';
+    const modeArg = currentSizeMode === 'mixed' ? 'mixed' : currentSizeMode;
+    if (alreadyCommittedSize(`${targetNodeId}:${curW}:${curH}:${validR}:${modeArg}`)) return;
 
     pendingSizeRef.current = {
       nodeId: targetNodeId,
@@ -611,11 +638,7 @@ export function SizeSection() {
     if (mode !== 'mixed') {
       setNodeOptionState({ sizeMode: mode });
     }
-    const hiddenInput = document.getElementById('select-size-mode') as HTMLInputElement | null;
-    if (hiddenInput) {
-      hiddenInput.value = mode;
-      hiddenInput.dispatchEvent(new Event('change'));
-    }
+    // hidden input은 currentSizeMode 동기화 effect에서 React state로 갱신되므로 합성 change 이벤트 불필요
     setSelectedSizePresetId(null);
     setDropdownOpen(false);
     setSizeModeDropdownOpen(false);

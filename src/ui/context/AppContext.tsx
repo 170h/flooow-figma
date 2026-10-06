@@ -77,6 +77,28 @@ export const DEFAULT_STYLE_PRESETS: StylePreset[] = [
 
 const DEFAULT_STYLE_PRESET_IDS = new Set(['style-white', 'style-black']);
 
+/**
+ * 스타일 값(fill/weight/stroke)과 일치하는 프리셋 ID 탐색.
+ * 단일 선택 로드·다중 선택·Apply/Undo 동기화가 모두 이 판정식을 공유한다.
+ */
+function matchStylePresetId(
+  presets: StylePreset[],
+  fillColor: string | undefined,
+  strokeWeight: number | undefined,
+  strokeColor: string | undefined,
+): string | null {
+  if (!fillColor || strokeWeight === undefined) return null;
+  const matched = presets.find((p) => {
+    if (p.fillColor.toLowerCase() !== fillColor.toLowerCase()) return false;
+    if (p.strokeWeight !== strokeWeight) return false;
+    if (p.strokeWeight > 0 && strokeColor) {
+      if (p.strokeColor.toLowerCase() !== strokeColor.toLowerCase()) return false;
+    }
+    return true;
+  });
+  return matched ? matched.id : null;
+}
+
 const getCurrentUITheme = (): 'light' | 'dark' => {
   if (typeof document !== 'undefined' && (
     document.documentElement.classList.contains('figma-dark') ||
@@ -234,9 +256,6 @@ function normalizeTerminal(term?: string, fallback: string = 'NONE'): string {
 // 모달 타입
 export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color' | 'label-fill-color' | 'label-stroke-color' | 'subscription';
 
-// 어피어런스 탭 상호 배타적 토글 섹션 ('stepBadges' | 'status' | 'elevation' | null)
-export type ExclusiveAppearanceSection = 'stepBadges' | 'status' | 'elevation' | null;
-
 export interface AppContextValue {
   // 선택 상태
   selectedNodes: NodeInfo[];
@@ -244,10 +263,6 @@ export interface AppContextValue {
   isConnectorSelected: boolean;
   currentTab: string;
   setCurrentTab: (tab: string) => void;
-
-  // 어피어런스 독점 섹션 상태
-  activeAppearanceSection: ExclusiveAppearanceSection;
-  setActiveAppearanceSection: (section: ExclusiveAppearanceSection) => void;
 
   // UI 상태
   uiState: UIState;
@@ -503,14 +518,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedNodes, setSelectedNodes] = useState<NodeInfo[]>([]);
   const [isConnectorSelected, setIsConnectorSelected] = useState(false);
   const [currentTab, setCurrentTabState] = useState('node');
-  const [activeAppearanceSection, setActiveAppearanceSection] = useState<ExclusiveAppearanceSection>(null);
-  const userActionLockRef = useRef<number>(0);
-  const prevSelectedNodeIdRef = useRef<string | null>(null);
-
-  const setActiveAppearanceSectionWithLock = useCallback((section: ExclusiveAppearanceSection) => {
-    userActionLockRef.current = Date.now();
-    setActiveAppearanceSection(section);
-  }, []);
 
   const [uiState, setUIStateRaw] = useState<UIState>(DEFAULT_UI_STATE);
   const [nodeOptionState, setNodeOptionStateRaw] = useState<NodeOptionState>(DEFAULT_NODE_OPTION_STATE);
@@ -1167,6 +1174,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const snapshot = lastAppliedSnapshotRef.current;
     if (snapshot) {
       if (snapshot.type === 'single' && snapshot.singlePayload) {
+        const sp = snapshot.singlePayload;
+        // Undo 복원을 적용 플로우와 동일하게 취급: 복원 에코를 기존 단일 로드 hydration으로 수용
+        isApplyingSingleRef.current = true;
+        // 복원 대상 노드가 현재 선택 중인 경우에만 UI를 복원값에 즉시 동기화
+        // (선택 해제 후 생성 폼 등에는 건드리지 않는다)
+        const undoTargetSelected = (selectedNodesRef.current || []).some(n => n && n.id === sp.nodeId);
+        if (undoTargetSelected) {
+          // 복원값을 UI에 즉시 반영 (에코 도착 전 표시 일치)
+          const restoredFill = sp.colorHex ?? nodeOptionStateRef.current.fillColor;
+          setNodeOptionState({
+            fillColor: restoredFill,
+            width: sp.width ?? nodeOptionStateRef.current.width,
+            height: sp.height ?? nodeOptionStateRef.current.height,
+            cornerRadius: sp.cornerRadius ?? nodeOptionStateRef.current.cornerRadius,
+            elevationOn: sp.elevation !== undefined && sp.elevation !== null,
+            elevation: sp.elevation ?? nodeOptionStateRef.current.elevation,
+            singleLinkOn: Boolean(sp.figmaLink),
+            singleLinkUrl: sp.figmaLink || '',
+          });
+          const undoStyleId = matchStylePresetId(
+            stylePresets,
+            restoredFill,
+            nodeOptionStateRef.current.strokeWeight,
+            nodeOptionStateRef.current.strokeColor,
+          );
+          setSelectedStylePresetId(undoStyleId);
+          setUIState({ selectedStylePresetId: undoStyleId });
+          setFormTextDraft({
+            sizeW: sp.width !== undefined ? String(sp.width) : formTextDraftRef.current.sizeW,
+            sizeH: sp.height !== undefined ? String(sp.height) : formTextDraftRef.current.sizeH,
+            sizeR: sp.cornerRadius !== undefined ? String(sp.cornerRadius) : formTextDraftRef.current.sizeR,
+            linkUrl: sp.figmaLink || '',
+          });
+        }
         parent.postMessage({
           pluginMessage: {
             type: 'UPDATE_FLOW_NODE',
@@ -1211,7 +1252,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       revertSingleNodeForm(originalSelectedNodeRef.current);
       showToast(t('undoCancelled'), 'info');
     }
-  }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft]);
+  }, [showToast, revertSingleNodeForm, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft, setNodeOptionState, setFormTextDraft, stylePresets]);
 
   const lastResizeHeightRef = useRef(0);
   const resizeTimerRef = useRef<number | null>(null);
@@ -1490,8 +1531,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     const next = stylePresets.filter((p) => p.id !== id);
     saveStylePresets(next);
+    // 삭제한 프리셋을 가리키던 선택 상태는 비운다 (삭제 대상 오지정 방지)
+    if (selectedStylePresetId === id) {
+      setSelectedStylePresetId(null);
+      setUIState({ selectedStylePresetId: null });
+    }
     showToast(t('styleDeleted'), 'info');
-  }, [stylePresets, saveStylePresets, showToast]);
+  }, [stylePresets, saveStylePresets, showToast, selectedStylePresetId, setUIState]);
 
   const applyStatusToNode = useCallback((status?: string) => {
     const nodes = selectedNodesRef.current;
@@ -2097,6 +2143,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           payload: { nodeId: nodes[0].id, title, description: effectiveDesc, width: w, height: h, cornerRadius: radius, theme: nodes[0]?.theme || 'light', figmaLink: figmaUrl, nodeType: targetNodeType, colorHex: nodeOptionStateRef.current.fillColor, elevation: finalElevation }
         }
       }, '*');
+      // 방금 적용한 값에 맞춰 프리셋 선택 상태를 즉시 동기화 (에코 대기 없이)
+      // fill은 이번 Apply 값, weight/stroke은 이번 Apply가 건드리지 않으므로 노드 기존값 기준
+      const appliedStyleId = matchStylePresetId(
+        stylePresets,
+        nodeOptionStateRef.current.fillColor,
+        targetNode.strokeWeight,
+        targetNode.strokeColorHex,
+      );
+      setSelectedStylePresetId(appliedStyleId);
+      setUIState({ selectedStylePresetId: appliedStyleId });
     } else if (nodes.length >= 2) {
       // Step 2: 다중 선택 시 기존의 전체 덮어쓰기 loop를 차단 (Apply 실행은 Step 3에서 구현)
       return;
@@ -2114,7 +2170,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             width: w,
             height: h,
             cornerRadius: radius,
-            theme: 'light',
+            theme: getCurrentUITheme(),
             figmaLink: figmaUrl,
             nodeType: targetNodeType,
             branchVariant: targetNodeType === 'Branch' ? storedBranchVariant : undefined,
@@ -2132,7 +2188,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     }
-  }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, setNodeOptionState, showToast]);
+  }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, setNodeOptionState, setUIState, setSelectedStylePresetId, showToast, stylePresets]);
 
   const handleSelectionChange = useCallback((
     count: number,
@@ -2262,6 +2318,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else if (count === 0) {
       // 바탕화면 클릭 (신규 생성 모드): Screen / Hug / White / Elevation off
       setCurrentTab('node');
+      // 선택 해제 전환 시에만 생성 폼을 팩토리 기본값으로 복원한다.
+      // 동일 0-선택 재수신(문서 변경 등)에서는 입력 중인 생성값을 보존한다.
+      if (isSelectionChanged) {
+        setNodeOptionState({ ...DEFAULT_NODE_OPTION_STATE });
+        setFormTextDraft({ ...DEFAULT_FORM_TEXT_DRAFT });
+      }
     } else {
       // 일반 노드 선택: 이전 노드에서 마지막으로 선택했던 탭으로 복원
       const targetTab = lastNodeTabRef.current || 'node';
@@ -2310,51 +2372,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         };
         setNodeOptionState(nodeOptionsUpdates);
 
-        const matchedPreset = stylePresets.find((p) => {
-          const matchFill = p.fillColor.toLowerCase() === fillColor.toLowerCase();
-          if (!matchFill) return false;
-          if (p.strokeWeight !== strokeWeight) return false;
-          if (p.strokeWeight > 0 && strokeColor) {
-            if (p.strokeColor.toLowerCase() !== strokeColor.toLowerCase()) return false;
-          }
-          return true;
-        });
-        const matchedId = matchedPreset ? matchedPreset.id : null;
+        const matchedId = matchStylePresetId(stylePresets, fillColor, strokeWeight, strokeColor);
         setSelectedStylePresetId(matchedId);
         setUIState({ selectedStylePresetId: matchedId });
+      } else if (isSelectionChanged) {
+        // 단일 비플로우·다중·해제: 이전 선택의 프리셋 잔상을 남기지 않는다.
+        // 다중은 전원 동일 프리셋일 때만 해당 ID, 하나라도 다르면 null(Mixed 규약).
+        const flowNodesForPreset = nodes.filter(n => n && Boolean(n.isFlowNode));
+        let nextPresetId: string | null = null;
+        if (nodes.length === 0) {
+          nextPresetId = null;
+        } else if (flowNodesForPreset.length >= 2) {
+          const ids = flowNodesForPreset.map(n =>
+            matchStylePresetId(stylePresets, n.fillColorHex || undefined, n.strokeWeight, n.strokeColorHex || undefined)
+          );
+          nextPresetId = ids.every(id => id !== null && id === ids[0]) ? ids[0] : null;
+        } else {
+          nextPresetId = null;
+        }
+        setSelectedStylePresetId(nextPresetId);
+        setUIState({ selectedStylePresetId: nextPresetId });
       }
     }
 
-    // 어피어런스 탭 독점 섹션 동기화 (한 번에 하나만 열리도록 유지)
-    // 사용자가 UI에서 스위치를 조작한 직후 600ms 동안은 피그마의 중간 비동기 응답으로 덮어쓰지 않음
-    const isUserLocked = Date.now() - userActionLockRef.current < 600;
-    const currentNodeId = nodes.length === 1 ? nodes[0]?.id : (nodes.length > 1 ? 'MULTI' : null);
-    const isDifferentNode = currentNodeId !== prevSelectedNodeIdRef.current;
-    prevSelectedNodeIdRef.current = currentNodeId;
-
-    if (!isUserLocked || isDifferentNode) {
-      if (nodes.length > 0) {
-        const flowNodes = nodes.filter(n => n && n.isFlowNode);
-        const hasAnyElevation = flowNodes.some(n =>
-          n.elevation !== undefined && n.elevation !== null
-            ? n.elevation >= 0
-            : Boolean(n.elevationOn)
-        );
-        if (hasAnyElevation) {
-          setActiveAppearanceSection('elevation');
-        } else {
-          setActiveAppearanceSection(null);
-        }
-      } else {
-        const hasElevation = Boolean(nodeOptionStateRef.current.elevationOn);
-        if (hasElevation) {
-          setActiveAppearanceSection('elevation');
-        } else {
-          setActiveAppearanceSection(null);
-        }
-      }
-    }
-  }, [closeAllPopovers, setCurrentTab, setNodeOptionState, setUIState, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft]);
+  }, [closeAllPopovers, setCurrentTab, setNodeOptionState, setUIState, clearMultiDraft, clearConnectorLabelDraft, clearEndpointMagnetDraft, stylePresets]);
 
   const value: AppContextValue = {
     selectedNodes,
@@ -2362,8 +2403,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isConnectorSelected,
     currentTab,
     setCurrentTab,
-    activeAppearanceSection,
-    setActiveAppearanceSection: setActiveAppearanceSectionWithLock,
     uiState,
     setUIState,
     nodeOptionState,

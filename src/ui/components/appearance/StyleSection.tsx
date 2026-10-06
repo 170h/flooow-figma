@@ -156,6 +156,23 @@ export function StyleSection() {
   const [strokeInput, setStrokeInput] = useState("");
   const [weightInput, setWeightInput] = useState("");
 
+  // Enter 직후 blur 중복 적용 방지: 마지막 적용 키 (동일 값 재적용 스킵)
+  const styleCommitRef = useRef<string | null>(null);
+  const styleScopeId =
+    selectedNodes.length === 1
+      ? selectedNodes[0]?.id || "NONE"
+      : selectedNodes.length > 1
+        ? "MULTI"
+        : "NONE";
+  const prevStyleScopeRef = useRef(styleScopeId);
+  // 선택 변경 시 커밋 가드 리셋 (동일 값이라도 새 선택에는 적용되어야 함)
+  useEffect(() => {
+    if (prevStyleScopeRef.current !== styleScopeId) {
+      prevStyleScopeRef.current = styleScopeId;
+      styleCommitRef.current = null;
+    }
+  }, [styleScopeId]);
+
   // 외부 선택 변경 또는 상태 변경 시 로컬 인풋 동기화
   useEffect(() => {
     if (isFillMixed) {
@@ -265,6 +282,9 @@ export function StyleSection() {
       const formatted = newColorHex.startsWith("#")
         ? newColorHex
         : `#${newColorHex}`;
+      const styleKey = `${styleScopeId}:fill:${formatted.toUpperCase()}`;
+      if (styleCommitRef.current === styleKey) return;
+      styleCommitRef.current = styleKey;
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ colorHex: formatted });
         return;
@@ -276,6 +296,9 @@ export function StyleSection() {
   );
 
   const applyFillNone = useCallback(() => {
+    const styleKey = `${styleScopeId}:fill:None`;
+    if (styleCommitRef.current === styleKey) return;
+    styleCommitRef.current = styleKey;
     if (selectedNodes.length >= 2) {
       updateMultiDraft({ colorHex: "None" });
       return;
@@ -301,6 +324,9 @@ export function StyleSection() {
   };
 
   const applyStrokeNone = useCallback(() => {
+    const styleKey = `${styleScopeId}:stroke:none`;
+    if (styleCommitRef.current === styleKey) return;
+    styleCommitRef.current = styleKey;
     if (selectedNodes.length >= 2) {
       updateMultiDraft({ strokeWeight: 0 });
       return;
@@ -320,6 +346,9 @@ export function StyleSection() {
           : effectiveStrokeWeight > 0
             ? effectiveStrokeWeight
             : 1.5;
+      const styleKey = `${styleScopeId}:stroke:${formatted.toUpperCase()}:${targetWeight}`;
+      if (styleCommitRef.current === styleKey) return;
+      styleCommitRef.current = styleKey;
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ strokeColor: formatted, strokeWeight: targetWeight });
         return;
@@ -345,6 +374,9 @@ export function StyleSection() {
   const applyStrokeWeight = useCallback(
     (newWeight: number) => {
       const validWeight = Math.max(0, Math.round(newWeight * 10) / 10);
+      const styleKey = `${styleScopeId}:strokeWeight:${validWeight}`;
+      if (styleCommitRef.current === styleKey) return;
+      styleCommitRef.current = styleKey;
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ strokeWeight: validWeight });
         return;

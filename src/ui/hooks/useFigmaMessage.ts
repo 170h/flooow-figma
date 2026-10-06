@@ -9,7 +9,6 @@ import { resolveAppLocale, setAppLocale } from '../../i18n';
 export function useFigmaMessage() {
   const {
     handleSelectionChange,
-    setCurrentTab,
     setUIState,
     setDesignFrames,
     setFlooowUsage,
@@ -100,12 +99,6 @@ export function useFigmaMessage() {
           break;
         }
 
-        case 'INIT_DONE':
-        case 'READY': {
-          // 초기화 완료 후 처리 (필요 시 확장)
-          break;
-        }
-
         case 'DESIGN_FRAMES_LOADED': {
           setDesignFrames(msg.frames || []);
           break;
@@ -116,12 +109,9 @@ export function useFigmaMessage() {
           break;
         }
 
-        case 'SWITCH_TAB': {
-          if (msg.tab) setCurrentTab(msg.tab);
-          break;
-        }
-
         default:
+          // 알 수 없는 메시지 무음 폐기 방지 — 정상 흐름에서는 도달하지 않음
+          console.warn('알 수 없는 Core 메시지:', (msg as { type?: string })?.type);
           break;
       }
     };
@@ -142,5 +132,5 @@ export function useFigmaMessage() {
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, [handleSelectionChange, setCurrentTab, setUIState, setFlooowUsage]);
+  }, [handleSelectionChange, setUIState, setFlooowUsage]);
 }

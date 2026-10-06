@@ -241,6 +241,7 @@ export function ConnectSection() {
     const isDifferentSelection = currentSelectionKey !== prevSelectionKeyRef.current;
     if (isDifferentSelection) {
       prevSelectionKeyRef.current = currentSelectionKey;
+      weightCommitRef.current = null; // 선택 변경 시 두께 커밋 가드 리셋
       // 선택 변경에 의해 동기화되는 노드의 색상을 기록하여, 선택만 했을 때 applyCurrentConnectorState가 자동 격발되는 것을 방지
       const firstConn = selectedNodes.find(n => n && n.isConnector);
       lastSyncedSelectionColorRef.current = firstConn?.connectorColorHex ? firstConn.connectorColorHex.toUpperCase() : null;
@@ -625,6 +626,16 @@ export function ConnectSection() {
     if (selectEl) selectEl.value = formatted;
     setTimeout(() => markConnectorDirty(), 0);
   }
+
+  // 두께 입력 확정 (Enter/blur 공용): 동일 값 재확정 시 중복 적용 스킵
+  const commitStrokeWeightInput = () => {
+    const selectionKey = selectedNodes.map((n) => n.id).sort().join(',');
+    const weightKey = `${selectionKey}:weight:${isWeightMixed ? 'MIXED' : weightInput}`;
+    if (weightCommitRef.current === weightKey) return; // Enter 직후 blur 중복 방지
+    weightCommitRef.current = weightKey;
+    clampAndSyncStrokeWeight();
+    markConnectorDirty();
+  };
 
   // 두께 입력값 clamp 및 동기화 헬퍼 (C-25)
   const clampAndSyncStrokeWeight = () => {
@@ -1014,14 +1025,10 @@ export function ConnectSection() {
               }}
               onFocus={(e) => e.currentTarget.select()}
               onClick={(e) => e.currentTarget.select()}
-              onBlur={() => {
-                clampAndSyncStrokeWeight();
-                markConnectorDirty();
-              }}
+              onBlur={commitStrokeWeightInput}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  clampAndSyncStrokeWeight();
-                  markConnectorDirty();
+                  commitStrokeWeightInput();
                 }
               }}
             />

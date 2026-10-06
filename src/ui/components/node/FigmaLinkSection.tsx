@@ -52,6 +52,8 @@ export function FigmaLinkSection() {
   const cachedUrlRef = useRef<string>("");
   const userActionLockRef = useRef<number>(0);
   const prevSelectedNodeIdRef = useRef<string | null>(null);
+  // Enter 직후 blur 중복 커밋 방지: 마지막 커밋 URL 키 (동일 값 재커밋 스킵)
+  const linkCommitRef = useRef<string | null>(null);
 
   // 비활성 사유 칩 (클릭 시 잠시 표시)
   const disabledNotice = useDisabledNotice();
@@ -171,6 +173,7 @@ export function FigmaLinkSection() {
 
     if (isDifferentNode) {
       setIsOn(null);
+      linkCommitRef.current = null; // 선택 변경 시 커밋 가드 리셋
     }
 
     // 사용자가 현재 입력필드에 포커스하고 입력 중인 경우 외부 동기화로 인한 값 덮어쓰기 방지 (GEMINI §12 가드)
@@ -224,6 +227,16 @@ export function FigmaLinkSection() {
 
   function commitUrl(currentRawUrl: string) {
     const trimmed = currentRawUrl.trim();
+    const linkScopeId =
+      selectedNodes.length === 1
+        ? selectedNodes[0]?.id || "NONE"
+        : selectedNodes.length > 1
+          ? "MULTI"
+          : "NONE";
+    const canonical = trimmed ? normalizeUrl(trimmed) : "";
+    const linkKey = `${linkScopeId}:${canonical || "EMPTY"}`;
+    if (linkCommitRef.current === linkKey) return; // Enter 직후 blur 중복 방지
+    linkCommitRef.current = linkKey;
     if (!trimmed) {
       setUrl("");
       cachedUrlRef.current = "";
@@ -285,6 +298,7 @@ export function FigmaLinkSection() {
     if (!checked) {
       // 1. 토글을 껐을 때: URL은 캐시에 남겨두고 노드 캔버스의 링크 배지만 숨김
       cachedUrlRef.current = url;
+      linkCommitRef.current = null; // 해제 적용 후 동일 URL 재커밋이 동작하도록 가드 리셋
       setNodeOptionState({ singleLinkOn: false, singleLinkUrl: url });
       setTimeout(() => {
         applyCurrentNodeState(undefined, undefined, {
@@ -332,6 +346,7 @@ export function FigmaLinkSection() {
     e.stopPropagation();
     setUrl("");
     cachedUrlRef.current = "";
+    linkCommitRef.current = null; // 삭제 적용 후 후속 blur 커밋이 동작하도록 가드 리셋
     if (selectedNodes.length >= 2) {
       updateMultiDraft({
         figmaLink: "",

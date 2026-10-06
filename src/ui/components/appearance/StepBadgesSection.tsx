@@ -115,6 +115,8 @@ export function StepBadgesSection() {
 
   const userActionLockRef = useRef<number>(0);
   const prevSelectedNodeIdRef = useRef<string | null>(null);
+  // Enter 직후 blur 중복 커밋 방지: 마지막 커밋 키 (동일 값 재커밋 스킵)
+  const badgeCommitRef = useRef<string | null>(null);
 
   // 비활성 사유 칩 (클릭 시 잠시 표시)
   const disabledNotice = useDisabledNotice();
@@ -280,6 +282,7 @@ export function StepBadgesSection() {
 
     if (isDifferentNode) {
       setIsOpen(null);
+      badgeCommitRef.current = null; // 선택 변경 시 커밋 가드 리셋
     }
 
     if (selectedNodes.length === 0) {
@@ -464,6 +467,9 @@ export function StepBadgesSection() {
       }
       const parsed = parseInt(stepNumText, 10);
       const val = isNaN(parsed) || parsed < 1 ? 1 : parsed;
+      const badgeKey = `MULTI:${val}:${selectedBadgeCorner}:${selectedBadgeShape}:${selectedBadgeColorMode}`;
+      if (badgeCommitRef.current === badgeKey) return; // Enter 직후 blur 중복 방지
+      badgeCommitRef.current = badgeKey;
       setIsMixed(false);
       setStepNumText(String(val));
       updateMultiDraft({ badgeNumber: val });
@@ -471,6 +477,10 @@ export function StepBadgesSection() {
     }
     setIsMixed(false);
     const val = getNumberValue();
+    const singleId = selectedNodes[0]?.id || "NONE";
+    const singleKey = `${singleId}:${val}:${selectedBadgeCorner}:${selectedBadgeShape}:${selectedBadgeColorMode}`;
+    if (badgeCommitRef.current === singleKey) return; // Enter 직후 blur 중복 방지
+    badgeCommitRef.current = singleKey;
     setStepNumText(String(val));
     setNodeOptionState({ stepNumber: val });
     if (isSectionOpen && !isMultiMode) {

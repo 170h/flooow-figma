@@ -24,14 +24,6 @@ export interface StatusMeta {
 // NOTE: 런타임 값(STATUS_CONFIG)은 src/domain/nodeDomain.ts로 이동.
 // 프로토콜 계약(타입)은 이 파일에 유지한다 (INV-07).
 
-export interface FrameStatusItem {
-  id: string;
-  name: string;
-  status: WorkflowStatus;
-  x: number;
-  y: number;
-}
-
 export type MagnetPosition = 'TOP' | 'BOTTOM' | 'LEFT' | 'RIGHT';
 // Figma UI3 6종 노드 분류 타입 및 레거시 호환 타입
 export type DiagramNodeType =
@@ -341,7 +333,6 @@ export type PluginAction =
   | { type: 'AUTO_CONNECT_SELECTED'; label?: string }
   | { type: 'UPDATE_CONNECTOR_LABEL'; connectorId: string; label: string }
   | { type: 'TOGGLE_NODE_THEME'; nodeId: string }
-  | { type: 'CREATE_CONNECTORS'; label?: string; lineStyle?: 'solid' | 'dashed' }
   | { type: 'ADD_STEP_BADGES'; startNumber?: number; corner?: string; shape?: string; colorMode?: 'White' | 'Black' | 'Style' }
   | { type: 'REMOVE_STEP_BADGES' }
   | { type: 'SET_STATUS'; status: WorkflowStatus }
@@ -350,7 +341,6 @@ export type PluginAction =
   | { type: 'FOCUS_FRAME'; nodeId: string }
   | { type: 'GET_DESIGN_FRAMES' }
   | { type: 'GET_FLOOOW_USAGE' }
-  | { type: 'CREATE_TEMPLATE'; templateType: 'user_flow' | 'screen_spec' | 'feature_roadmap' }
   | { type: 'RESIZE_NODE'; nodeId: string; width: number; height: number }
   | {
       type: 'UPDATE_CONNECTOR_PROPERTIES';
@@ -484,32 +474,12 @@ export type CoreToUIMessage =
       multiNodeConnectors?: MultiNodeConnectorDetail[];
     }
   | {
-      type: 'STATUS_LIST_UPDATED';
-      items: FrameStatusItem[];
-    }
-  | {
       type: 'DESIGN_FRAMES_LOADED';
       frames: DesignFrameItem[];
     }
   | {
       type: 'FLOOOW_USAGE';
       usage: FlooowUsageState;
-    }
-  | {
-      type: 'UI3_VARIABLES_EXTRACTED';
-      css: string;
-      count: number;
-      collections: string[];
-    }
-  | {
-      type: 'SETTINGS_LOADED';
-      token: string;
-      fileUrl: string;
-    }
-  | {
-      type: 'TOAST';
-      message: string;
-      level: 'info' | 'success' | 'warning' | 'error';
     };
 
 
