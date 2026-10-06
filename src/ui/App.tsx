@@ -421,7 +421,6 @@ export function App() {
 
       {/* 4. 푸터: 왼쪽 구독 상태(Free Plan) + 오른쪽 액션 영역 */}
       {(() => {
-        const isSingleFlow = nodeCount === 1 && !isConnSel && !isFigjamSelected;
         const isMultiFlow = nodeCount >= 2 && !isConnSel && !isFigjamSelected && !isMixedNodeAndFigjam;
 
         // Quota UI는 Core FLOOOW_USAGE만 사용 (UI 자체 계산 금지).
@@ -464,19 +463,9 @@ export function App() {
               </div>
             </div>
 
-            {/* 오른쪽: 선택 상태에 따른 액션 버튼 */}
+            {/* 오른쪽: 선택 상태에 따른 액션 버튼 (단일 선택 시 버튼 없음) */}
             <div className="footer-right">
-              {isSingleFlow || isSingleFigjam ? (
-                /* 단일 선택: Undo / Apply 미렌더링, Upgrade 버튼 표시 */
-                <button
-                  id="btn-upgrade"
-                  className="btn-cta-secondary btn-upgrade"
-                  type="button"
-                  onClick={() => {}}
-                >
-                  Upgrade
-                </button>
-              ) : isMultiFlow || isMultiConn ? (
+              {nodeCount === 1 ? null : isMultiFlow || isMultiConn ? (
                 /* 노드 복수 선택·커넥터만 복수 선택: Undo(초안 취소) + Apply to All */
                 <>
                   <button

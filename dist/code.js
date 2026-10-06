@@ -2869,8 +2869,18 @@
       measureNode.remove();
     }
   }
+  var cachedSpaceAdvanceW = null;
+  async function measureSpaceAdvance() {
+    if (cachedSpaceAdvanceW !== null) return cachedSpaceAdvanceW;
+    const font = { family: "Inter", style: "Bold" };
+    const withSpace = await measureSingleLineTextWidth("a a", font, 13);
+    const withoutSpace = await measureSingleLineTextWidth("aa", font, 13);
+    cachedSpaceAdvanceW = Math.max(0, withSpace - withoutSpace);
+    return cachedSpaceAdvanceW;
+  }
   var TITLE_CHAR_LIMIT = 32;
   var TAG_TITLE_PAD_X = 12;
+  var DESC_LINE_HEIGHT = 15;
   function clampTitleChars(title) {
     const chars = Array.from(title);
     return chars.length > TITLE_CHAR_LIMIT ? chars.slice(0, TITLE_CHAR_LIMIT).join("") : title;
@@ -2944,13 +2954,18 @@
     const pl = typeof card.paddingLeft === "number" ? card.paddingLeft : 16;
     const pr = typeof card.paddingRight === "number" ? card.paddingRight : 16;
     const strokeOffset = (typeof card.strokeWeight === "number" ? card.strokeWeight : 1.5) * 2;
-    const trimmedTitle = (title || "").trim();
+    const rawTitle = title || "";
+    const trimmedTitle = rawTitle.trim();
     let measuredTitleW = 0;
     if (trimmedTitle) {
       const titleFont = { family: "Inter", style: "Bold" };
       measuredTitleW = await measureSingleLineTextWidth(trimmedTitle, titleFont, 13);
     }
-    const titleRequiredW = measuredTitleW > 0 ? measuredTitleW + pl + pr + Math.ceil(strokeOffset) + 4 : SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
+    const leadingSpaces = (rawTitle.match(/^[ \u00A0]+/) || [""])[0].length;
+    const trailingSpaces = (rawTitle.match(/[ \u00A0]+$/) || [""])[0].length;
+    const edgeSpaceCount = rawTitle ? leadingSpaces + trailingSpaces : 0;
+    const edgeSpaceW = edgeSpaceCount > 0 ? await measureSpaceAdvance() * edgeSpaceCount : 0;
+    const titleRequiredW = measuredTitleW > 0 || edgeSpaceW > 0 ? measuredTitleW + edgeSpaceW + pl + pr + Math.ceil(strokeOffset) + 8 : SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
     const internalRequiredW = await calculateMinimumInternalContentWidth(status, figmaLink);
     const fitW = Math.max(SCREEN_NODE_CONSTRAINTS.MIN_WIDTH, titleRequiredW, internalRequiredW);
     return clampScreenWidth(fitW);
@@ -2981,6 +2996,13 @@
   }
   async function updateDescTextTruncation(card, descText, currentHeight, textCharacters, targetWidth) {
     try {
+      try {
+        const truncLh = descText.lineHeight;
+        if (typeof truncLh !== "object" || truncLh === null || truncLh.unit !== "PIXELS" || Math.round(truncLh.value || 0) !== DESC_LINE_HEIGHT) {
+          descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: "PIXELS" };
+        }
+      } catch (_) {
+      }
       const descFont = { family: "Inter", style: "Regular" };
       await figma.loadFontAsync(descFont);
       await ensureTextNodeFontsLoaded(descText);
@@ -3056,7 +3078,7 @@
       const headerRow = card.children.find(isHeaderFrame);
       const headerH = headerRow ? headerRow.height : 20;
       const availableH = Math.max(14, currentHeight - 14 - pb - 8 - Math.round(headerH));
-      descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
+      descText.maxLines = Math.max(1, Math.floor(availableH / DESC_LINE_HEIGHT));
     } catch (err) {
       console.warn("updateDescTextTruncation failed:", err);
     }
@@ -3836,10 +3858,34 @@
       const originalText = textNode.characters;
       const cleanedText = originalText.split("\n").map((line) => line.replace(/^[\s\u2022\u25E6\u2023\u2043\u2219\u25AA\u25AB\-\*]+(?:\s+|$)/, "").trim()).filter((line) => line.length > 0).join(" ");
       if (cleanedText !== originalText && cleanedText.length > 0) {
-        textNode.characters = cleanedText;
-        len = textNode.characters.length;
+        const originalCore = originalText.replace(/[ \u00A0]/g, "");
+        const cleanedCore = cleanedText.replace(/[ \u00A0]/g, "");
+        if (originalCore !== cleanedCore) {
+          textNode.characters = cleanedText;
+          len = textNode.characters.length;
+        }
       }
+      let needsTitleStyleFix = false;
       if (len > 0) {
+        try {
+          const checkSegments = textNode.getStyledTextSegments([
+            "hyperlink",
+            "textDecoration",
+            "listOptions",
+            "fontName",
+            "fontSize"
+          ]);
+          needsTitleStyleFix = checkSegments.some(
+            (seg) => seg.hyperlink !== null || seg.textDecoration !== "NONE" || seg.listOptions && seg.listOptions.type !== "NONE" || seg.fontName.family !== targetFont.family || seg.fontName.style !== targetFont.style || seg.fontSize !== targetSize
+          );
+        } catch (_) {
+          needsTitleStyleFix = true;
+        }
+        if (!needsTitleStyleFix && Array.isArray(textNode.fills) && textNode.fills.length === 0) {
+          needsTitleStyleFix = true;
+        }
+      }
+      if (len > 0 && needsTitleStyleFix) {
         try {
           const segments = textNode.getStyledTextSegments([
             "hyperlink",
@@ -3912,7 +3958,7 @@
           textNode.setRangeIndentation(0, len, 0);
         } catch (_) {
         }
-      } else {
+      } else if (len === 0) {
         try {
           textNode.fontName = targetFont;
         } catch (_) {
@@ -4129,6 +4175,7 @@
     descText.name = "DescText";
     descText.fontName = { family: "Inter", style: "Regular" };
     descText.fontSize = 11;
+    descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: "PIXELS" };
     descText.characters = desc;
     descText.fills = [descFill];
     descText.textAlignHorizontal = "LEFT";
@@ -4529,6 +4576,7 @@
           descText.name = "DescText";
           descText.fontName = { family: "Inter", style: "Regular" };
           descText.fontSize = 11;
+          descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: "PIXELS" };
           descText.characters = description;
           descText.fills = [descFill];
           descText.textAlignHorizontal = "LEFT";
@@ -5025,6 +5073,7 @@
       const descAvailW = Math.max(10, (fitW !== void 0 ? fitW : targetW) - 32 - descStrokeOffset);
       descText.fontName = { family: "Inter", style: "Regular" };
       descText.fontSize = 11;
+      descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: "PIXELS" };
       descText.characters = effectiveDesc;
       descText.textAutoResize = "HEIGHT";
       descText.resize(descAvailW, descText.height || 16);
@@ -5041,7 +5090,7 @@
         const headerRow = card.children.find(isHeaderFrame);
         const headerH = headerRow ? headerRow.height : 18;
         const availableH = Math.max(14, targetH - 14 - pb - 8 - Math.round(headerH));
-        descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
+        descText.maxLines = Math.max(1, Math.floor(availableH / DESC_LINE_HEIGHT));
       } else {
         await updateDescTextTruncation(card, descText, targetH, effectiveDesc, targetW);
       }
@@ -7238,6 +7287,13 @@
                     }
                   } else if (sMode === "fit" || sMode === "hug") {
                     if (isDesc) {
+                      try {
+                        const liveLh = textNode.lineHeight;
+                        if (typeof liveLh !== "object" || liveLh === null || liveLh.unit !== "PIXELS" || Math.round(liveLh.value || 0) !== DESC_LINE_HEIGHT) {
+                          textNode.lineHeight = { value: DESC_LINE_HEIGHT, unit: "PIXELS" };
+                        }
+                      } catch (_) {
+                      }
                       const prevDesc = safeGetPluginData2(card, "node_desc") || "";
                       const currDesc = textNode.characters;
                       card.setPluginData("node_desc", currDesc);

@@ -356,6 +356,8 @@ export interface AppContextValue {
   endpointDirty: boolean;
   setEndpointMagnetDraft: (side: 'source' | 'target', magnet: MagnetPosition) => void;
   clearEndpointMagnetDraft: () => void;
+  /** 단일 커넥터 기즈모 클릭 즉시 적용 (푸터 버튼 없이 Draft를 바로 전송) */
+  applyEndpointMagnetDraft: () => void;
 }
 
 export interface EndpointMagnetDraft {
@@ -574,13 +576,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [endpointDraft, setEndpointDraftRaw] = useState<EndpointMagnetDraft>({});
   const endpointDraftRef = useRef<EndpointMagnetDraft>({});
   const setEndpointMagnetDraft = useCallback((side: 'source' | 'target', magnet: MagnetPosition) => {
-    setEndpointDraftRaw((prev) => {
-      const next = side === 'source'
-        ? { ...prev, sourceMagnet: magnet }
-        : { ...prev, targetMagnet: magnet };
-      endpointDraftRef.current = next;
-      return next;
-    });
+    // ref를 동기적으로 갱신한다. 단일 커넥터는 클릭 직후 applyEndpointMagnetDraft를 호출하므로
+    // updater 내부 갱신(비동기 실행)으로는 늦다.
+    const next = side === 'source'
+      ? { ...endpointDraftRef.current, sourceMagnet: magnet }
+      : { ...endpointDraftRef.current, targetMagnet: magnet };
+    endpointDraftRef.current = next;
+    setEndpointDraftRaw(next);
   }, []);
   const clearEndpointMagnetDraft = useCallback(() => {
     endpointDraftRef.current = {};
@@ -2429,6 +2431,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     endpointDirty,
     setEndpointMagnetDraft,
     clearEndpointMagnetDraft,
+    applyEndpointMagnetDraft,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

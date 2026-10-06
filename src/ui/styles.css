@@ -557,7 +557,7 @@
 
     /* 복사 완료 후 체크 상태 스타일 */
     .btn-action-icon.copied {
-      color: #10B981 !important;
+      color: var(--color-primary) !important;
     }
 
     .btn-action-icon.copied svg {

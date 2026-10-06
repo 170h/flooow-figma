@@ -69,7 +69,7 @@ export const IcCopy = () => (
 /** 체크(복사 완료) 아이콘 */
 export const IcCheckLarge = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M6 12.5L10 16.5L18 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M16.765 7.07607C16.9992 7.22242 17.0704 7.5309 16.924 7.76507L11.924 15.7651C11.8366 15.9049 11.686 15.9926 11.5212 15.9996C11.3565 16.0066 11.1989 15.932 11.1 15.8001L8.10003 11.7999C7.93434 11.579 7.97912 11.2656 8.20004 11.0999C8.42095 10.9343 8.73435 10.979 8.90003 11.2L11.4625 14.6167L16.076 7.23507C16.2224 7.0009 16.5309 6.92971 16.765 7.07607Z" fill="currentColor"/>
   </svg>
 );
 

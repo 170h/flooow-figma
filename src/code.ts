@@ -1188,9 +1188,24 @@ async function measureSingleLineTextWidth(
   }
 }
 
+// 스페이스 1칸 어드밴스 (Inter Bold 13px 기준, 세션 캐시).
+// 'a a'와 'aa' 측정값 차이로 산출한다. 앞뒤 스페이스 trim 내성이라 끝공백 폭 측정에 쓴다.
+let cachedSpaceAdvanceW: number | null = null;
+async function measureSpaceAdvance(): Promise<number> {
+  if (cachedSpaceAdvanceW !== null) return cachedSpaceAdvanceW;
+  const font: FontName = { family: 'Inter', style: 'Bold' };
+  const withSpace = await measureSingleLineTextWidth('a a', font, 13);
+  const withoutSpace = await measureSingleLineTextWidth('aa', font, 13);
+  cachedSpaceAdvanceW = Math.max(0, withSpace - withoutSpace);
+  return cachedSpaceAdvanceW;
+}
+
 /** 플러그인 타이틀 입력(maxLength 32)과 같은 글자 수 제한 */
 const TITLE_CHAR_LIMIT = 32;
 const TAG_TITLE_PAD_X = 12;
+
+/** Screen 디스크립션(Inter Regular 11px) 고정 라인하이트 */
+const DESC_LINE_HEIGHT = 15;
 
 function clampTitleChars(title: string): string {
   const chars = Array.from(title);
@@ -1287,15 +1302,22 @@ async function calculateScreenFitWidth(
   const strokeOffset = (typeof card.strokeWeight === 'number' ? card.strokeWeight : 1.5) * 2;
 
   // 1. Title 측정 (Inter Bold 13px, 줄바꿈 없는 1줄 폭)
-  const trimmedTitle = (title || '').trim();
+  const rawTitle = title || '';
+  const trimmedTitle = rawTitle.trim();
   let measuredTitleW = 0;
   if (trimmedTitle) {
     const titleFont: FontName = { family: 'Inter', style: 'Bold' };
     measuredTitleW = await measureSingleLineTextWidth(trimmedTitle, titleFont, 13);
   }
-  // Title 1줄 실측 폭 + 좌우 패딩(32px) + 스트로크 보더 오프셋(약 3px) + 단어 래핑 방지 호흡 여유(4px)
-  const titleRequiredW = measuredTitleW > 0
-    ? measuredTitleW + pl + pr + Math.ceil(strokeOffset) + 4
+  // 앞뒤 스페이스도 카드 폭에 반영한다. 타이핑 중 characters에는 스페이스가 살아있는데
+  // 측정만 trim 기준이면 스페이스 키에서 카드가 안 늘고 다음 글자에서야 따라와 두 줄↔한 줄 진동이 된다.
+  const leadingSpaces = (rawTitle.match(/^[ \u00A0]+/) || [''])[0].length;
+  const trailingSpaces = (rawTitle.match(/[ \u00A0]+$/) || [''])[0].length;
+  const edgeSpaceCount = rawTitle ? leadingSpaces + trailingSpaces : 0;
+  const edgeSpaceW = edgeSpaceCount > 0 ? (await measureSpaceAdvance()) * edgeSpaceCount : 0;
+  // Title 1줄 실측 폭 + 앞뒤 스페이스 폭 + 좌우 패딩(32px) + 스트로크 보더 오프셋(약 3px) + 단어 래핑 방지 호흡 여유(8px)
+  const titleRequiredW = measuredTitleW > 0 || edgeSpaceW > 0
+    ? measuredTitleW + edgeSpaceW + pl + pr + Math.ceil(strokeOffset) + 8
     : SCREEN_NODE_CONSTRAINTS.MIN_WIDTH;
 
   // 2. 내부 고정/비가변 요소(Status, Link)가 겹치거나 밖으로 나가지 않기 위한 최소 너비
@@ -1340,6 +1362,18 @@ async function ensureTextNodeFontsLoaded(textNode: TextNode | TextSublayerNode) 
 // 3. 오직 카드가 작아서 텍스트가 카드 바깥으로 실제로 넘칠 때에만 가용 높이에 맞추어 maxLines(...)를 적용합니다.
 async function updateDescTextTruncation(card: FrameNode, descText: TextNode, currentHeight: number, textCharacters?: string, targetWidth?: number) {
   try {
+    // 디스크립션 고정 라인하이트 15px 수렴 (1회성: 이미 15px이면 쓰기 없음)
+    try {
+      const truncLh = descText.lineHeight as { unit?: string; value?: number } | string | undefined;
+      if (
+        typeof truncLh !== 'object' ||
+        truncLh === null ||
+        (truncLh as { unit?: string }).unit !== 'PIXELS' ||
+        Math.round((truncLh as { value?: number }).value || 0) !== DESC_LINE_HEIGHT
+      ) {
+        descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: 'PIXELS' };
+      }
+    } catch (_) {}
     const descFont: FontName = { family: 'Inter', style: 'Regular' };
     await figma.loadFontAsync(descFont);
     await ensureTextNodeFontsLoaded(descText);
@@ -1415,8 +1449,8 @@ async function updateDescTextTruncation(card: FrameNode, descText: TextNode, cur
     const headerH = headerRow ? headerRow.height : 20;
 
     const availableH = Math.max(14, currentHeight - 14 - pb - 8 - Math.round(headerH));
-    // Inter 11px의 1줄 실질 높이는 약 13.5px
-    descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
+    // 디스크립션 고정 라인하이트(DESC_LINE_HEIGHT) 기준 가용 줄수 계산
+    descText.maxLines = Math.max(1, Math.floor(availableH / DESC_LINE_HEIGHT));
   } catch (err) {
     console.warn('updateDescTextTruncation failed:', err);
   }
@@ -2433,11 +2467,44 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
       .join(' ');
 
     if (cleanedText !== originalText && cleanedText.length > 0) {
-      textNode.characters = cleanedText;
-      len = textNode.characters.length;
+      // 타이핑 중 앞뒤 일반 스페이스 차이만 있으면 characters를 덮어쓰지 않는다.
+      // (매 키스트로크마다 trim된 값으로 되돌리면 스페이스 입력이 씹히고 커서가 튄다.
+      //  불릿·줄바꿈 등 스페이스 아닌 문자 차이가 있을 땐 기존대로 보정한다.)
+      const originalCore = originalText.replace(/[ \u00A0]/g, '');
+      const cleanedCore = cleanedText.replace(/[ \u00A0]/g, '');
+      if (originalCore !== cleanedCore) {
+        textNode.characters = cleanedText;
+        len = textNode.characters.length;
+      }
     }
 
+    // 표준 여부 사전 판정(읽기만 수행). 이미 표준이면 서식 쓰기를 생략해
+    // 타이핑 중 커서·줄바꿈 간섭과 핸들러 지연을 줄인다. 최종 상태는 기존 로직과 동일.
+    let needsTitleStyleFix = false;
     if (len > 0) {
+      try {
+        const checkSegments = textNode.getStyledTextSegments([
+          'hyperlink',
+          'textDecoration',
+          'listOptions',
+          'fontName',
+          'fontSize',
+        ]);
+        needsTitleStyleFix = checkSegments.some((seg) =>
+          seg.hyperlink !== null ||
+          seg.textDecoration !== 'NONE' ||
+          (seg.listOptions && seg.listOptions.type !== 'NONE') ||
+          seg.fontName.family !== targetFont.family ||
+          seg.fontName.style !== targetFont.style ||
+          seg.fontSize !== targetSize
+        );
+      } catch (_) { needsTitleStyleFix = true; }
+      if (!needsTitleStyleFix && Array.isArray(textNode.fills) && textNode.fills.length === 0) {
+        needsTitleStyleFix = true;
+      }
+    }
+
+    if (len > 0 && needsTitleStyleFix) {
       // 3. getStyledTextSegments로 세그먼트별 서식(링크, 블릿, 취소선, 볼드 등) 정밀 차단 및 제거
       try {
         const segments = textNode.getStyledTextSegments([
@@ -2481,7 +2548,7 @@ async function enforceTitleStandardStyle(textNode: TextNode, flowNode?: FrameNod
       try { textNode.setRangeHyperlink(0, len, null); } catch (_) {}
       try { textNode.setRangeListOptions(0, len, { type: 'NONE' }); } catch (_) {}
       try { textNode.setRangeIndentation(0, len, 0); } catch (_) {}
-    } else {
+    } else if (len === 0) {
       try { textNode.fontName = targetFont; } catch (_) {}
       try { textNode.fontSize = targetSize; } catch (_) {}
       if (Array.isArray(textNode.fills) && textNode.fills.length === 0) {
@@ -2690,6 +2757,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   descText.name = 'DescText';
   descText.fontName = { family: 'Inter', style: 'Regular' };
   descText.fontSize = 11;
+  descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: 'PIXELS' };
   descText.characters = desc;
   descText.fills = [descFill];
   descText.textAlignHorizontal = 'LEFT';
@@ -3207,6 +3275,7 @@ async function createFlowNode(payload: FlowNodePayload) {
         descText.name = 'DescText';
         descText.fontName = { family: 'Inter', style: 'Regular' };
         descText.fontSize = 11;
+        descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: 'PIXELS' };
         descText.characters = description;
         descText.fills = [descFill];
         descText.textAlignHorizontal = 'LEFT';
@@ -3824,6 +3893,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     const descAvailW = Math.max(10, (fitW !== undefined ? fitW : targetW) - 32 - descStrokeOffset);
     descText.fontName = { family: 'Inter', style: 'Regular' };
     descText.fontSize = 11;
+    descText.lineHeight = { value: DESC_LINE_HEIGHT, unit: 'PIXELS' };
     descText.characters = effectiveDesc;
     descText.textAutoResize = 'HEIGHT';
     descText.resize(descAvailW, descText.height || 16);
@@ -3838,7 +3908,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
       const headerRow = card.children.find(isHeaderFrame) as FrameNode | undefined;
       const headerH = headerRow ? headerRow.height : 18;
       const availableH = Math.max(14, targetH - 14 - pb - 8 - Math.round(headerH));
-      descText.maxLines = Math.max(1, Math.floor(availableH / 13.5));
+      descText.maxLines = Math.max(1, Math.floor(availableH / DESC_LINE_HEIGHT));
     } else {
       await updateDescTextTruncation(card, descText, targetH, effectiveDesc, targetW);
     }
@@ -6627,6 +6697,18 @@ figma.on('documentchange', async (event) => {
                 } else if (sMode === 'fit' || sMode === 'hug') {
                   // Description 편집인 경우: Enter(줄바꿈)뿐만 아니라 일반 타이핑에 의한 자동 wrapping도 실시간 감지하여 높이 반영
                   if (isDesc) {
+                    // 디스크립션 고정 라인하이트 15px 수렴 (1회성: 이미 15px이면 쓰기 없음)
+                    try {
+                      const liveLh = textNode.lineHeight as { unit?: string; value?: number } | string | undefined;
+                      if (
+                        typeof liveLh !== 'object' ||
+                        liveLh === null ||
+                        (liveLh as { unit?: string }).unit !== 'PIXELS' ||
+                        Math.round((liveLh as { value?: number }).value || 0) !== DESC_LINE_HEIGHT
+                      ) {
+                        textNode.lineHeight = { value: DESC_LINE_HEIGHT, unit: 'PIXELS' };
+                      }
+                    } catch (_) {}
                     const prevDesc = safeGetPluginData(card, 'node_desc') || '';
                     const currDesc = textNode.characters;
                     card.setPluginData('node_desc', currDesc);

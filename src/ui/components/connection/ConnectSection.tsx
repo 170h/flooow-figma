@@ -108,6 +108,7 @@ export function ConnectSection() {
     flooowUsage,
     endpointDraft,
     setEndpointMagnetDraft,
+    applyEndpointMagnetDraft,
   } = useApp();
   const summary = useSelectionSummary();
   const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet, selectedConnectorColor } = uiState;
@@ -540,9 +541,11 @@ export function ConnectSection() {
       || (uiState.connectedConnectors && uiState.connectedConnectors.length > 0)
       || (uiState.multiNodeConnectors && uiState.multiNodeConnectors.length > 0);
 
-    // 기존 endpoint가 있으면 그 사이드의 Draft만 바꾼다. Apply 전까지 connector는 수정하지 않는다.
+    // 기존 endpoint가 있으면 그 사이드의 Draft만 바꾼다.
+    // 단일 커넥터는 푸터 버튼이 없으므로 클릭 즉시 적용하고, 그 외는 Apply 전까지 connector를 수정하지 않는다.
     if (hasEditableEndpoints) {
       setEndpointMagnetDraft(nodeIndex === 1 ? 'source' : 'target', pos);
+      if (summary.isSingleConnector) applyEndpointMagnetDraft();
       return;
     }
 
