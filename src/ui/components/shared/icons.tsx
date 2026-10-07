@@ -380,7 +380,7 @@ export const StrokeColorIcon = ({
  * - 호버 애니메이션(확대) 지원 (.figma-color-chip)
  * - 일반 상태: color로 면 채움
  * - None 상태 (isNone === true): 체커보드 투명 배경 + 우상단 -> 좌하단 피그마 레드(#F24822) 1.5px 대각선 취소선 오버레이
- * - Mixed 상태 (isMixed === true): 사선 패턴 채움
+ * - Mixed 상태 (isMixed === true): 색 없이 '-' 아이콘
  */
 export const FillColorIcon = ({
   color = '#FFFFFF',
@@ -412,11 +412,9 @@ export const FillColorIcon = ({
         justifyContent: 'center',
         cursor: onClick ? 'pointer' : 'default',
         backgroundColor: (isMixed || isNone) ? 'transparent' : formattedColor,
-        backgroundImage: isMixed
-          ? 'repeating-linear-gradient(45deg, #ccc, #ccc 2px, transparent 2px, transparent 4px)'
-          : (isNone
-            ? 'repeating-conic-gradient(var(--checker-light, #e1e1e1) 0% 25%, var(--checker-dark, #ffffff) 0% 50%) 50% / 6px 6px'
-            : undefined),
+        backgroundImage: isNone
+          ? 'repeating-conic-gradient(var(--checker-light, #e1e1e1) 0% 25%, var(--checker-dark, #ffffff) 0% 50%) 50% / 6px 6px'
+          : undefined,
         overflow: 'hidden',
         position: 'relative',
         flexShrink: 0,
@@ -424,6 +422,17 @@ export const FillColorIcon = ({
       }}
       onClick={onClick}
     >
+      {isMixed && !isNone && (
+        <span
+          style={{
+            width: Math.max(6, size - 6),
+            height: 1.5,
+            borderRadius: 1,
+            backgroundColor: 'currentColor',
+            flexShrink: 0,
+          }}
+        />
+      )}
       {isNone && (
         <svg
           xmlns="http://www.w3.org/2000/svg"

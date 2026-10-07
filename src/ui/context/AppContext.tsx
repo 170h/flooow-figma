@@ -830,20 +830,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const nextLine = normalizeHexColor(partial.selectedConnectorColor) || DEFAULT_CONNECTOR_COLOR;
       const cfg = lastConnectorConfigRef.current;
       if (nextLine !== normalizeHexColor(prevLine)) {
-        const nextCfg = { ...cfg };
-        let changed = false;
+        // connectorColorInput까지 같이 갱신해야, 직후 liveApply가 선택 스냅샷의 이전 색을 다시 보내지 않는다.
+        const nextCfg = { ...cfg, connectorColorInput: nextLine };
         if (labelFillIsDefault(cfg.labelFillColor, prevLine)) {
           nextCfg.labelFillColor = DEFAULT_LABEL_FILL;
-          changed = true;
         }
         if (labelStrokeFollowsConnector(cfg.labelStrokeColor, prevLine)) {
           nextCfg.labelStrokeColor = nextLine;
-          changed = true;
         }
-        if (changed) {
-          lastConnectorConfigRef.current = nextCfg;
-          setLastConnectorConfigRaw(nextCfg);
-        }
+        lastConnectorConfigRef.current = nextCfg;
+        setLastConnectorConfigRaw(nextCfg);
       }
     }
     uiStateRef.current = { ...uiStateRef.current, ...partial };
@@ -1600,7 +1596,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         startNumber,
         corner: corner || nodeOptionStateRef.current.badgeCorner || 'TOP_LEFT',
         shape: shape || nodeOptionStateRef.current.badgeShape || 'Square',
-        colorMode: colorMode || nodeOptionStateRef.current.badgeColorMode || 'Style',
+        ...(colorMode ? { colorMode } : {}),
       }
     }, '*');
   }, []);

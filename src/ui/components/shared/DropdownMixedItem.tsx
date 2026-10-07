@@ -30,6 +30,8 @@ export interface DropdownMixedItemProps {
   chipSize?: number;
   /** 클릭 이벤트 핸들러 */
   onClick?: (e: React.MouseEvent) => void;
+  /** 현재 선택된 Mixed 항목인지. 기본값 true */
+  selected?: boolean;
   /** 추가 클래스 */
   className?: string;
   /** 추가 인라인 스타일 */
@@ -48,12 +50,13 @@ export function DropdownMixedItem({
   className = '',
   style,
   showDivider = true,
+  selected = true,
 }: DropdownMixedItemProps) {
   return (
     <>
       {variant === 'icon' && (
         <div
-          className={`size-mode-menu-item figma-dropdown-item selected ${className}`.trim()}
+          className={`size-mode-menu-item figma-dropdown-item${selected ? ' selected' : ''} ${className}`.trim()}
           data-value="mixed"
           style={style}
           onClick={onClick}
@@ -70,7 +73,7 @@ export function DropdownMixedItem({
 
       {variant === 'chip' && (
         <div
-          className={`figma-dropdown-item selected ${className}`.trim()}
+          className={`figma-dropdown-item${selected ? ' selected' : ''} ${className}`.trim()}
           data-value="mixed"
           style={{ width: '100%', cursor: onClick ? 'pointer' : 'default', ...style }}
           onClick={onClick}

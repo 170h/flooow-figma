@@ -632,26 +632,32 @@ export function App() {
               );
               setUIState({ selectedConnectorColor: formatted });
 
-              // 선택된 커넥터가 있는 경우 모든 커넥터에 즉시 색상 변경 메시지 전송 (실시간 즉시 어플라이)
               const connNodes = selectedNodes.filter((n) => n && n.isConnector);
-              if (connNodes.length > 0) {
-                connNodes.forEach((c) => {
-                  parent.postMessage(
-                    {
-                      pluginMessage: {
-                        type: 'UPDATE_CONNECTOR_PROPERTIES',
-                        payload: {
-                          connectorId: c.id,
-                          colorHex: formatted,
-                          ...(fillIsDefault ? { labelFillColor: '#FFFFFF' } : {}),
-                          ...(strokeFollows ? { labelStrokeColor: formatted } : {}),
-                        },
+              console.log('[FLOOOW-CONN-COLOR] ui apply', {
+                colorHex: formatted,
+                selected: selectedNodes.map((n) => ({ id: n?.id, isConnector: n?.isConnector, type: n?.flowNodeType })),
+                connCount: connNodes.length,
+              });
+              if (connNodes.length === 0) {
+                console.log('[FLOOOW-CONN-COLOR] ui apply skipped: no connector in selection');
+              }
+              connNodes.forEach((c) => {
+                console.log('[FLOOOW-CONN-COLOR] post', { connectorId: c.id, colorHex: formatted });
+                parent.postMessage(
+                  {
+                    pluginMessage: {
+                      type: 'UPDATE_CONNECTOR_PROPERTIES',
+                      payload: {
+                        connectorId: c.id,
+                        colorHex: formatted,
+                        ...(fillIsDefault ? { labelFillColor: '#FFFFFF' } : {}),
+                        ...(strokeFollows ? { labelStrokeColor: formatted } : {}),
                       },
                     },
-                    '*'
-                  );
-                });
-              }
+                  },
+                  '*'
+                );
+              });
             }}
             onClose={() => setActiveModal('none')}
           />

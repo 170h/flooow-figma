@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../../context/AppContext";
 import { useSelectionSummary } from "../../hooks/useSelectionSummary";
-import { DropdownMixedItem } from "../shared/DropdownMixedItem";
-import { COLOR_MIXED_ICON, MixedDashChip } from "../shared/icons";
 import { Switch } from "../shared/Switch";
 import { useDisabledNotice, DisabledNoticeChip } from "../shared/DisabledNotice";
 import { t } from "../../../i18n";
@@ -91,7 +89,7 @@ const COLOR_OPTIONS: { id: BadgeColorMode; label: string }[] = [
 /**
  * Step Badges 섹션 - 피그마 UI3 공식 사양
  * 싱글 노드: 1027248:4148 (실시간 반영, 2행)
- * 복수 노드: 1027377:2473 (Mixed 표시, 3행 Add Step Badges 버튼)
+ * 복수 노드: 1027377:2473 (번호는 선택 노드의 최솟값, 3행 Add Step Badges 버튼)
  */
 export function StepBadgesSection() {
   const {
@@ -159,15 +157,21 @@ export function StepBadgesSection() {
     : summary.isMultiFlowNode && summary.badgeShape.value
       ? summary.badgeShape.value
       : nodeOptionState.badgeShape || "Square");
-  const selectedBadgeColorMode: BadgeColorMode | undefined = multiDraft.badgeColorMode || (isColorModeMixed
-    ? undefined
-    : summary.isMultiFlowNode && summary.badgeColorMode.value
-      ? (summary.badgeColorMode.value as BadgeColorMode)
-      : nodeOptionState.badgeColorMode || "Style");
+  const selectedBadgeColorMode: BadgeColorMode | undefined = multiDraft.badgeColorMode
+    ? multiDraft.badgeColorMode
+    : isColorModeMixed
+      ? undefined
+      : summary.isMultiFlowNode && summary.badgeColorMode.value
+        ? (summary.badgeColorMode.value as BadgeColorMode)
+        : (nodeOptionState.badgeColorMode || "Style");
 
   // 현재 노드의 배경색 및 보더색 추출 (Style / White 모드 스와치 표시용)
   const firstNode = selectedNodes[0];
   const nodeBgColorHex = firstNode?.fillColorHex || nodeOptionState.fillColor || "#FFFFFF";
+  const styleFills = selectedNodes
+    .filter((n) => n.isFlowNode && n.fillColorHex)
+    .map((n) => n.fillColorHex!.toLowerCase());
+  const isStyleColorMixed = isMultiMode && new Set(styleFills).size > 1;
   const hasNodeStroke =
     (firstNode?.strokeWeight || 0) > 0 && !!firstNode?.strokeColorHex;
 
@@ -309,15 +313,13 @@ export function StepBadgesSection() {
             .map((n) => n.stepNumber)
             .filter((n): n is number => typeof n === "number" && !isNaN(n) && n > 0);
 
-          if (validNums.length === supported.length && validNums.every((v) => v === validNums[0])) {
-            setIsMixed(false);
-            setStepNumText(String(validNums[0]));
-          } else if (validNums.length === 0) {
+          if (validNums.length === 0) {
             setIsMixed(false);
             setStepNumText("1");
           } else {
-            setIsMixed(true);
-            setStepNumText("");
+            // 서로 달라도 Mixed 대신 최솟값. 한 번만 있는 번호도 포함한다.
+            setIsMixed(false);
+            setStepNumText(String(Math.min(...validNums)));
           }
         }
       } else {
@@ -453,15 +455,12 @@ export function StepBadgesSection() {
         const validNums = supported
           .map((n) => n.stepNumber)
           .filter((n): n is number => typeof n === "number" && !isNaN(n) && n > 0);
-        if (validNums.length === supported.length && validNums.every((v) => v === validNums[0])) {
-          setStepNumText(String(validNums[0]));
-          setIsMixed(false);
-        } else if (validNums.length === 0) {
+        if (validNums.length === 0) {
           setStepNumText("1");
           setIsMixed(false);
         } else {
-          setStepNumText("");
-          setIsMixed(true);
+          setStepNumText(String(Math.min(...validNums)));
+          setIsMixed(false);
         }
         return;
       }
@@ -531,24 +530,55 @@ export function StepBadgesSection() {
     const start = getNumberValue();
     const corner = (selectedBadgeCorner || 'TOP_LEFT') as BadgePosition;
     const shape = (selectedBadgeShape || 'Square') as BadgeShape;
-    const colorMode = (selectedBadgeColorMode || 'Style') as BadgeColorMode;
+    // Mixed면 색을 보내지 않아 노드마다 기존 컬러를 유지한다. 고른 색만 공통 적용한다.
+    const colorMode = selectedBadgeColorMode;
 
-    // 1. Core의 ADD_STEP_BADGES 즉시 실행
-    // (선택된 노드 중 Step Badge 지원 노드에만 start부터 순차 번호 부여, 다른 설정은 일체 건드리지 않음)
     applyStepBadges(start, corner, shape, colorMode);
 
-    // 2. Step Badge 섹션 로컬 상태 동기화
     setIsOpen(true);
     setNodeOptionState({
       stepBadgesOn: true,
       stepNumber: start,
       badgeCorner: corner,
       badgeShape: shape,
-      badgeColorMode: colorMode,
+      ...(colorMode ? { badgeColorMode: colorMode } : {}),
     });
 
     // 3. multiDraft에서 step badge 관련 키만 정리하여 향후 'Apply to All' 실행 시 타 속성과 엉키지 않도록 함
     clearMultiDraftKeys(['badgeOn', 'badgeNumber', 'badgeCorner', 'badgeShape', 'badgeColorMode']);
+  }
+
+  // Mixed 컬러칩: 다른 옵션과 같은 14px 칩 안에 '-'만 표시
+  function renderMixedColorChip(size = 14) {
+    return (
+      <span
+        className="figma-color-chip"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: 2,
+          backgroundColor: "transparent",
+          border: "none",
+          boxShadow: "inset 0 0 0 1px var(--color-chip-border)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          boxSizing: "border-box",
+          overflow: "hidden",
+        }}
+      >
+        <span
+          style={{
+            width: Math.max(6, size - 6),
+            height: 1.5,
+            borderRadius: 1,
+            backgroundColor: "currentColor",
+            flexShrink: 0,
+          }}
+        />
+      </span>
+    );
   }
 
   // 컬러 스와치 렌더러 (피그마 UI3 공식 표준 컬러칩 규격: 14x14, R:2px)
@@ -589,7 +619,11 @@ export function StepBadgesSection() {
         />
       );
     }
-    // Style: 노드 배경색, 노드에 보더가 있으면 노드 보더 반영, 없으면 컬러 입력필드 컬러칩과 동일하게 투명 보더
+    // Style: 노드마다 스타일 색이 다르면 한 색으로 통일되는 것처럼 보이지 않게 '-'만 표시
+    if (isStyleColorMixed || isColorModeMixed) {
+      return renderMixedColorChip(size);
+    }
+    // 스타일 색이 하나일 때만 그 색을 칩에 반영
     return (
       <span
         className="figma-color-chip"
@@ -780,11 +814,13 @@ export function StepBadgesSection() {
                     {selectedBadgeColorMode ? (
                       renderColorSwatch(selectedBadgeColorMode, 14)
                     ) : (
-                      <MixedDashChip size={14} />
+                      renderMixedColorChip(14)
                     )}
                   </span>
                   <span className="figma-dropdown-current-text">
-                    {selectedBadgeColorMode || "Mixed"}
+                    {selectedBadgeColorMode === "Style" && isStyleColorMixed
+                      ? "Mixed"
+                      : (selectedBadgeColorMode || "Mixed")}
                   </span>
                 </div>
                 <svg
@@ -814,20 +850,13 @@ export function StepBadgesSection() {
                     bottom: "calc(100% + 4px)",
                     top: "auto",
                     left: 0,
-                    right: 0,
-                    width: "100%",
+                    right: "auto",
+                    width: 180,
                     display: "flex",
+                    flexDirection: "column",
                     zIndex: 1050,
                   }}
                 >
-                  {/* Mixed 상태: 컬러칩이 포함된 옵션이므로 16x16 체크 + 스와치 위치의 '-' 대시 아이콘 + Mixed 라벨 */}
-                  {(isColorModeMixed || !selectedBadgeColorMode) && (
-                    <DropdownMixedItem
-                      variant="chip"
-                      chipSize={14}
-                      onClick={() => setColorDropdownOpen(false)}
-                    />
-                  )}
                   {COLOR_OPTIONS.map((opt) => {
                     const active = selectedBadgeColorMode === opt.id;
                     return (
@@ -865,7 +894,7 @@ export function StepBadgesSection() {
                             fontWeight: active ? 600 : 500,
                           }}
                         >
-                          {opt.label}
+                          {opt.id === "Style" && (isStyleColorMixed || isColorModeMixed) ? "Mixed" : opt.label}
                         </span>
                       </div>
                     );

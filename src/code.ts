@@ -5629,6 +5629,7 @@ async function updateConnectorProperties(payload: {
     }
 
     if (!node) {
+      console.log('[FLOOOW-CONN-COLOR] core node missing', payload.connectorId, payload.colorHex);
       notify(t('connectorNotFound'), 'warning');
       return;
     }
@@ -5644,6 +5645,15 @@ async function updateConnectorProperties(payload: {
     ) {
       connectorRootNode = node.parent;
     }
+
+    console.log('[FLOOOW-CONN-COLOR] core update', {
+      connectorId: payload.connectorId,
+      colorHex: payload.colorHex,
+      nodeType: node.type,
+      nodeId: node.id,
+      rootType: connectorRootNode.type,
+      rootId: connectorRootNode.id,
+    });
 
     const currentStartOff = parseFloat(
       safeGetPluginData(connectorRootNode, 'start_offset') ||
@@ -5670,6 +5680,144 @@ async function updateConnectorProperties(payload: {
     const effectiveStartOffset = payload.isReversed ? rawEndOffset : rawStartOffset;
     const effectiveEndOffset = payload.isReversed ? rawStartOffset : rawEndOffset;
 
+    if (connectorRootNode.type === 'CONNECTOR') {
+      const conn = connectorRootNode as ConnectorNode;
+
+      const nativeSourceId = conn.connectorStart && 'endpointNodeId' in conn.connectorStart ? conn.connectorStart.endpointNodeId : undefined;
+      const nativeTargetId = conn.connectorEnd && 'endpointNodeId' in conn.connectorEnd ? conn.connectorEnd.endpointNodeId : undefined;
+
+      const hasOffset = (typeof effectiveStartOffset === 'number' && effectiveStartOffset > 0) ||
+                        (typeof effectiveEndOffset === 'number' && effectiveEndOffset > 0);
+
+      if (hasOffset && nativeSourceId && nativeTargetId) {
+        const sourceNode = figma.getNodeById(nativeSourceId) as SceneNode | null;
+        const targetNode = figma.getNodeById(nativeTargetId) as SceneNode | null;
+
+        if (sourceNode && targetNode) {
+          const colorHex = payload.colorHex || (Array.isArray(conn.strokes) && conn.strokes.length > 0 && conn.strokes[0].type === 'SOLID' ? rgbToHexColor(conn.strokes[0].color) : '#000000');
+          const strokeWeight = typeof payload.strokeWeight === 'number' ? payload.strokeWeight : (typeof conn.strokeWeight === 'number' ? conn.strokeWeight : 1.5);
+          const strokePattern = payload.strokePattern || (Array.isArray(conn.dashPattern) && conn.dashPattern.length > 0 ? (conn.dashPattern[0] <= 2 ? 'DOTTED' : 'DASHED') : 'SOLID');
+          const routingType = payload.routingType || (conn.connectorLineType === 'STRAIGHT' ? 'STRAIGHT' : 'ORTHOGONAL');
+          const startTerm = effectiveStartTerm && effectiveStartTerm !== 'MIXED' ? effectiveStartTerm : normalizeConnectorTerminal(conn.getPluginData('start_terminal'), 'NONE');
+          const endTerm = effectiveEndTerm && effectiveEndTerm !== 'MIXED' ? effectiveEndTerm : normalizeConnectorTerminal(conn.getPluginData('end_terminal'), 'ARROW');
+          const label = payload.hasLabel && payload.label !== undefined ? payload.label.trim() : (conn.text ? conn.text.characters : '');
+
+          const sourceMag = effectiveStartMagnet || (conn.connectorStart && 'magnet' in conn.connectorStart ? conn.connectorStart.magnet as MagnetPosition : 'RIGHT');
+          const targetMag = effectiveEndMagnet || (conn.connectorEnd && 'magnet' in conn.connectorEnd ? conn.connectorEnd.magnet as MagnetPosition : 'LEFT');
+
+          const customConn = await createSingleConnector(
+            sourceNode,
+            sourceMag,
+            targetNode,
+            targetMag,
+            label,
+            colorHex,
+            strokeWeight,
+            routingType,
+            startTerm,
+            endTerm,
+            strokePattern,
+            effectiveStartOffset,
+            effectiveEndOffset
+          );
+
+          conn.remove();
+          figma.currentPage.selection = [customConn];
+          notify(t('connectorOffsetConverted'), 'success');
+          handleSelectionChange();
+          return;
+        }
+      }
+
+      if (typeof effectiveStartOffset === 'number') {
+        conn.setPluginData('start_offset', String(effectiveStartOffset));
+      }
+      if (typeof effectiveEndOffset === 'number') {
+        conn.setPluginData('end_offset', String(effectiveEndOffset));
+      }
+
+      if (typeof payload.strokeWeight === 'number') {
+        conn.strokeWeight = payload.strokeWeight;
+      }
+
+      if (payload.strokePattern === 'DASHED') {
+        conn.dashPattern = [4, 4];
+      } else if (payload.strokePattern === 'DOTTED') {
+        conn.dashPattern = [1.5, 3];
+      } else if (payload.strokePattern === 'SOLID') {
+        conn.dashPattern = [];
+      }
+
+      if (payload.routingType === 'STRAIGHT') {
+        conn.connectorLineType = 'STRAIGHT';
+      } else if (payload.routingType) {
+        conn.connectorLineType = 'ELBOWED';
+      }
+
+      if (payload.colorHex) {
+        conn.strokes = [{ type: 'SOLID', color: hexToRgbColor(payload.colorHex) }];
+        conn.setPluginData('connector_color', payload.colorHex);
+        const applied = Array.isArray(conn.strokes) && conn.strokes[0] && conn.strokes[0].type === 'SOLID'
+          ? rgbToHexColor(conn.strokes[0].color)
+          : 'none';
+        console.log('[FLOOOW-CONN-COLOR] native stroke', {
+          requested: payload.colorHex,
+          applied,
+          lineType: conn.connectorLineType,
+        });
+      }
+
+      const mapCap = (term?: ConnectorTerminalType): ConnectorStrokeCap => {
+        switch (term) {
+          case 'ARROW':
+          case 'TRIANGLE_ARROW':
+          case 'REVERSED_TRIANGLE_ARROW':
+            return 'ARROW_LINES';
+          case 'DIAMOND':
+            return 'DIAMOND_FILLED';
+          case 'CIRCLE':
+            return 'CIRCLE_FILLED';
+          default:
+            return 'NONE';
+        }
+      };
+      if (effectiveStartTerm && effectiveStartTerm !== 'MIXED') {
+        conn.connectorStartStrokeCap = mapCap(effectiveStartTerm);
+        conn.setPluginData('start_terminal', effectiveStartTerm);
+      }
+      if (effectiveEndTerm && effectiveEndTerm !== 'MIXED') {
+        conn.connectorEndStrokeCap = mapCap(effectiveEndTerm);
+        conn.setPluginData('end_terminal', effectiveEndTerm);
+      }
+
+      if (payload.hasLabel !== undefined) {
+        conn.setPluginData('connector_label_on', payload.hasLabel ? 'true' : 'false');
+      }
+      if (payload.hasLabel && payload.label !== undefined) {
+        if (conn.text) {
+          await safeSetCharacters(conn.text, payload.label.trim());
+        }
+      } else if (payload.hasLabel === false && conn.text) {
+        await safeSetCharacters(conn.text, '');
+      }
+
+      if (effectiveStartMagnet && nativeSourceId) {
+        conn.connectorStart = {
+          endpointNodeId: nativeSourceId,
+          magnet: effectiveStartMagnet,
+        };
+        conn.setPluginData('source_magnet', effectiveStartMagnet);
+        conn.setPluginData('is_manual_magnet', 'true');
+      }
+      if (effectiveEndMagnet && nativeTargetId) {
+        conn.connectorEnd = {
+          endpointNodeId: nativeTargetId,
+          magnet: effectiveEndMagnet,
+        };
+        conn.setPluginData('target_magnet', effectiveEndMagnet);
+        conn.setPluginData('is_manual_magnet', 'true');
+      }
+    } else {
     // 커스텀 직각 벡터 커넥터 (그룹 또는 벡터)
       let vectorNode: VectorNode | null = null;
       let termVectorNode: VectorNode | null = null;
@@ -5689,6 +5837,11 @@ async function updateConnectorProperties(payload: {
       }
 
       const rgb = payload.colorHex ? hexToRgbColor(payload.colorHex) : undefined;
+      console.log('[FLOOOW-CONN-COLOR] custom path', {
+        rootType: connectorRootNode.type,
+        hasVector: Boolean(vectorNode),
+        colorHex: payload.colorHex,
+      });
 
       if (vectorNode) {
         if (rgb) {
@@ -5939,11 +6092,12 @@ async function updateConnectorProperties(payload: {
         effectiveStartOffset,
         effectiveEndOffset
       );
+    }
 
     // 성공 토스트는 라벨 입력 중 플러그인 포커스를 뺏으므로 생략한다.
     handleSelectionChange();
   } catch (err) {
-    console.error('[UPDATE_CONNECTOR_PROPERTIES failed]', err);
+    console.error('[FLOOOW-CONN-COLOR] core failed', err);
     notify(t('connectorUpdateFailed', { error: String(err) }), 'error');
   }
 }
@@ -6580,7 +6734,7 @@ async function addStepBadges(
   startNumber: number = 1,
   corner: string = 'TOP_LEFT',
   shape: string = 'Square',
-  colorMode: 'White' | 'Black' | 'Style' = 'Style'
+  colorMode?: 'White' | 'Black' | 'Style'
 ) {
   const rawSelection = [...figma.currentPage.selection];
   if (rawSelection.length === 0) {
@@ -6608,7 +6762,10 @@ async function addStepBadges(
 
   let currentNum = startNumber;
   for (const card of selection) {
-    await applyStepBadgeToSingleCard(card, currentNum, corner, shape, colorMode);
+    const cardMode = colorMode
+      || (safeGetPluginData(card, 'badge_color_mode') as 'White' | 'Black' | 'Style')
+      || 'Style';
+    await applyStepBadgeToSingleCard(card, currentNum, corner, shape, cardMode);
     currentNum++;
   }
 
@@ -6886,7 +7043,7 @@ figma.ui.onmessage = async (msg: PluginAction) => {
         await applyElevationToSelected(msg.level);
         break;
       case 'ADD_STEP_BADGES':
-        await addStepBadges(msg.startNumber || 1, msg.corner || 'TOP_LEFT', msg.shape || 'Square', msg.colorMode || 'Style');
+        await addStepBadges(msg.startNumber || 1, msg.corner || 'TOP_LEFT', msg.shape || 'Square', msg.colorMode);
         break;
       case 'REMOVE_STEP_BADGES':
         await removeStepBadges();

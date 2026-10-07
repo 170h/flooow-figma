@@ -1338,13 +1338,12 @@
       opacity: 1 !important;
     }
 
-    /* 컬러 모달 Hex 입력의 Mixed placeholder는 입력 고유 placeholder 스타일과 일치 */
-    body.figma-dark input.conn-modal-hex-input[placeholder="Mixed" i]::placeholder,
-    .figma-dark input.conn-modal-hex-input[placeholder="Mixed" i]::placeholder,
-    [data-theme="dark"] input.conn-modal-hex-input[placeholder="Mixed" i]::placeholder {
+    /* 컬러 모달은 테마와 무관하게 어두운 칸이다. Mixed placeholder가 전역 #000 규칙에 덮이지 않게 한다. */
+    input.conn-modal-hex-input[placeholder="Mixed" i]:not(:disabled):not(.disabled)::placeholder {
       color: var(--color-text-ondark-muted, rgba(255, 255, 255, 0.45)) !important;
       -webkit-text-fill-color: var(--color-text-ondark-muted, rgba(255, 255, 255, 0.45)) !important;
       opacity: 1 !important;
+      font-weight: 500 !important;
     }
 
     /* ============================================================ */

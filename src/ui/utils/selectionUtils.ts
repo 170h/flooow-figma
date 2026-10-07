@@ -157,7 +157,12 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     hasStepBadge: getCommonProperty(flowNodes, (n) => (n.stepNumber !== undefined ? true : undefined), undefined, 'stepBadge'),
     badgeCorner: getCommonProperty(flowNodes, (n) => n.badgeCorner, undefined, 'stepBadge'),
     badgeShape: getCommonProperty(flowNodes, (n) => n.badgeShape, undefined, 'stepBadge'),
-    badgeColorMode: getCommonProperty(flowNodes, (n) => n.badgeColorMode, undefined, 'stepBadge'),
+    badgeColorMode: getCommonProperty(
+      flowNodes.filter((n) => typeof n.stepNumber === 'number' && !Number.isNaN(n.stepNumber)),
+      (n) => n.badgeColorMode || 'Style',
+      undefined,
+      'stepBadge',
+    ),
     description: getCommonProperty(flowNodes, (n) => n.description, undefined, 'description'),
     hasDescription: getCommonProperty(flowNodes, (n) => (n.description && n.description.trim().length > 0 ? true : undefined), undefined, 'description'),
     figmaLink: getCommonProperty(flowNodes, (n) => n.figmaLink, undefined, 'figmaLink'),
