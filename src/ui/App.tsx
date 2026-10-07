@@ -312,17 +312,22 @@ export function App() {
       );
     }
     // 2. 다중 선택 (커넥터 및 플로우 노드 포함): 다중 선택 인디케이터
+    // 커넥터는 카운트에서 제외하고 노드 + 피그마 오브젝트만 집계한다
     if (nodeCount >= 2) {
       // 선택 텍스트 생성
       const flowNodeCount = selectedNodes.filter(n => n && n.isFlowNode).length;
       const connCount = selectedNodes.filter(n => n && n.isConnector).length;
+      const figmaCount = selectedNodes.filter(n => n && !n.isFlowNode && !n.isConnector).length;
+      const countableCount = flowNodeCount + figmaCount;
       let selText = '';
-      if (connCount > 0 && flowNodeCount === 0) {
+      if (countableCount === 0) {
         selText = `${connCount} connector${connCount > 1 ? 's' : ''} selected`;
-      } else if (flowNodeCount > 0 && connCount === 0) {
+      } else if (flowNodeCount > 0 && figmaCount === 0) {
         selText = `${flowNodeCount} node${flowNodeCount > 1 ? 's' : ''} selected`;
+      } else if (flowNodeCount === 0 && figmaCount > 0) {
+        selText = `${figmaCount} Figma object${figmaCount > 1 ? 's' : ''} selected`;
       } else {
-        selText = `${nodeCount} objects selected`;
+        selText = `${flowNodeCount} node${flowNodeCount > 1 ? 's' : ''} and ${figmaCount} Figma object${figmaCount > 1 ? 's' : ''} selected`;
       }
       return (
         <div id="multi-selection-indicator" className="multi-selection-indicator" style={{ width: '100%', display: 'flex' }}>
@@ -623,27 +628,18 @@ export function App() {
                 uiState.selectedConnectorColor
               );
               setUIState({ selectedConnectorColor: formatted });
+              setLastConnectorConfig({ connectorColorInput: formatted });
 
               const connNodes = selectedNodes.filter((n) => n && n.isConnector);
-              console.log('[FLOOOW-CONN-COLOR] ui apply', {
-                colorHex: formatted,
-                selected: selectedNodes.map((n) => ({ id: n?.id, isConnector: n?.isConnector, type: n?.flowNodeType })),
-                connCount: connNodes.length,
-              });
               if (connNodes.length > 1) {
                 // 다중 커넥터 선택: 즉시 UPDATE 경로를 쓰지 않는다.
                 // connectorDirty만 설정하고 Footer Apply to All 경로(applyCurrentConnectorState)로만 적용한다.
-                console.log('[FLOOOW-CONN-COLOR] ui apply deferred: multi connector → footer Apply to All');
                 markConnectorDirty();
               } else {
                 // 예외 A(커넥터 1개 단독): 기존 즉시 적용(직접 UPDATE) 유지.
                 // 예외 B(대상 2개 + 커넥터 1개, connNodes=0): selectedConnectorColor 동기화 효과의
                 // markConnectorDirty가 기존 live-apply 조건 그대로 즉시 적용한다 (경로 변경 없음).
-                if (connNodes.length === 0) {
-                  console.log('[FLOOOW-CONN-COLOR] ui apply skipped: no connector in selection');
-                }
                 connNodes.forEach((c) => {
-                  console.log('[FLOOOW-CONN-COLOR] post', { connectorId: c.id, colorHex: formatted });
                   parent.postMessage(
                     {
                       pluginMessage: {
@@ -666,14 +662,15 @@ export function App() {
         );
       })()}
       {activeModal === 'fill-color' && (() => {
-        const isFillMixed = summary.isMultiFlowNode
+        const isMultiForFill = summary.isMultiFlowNode || summary.isMixedWithConnectors;
+        const isFillMixed = isMultiForFill
           ? (multiDraft.colorHex !== undefined ? false : summary.color.isMixed)
           : false;
         const currentFill = multiDraft.colorHex !== undefined
           ? multiDraft.colorHex
-          : ((summary.isMultiFlowNode
+          : ((isMultiForFill
               ? summary.color.value
-              : (summary.isSingleFlowNode ? summary.color.value : nodeOptionState.fillColor)
+              : (summary.isSingleFlowNode ? (nodeOptionState.fillColor || summary.color.value) : nodeOptionState.fillColor)
             ) || nodeOptionState.fillColor || '#FFFFFF');
 
         return (
@@ -681,35 +678,41 @@ export function App() {
             initialColor={currentFill}
             isMixed={isFillMixed}
             onApply={(colorHex) => {
+              const formatted = colorHex.toLowerCase() === 'none' || colorHex.toLowerCase() === 'transparent'
+                ? 'None'
+                : (colorHex.startsWith('#') ? colorHex.toUpperCase() : `#${colorHex.toUpperCase()}`);
+              setSelectedStylePresetId(null);
+              setNodeOptionState({ fillColor: formatted });
               if (selectedNodes.length >= 2) {
-                updateMultiDraft({ colorHex });
+                updateMultiDraft({ colorHex: formatted });
               } else {
-                setNodeOptionState({ fillColor: colorHex });
-                applyCurrentNodeState(undefined, { colorHex });
+                applyCurrentNodeState(undefined, { colorHex: formatted });
               }
+              triggerFormChange();
             }}
             onClose={() => setActiveModal('none')}
           />
         );
       })()}
       {activeModal === 'stroke-color' && (() => {
-        const isStrokeMixed = summary.isMultiFlowNode
+        const isMultiForStroke = summary.isMultiFlowNode || summary.isMixedWithConnectors;
+        const isStrokeMixed = isMultiForStroke
           ? (multiDraft.strokeColor !== undefined ? false : summary.strokeColor.isMixed)
           : false;
-        const isWeightMixed = summary.isMultiFlowNode
+        const isWeightMixed = isMultiForStroke
           ? (multiDraft.strokeWeight !== undefined ? false : summary.strokeWeight.isMixed)
           : false;
 
         const currentStrokeColor = multiDraft.strokeColor !== undefined
           ? multiDraft.strokeColor
-          : ((summary.isMultiFlowNode
+          : ((isMultiForStroke
               ? summary.strokeColor.value
-              : (summary.isSingleFlowNode ? summary.strokeColor.value : nodeOptionState.strokeColor)
+              : (summary.isSingleFlowNode ? (nodeOptionState.strokeColor || summary.strokeColor.value) : nodeOptionState.strokeColor)
             ) || nodeOptionState.strokeColor || '#000000');
 
-        const rawWeight = summary.isMultiFlowNode
+        const rawWeight = isMultiForStroke
           ? summary.strokeWeight.value
-          : (summary.isSingleFlowNode ? summary.strokeWeight.value : nodeOptionState.strokeWeight);
+          : (summary.isSingleFlowNode ? (nodeOptionState.strokeWeight ?? summary.strokeWeight.value) : nodeOptionState.strokeWeight);
         const currentStrokeWeight = multiDraft.strokeWeight !== undefined
           ? multiDraft.strokeWeight
           : (typeof rawWeight === 'number'
@@ -723,12 +726,17 @@ export function App() {
             isColorMixed={isStrokeMixed}
             isWeightMixed={isWeightMixed}
             onApply={(strokeColor, strokeWeight) => {
+              const formattedColor = strokeColor.toLowerCase() === 'none' || strokeColor.toLowerCase() === 'transparent'
+                ? 'None'
+                : (strokeColor.startsWith('#') ? strokeColor.toUpperCase() : `#${strokeColor.toUpperCase()}`);
+              setSelectedStylePresetId(null);
+              setNodeOptionState({ strokeColor: formattedColor, strokeWeight });
               if (selectedNodes.length >= 2) {
-                updateMultiDraft({ strokeColor, strokeWeight });
+                updateMultiDraft({ strokeColor: formattedColor, strokeWeight });
               } else {
-                setNodeOptionState({ strokeColor, strokeWeight });
-                applyCurrentNodeState(undefined, { strokeColor, strokeWeight });
+                applyCurrentNodeState(undefined, { strokeColor: formattedColor, strokeWeight });
               }
+              triggerFormChange();
             }}
             onClose={() => setActiveModal('none')}
           />

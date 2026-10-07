@@ -672,8 +672,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isApplyingMultiDraftRef.current) return;
     if (!nodes || nodes.length < 2) return;
     if (!hasMultiDraft) return;
-    // 노드와 FigJam 오브젝트가 섞인 선택은 Connection 전용이다
-    if (nodes.some((n) => n && !n.isFlowNode)) return;
+    // 노드+커넥터 혼합 선택에서는 플로우 노드만을 적용 대상으로 삼는다.
+    // (기존에는 커넥터가 1개라도 섞이면 전체 batch를 조용히 폐기하여 Apply가 무반응이었다)
+    const flowTargets = nodes.filter((n) => n && n.isFlowNode);
+    if (flowTargets.length === 0) return;
+    // FigJam 오브젝트만 섞인 선택은 Connection 전용이다 (플로우 노드 없음 → 위에서 반환됨)
 
     // 현재 선택 노드 집합과 Draft 대상 노드 집합 일치 검증
     const currentSortedIds = nodes.map(n => n?.id).filter(Boolean).sort();
@@ -697,7 +700,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!hasField) return;
 
     // 다중 노드 Apply to All 실행 전 원래 상태 스냅샷 캡처
-    const targetNodes = nodes.filter(n => n && draftSortedIds.includes(n.id));
+    // 다중 노드 Apply to All 실행 전 원래 상태 스냅샷 캡처 (플로우 노드 대상만)
+    const targetNodes = flowTargets.filter(n => n && draftSortedIds.includes(n.id));
+    if (targetNodes.length === 0) return;
     const batchItems: Array<{ nodeId: string; patch: NodePatchPayload }> = targetNodes.map(node => {
       const origPatch: NodePatchPayload = {};
       (Object.keys(patch) as Array<keyof NodePatchPayload>).forEach(k => {
@@ -735,7 +740,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       pluginMessage: {
         type: 'BATCH_UPDATE_FLOW_NODES',
         payload: {
-          nodeIds: [...draftSortedIds],
+          nodeIds: targetNodes.map(n => n.id),
           patch,
         }
       }
@@ -1655,9 +1660,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const hasLabel = Boolean(lastConnectorConfigRef.current.labelOn);
     const label = hasLabel ? (lastConnectorConfigRef.current.labelText || '').trim() : '';
     // color는 ConnectSection 로컬 state 미러(lastConnectorConfig ref)에서 읽는다 (DOM read 제거).
-    // 정규화(빈 값 → undefined)는 기존과 동일.
+    // 빈 값/공백 → undefined로 정규화한다. 미러가 비었을 때만 dirty 상태에서
+    // uiState.selectedConnectorColor를 fallback으로 사용하고, fallback도 빈 값이면 undefined다.
     const colorRaw = lastConnectorConfigRef.current.connectorColorInput;
-    const color = colorRaw && colorRaw.trim() ? colorRaw : undefined;
+    const fallbackRaw = connectorDirty ? uiStateRef.current.selectedConnectorColor : undefined;
+    const fallback = fallbackRaw && fallbackRaw.trim() ? fallbackRaw : undefined;
+    const color = (colorRaw && colorRaw.trim()) ? colorRaw : fallback;
     // weight/terminal/offset은 ConnectSection 로컬 state 미러(lastConnectorConfig ref)에서 읽는다 (DOM read 제거).
     // 정규화(''/'MIXED' → undefined)와 custom offset 우선순위는 기존과 동일.
     const weightStr = lastConnectorConfigRef.current.strokeWeightInput;

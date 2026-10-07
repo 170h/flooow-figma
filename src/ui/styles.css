@@ -4094,20 +4094,25 @@
     /* absolute 배치로 라인박스에 영향을 주지 않아 타이틀이 밀리지 않는다 */
     .disabled-notice-chip {
       position: absolute;
-      left: calc(100% + 8px);
+      left: calc(100% + 12px);
       top: 50%;
       transform: translateY(-50%);
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      width: max-content;
+      max-width: 200px;
       background: var(--color-notice-bg);
       border-radius: 2px;
-      padding: 2px 3px;
+      padding: 2px 4px;
       color: var(--color-notice-text);
       font-size: 9px;
       font-weight: var(--font-weight-default);
-      line-height: 14px;
-      white-space: nowrap;
+      line-height: 13px;
+      white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      z-index: 10;
       animation: noticeIn 0.18s ease-out;
       transition: opacity 0.2s ease;
     }
@@ -4126,6 +4131,8 @@
 
     .disabled-notice-text {
       display: inline-block;
+      word-break: keep-all;
+      overflow-wrap: break-word;
     }
 
     @keyframes noticeIn {
@@ -4593,6 +4600,39 @@
       background-color: var(--color-bg);
       border-color: var(--color-brand);
       outline: none;
+    }
+
+    .conn-label-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .conn-label-input.has-text {
+      padding-right: 28px;
+    }
+
+    .conn-label-clear-btn {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: var(--color-text-secondary);
+      outline: none;
+    }
+
+    .conn-label-clear-btn:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-hover);
     }
 
     .conn-label-ctrl-row {

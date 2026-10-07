@@ -104,7 +104,6 @@ export function ConnectorColorModal({
 
   // 1. 프리셋 색상 선택 (컬러칩 클릭 시 어플라이 버튼 없이 즉시 적용 및 모달 닫기)
   function handleSelectPreset(hex: string) {
-    console.log('[FLOOOW-CONN-COLOR] chip click', hex);
     setIsMixed(false);
     const formatted = hex.replace("#", "").toUpperCase();
     setColorHex(formatted);

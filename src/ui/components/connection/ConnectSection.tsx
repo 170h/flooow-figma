@@ -256,17 +256,6 @@ export function ConnectSection() {
     }
   }, [nodeOptionState.fillColor, nodeOptionState.strokeWeight, nodeOptionState.strokeColor, selectedStylePresetId, summary.connectorCount]);
 
-  // selectedConnectorColor 변경 시 로컬 입력필드 및 컬러칩 동기화 (모달 실시간 어플라이 연동)
-  useEffect(() => {
-    if (selectedConnectorColor) {
-      const formatted = selectedConnectorColor.toUpperCase();
-      setSelectedColor(formatted);
-      setHexInput(formatted.replace('#', ''));
-      const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
-      if (colSel) colSel.value = formatted;
-    }
-  }, [selectedConnectorColor]);
-
   // 외부 클릭 시 모든 커넥션 드롭다운 닫기
   useEffect(() => {
     function handleDocClick(e: MouseEvent) {
@@ -424,21 +413,23 @@ export function ConnectSection() {
       const endSel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
       if (endSel) endSel.value = endVal;
 
-      // 2. 컬러 (Mixed면 hidden 미러까지 비워 payload가 undefined=유지가 되도록)
-      setIsColorMixed(props.connectorColor.isMixed);
-      if (!props.connectorColor.isMixed && props.connectorColor.value) {
-        const hex = props.connectorColor.value.toUpperCase();
-        setSelectedColor(hex);
-        setHexInput(hex.replace('#', ''));
-        const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
-        if (colSel) colSel.value = hex;
-      } else if (props.connectorColor.isMixed) {
-        setSelectedColor('');
-        setHexInput('');
-      } else {
-        // 전체 커넥터에 색상이 없는 경우: 직전 선택의 색이 스와치/입력에 잔류하지 않도록 비운다 (undefined=유지)
-        setSelectedColor('');
-        setHexInput('');
+      // 2. 컬러 (노드 선택이 실제로 변경된 경우에만 캔버스 상태로 초기화, 같은 선택 내 사용자의 모달/수동 입력값 보존)
+      if (isDifferentSelection) {
+        setIsColorMixed(props.connectorColor.isMixed);
+        if (!props.connectorColor.isMixed && props.connectorColor.value) {
+          const hex = props.connectorColor.value.toUpperCase();
+          setSelectedColor(hex);
+          setHexInput(hex.replace('#', ''));
+          const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
+          if (colSel) colSel.value = hex;
+        } else if (props.connectorColor.isMixed) {
+          setSelectedColor('');
+          setHexInput('');
+        } else {
+          // 전체 커넥터에 색상이 없는 경우: 직전 선택의 색이 스와치/입력에 잔류하지 않도록 비운다 (undefined=유지)
+          setSelectedColor('');
+          setHexInput('');
+        }
       }
 
       // 3. 선 굵기 (커넥터 복수/혼합 선택 시)
@@ -646,6 +637,9 @@ export function ConnectSection() {
       setEndOffsetInputState(cfg.endOffsetInput);
     }
     if (cfg.connectorColorInput !== undefined && cfg.connectorColorInput !== selectedColor) {
+      if (cfg.connectorColorInput) {
+        setIsColorMixed(false);
+      }
       setSelectedColorState(cfg.connectorColorInput);
       setHexInput(cfg.connectorColorInput.replace('#', ''));
     }
@@ -662,6 +656,7 @@ export function ConnectSection() {
   useEffect(() => {
     if (selectedConnectorColor) {
       const formatted = selectedConnectorColor.toUpperCase();
+      setIsColorMixed(false);
       setSelectedColor(formatted);
       setHexInput(formatted.replace('#', ''));
       const selectEl = document.getElementById('conn-line-color') as HTMLInputElement | null;
@@ -1065,7 +1060,7 @@ export function ConnectSection() {
                   e.stopPropagation();
                   setStartTermPopupOpen(false);
                   setEndTermPopupOpen(false);
-                  setUIState({ selectedConnectorColor: selectedColor });
+                  setUIState({ selectedConnectorColor: isColorMixed ? '' : selectedColor });
                   setActiveModal('connector-color');
                 }}
               >

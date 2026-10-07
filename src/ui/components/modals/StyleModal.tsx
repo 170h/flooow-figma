@@ -49,12 +49,16 @@ export function StyleModal({
     nodeOptionState,
     setNodeOptionState,
     setUIState,
+    selectedStylePresetId,
+    setSelectedStylePresetId,
     applyCurrentNodeState,
     stylePresets,
     addStylePreset,
     updateStylePreset,
     showToast,
     selectedNodes,
+    updateMultiDraft,
+    triggerFormChange,
   } = useApp();
 
   // 수정 대상 프리셋 조회
@@ -158,6 +162,10 @@ export function StyleModal({
         strokeWeight: finalStrokeWeight,
         strokeColor: finalStrokeColor,
       });
+      setSelectedStylePresetId(editingPresetId);
+      setUIState({
+        selectedStylePresetId: editingPresetId,
+      });
     } else {
       addStylePreset({
         name: isFillNone ? "Custom None" : `Custom ${finalFillColor}`,
@@ -165,29 +173,28 @@ export function StyleModal({
         strokeWeight: finalStrokeWeight,
         strokeColor: finalStrokeColor,
       });
-      showToast(t('styleAddedNew'), "success");
     }
 
-    // UI 및 노드 옵션 상태 갱신
-    if (mode === "edit" && editingPresetId) {
-      setUIState({
-        selectedStylePresetId: editingPresetId,
-      });
-    }
     setNodeOptionState({
       fillColor: finalFillColor,
       strokeWeight: finalStrokeWeight,
       strokeColor: finalStrokeColor,
     });
 
-    // 캔버스에 선택된 노드가 있다면 즉시 스타일 동기화 반영
-    if (selectedNodes.length > 0) {
+    if (selectedNodes.length >= 2) {
+      updateMultiDraft({
+        colorHex: finalFillColor,
+        strokeWeight: finalStrokeWeight,
+        strokeColor: finalStrokeColor,
+      });
+    } else if (selectedNodes.length === 1) {
       applyCurrentNodeState(undefined, {
         colorHex: finalFillColor,
         strokeWeight: finalStrokeWeight,
         strokeColor: finalStrokeColor,
       });
     }
+    triggerFormChange();
 
     onClose();
   }

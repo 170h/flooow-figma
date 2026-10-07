@@ -2,7 +2,15 @@ import type { FlooowUsageState } from './entitlementGate';
 
 export type { FlooowUsageState };
 
-export type AppLocale = 'ko' | 'en';
+export type AppLocale =
+  | 'ko'
+  | 'en'
+  | 'ja'
+  | 'zh-CN'
+  | 'zh-TW'
+  | 'es'
+  | 'de'
+  | 'fr';
 
 export type WorkflowStatus =
   | 'draft'

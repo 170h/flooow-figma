@@ -14,6 +14,13 @@ export function hexToHsv(
   fallbackHue = 0,
 ): { h: number; s: number; v: number } {
   let clean = hex.replace("#", "").trim();
+  if (!clean) {
+    return {
+      h: fallbackHue,
+      s: 100,
+      v: 100,
+    };
+  }
   if (clean.length === 3) {
     clean = clean
       .split("")

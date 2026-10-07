@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useApp, SizePreset, NodeInfo } from '../../context/AppContext';
-import { useSelectionSummary } from '../../hooks/useSelectionSummary';
+import { useSelectionSummary, getCommonProperty } from '../../hooks/useSelectionSummary';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 import { MixedDashChip } from '../shared/icons';
 import { useDisabledNotice, DisabledNoticeChip } from '../shared/DisabledNotice';
@@ -188,11 +188,21 @@ export function SizeSection() {
     }
   }, [isSizeAllowed, dropdownOpen, setSizeModeDropdownOpen]);
 
+  // Mixed 표시는 노드 실제값 기준으로 판정한다 (옵션 지원 필터 무관).
+  // summary.width 등은 'size' 지원 노드로 필터링되므로, 비-Screen 혼합 선택에서는
+  // 값이 달라도 isMixed가 false가 되어 빈칸이 된다. 비활성 여부는 isSizeAllowed가 그대로 관장한다.
+  const sizeJudgeNodes = selectedNodes.filter((n) => n && n.isFlowNode);
+  const judgeW = getCommonProperty(sizeJudgeNodes, (n) => n.width);
+  const judgeH = getCommonProperty(sizeJudgeNodes, (n) => n.height);
+  const judgeR = getCommonProperty(sizeJudgeNodes, (n) => n.cornerRadius);
+  const judgeSizeMode = getCommonProperty(sizeJudgeNodes, (n) => n.sizeMode);
+
   const currentSizeMode = (() => {
     if (multiDraft.sizeMode) return multiDraft.sizeMode;
-    if (summary.isMultiFlowNode) {
-      if (summary.sizeMode.isMixed) return 'mixed';
-      return summary.sizeMode.value || nodeOptionState.sizeMode || 'hug';
+    // 노드+커넥터 혼합 선택도 플로우 노드 기준으로 판정 (비활성은 isSizeAllowed가 유지)
+    if (summary.isMultiFlowNode || summary.isMixedWithConnectors) {
+      if (judgeSizeMode.isMixed) return 'mixed';
+      return judgeSizeMode.value || summary.sizeMode.value || nodeOptionState.sizeMode || 'hug';
     }
     if (summary.isSingleFlowNode) {
       return summary.sizeMode.value || nodeOptionState.sizeMode || 'hug';
@@ -206,12 +216,14 @@ export function SizeSection() {
     if (el && el.value !== currentSizeMode) el.value = currentSizeMode;
   }, [currentSizeMode]);
 
-  const isWMixed = multiDraft.width !== undefined ? false : (summary.isMultiFlowNode && summary.width.isMixed);
-  const isHMixed = multiDraft.height !== undefined ? false : (summary.isMultiFlowNode && summary.height.isMixed);
-  const isRMixed = multiDraft.cornerRadius !== undefined ? false : (summary.isMultiFlowNode && summary.cornerRadius.isMixed);
+  // 노드+커넥터 혼합 선택도 플로우 노드 기준으로 Mixed 판정 (표시만, 편집은 disabled 유지)
+  const isMultiForSize = summary.isMultiFlowNode || summary.isMixedWithConnectors;
+  const isWMixed = multiDraft.width !== undefined ? false : (isMultiForSize && (judgeW.isMixed || summary.width.isMixed));
+  const isHMixed = multiDraft.height !== undefined ? false : (isMultiForSize && (judgeH.isMixed || summary.height.isMixed));
+  const isRMixed = multiDraft.cornerRadius !== undefined ? false : (isMultiForSize && (judgeR.isMixed || summary.cornerRadius.isMixed));
 
   const isSizeDrafted = multiDraft.width !== undefined || multiDraft.height !== undefined;
-  const isSizeMixed = !isSizeDrafted && summary.isMultiFlowNode && (isWMixed || isHMixed);
+  const isSizeMixed = !isSizeDrafted && isMultiForSize && (isWMixed || isHMixed);
 
   // 다중 선택 시 Mixed 상태에서 각 프리셋별 노드 수 산출
   const sizePresetCounts = React.useMemo(() => {
@@ -246,21 +258,26 @@ export function SizeSection() {
     }
 
     if (validNodes.length > 0) {
-      if (summary.isMultiFlowNode) {
+      // 복수 노드 또는 노드+커넥터 혼합 선택: 플로우 노드 요약을 표시 (Mixed 포함)
+      // 표시값은 실제값 기준(judge) 우선, Screen 요약값을 fallback으로 사용한다
+      if (summary.isMultiFlowNode || summary.isMixedWithConnectors) {
+        const dispW = judgeW.value !== undefined ? judgeW.value : summary.width.value;
+        const dispH = judgeH.value !== undefined ? judgeH.value : summary.height.value;
+        const dispR = judgeR.value !== undefined ? judgeR.value : summary.cornerRadius.value;
         if (!isFocusedRef.current.w) {
-          setWidthInput(multiDraft.width !== undefined ? String(multiDraft.width) : (isWMixed ? '' : (summary.width.value !== undefined ? String(summary.width.value) : '')));
+          setWidthInput(multiDraft.width !== undefined ? String(multiDraft.width) : (isWMixed ? '' : (dispW !== undefined ? String(dispW) : '')));
         }
         if (!isFocusedRef.current.h) {
-          setHeightInput(multiDraft.height !== undefined ? String(multiDraft.height) : (isHMixed ? '' : (summary.height.value !== undefined ? String(summary.height.value) : '')));
+          setHeightInput(multiDraft.height !== undefined ? String(multiDraft.height) : (isHMixed ? '' : (dispH !== undefined ? String(dispH) : '')));
         }
         if (!isFocusedRef.current.r) {
-          setRadiusInput(multiDraft.cornerRadius !== undefined ? String(multiDraft.cornerRadius) : (isRMixed ? '' : (summary.cornerRadius.value !== undefined ? String(summary.cornerRadius.value) : '')));
+          setRadiusInput(multiDraft.cornerRadius !== undefined ? String(multiDraft.cornerRadius) : (isRMixed ? '' : (dispR !== undefined ? String(dispR) : '')));
         }
         if (isDifferentNode) {
           if (isSizeMixed) {
             setSelectedSizePresetId(null);
           } else {
-            const matched = sizePresets.find((p) => p.w === summary.width.value && p.h === summary.height.value);
+            const matched = sizePresets.find((p) => p.w === dispW && p.h === dispH);
             setSelectedSizePresetId(matched ? matched.id : null);
           }
         }
@@ -333,6 +350,7 @@ export function SizeSection() {
   }, [
     selectedNodes,
     summary.isMultiFlowNode,
+    summary.isMixedWithConnectors,
     isWMixed,
     isHMixed,
     isRMixed,
@@ -752,12 +770,12 @@ export function SizeSection() {
                 </span>
                 <span className="size-mode-current-text figma-dropdown-current-text" id="size-mode-current-text">
                   {currentSizeMode === 'hug'
-                    ? 'Hug contents'
+                    ? t('sizeModeHug')
                     : currentSizeMode === 'fit'
-                    ? 'Fit contents'
+                    ? t('sizeModeFit')
                     : currentSizeMode === 'mixed'
                     ? 'Mixed'
-                    : 'Fixed height'}
+                    : t('sizeModeFixed')}
                 </span>
               </div>
               <span
@@ -790,17 +808,17 @@ export function SizeSection() {
                 <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'fixed' ? ' selected' : ''}`} data-value="fixed" onClick={() => selectSizeMode('fixed')}>
                   <span className="size-mode-menu-item-check figma-dropdown-check-slot">{CHECK_SVG}</span>
                   <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">{FIXED_SVG}</span>
-                  <span className="size-mode-menu-item-label figma-dropdown-label">Fixed height</span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">{t('sizeModeFixed')}</span>
                 </div>
                 <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'hug' ? ' selected' : ''}`} data-value="hug" onClick={() => selectSizeMode('hug')}>
                   <span className="size-mode-menu-item-check figma-dropdown-check-slot">{CHECK_SVG}</span>
                   <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">{HUG_SVG}</span>
-                  <span className="size-mode-menu-item-label figma-dropdown-label">Hug contents</span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">{t('sizeModeHug')}</span>
                 </div>
                 <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'fit' ? ' selected' : ''}`} data-value="fit" onClick={() => selectSizeMode('fit')}>
                   <span className="size-mode-menu-item-check figma-dropdown-check-slot">{CHECK_SVG}</span>
                   <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">{FIT_SVG}</span>
-                  <span className="size-mode-menu-item-label figma-dropdown-label">Fit contents</span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">{t('sizeModeFit')}</span>
                 </div>
               </div>
             )}

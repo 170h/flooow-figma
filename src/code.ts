@@ -5731,7 +5731,6 @@ async function updateConnectorProperties(payload: {
     }
 
     if (!node) {
-      console.log('[FLOOOW-CONN-COLOR] core node missing', payload.connectorId, payload.colorHex);
       notify(t('connectorNotFound'), 'warning');
       return;
     }
@@ -5747,15 +5746,6 @@ async function updateConnectorProperties(payload: {
     ) {
       connectorRootNode = node.parent;
     }
-
-    console.log('[FLOOOW-CONN-COLOR] core update', {
-      connectorId: payload.connectorId,
-      colorHex: payload.colorHex,
-      nodeType: node.type,
-      nodeId: node.id,
-      rootType: connectorRootNode.type,
-      rootId: connectorRootNode.id,
-    });
 
     const currentStartOff = parseFloat(
       safeGetPluginData(connectorRootNode, 'start_offset') ||
@@ -5859,14 +5849,6 @@ async function updateConnectorProperties(payload: {
       if (payload.colorHex) {
         conn.strokes = [{ type: 'SOLID', color: hexToRgbColor(payload.colorHex) }];
         conn.setPluginData('connector_color', payload.colorHex);
-        const applied = Array.isArray(conn.strokes) && conn.strokes[0] && conn.strokes[0].type === 'SOLID'
-          ? rgbToHexColor(conn.strokes[0].color)
-          : 'none';
-        console.log('[FLOOOW-CONN-COLOR] native stroke', {
-          requested: payload.colorHex,
-          applied,
-          lineType: conn.connectorLineType,
-        });
       }
 
       const mapCap = (term?: ConnectorTerminalType): ConnectorStrokeCap => {
@@ -5939,11 +5921,6 @@ async function updateConnectorProperties(payload: {
       }
 
       const rgb = payload.colorHex ? hexToRgbColor(payload.colorHex) : undefined;
-      console.log('[FLOOOW-CONN-COLOR] custom path', {
-        rootType: connectorRootNode.type,
-        hasVector: Boolean(vectorNode),
-        colorHex: payload.colorHex,
-      });
 
       if (vectorNode) {
         if (rgb) {

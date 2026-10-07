@@ -4100,20 +4100,25 @@
     /* absolute 배치로 라인박스에 영향을 주지 않아 타이틀이 밀리지 않는다 */
     .disabled-notice-chip {
       position: absolute;
-      left: calc(100% + 8px);
+      left: calc(100% + 12px);
       top: 50%;
       transform: translateY(-50%);
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      width: max-content;
+      max-width: 200px;
       background: var(--color-notice-bg);
       border-radius: 2px;
-      padding: 2px 3px;
+      padding: 2px 4px;
       color: var(--color-notice-text);
       font-size: 9px;
       font-weight: var(--font-weight-default);
-      line-height: 14px;
-      white-space: nowrap;
+      line-height: 13px;
+      white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      z-index: 10;
       animation: noticeIn 0.18s ease-out;
       transition: opacity 0.2s ease;
     }
@@ -4132,6 +4137,8 @@
 
     .disabled-notice-text {
       display: inline-block;
+      word-break: keep-all;
+      overflow-wrap: break-word;
     }
 
     @keyframes noticeIn {
@@ -4599,6 +4606,39 @@
       background-color: var(--color-bg);
       border-color: var(--color-brand);
       outline: none;
+    }
+
+    .conn-label-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .conn-label-input.has-text {
+      padding-right: 28px;
+    }
+
+    .conn-label-clear-btn {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: var(--color-text-secondary);
+      outline: none;
+    }
+
+    .conn-label-clear-btn:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-hover);
     }
 
     .conn-label-ctrl-row {
@@ -30386,9 +30426,21 @@
   }
 
   // src/i18n.ts
-  var activeLocale = "ko";
+  var SUPPORTED_LOCALES = [
+    "ko",
+    "en",
+    "ja",
+    "zh-CN",
+    "zh-TW",
+    "es",
+    "de",
+    "fr"
+  ];
+  var activeLocale = "en";
   function setAppLocale(locale) {
-    if (locale === "ko" || locale === "en") activeLocale = locale;
+    if (locale && SUPPORTED_LOCALES.includes(locale)) {
+      activeLocale = locale;
+    }
     return activeLocale;
   }
   function getAppLocale() {
@@ -30396,19 +30448,23 @@
   }
   function resolveAppLocale(language) {
     const lang = (language || "").trim().toLowerCase();
-    if (!lang) return "ko";
+    if (!lang) return "en";
     if (lang.startsWith("ko")) return "ko";
+    if (lang.startsWith("ja")) return "ja";
+    if (lang.startsWith("zh")) {
+      const traditional = lang.includes("hant") || /-(tw|hk|mo)\b/.test(lang);
+      return traditional ? "zh-TW" : "zh-CN";
+    }
+    if (lang.startsWith("es")) return "es";
+    if (lang.startsWith("de")) return "de";
+    if (lang.startsWith("fr")) return "fr";
     return "en";
   }
   var KO = {
-    // ==========================================================================
     // 1. 플랜 한도 (Quota & Entitlement)
-    // ==========================================================================
     /** [사용처] Core/UI 한도 도달 알림 | [조건] 무료 플랜 20개 초과 시 | [비고] {current}, {limit} 치환 */
     limitReached: "Flooow element\uAC00 \uAC00\uB4DD \uCC3C\uC2B5\uB2C8\uB2E4 ({current}/{limit}). \uAE30\uC874 element\uB97C \uC0AD\uC81C\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
-    // ==========================================================================
     // 2. 노드 생성 및 수정 (Node CRUD)
-    // ==========================================================================
     /** [사용처] Core 노드 단일 생성 완료 토스트 | [조건] 노드 1개 생성 성공 시 | [비고] {title} 치환 */
     nodeCreated: '\uB178\uB4DC "{title}"\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4',
     /** [사용처] Core 노드 생성 실패 토스트 | [조건] 노드 생성 예외 발생 시 | [비고] {error} 치환 */
@@ -30425,9 +30481,7 @@
     nodesBatchUpdateFailed: "\uB2E4\uC911 \uB178\uB4DC \uC5C5\uB370\uC774\uD2B8 \uC2E4\uD328: {error}",
     /** [사용처] Core 노드 참조 실패 알림 | [조건] 참조하던 노드가 캔버스에서 삭제되었을 때 */
     nodeGone: "\uD574\uB2F9 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
-    // ==========================================================================
     // 3. 커넥터 생성 및 체인 연결 (Connect & Chain)
-    // ==========================================================================
     /** [사용처] Core 커넥터 생성 오류 | [조건] 연결할 대상 노드를 찾을 수 없을 때 */
     connectNodesNotFound: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 커넥터 생성 검증 | [조건] 동일한 노드를 선택했거나 2개 노드가 구별되지 않을 때 */
@@ -30460,9 +30514,7 @@
     chainCreated: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC",
     /** [사용처] Core 체인 연결 실패 토스트 | [조건] 체인 생성 중 예외 발생 시 | [비고] {error} 치환 */
     chainFailed: "\uCCB4\uC778 \uC5F0\uACB0 \uC2E4\uD328: {error}",
-    // ==========================================================================
     // 4. 커넥터 라벨 및 속성 수정 (Connector Editing)
-    // ==========================================================================
     /** [사용처] Core 커넥터 라벨 수정 검증 | [조건] 캔버스에 선택된 커넥터가 없을 때 */
     connectorSelectForLabel: "\uC218\uC815\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 커넥터 라벨 설정 토스트 | [조건] 커넥터에 텍스트 라벨 적용 시 | [비고] {label} 치환 */
@@ -30493,27 +30545,21 @@
     connectorsAlreadyElbowed: "\uC5F0\uACB0\uC120 {count}\uAC1C\uAC00 \uC774\uBBF8 \uBAA8\uB450 \uC9C1\uAC01 \uC0C1\uD0DC\uC785\uB2C8\uB2E4",
     /** [사용처] Core 일괄 변환 실패 토스트 | [조건] 일괄 변환 처리 중 오류 발생 시 | [비고] {error} 치환 */
     connectorsConvertFailed: "\uC5F0\uACB0\uC120 \uC77C\uAD04 \uBCC0\uD658 \uC2E4\uD328: {error}",
-    // ==========================================================================
     // 5. 어피어런스 - 상태 (Status Badge)
-    // ==========================================================================
     /** [사용처] Core 상태 뱃지 선택 검증 | [조건] 선택된 노드 없이 상태 지정 시도 시 */
     statusNeedSelection: "\uC0C1\uD0DC\uB97C \uC9C0\uC815\uD560 \uC694\uC18C\uB97C 1\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 상태 뱃지 제거 토스트 | [조건] 노드에서 상태 뱃지 삭제 완료 시 | [비고] {count} 치환 */
     statusRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 상태 뱃지 부착 토스트 | [조건] 노드에 특정 상태 뱃지 부착 완료 시 | [비고] {count}, {label} 치환 */
     statusAttached: '{count}\uAC1C \uB178\uB4DC\uC5D0 \uC0C1\uD0DC \uBC43\uC9C0 "{label}"\uC744 \uBD80\uCC29\uD588\uC2B5\uB2C8\uB2E4',
-    // ==========================================================================
     // 6. 어피어런스 - 엘리베이션 (Elevation)
-    // ==========================================================================
     /** [사용처] Core 엘리베이션 선택 검증 | [조건] 선택된 노드 없이 엘리베이션 지정 시도 시 */
     elevationNeedSelection: "\uC5D8\uB9AC\uBCA0\uC774\uC158\uC744 \uC801\uC6A9\uD560 \uC694\uC18C\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 엘리베이션 제거 토스트 | [조건] 노드에서 그림자(Elevation) 제거 완료 시 | [비고] {count} 치환 */
     elevationRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 엘리베이션 적용 토스트 | [조건] 노드에 레벨별 그림자 적용 완료 시 | [비고] {count}, {level} 치환 */
     elevationApplied: "{count}\uAC1C \uB178\uB4DC\uC5D0 Level {level} \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    // ==========================================================================
     // 7. 어피어런스 - 스텝 뱃지 (Step Badges)
-    // ==========================================================================
     /** [사용처] Core 스텝 번호 선택 검증 | [조건] 선택 노드 없이 스텝 번호 적용 시도 시 */
     stepNeedSelection: "\uC2A4\uD15D \uBC88\uD638\uB97C \uB9E4\uAE38 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 스텝 번호 적용 토스트 | [조건] 노드에 스텝 번호 부여 완료 시 | [비고] {count} 치환 */
@@ -30524,9 +30570,7 @@
     stepRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 스텝 번호 없음 알림 | [조건] 선택한 노드들에 스텝 번호가 없을 때 */
     stepNoneExist: "\uC120\uD0DD\uD55C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC874\uC7AC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
-    // ==========================================================================
     // 8. 환경설정 및 디자인 토큰 (Settings & Tokens)
-    // ==========================================================================
     /** [사용처] Core 환경설정 저장 알림 | [조건] clientStorage에 설정 저장 완료 시 */
     settingsSaved: "\uD53C\uADF8\uB9C8 \uC5F0\uB3D9 \uC124\uC815\uC774 \uC548\uC804\uD558\uAC8C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 변수 API 미지원 알림 | [조건] 현재 피그마 버전에서 figma.variables가 없을 때 */
@@ -30537,9 +30581,7 @@
     tokensExtracted: "\u{1F3A8} \uCD1D {count}\uAC1C\uC758 UI3 \uB514\uC790\uC778 \uD1A0\uD070\uC774 \uCD94\uCD9C\uB418\uC5C8\uC2B5\uB2C8\uB2E4!",
     /** [사용처] Core 토큰 추출 실패 알림 | [조건] UI3 토큰 추출 중 예외 발생 시 | [비고] {error} 치환 */
     tokensFailed: "UI3 \uBCC0\uC218 \uCD94\uCD9C \uC2E4\uD328: {error}",
-    // ==========================================================================
     // 9. 실행 취소 / 다시 실행 (Undo / Redo)
-    // ==========================================================================
     /** [사용처] UI 실행 취소 힌트 툴팁 | [조건] 캔버스 실행 취소 힌트 노출 시 */
     undoHint: "\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Z (Mac) \uB610\uB294 Ctrl+Z (Windows)\uB85C \uC791\uC5C5\uC744 \uB418\uB3CC\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI 다시 실행 힌트 툴팁 | [조건] 캔버스 다시 실행 힌트 노출 시 */
@@ -30548,9 +30590,7 @@
     undoCancelled: "\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 작업 되돌림 완료 토스트 | [조건] 직전 작업이 취소/되돌려졌을 때 */
     undone: "\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.",
-    // ==========================================================================
     // 10. 입력 유효성 검사 (Validation)
-    // ==========================================================================
     /** [사용처] UI 제목 입력 제한 안내 | [조건] 제목이 32자를 초과했을 때 */
     titleMax32: "\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI 수치 최대값 제한 안내 | [조건] 입력값이 999를 초과했을 때 */
@@ -30565,9 +30605,7 @@
     sizeMaxH: "\uCD5C\uB300 \uB192\uC774\uB294 {px}px\uC785\uB2C8\uB2E4.",
     /** [사용처] UI 모서리 곡률 최대값 제한 | [조건] 모서리 곡률이 최대 허용치를 초과했을 때 | [비고] {px} 치환 */
     sizeMaxCorner: "\uCD5C\uB300\uAC12\uC740 {px}\uC785\uB2C8\uB2E4.",
-    // ==========================================================================
     // 11. 사이즈 및 스타일 프리셋 (Presets & Styles)
-    // ==========================================================================
     /** [사용처] Core 사이즈 프리셋 추가 알림 | [조건] 새 커스텀 사이즈 프리셋 저장 완료 시 | [비고] {name} 치환 */
     sizePresetAdded: '"{name}" \uC0AC\uC774\uC988\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.',
     /** [사용처] Core 사이즈 속성 갱신 알림 | [조건] 노드 사이즈 속성 반영 완료 시 */
@@ -30588,16 +30626,12 @@
     styleDeleted: "\uC2A4\uD0C0\uC77C\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI 기본 스타일 보호 알림 | [조건] 기본 White/Black 스타일 수정 시도 시 */
     styleEditNoDefault: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
-    // ==========================================================================
     // 12. 디스크립션 클립보드 복사 (Description)
-    // ==========================================================================
     /** [사용처] UI 설명 복사 검증 | [조건] 설명 내용이 비어있는 상태에서 복사 클릭 시 */
     descCopyEmpty: "\uBCF5\uC0AC\uD560 \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI 설명 복사 완료 피드백 | [조건] 클립보드 복사 성공 시 */
     descCopied: "\uB514\uC2A4\uD06C\uB9BD\uC158\uC744 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4",
-    // ==========================================================================
     // 13. UI 컨트롤 및 필드 툴팁 (Control Tooltips)
-    // ==========================================================================
     /** [사용처] UI SizeSection | [조건] W 너비 스크러버 마우스 오버 */
     tipWidth: "\uB108\uBE44",
     /** [사용처] UI SizeSection | [조건] H 높이 스크러버 마우스 오버 */
@@ -30612,6 +30646,10 @@
     tipEndOffset: "\uB05D \uC624\uD504\uC14B",
     /** [사용처] UI ConnectorSection | [조건] 커넥터 중앙 라벨 인풋 마우스 오버 */
     tipLabelText: "\uB77C\uBCA8 \uD14D\uC2A4\uD2B8",
+    /** [사용처] UI ConnectorSection | [조건] 커넥터 라벨 입력 인풋 플레이스홀더 */
+    tipLabelPlaceholder: "\uB77C\uBCA8 \uCD94\uAC00",
+    /** [사용처] UI ConnectorSection | [조건] 커넥터 라벨 삭제(X) 버튼 접근성 라벨 */
+    tipClearLabel: "\uB77C\uBCA8 \uC9C0\uC6B0\uAE30",
     /** [사용처] UI ConnectorSection | [조건] 라벨 배경색 컬러 피커 마우스 오버 */
     tipLabelFill: "\uB77C\uBCA8 \uBC30\uACBD \uC0C9\uC0C1",
     /** [사용처] UI ConnectorSection | [조건] 라벨 보더색 컬러 피커 마우스 오버 */
@@ -30710,6 +30748,12 @@
     tipSizeMode: "\uB192\uC774 \uBAA8\uB4DC \uC120\uD0DD",
     /** [사용처] UI SizeSection | [조건] Screen 외 도형 선택 시 높이 모드 비활성 툴팁 */
     tipSizeModeDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Size \uBAA8\uB4DC\uB97C \uBCC0\uACBD\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI SizeSection/SizeModal | [조건] 고정 높이 모드 라벨 */
+    sizeModeFixed: "\uACE0\uC815 \uB192\uC774",
+    /** [사용처] UI SizeSection/SizeModal | [조건] 콘텐츠 맞춤 모드 라벨 */
+    sizeModeHug: "\uCF58\uD150\uCE20 \uB9DE\uCDA4",
+    /** [사용처] UI SizeSection/SizeModal | [조건] 콘텐츠 채우기 모드 라벨 */
+    sizeModeFit: "\uCF58\uD150\uCE20 \uCC44\uC6B0\uAE30",
     /** [사용처] UI SizeSection | [조건] 사이즈 프리셋 칩 마우스 오버 | [비고] {name}, {w}, {h} 치환 */
     tipPresetDims: "{name} {w}\xD7{h}",
     /** [사용처] UI SizeSection | [조건] Screen 외 도형 선택 시 프리셋 칩 비활성 툴팁 */
@@ -30718,9 +30762,7 @@
     tipConnectorColor: "\uCEE4\uB125\uD130 \uC0C9\uC0C1",
     /** [사용처] UI Footer / Action | [조건] 무료 생성 한도(20개) 도달 시 비활성 툴팁 */
     tipQuotaBlocked: "\uBB34\uB8CC \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC2B5\uB2C8\uB2E4. \uC5C5\uADF8\uB808\uC774\uB4DC\uD558\uBA74 \uB354 \uB9CC\uB4E4 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
-    // ==========================================================================
     // 14. 도형 타입별 지원 여부 안내 (Shape Notices)
-    // ==========================================================================
     /** [사용처] UI SizeSection 패널 | [조건] Screen 타입 노드가 아닌 일반 도형 선택 시 */
     noticeSizeOnlyScreen: "Size\uB294 Screen \uB178\uB4DC\uC5D0\uC11C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
     /** [사용처] UI DescriptionSection 패널 | [조건] Description 미지원 도형 선택 시 */
@@ -30735,9 +30777,7 @@
     noticeLinkUnsupported: "Reference Link\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
     /** [사용처] UI 어피어런스 패널 | [조건] 서로 다른 타입 노드 혼합 선택 시 */
     noticeMixed: "\uD63C\uD569 \uC120\uD0DD\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
-    // ==========================================================================
     // 15. 하단 액션바 연결 상태 라벨 (Connect Status Text)
-    // ==========================================================================
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 캔버스에서 선택된 노드가 0개 또는 1개일 때 */
     connectStatusSelectNodes: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 2개 노드가 선택되고 명시적 단자 연결 준비 완료 시 */
@@ -30752,9 +30792,7 @@
     connectStatusConnected: "\uC5F0\uACB0\uB428",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 선택된 커넥터에 변경사항이 없을 때 */
     connectStatusNoChanges: "\uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C",
-    // ==========================================================================
     // 16. 주요 액션 버튼 안내 및 툴팁 (Action Buttons & Tooltips)
-    // ==========================================================================
     /** [사용처] UI StepBadgesSection 안내 문구 | [조건] Add Step Badges 버튼 좌측에 상시 표시 */
     stepDescStartsFromNumber: "\uC9C0\uC815\uD55C \uBC88\uD638\uBD80\uD130 \uC2DC\uC791",
     /** [사용처] UI StepBadgesSection 버튼 툴팁 | [조건] 시작 번호 미입력으로 버튼 비활성화 시 */
@@ -30868,6 +30906,8 @@
     tipStartOffset: "Start offset",
     tipEndOffset: "End offset",
     tipLabelText: "Label text",
+    tipLabelPlaceholder: "Add a label",
+    tipClearLabel: "Clear label",
     tipLabelFill: "Label fill color",
     tipLabelStroke: "Label stroke color",
     tipAlignLeft: "Align left",
@@ -30917,6 +30957,9 @@
     tipDefaultPresetLocked: "Default presets cannot be edited or deleted",
     tipSizeMode: "Select height mode",
     tipSizeModeDisabled: "Size mode cannot be changed for this shape",
+    sizeModeFixed: "Fixed height",
+    sizeModeHug: "Hug contents",
+    sizeModeFit: "Fit contents",
     tipPresetDims: "{name} {w}\xD7{h}",
     tipPresetDisabledShape: "Size presets are disabled for this shape",
     tipConnectorColor: "Connector color",
@@ -30945,9 +30988,1064 @@
     connectTipApplyChanges: "Apply connector changes",
     connectTipConnectNodes: "Connect selected nodes"
   };
+  var JA = {
+    limitReached: "Flooow\u306E\u8981\u7D20\u6570\u304C\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F\uFF08{current}/{limit}\uFF09\u3002\u65E2\u5B58\u306E\u8981\u7D20\u3092\u524A\u9664\u3057\u3066\u304B\u3089\u3001\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002",
+    nodeCreated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F",
+    nodeCreateFailed: "\u30CE\u30FC\u30C9\u306E\u4F5C\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    nodeNotFoundSelect: "\u7DE8\u96C6\u3059\u308B\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u30CE\u30FC\u30C9\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    nodeUpdated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F",
+    nodeUpdateFailed: "\u30CE\u30FC\u30C9\u306E\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    nodesBatchUpdated: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F",
+    nodesBatchUpdateFailed: "\u30CE\u30FC\u30C9\u306E\u4E00\u62EC\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    nodeGone: "\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
+    connectNodesNotFound: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
+    connectNeedTwoDifferent: "\u63A5\u7D9A\u3059\u308B2\u3064\u306E\u7570\u306A\u308B\u30CE\u30FC\u30C9\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    connectDone: "\u63A5\u7D9A\u3057\u307E\u3057\u305F",
+    connectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u3067\u63A5\u7D9A\u3057\u307E\u3057\u305F",
+    connectCreateFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u4F5C\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    connectNeedTwoOrMore: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    connectNeedTwoDifferentOrMore: "\u7570\u306A\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    connectNeedTwo: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    autoConnectDone: "\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F",
+    autoConnectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u4ED8\u304D\u306E\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F",
+    autoChainDone: "\u26A1 {nodes}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u9806\u756A\u306B\u63A5\u7D9A\u3057\u307E\u3057\u305F\uFF08{conns}\u672C\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\uFF09\u3002",
+    autoConnectFailed: "\u81EA\u52D5\u63A5\u7D9A\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    chainExistsAll: "\u3059\u3079\u3066\u306E\u63A5\u7D9A\u306F\u3059\u3067\u306B\u5B58\u5728\u3057\u307E\u3059\u3002",
+    chainCreatedPartial: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\uFF08{skipped}\u4EF6\u306F\u63A5\u7D9A\u6E08\u307F\uFF09",
+    chainCreated: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F",
+    chainFailed: "\u30C1\u30A7\u30FC\u30F3\u63A5\u7D9A\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    connectorSelectForLabel: "\u7DE8\u96C6\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    connectorLabelSet: "\u4E2D\u592E\u30E9\u30D9\u30EB\u3092\u300C{label}\u300D\u306B\u8A2D\u5B9A\u3057\u307E\u3057\u305F",
+    connectorLabelCleared: "\u4E2D\u592E\u30E9\u30D9\u30EB\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
+    connectorLabelFailed: "\u30E9\u30A4\u30F3\u30C6\u30AD\u30B9\u30C8\u306E\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    connectorNotFound: "\u7DE8\u96C6\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
+    connectorOffsetConverted: "\u30AA\u30D5\u30BB\u30C3\u30C8\u3092\u9069\u7528\u3059\u308B\u305F\u3081\u3001\u30AB\u30B9\u30BF\u30E0\u76F4\u89D2\u30B3\u30CD\u30AF\u30BF\u30FC\u306B\u5909\u63DB\u3057\u307E\u3057\u305F\u3002",
+    connectorUpdateFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    connectorSelectForLineType: "\u5909\u66F4\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    connectorLineElbowed: "\u{1F4D0} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u89D2\u306B\u5909\u66F4\u3057\u307E\u3057\u305F",
+    connectorLineStraight: "\u{1F4CF} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u7DDA\u306B\u5909\u66F4\u3057\u307E\u3057\u305F",
+    connectorLineTypeFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u7DDA\u7A2E\u5909\u66F4\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    connectorsNoneToConvert: "\u5909\u63DB\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u304C\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u306B\u3042\u308A\u307E\u305B\u3093\u3002",
+    connectorsConvertedAll: "\u26A1 {count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u3059\u3079\u3066\u76F4\u89D2\u306B\u5909\u63DB\u3057\u307E\u3057\u305F",
+    connectorsAlreadyElbowed: "{count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u306F\u3059\u3067\u306B\u3059\u3079\u3066\u76F4\u89D2\u3067\u3059",
+    connectorsConvertFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u4E00\u62EC\u5909\u63DB\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    statusNeedSelection: "\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u8A2D\u5B9A\u3059\u308B\u8981\u7D20\u30921\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    statusRemoved: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u304B\u3089\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30C3\u30B8\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
+    statusAttached: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u306B\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30C3\u30B8\u300C{label}\u300D\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F",
+    elevationNeedSelection: "Elevation\u3092\u9069\u7528\u3059\u308B\u8981\u7D20\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    elevationRemoved: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u304B\u3089Elevation\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
+    elevationApplied: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u306BLevel {level}\u306EElevation\u3092\u9069\u7528\u3057\u307E\u3057\u305F\u3002",
+    stepNeedSelection: "\u756A\u53F7\u3092\u4ED8\u3051\u308B\u8981\u7D20\u3092\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    stepApplied: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u306B\u30B9\u30C6\u30C3\u30D7\u756A\u53F7\u3092\u9069\u7528\u3057\u307E\u3057\u305F\u3002",
+    stepRemoveNeedSelection: "\u30B9\u30C6\u30C3\u30D7\u756A\u53F7\u3092\u524A\u9664\u3059\u308B\u8981\u7D20\u3092\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    stepRemoved: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u304B\u3089\u30B9\u30C6\u30C3\u30D7\u756A\u53F7\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
+    stepNoneExist: "\u9078\u629E\u3057\u305F\u30CE\u30FC\u30C9\u306B\u306F\u30B9\u30C6\u30C3\u30D7\u756A\u53F7\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
+    settingsSaved: "Figma\u9023\u643A\u8A2D\u5B9A\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F\u3002",
+    variablesUnsupported: "\u3053\u306EFigma\u30D0\u30FC\u30B8\u30E7\u30F3\u3067\u306FVariables API\u3092\u30B5\u30DD\u30FC\u30C8\u3057\u3066\u3044\u307E\u305B\u3093\u3002",
+    variablesNoneLocal: "\u958B\u3044\u3066\u3044\u308B\u30D5\u30A1\u30A4\u30EB\u306B\u30ED\u30FC\u30AB\u30EBVariables\u304C\u3042\u308A\u307E\u305B\u3093\u3002UI3 Kit\u30D5\u30A1\u30A4\u30EB\u306E\u30BF\u30D6\u304B\u3089\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    tokensExtracted: "\u{1F3A8} {count}\u500B\u306EUI3\u30C7\u30B6\u30A4\u30F3\u30C8\u30FC\u30AF\u30F3\u3092\u62BD\u51FA\u3057\u307E\u3057\u305F\u3002",
+    tokensFailed: "UI3\u5909\u6570\u306E\u62BD\u51FA\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
+    undoHint: "\u30AD\u30E3\u30F3\u30D0\u30B9\u3067Cmd+Z\uFF08Mac\uFF09\u307E\u305F\u306FCtrl+Z\uFF08Windows\uFF09\u3092\u62BC\u3059\u3068\u5143\u306B\u623B\u305B\u307E\u3059\u3002",
+    redoHint: "\u30AD\u30E3\u30F3\u30D0\u30B9\u3067Cmd+Shift+Z\uFF08Mac\uFF09\u307E\u305F\u306FCtrl+Y\uFF08Windows\uFF09\u3092\u62BC\u3059\u3068\u3084\u308A\u76F4\u305B\u307E\u3059\u3002",
+    undoCancelled: "\u5909\u66F4\u3092\u7834\u68C4\u3057\u307E\u3057\u305F\u3002",
+    undone: "\u5143\u306B\u623B\u3057\u307E\u3057\u305F\u3002",
+    titleMax32: "\u30BF\u30A4\u30C8\u30EB\u306F\u6700\u592732\u6587\u5B57\u307E\u3067\u5165\u529B\u3067\u304D\u307E\u3059\u3002",
+    max999: "\u6700\u5927\u5024\u306F999\u3067\u3059\u3002",
+    sizeMinW: "\u6700\u5C0F\u5E45\u306F{px}px\u3067\u3059\u3002",
+    sizeMaxW: "\u6700\u5927\u5E45\u306F{px}px\u3067\u3059\u3002",
+    sizeMinH: "\u6700\u5C0F\u9AD8\u3055\u306F{px}px\u3067\u3059\u3002",
+    sizeMaxH: "\u6700\u5927\u9AD8\u3055\u306F{px}px\u3067\u3059\u3002",
+    sizeMaxCorner: "\u6700\u5927\u5024\u306F{px}\u3067\u3059\u3002",
+    sizePresetAdded: "\u30B5\u30A4\u30BA\u30D7\u30EA\u30BB\u30C3\u30C8\u300C{name}\u300D\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\u3002",
+    sizeUpdated: "\u30B5\u30A4\u30BA\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F\u3002",
+    sizePresetDeleted: "\u30D7\u30EA\u30BB\u30C3\u30C8\u300C{name}\u300D\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
+    sizePresetDeleted2: "\u30B5\u30A4\u30BA\u30D7\u30EA\u30BB\u30C3\u30C8\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
+    presetDeleteNoDefault: "\u30C7\u30D5\u30A9\u30EB\u30C8\u30D7\u30EA\u30BB\u30C3\u30C8\u306F\u524A\u9664\u3067\u304D\u307E\u305B\u3093\u3002",
+    styleAddedNew: "\u65B0\u3057\u3044\u30B9\u30BF\u30A4\u30EB\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\u3002",
+    styleUpdated: "\u30B9\u30BF\u30A4\u30EB\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F\u3002",
+    styleDefaultNoDelete: "\u30C7\u30D5\u30A9\u30EB\u30C8\u30B9\u30BF\u30A4\u30EB\u306F\u524A\u9664\u3067\u304D\u307E\u305B\u3093\u3002",
+    styleDeleted: "\u30B9\u30BF\u30A4\u30EB\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
+    styleEditNoDefault: "\u30C7\u30D5\u30A9\u30EB\u30C8\u30B9\u30BF\u30A4\u30EB\u306F\u7DE8\u96C6\u3067\u304D\u307E\u305B\u3093\u3002",
+    descCopyEmpty: "\u30B3\u30D4\u30FC\u3059\u308B\u8AAC\u660E\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
+    descCopied: "\u8AAC\u660E\u3092\u30AF\u30EA\u30C3\u30D7\u30DC\u30FC\u30C9\u306B\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F\uFF01",
+    tipWidth: "\u5E45",
+    tipHeight: "\u9AD8\u3055",
+    tipCornerRadius: "\u89D2\u4E38",
+    tipStrokeWidth: "\u7DDA\u306E\u592A\u3055",
+    tipStartOffset: "\u958B\u59CB\u30AA\u30D5\u30BB\u30C3\u30C8",
+    tipEndOffset: "\u7D42\u4E86\u30AA\u30D5\u30BB\u30C3\u30C8",
+    tipLabelText: "\u30E9\u30D9\u30EB\u30C6\u30AD\u30B9\u30C8",
+    tipLabelPlaceholder: "\u30E9\u30D9\u30EB\u3092\u8FFD\u52A0",
+    tipClearLabel: "\u30E9\u30D9\u30EB\u3092\u30AF\u30EA\u30A2",
+    tipLabelFill: "\u30E9\u30D9\u30EB\u306E\u5857\u308A",
+    tipLabelStroke: "\u30E9\u30D9\u30EB\u306E\u7DDA",
+    tipAlignLeft: "\u5DE6\u63C3\u3048",
+    tipAlignCenter: "\u4E2D\u592E\u63C3\u3048",
+    tipAlignRight: "\u53F3\u63C3\u3048",
+    tipAddStyle: "\u30B9\u30BF\u30A4\u30EB\u3092\u8FFD\u52A0",
+    tipStyleMore: "\u305D\u306E\u4ED6\u306E\u30AA\u30D7\u30B7\u30E7\u30F3",
+    tipStyleMoreLocked: "\u30C7\u30D5\u30A9\u30EB\u30C8\u30B9\u30BF\u30A4\u30EB\u306F\u7DE8\u96C6\u307E\u305F\u306F\u524A\u9664\u3067\u304D\u307E\u305B\u3093",
+    tipFillColor: "\u5857\u308A\u306E\u8272",
+    tipStrokeColor: "\u7DDA\u306E\u8272",
+    tipStrokeWeight: "\u7DDA\u306E\u592A\u3055",
+    tipStepNumber: "\u30D0\u30C3\u30B8\u756A\u53F7",
+    tipStepStartNumber: "\u958B\u59CB\u30D0\u30C3\u30B8\u756A\u53F7",
+    tipCornerTL: "\u5DE6\u4E0A",
+    tipCornerTR: "\u53F3\u4E0A",
+    tipCornerBL: "\u5DE6\u4E0B",
+    tipCornerBR: "\u53F3\u4E0B",
+    tipCopy: "\u30B3\u30D4\u30FC",
+    tipCopied: "\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F",
+    tipNoDesc: "\u8AAC\u660E\u304C\u5165\u529B\u3055\u308C\u3066\u3044\u307E\u305B\u3093",
+    tipDescDisabled: "\u3053\u306E\u56F3\u5F62\u3067\u306FDescription\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    tipLinkDisabled: "\u3053\u306E\u56F3\u5F62\u3067\u306FReference Link\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    tipHexColor: "Hex\u30AB\u30E9\u30FC",
+    tipClose: "\u9589\u3058\u308B",
+    tipRefreshFrames: "\u30AD\u30E3\u30F3\u30D0\u30B9\u304B\u3089\u30D5\u30EC\u30FC\u30E0\u3092\u66F4\u65B0",
+    tipSolid: "\u5B9F\u7DDA",
+    tipDashed: "\u7834\u7DDA",
+    tipDotted: "\u70B9\u7DDA",
+    tipStartTerminal: "\u59CB\u70B9\u7AEF\u5B50",
+    tipEndTerminal: "\u7D42\u70B9\u7AEF\u5B50",
+    tipTermNone: "\u306A\u3057",
+    tipTermArrow: "\u77E2\u5370",
+    tipTermCircle: "\u5186",
+    tipTermDiamond: "\u3072\u3057\u5F62",
+    tipRouteOrtho: "\u76F4\u89D2",
+    tipRouteSCurve: "S\u5B57\u30AB\u30FC\u30D6",
+    tipRouteCurve: "\u30AB\u30FC\u30D6",
+    tipRouteStraight: "\u76F4\u7DDA",
+    tipGizmoSource: "\u59CB\u70B9",
+    tipGizmoTarget: "\u7D42\u70B9",
+    tipMixed: "\u6DF7\u5728",
+    tipActive: "\u6709\u52B9",
+    tipAddSize: "\u30B5\u30A4\u30BA\u3092\u8FFD\u52A0",
+    tipAddSizeDisabled: "\u3053\u306E\u56F3\u5F62\u3067\u306F\u30B5\u30A4\u30BA\u3092\u8FFD\u52A0\u3067\u304D\u307E\u305B\u3093",
+    tipSizeMore: "\u305D\u306E\u4ED6\u306E\u30AA\u30D7\u30B7\u30E7\u30F3",
+    tipSizeMoreDisabled: "\u3053\u306E\u56F3\u5F62\u3067\u306FSize\u30AA\u30D7\u30B7\u30E7\u30F3\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    tipDefaultPresetLocked: "\u30C7\u30D5\u30A9\u30EB\u30C8\u30D7\u30EA\u30BB\u30C3\u30C8\u306F\u7DE8\u96C6\u307E\u305F\u306F\u524A\u9664\u3067\u304D\u307E\u305B\u3093",
+    tipSizeMode: "\u9AD8\u3055\u30E2\u30FC\u30C9\u3092\u9078\u629E",
+    tipSizeModeDisabled: "\u3053\u306E\u56F3\u5F62\u3067\u306FSize\u30E2\u30FC\u30C9\u3092\u5909\u66F4\u3067\u304D\u307E\u305B\u3093",
+    sizeModeFixed: "\u9AD8\u3055\u56FA\u5B9A",
+    sizeModeHug: "\u30B3\u30F3\u30C6\u30F3\u30C4\u306B\u5408\u308F\u305B\u308B",
+    sizeModeFit: "\u30B3\u30F3\u30C6\u30F3\u30C4\u306B\u30D5\u30A3\u30C3\u30C8",
+    tipPresetDims: "{name} {w}\xD7{h}",
+    tipPresetDisabledShape: "\u3053\u306E\u56F3\u5F62\u3067\u306FSize\u30D7\u30EA\u30BB\u30C3\u30C8\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    tipConnectorColor: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u8272",
+    tipQuotaBlocked: "\u7121\u6599\u30D7\u30E9\u30F3\u306E\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F\u3002\u30A2\u30C3\u30D7\u30B0\u30EC\u30FC\u30C9\u3059\u308B\u3068\u3055\u3089\u306B\u4F5C\u6210\u3067\u304D\u307E\u3059\u3002",
+    noticeSizeOnlyScreen: "Size\u306FScreen\u30CE\u30FC\u30C9\u3067\u306E\u307F\u4F7F\u7528\u3067\u304D\u307E\u3059",
+    noticeDescUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FDescription\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    noticeElevationUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FElevation\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    noticeStatusUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStatus\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    noticeStepUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStep Badges\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    noticeLinkUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FReference Link\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    noticeMixed: "\u6DF7\u5728\u3057\u305F\u9078\u629E\u3067\u306F\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
+    connectStatusSelectNodes: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E",
+    connectStatusReadyTwoNodes: "2\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F",
+    connectStatusReadyMultiNodes: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F",
+    connectStatusReady: "\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F",
+    connectStatusChangesReady: "\u9069\u7528\u3059\u308B\u5909\u66F4\u304C\u3042\u308A\u307E\u3059",
+    connectStatusConnected: "\u63A5\u7D9A\u6E08\u307F",
+    connectStatusNoChanges: "\u5909\u66F4\u306A\u3057",
+    stepDescStartsFromNumber: "\u6307\u5B9A\u3057\u305F\u756A\u53F7\u304B\u3089\u958B\u59CB",
+    stepTipEnterStartNumber: "\u958B\u59CB\u756A\u53F7\u3092\u5165\u529B",
+    stepTipAddStepBadges: "\u30B9\u30C6\u30C3\u30D7\u30D0\u30C3\u30B8\u3092\u8FFD\u52A0",
+    connectTipNoChanges: "\u9069\u7528\u3059\u308B\u5909\u66F4\u306F\u3042\u308A\u307E\u305B\u3093",
+    connectTipApplyChanges: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u5909\u66F4\u3092\u9069\u7528",
+    connectTipConnectNodes: "\u9078\u629E\u3057\u305F\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A"
+  };
+  var ZH_CN = {
+    limitReached: "Flooow \u5143\u7D20\u6570\u91CF\u5DF2\u8FBE\u4E0A\u9650\uFF08{current}/{limit}\uFF09\u3002\u8BF7\u5220\u9664\u73B0\u6709\u5143\u7D20\u540E\u91CD\u8BD5\u3002",
+    nodeCreated: "\u5DF2\u521B\u5EFA\u8282\u70B9\u201C{title}\u201D",
+    nodeCreateFailed: "\u521B\u5EFA\u8282\u70B9\u5931\u8D25\uFF1A{error}",
+    nodeNotFoundSelect: "\u627E\u4E0D\u5230\u8981\u7F16\u8F91\u7684\u8282\u70B9\u3002\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u4E00\u4E2A\u8282\u70B9\u3002",
+    nodeUpdated: "\u5DF2\u66F4\u65B0\u8282\u70B9\u201C{title}\u201D",
+    nodeUpdateFailed: "\u66F4\u65B0\u8282\u70B9\u5931\u8D25\uFF1A{error}",
+    nodesBatchUpdated: "\u5DF2\u66F4\u65B0 {count} \u4E2A\u8282\u70B9",
+    nodesBatchUpdateFailed: "\u6279\u91CF\u66F4\u65B0\u8282\u70B9\u5931\u8D25\uFF1A{error}",
+    nodeGone: "\u627E\u4E0D\u5230\u8BE5\u8282\u70B9\u3002",
+    connectNodesNotFound: "\u627E\u4E0D\u5230\u8981\u8FDE\u63A5\u7684\u8282\u70B9\u3002",
+    connectNeedTwoDifferent: "\u8BF7\u9009\u62E9\u4E24\u4E2A\u4E0D\u540C\u7684\u8282\u70B9\u8FDB\u884C\u8FDE\u63A5\u3002",
+    connectDone: "\u8FDE\u63A5\u5B8C\u6210",
+    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u8FDE\u63A5",
+    connectCreateFailed: "\u521B\u5EFA\u8FDE\u63A5\u5668\u5931\u8D25\uFF1A{error}",
+    connectNeedTwoOrMore: "\u8BF7\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u8FDB\u884C\u8FDE\u63A5\u3002",
+    connectNeedTwoDifferentOrMore: "\u8BF7\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u4E0D\u540C\u7684\u8282\u70B9\u3002",
+    connectNeedTwo: "\u8BF7\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u8FDB\u884C\u8FDE\u63A5\u3002",
+    autoConnectDone: "\u76F4\u89D2\u8FDE\u63A5\u5B8C\u6210",
+    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u76F4\u89D2\u8FDE\u63A5",
+    autoChainDone: "\u26A1 \u5DF2\u6309\u987A\u5E8F\u8FDE\u63A5 {nodes} \u4E2A\u8282\u70B9\uFF08{conns} \u4E2A\u8FDE\u63A5\u5668\uFF09\u3002",
+    autoConnectFailed: "\u81EA\u52A8\u8FDE\u63A5\u5931\u8D25\uFF1A{error}",
+    chainExistsAll: "\u6240\u6709\u8FDE\u63A5\u5747\u5DF2\u5B58\u5728\u3002",
+    chainCreatedPartial: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5\uFF08{skipped} \u4E2A\u5DF2\u5B58\u5728\uFF09",
+    chainCreated: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5",
+    chainFailed: "\u94FE\u5F0F\u8FDE\u63A5\u5931\u8D25\uFF1A{error}",
+    connectorSelectForLabel: "\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u8981\u7F16\u8F91\u7684\u8FDE\u63A5\u5668\u3002",
+    connectorLabelSet: "\u4E2D\u5FC3\u6807\u7B7E\u5DF2\u8BBE\u7F6E\u4E3A\u201C{label}\u201D",
+    connectorLabelCleared: "\u4E2D\u5FC3\u6807\u7B7E\u5DF2\u6E05\u9664\u3002",
+    connectorLabelFailed: "\u66F4\u65B0\u7EBF\u6761\u6587\u672C\u5931\u8D25\uFF1A{error}",
+    connectorNotFound: "\u627E\u4E0D\u5230\u8981\u7F16\u8F91\u7684\u8FDE\u63A5\u5668\u3002",
+    connectorOffsetConverted: "\u5DF2\u8F6C\u6362\u4E3A\u81EA\u5B9A\u4E49\u76F4\u89D2\u8FDE\u63A5\u5668\uFF0C\u4EE5\u5E94\u7528\u504F\u79FB\u3002",
+    connectorUpdateFailed: "\u66F4\u65B0\u8FDE\u63A5\u5668\u5931\u8D25\uFF1A{error}",
+    connectorSelectForLineType: "\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u8981\u4FEE\u6539\u7684\u8FDE\u63A5\u5668\u3002",
+    connectorLineElbowed: "\u{1F4D0} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u89D2",
+    connectorLineStraight: "\u{1F4CF} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u7EBF",
+    connectorLineTypeFailed: "\u66F4\u6539\u8FDE\u63A5\u5668\u7EBF\u578B\u5931\u8D25\uFF1A{error}",
+    connectorsNoneToConvert: "\u753B\u5E03\u4E2D\u6CA1\u6709\u53EF\u8F6C\u6362\u7684\u8FDE\u63A5\u5668\u3002",
+    connectorsConvertedAll: "\u26A1 \u5DF2\u5C06 {count} \u4E2A\u8FDE\u63A5\u5668\u5168\u90E8\u8F6C\u6362\u4E3A\u76F4\u89D2",
+    connectorsAlreadyElbowed: "{count} \u4E2A\u8FDE\u63A5\u5668\u5DF2\u5168\u90E8\u4E3A\u76F4\u89D2",
+    connectorsConvertFailed: "\u6279\u91CF\u8F6C\u6362\u8FDE\u63A5\u5668\u5931\u8D25\uFF1A{error}",
+    statusNeedSelection: "\u8BF7\u9009\u62E9\u81F3\u5C11 1 \u4E2A\u5143\u7D20\u4EE5\u8BBE\u7F6E\u72B6\u6001\u3002",
+    statusRemoved: "\u5DF2\u4ECE {count} \u4E2A\u8282\u70B9\u4E2D\u79FB\u9664\u72B6\u6001\u5FBD\u7AE0\u3002",
+    statusAttached: "\u5DF2\u4E3A {count} \u4E2A\u8282\u70B9\u6DFB\u52A0\u72B6\u6001\u5FBD\u7AE0\u201C{label}\u201D",
+    elevationNeedSelection: "\u8BF7\u9009\u62E9\u8981\u5E94\u7528 Elevation \u7684\u5143\u7D20\u3002",
+    elevationRemoved: "\u5DF2\u4ECE {count} \u4E2A\u8282\u70B9\u4E2D\u79FB\u9664 Elevation\u3002",
+    elevationApplied: "\u5DF2\u4E3A {count} \u4E2A\u8282\u70B9\u5E94\u7528 Level {level} Elevation\u3002",
+    stepNeedSelection: "\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u8981\u7F16\u53F7\u7684\u5143\u7D20\u3002",
+    stepApplied: "\u5DF2\u4E3A {count} \u4E2A\u8282\u70B9\u6DFB\u52A0\u6B65\u9AA4\u7F16\u53F7\u3002",
+    stepRemoveNeedSelection: "\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u8981\u79FB\u9664\u6B65\u9AA4\u7F16\u53F7\u7684\u5143\u7D20\u3002",
+    stepRemoved: "\u5DF2\u4ECE {count} \u4E2A\u8282\u70B9\u4E2D\u79FB\u9664\u6B65\u9AA4\u7F16\u53F7\u3002",
+    stepNoneExist: "\u6240\u9009\u8282\u70B9\u6CA1\u6709\u6B65\u9AA4\u7F16\u53F7\u3002",
+    settingsSaved: "Figma \u96C6\u6210\u8BBE\u7F6E\u5DF2\u4FDD\u5B58\u3002",
+    variablesUnsupported: "\u5F53\u524D Figma \u7248\u672C\u4E0D\u652F\u6301 Variables API\u3002",
+    variablesNoneLocal: "\u5F53\u524D\u6587\u4EF6\u4E2D\u6CA1\u6709\u672C\u5730 Variables\u3002\u8BF7\u4ECE UI3 Kit \u6587\u4EF6\u6807\u7B7E\u9875\u8FD0\u884C\u3002",
+    tokensExtracted: "\u{1F3A8} \u5DF2\u63D0\u53D6 {count} \u4E2A UI3 \u8BBE\u8BA1\u4EE4\u724C\u3002",
+    tokensFailed: "\u63D0\u53D6 UI3 \u53D8\u91CF\u5931\u8D25\uFF1A{error}",
+    undoHint: "\u5728\u753B\u5E03\u4E2D\u4F7F\u7528 Cmd+Z\uFF08Mac\uFF09\u6216 Ctrl+Z\uFF08Windows\uFF09\u64A4\u9500\u64CD\u4F5C\u3002",
+    redoHint: "\u5728\u753B\u5E03\u4E2D\u4F7F\u7528 Cmd+Shift+Z\uFF08Mac\uFF09\u6216 Ctrl+Y\uFF08Windows\uFF09\u91CD\u505A\u64CD\u4F5C\u3002",
+    undoCancelled: "\u5DF2\u653E\u5F03\u66F4\u6539\u3002",
+    undone: "\u5DF2\u64A4\u9500\u3002",
+    titleMax32: "\u6807\u9898\u6700\u591A\u53EF\u8F93\u5165 32 \u4E2A\u5B57\u7B26\u3002",
+    max999: "\u6700\u5927\u503C\u4E3A 999\u3002",
+    sizeMinW: "\u6700\u5C0F\u5BBD\u5EA6\u4E3A {px}px\u3002",
+    sizeMaxW: "\u6700\u5927\u5BBD\u5EA6\u4E3A {px}px\u3002",
+    sizeMinH: "\u6700\u5C0F\u9AD8\u5EA6\u4E3A {px}px\u3002",
+    sizeMaxH: "\u6700\u5927\u9AD8\u5EA6\u4E3A {px}px\u3002",
+    sizeMaxCorner: "\u6700\u5927\u503C\u4E3A {px}\u3002",
+    sizePresetAdded: "\u5DF2\u6DFB\u52A0\u5C3A\u5BF8\u9884\u8BBE\u201C{name}\u201D\u3002",
+    sizeUpdated: "\u5C3A\u5BF8\u5DF2\u66F4\u65B0\u3002",
+    sizePresetDeleted: "\u5DF2\u5220\u9664\u9884\u8BBE\u201C{name}\u201D\u3002",
+    sizePresetDeleted2: "\u5C3A\u5BF8\u9884\u8BBE\u5DF2\u5220\u9664\u3002",
+    presetDeleteNoDefault: "\u9ED8\u8BA4\u9884\u8BBE\u65E0\u6CD5\u5220\u9664\u3002",
+    styleAddedNew: "\u5DF2\u6DFB\u52A0\u65B0\u6837\u5F0F\u3002",
+    styleUpdated: "\u6837\u5F0F\u5DF2\u66F4\u65B0\u3002",
+    styleDefaultNoDelete: "\u9ED8\u8BA4\u6837\u5F0F\u65E0\u6CD5\u5220\u9664\u3002",
+    styleDeleted: "\u6837\u5F0F\u5DF2\u5220\u9664\u3002",
+    styleEditNoDefault: "\u9ED8\u8BA4\u6837\u5F0F\u65E0\u6CD5\u7F16\u8F91\u3002",
+    descCopyEmpty: "\u6CA1\u6709\u53EF\u590D\u5236\u7684\u63CF\u8FF0\u3002",
+    descCopied: "\u63CF\u8FF0\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F\uFF01",
+    tipWidth: "\u5BBD\u5EA6",
+    tipHeight: "\u9AD8\u5EA6",
+    tipCornerRadius: "\u5706\u89D2",
+    tipStrokeWidth: "\u63CF\u8FB9\u5BBD\u5EA6",
+    tipStartOffset: "\u8D77\u70B9\u504F\u79FB",
+    tipEndOffset: "\u7EC8\u70B9\u504F\u79FB",
+    tipLabelText: "\u6807\u7B7E\u6587\u672C",
+    tipLabelPlaceholder: "\u6DFB\u52A0\u6807\u7B7E",
+    tipClearLabel: "\u6E05\u9664\u6807\u7B7E",
+    tipLabelFill: "\u6807\u7B7E\u586B\u5145\u989C\u8272",
+    tipLabelStroke: "\u6807\u7B7E\u63CF\u8FB9\u989C\u8272",
+    tipAlignLeft: "\u5DE6\u5BF9\u9F50",
+    tipAlignCenter: "\u5C45\u4E2D\u5BF9\u9F50",
+    tipAlignRight: "\u53F3\u5BF9\u9F50",
+    tipAddStyle: "\u6DFB\u52A0\u6837\u5F0F",
+    tipStyleMore: "\u66F4\u591A\u9009\u9879",
+    tipStyleMoreLocked: "\u9ED8\u8BA4\u6837\u5F0F\u65E0\u6CD5\u7F16\u8F91\u6216\u5220\u9664",
+    tipFillColor: "\u586B\u5145\u989C\u8272",
+    tipStrokeColor: "\u63CF\u8FB9\u989C\u8272",
+    tipStrokeWeight: "\u63CF\u8FB9\u7C97\u7EC6",
+    tipStepNumber: "\u5FBD\u7AE0\u7F16\u53F7",
+    tipStepStartNumber: "\u8D77\u59CB\u5FBD\u7AE0\u7F16\u53F7",
+    tipCornerTL: "\u5DE6\u4E0A",
+    tipCornerTR: "\u53F3\u4E0A",
+    tipCornerBL: "\u5DE6\u4E0B",
+    tipCornerBR: "\u53F3\u4E0B",
+    tipCopy: "\u590D\u5236",
+    tipCopied: "\u5DF2\u590D\u5236",
+    tipNoDesc: "\u672A\u8F93\u5165\u63CF\u8FF0",
+    tipDescDisabled: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Description",
+    tipLinkDisabled: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Reference Link",
+    tipHexColor: "Hex \u989C\u8272",
+    tipClose: "\u5173\u95ED",
+    tipRefreshFrames: "\u4ECE\u753B\u5E03\u5237\u65B0\u753B\u6846",
+    tipSolid: "\u5B9E\u7EBF",
+    tipDashed: "\u865A\u7EBF",
+    tipDotted: "\u70B9\u7EBF",
+    tipStartTerminal: "\u8D77\u70B9\u7AEF\u70B9",
+    tipEndTerminal: "\u7EC8\u70B9\u7AEF\u70B9",
+    tipTermNone: "\u65E0",
+    tipTermArrow: "\u7BAD\u5934",
+    tipTermCircle: "\u5706\u5F62",
+    tipTermDiamond: "\u83F1\u5F62",
+    tipRouteOrtho: "\u76F4\u89D2",
+    tipRouteSCurve: "S \u66F2\u7EBF",
+    tipRouteCurve: "\u66F2\u7EBF",
+    tipRouteStraight: "\u76F4\u7EBF",
+    tipGizmoSource: "\u8D77\u70B9",
+    tipGizmoTarget: "\u7EC8\u70B9",
+    tipMixed: "\u6DF7\u5408",
+    tipActive: "\u542F\u7528",
+    tipAddSize: "\u6DFB\u52A0\u5C3A\u5BF8",
+    tipAddSizeDisabled: "\u6B64\u56FE\u5F62\u65E0\u6CD5\u6DFB\u52A0\u5C3A\u5BF8",
+    tipSizeMore: "\u66F4\u591A\u9009\u9879",
+    tipSizeMoreDisabled: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Size \u9009\u9879",
+    tipDefaultPresetLocked: "\u9ED8\u8BA4\u9884\u8BBE\u65E0\u6CD5\u7F16\u8F91\u6216\u5220\u9664",
+    tipSizeMode: "\u9009\u62E9\u9AD8\u5EA6\u6A21\u5F0F",
+    tipSizeModeDisabled: "\u6B64\u56FE\u5F62\u65E0\u6CD5\u66F4\u6539 Size \u6A21\u5F0F",
+    sizeModeFixed: "\u56FA\u5B9A\u9AD8\u5EA6",
+    sizeModeHug: "\u9002\u5E94\u5185\u5BB9",
+    sizeModeFit: "\u586B\u5145\u5185\u5BB9",
+    tipPresetDims: "{name} {w}\xD7{h}",
+    tipPresetDisabledShape: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Size \u9884\u8BBE",
+    tipConnectorColor: "\u8FDE\u63A5\u5668\u989C\u8272",
+    tipQuotaBlocked: "\u5DF2\u8FBE\u5230\u514D\u8D39\u7248\u4E0A\u9650\u3002\u5347\u7EA7\u540E\u53EF\u521B\u5EFA\u66F4\u591A\u5143\u7D20\u3002",
+    noticeSizeOnlyScreen: "Size \u4EC5\u9002\u7528\u4E8E Screen \u8282\u70B9",
+    noticeDescUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Description",
+    noticeElevationUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Elevation",
+    noticeStatusUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Status",
+    noticeStepUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Step Badges",
+    noticeLinkUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Reference Link",
+    noticeMixed: "\u6DF7\u5408\u9009\u62E9\u4E0D\u53EF\u7528",
+    connectStatusSelectNodes: "\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u4EE5\u8FDB\u884C\u8FDE\u63A5",
+    connectStatusReadyTwoNodes: "2 \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5",
+    connectStatusReadyMultiNodes: "{count} \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5",
+    connectStatusReady: "\u51C6\u5907\u8FDE\u63A5",
+    connectStatusChangesReady: "\u66F4\u6539\u5DF2\u51C6\u5907\u5E94\u7528",
+    connectStatusConnected: "\u5DF2\u8FDE\u63A5",
+    connectStatusNoChanges: "\u65E0\u66F4\u6539",
+    stepDescStartsFromNumber: "\u4ECE\u6307\u5B9A\u7F16\u53F7\u5F00\u59CB",
+    stepTipEnterStartNumber: "\u8F93\u5165\u8D77\u59CB\u7F16\u53F7",
+    stepTipAddStepBadges: "\u6DFB\u52A0\u6B65\u9AA4\u5FBD\u7AE0",
+    connectTipNoChanges: "\u6CA1\u6709\u53EF\u5E94\u7528\u7684\u66F4\u6539",
+    connectTipApplyChanges: "\u5E94\u7528\u8FDE\u63A5\u5668\u66F4\u6539",
+    connectTipConnectNodes: "\u8FDE\u63A5\u6240\u9009\u8282\u70B9"
+  };
+  var ZH_TW = {
+    limitReached: "Flooow \u5143\u7D20\u6578\u91CF\u5DF2\u9054\u4E0A\u9650\uFF08{current}/{limit}\uFF09\u3002\u8ACB\u522A\u9664\u73FE\u6709\u5143\u7D20\u5F8C\u518D\u8A66\u4E00\u6B21\u3002",
+    nodeCreated: "\u5DF2\u5EFA\u7ACB\u7BC0\u9EDE\u300C{title}\u300D",
+    nodeCreateFailed: "\u5EFA\u7ACB\u7BC0\u9EDE\u5931\u6557\uFF1A{error}",
+    nodeNotFoundSelect: "\u627E\u4E0D\u5230\u8981\u7DE8\u8F2F\u7684\u7BC0\u9EDE\u3002\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u7BC0\u9EDE\u3002",
+    nodeUpdated: "\u5DF2\u66F4\u65B0\u7BC0\u9EDE\u300C{title}\u300D",
+    nodeUpdateFailed: "\u66F4\u65B0\u7BC0\u9EDE\u5931\u6557\uFF1A{error}",
+    nodesBatchUpdated: "\u5DF2\u66F4\u65B0 {count} \u500B\u7BC0\u9EDE",
+    nodesBatchUpdateFailed: "\u6279\u6B21\u66F4\u65B0\u7BC0\u9EDE\u5931\u6557\uFF1A{error}",
+    nodeGone: "\u627E\u4E0D\u5230\u8A72\u7BC0\u9EDE\u3002",
+    connectNodesNotFound: "\u627E\u4E0D\u5230\u8981\u9023\u63A5\u7684\u7BC0\u9EDE\u3002",
+    connectNeedTwoDifferent: "\u8ACB\u9078\u53D6\u5169\u500B\u4E0D\u540C\u7684\u7BC0\u9EDE\u9032\u884C\u9023\u63A5\u3002",
+    connectDone: "\u9023\u63A5\u5B8C\u6210",
+    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u9023\u63A5",
+    connectCreateFailed: "\u5EFA\u7ACB\u9023\u63A5\u5668\u5931\u6557\uFF1A{error}",
+    connectNeedTwoOrMore: "\u8ACB\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u9032\u884C\u9023\u63A5\u3002",
+    connectNeedTwoDifferentOrMore: "\u8ACB\u9078\u53D6\u81F3\u5C11 2 \u500B\u4E0D\u540C\u7684\u7BC0\u9EDE\u3002",
+    connectNeedTwo: "\u8ACB\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u9032\u884C\u9023\u63A5\u3002",
+    autoConnectDone: "\u76F4\u89D2\u9023\u63A5\u5B8C\u6210",
+    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u76F4\u89D2\u9023\u63A5",
+    autoChainDone: "\u26A1 \u5DF2\u4F9D\u5E8F\u9023\u63A5 {nodes} \u500B\u7BC0\u9EDE\uFF08{conns} \u500B\u9023\u63A5\u5668\uFF09\u3002",
+    autoConnectFailed: "\u81EA\u52D5\u9023\u63A5\u5931\u6557\uFF1A{error}",
+    chainExistsAll: "\u6240\u6709\u9023\u63A5\u7686\u5DF2\u5B58\u5728\u3002",
+    chainCreatedPartial: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5\uFF08{skipped} \u500B\u5DF2\u9023\u63A5\uFF09",
+    chainCreated: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5",
+    chainFailed: "\u93C8\u5F0F\u9023\u63A5\u5931\u6557\uFF1A{error}",
+    connectorSelectForLabel: "\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u8981\u7DE8\u8F2F\u7684\u9023\u63A5\u5668\u3002",
+    connectorLabelSet: "\u4E2D\u592E\u6A19\u7C64\u5DF2\u8A2D\u70BA\u300C{label}\u300D",
+    connectorLabelCleared: "\u4E2D\u592E\u6A19\u7C64\u5DF2\u6E05\u9664\u3002",
+    connectorLabelFailed: "\u66F4\u65B0\u7DDA\u689D\u6587\u5B57\u5931\u6557\uFF1A{error}",
+    connectorNotFound: "\u627E\u4E0D\u5230\u8981\u7DE8\u8F2F\u7684\u9023\u63A5\u5668\u3002",
+    connectorOffsetConverted: "\u5DF2\u8F49\u63DB\u70BA\u81EA\u8A02\u76F4\u89D2\u9023\u63A5\u5668\uFF0C\u4EE5\u5957\u7528\u504F\u79FB\u3002",
+    connectorUpdateFailed: "\u66F4\u65B0\u9023\u63A5\u5668\u5931\u6557\uFF1A{error}",
+    connectorSelectForLineType: "\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u8981\u8B8A\u66F4\u7684\u9023\u63A5\u5668\u3002",
+    connectorLineElbowed: "\u{1F4D0} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u89D2",
+    connectorLineStraight: "\u{1F4CF} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u7DDA",
+    connectorLineTypeFailed: "\u8B8A\u66F4\u9023\u63A5\u5668\u7DDA\u689D\u985E\u578B\u5931\u6557\uFF1A{error}",
+    connectorsNoneToConvert: "\u756B\u5E03\u4E0A\u6C92\u6709\u53EF\u8F49\u63DB\u7684\u9023\u63A5\u5668\u3002",
+    connectorsConvertedAll: "\u26A1 \u5DF2\u5C07 {count} \u500B\u9023\u63A5\u5668\u5168\u90E8\u8F49\u63DB\u70BA\u76F4\u89D2",
+    connectorsAlreadyElbowed: "{count} \u500B\u9023\u63A5\u5668\u5DF2\u5168\u90E8\u70BA\u76F4\u89D2",
+    connectorsConvertFailed: "\u6279\u6B21\u8F49\u63DB\u9023\u63A5\u5668\u5931\u6557\uFF1A{error}",
+    statusNeedSelection: "\u8ACB\u9078\u53D6\u81F3\u5C11 1 \u500B\u5143\u7D20\u4EE5\u8A2D\u5B9A\u72C0\u614B\u3002",
+    statusRemoved: "\u5DF2\u5F9E {count} \u500B\u7BC0\u9EDE\u79FB\u9664\u72C0\u614B\u5FBD\u7AE0\u3002",
+    statusAttached: "\u5DF2\u70BA {count} \u500B\u7BC0\u9EDE\u65B0\u589E\u72C0\u614B\u5FBD\u7AE0\u300C{label}\u300D",
+    elevationNeedSelection: "\u8ACB\u9078\u53D6\u8981\u5957\u7528 Elevation \u7684\u5143\u7D20\u3002",
+    elevationRemoved: "\u5DF2\u5F9E {count} \u500B\u7BC0\u9EDE\u79FB\u9664 Elevation\u3002",
+    elevationApplied: "\u5DF2\u70BA {count} \u500B\u7BC0\u9EDE\u5957\u7528 Level {level} Elevation\u3002",
+    stepNeedSelection: "\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u8981\u7DE8\u865F\u7684\u5143\u7D20\u3002",
+    stepApplied: "\u5DF2\u70BA {count} \u500B\u7BC0\u9EDE\u5957\u7528\u6B65\u9A5F\u7DE8\u865F\u3002",
+    stepRemoveNeedSelection: "\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u8981\u79FB\u9664\u6B65\u9A5F\u7DE8\u865F\u7684\u5143\u7D20\u3002",
+    stepRemoved: "\u5DF2\u5F9E {count} \u500B\u7BC0\u9EDE\u79FB\u9664\u6B65\u9A5F\u7DE8\u865F\u3002",
+    stepNoneExist: "\u9078\u53D6\u7684\u7BC0\u9EDE\u6C92\u6709\u6B65\u9A5F\u7DE8\u865F\u3002",
+    settingsSaved: "Figma \u6574\u5408\u8A2D\u5B9A\u5DF2\u5132\u5B58\u3002",
+    variablesUnsupported: "\u76EE\u524D\u7684 Figma \u7248\u672C\u4E0D\u652F\u63F4 Variables API\u3002",
+    variablesNoneLocal: "\u76EE\u524D\u6A94\u6848\u6C92\u6709\u672C\u6A5F Variables\u3002\u8ACB\u5F9E UI3 Kit \u6A94\u6848\u5206\u9801\u57F7\u884C\u3002",
+    tokensExtracted: "\u{1F3A8} \u5DF2\u64F7\u53D6 {count} \u500B UI3 \u8A2D\u8A08 Token\u3002",
+    tokensFailed: "\u64F7\u53D6 UI3 \u8B8A\u6578\u5931\u6557\uFF1A{error}",
+    undoHint: "\u5728\u756B\u5E03\u4E0A\u4F7F\u7528 Cmd+Z\uFF08Mac\uFF09\u6216 Ctrl+Z\uFF08Windows\uFF09\u5FA9\u539F\u64CD\u4F5C\u3002",
+    redoHint: "\u5728\u756B\u5E03\u4E0A\u4F7F\u7528 Cmd+Shift+Z\uFF08Mac\uFF09\u6216 Ctrl+Y\uFF08Windows\uFF09\u91CD\u505A\u64CD\u4F5C\u3002",
+    undoCancelled: "\u5DF2\u6368\u68C4\u8B8A\u66F4\u3002",
+    undone: "\u5DF2\u5FA9\u539F\u3002",
+    titleMax32: "\u6A19\u984C\u6700\u591A\u53EF\u8F38\u5165 32 \u500B\u5B57\u5143\u3002",
+    max999: "\u6700\u5927\u503C\u70BA 999\u3002",
+    sizeMinW: "\u6700\u5C0F\u5BEC\u5EA6\u70BA {px}px\u3002",
+    sizeMaxW: "\u6700\u5927\u5BEC\u5EA6\u70BA {px}px\u3002",
+    sizeMinH: "\u6700\u5C0F\u9AD8\u5EA6\u70BA {px}px\u3002",
+    sizeMaxH: "\u6700\u5927\u9AD8\u5EA6\u70BA {px}px\u3002",
+    sizeMaxCorner: "\u6700\u5927\u503C\u70BA {px}\u3002",
+    sizePresetAdded: "\u5DF2\u65B0\u589E\u5C3A\u5BF8\u9810\u8A2D\u300C{name}\u300D\u3002",
+    sizeUpdated: "\u5C3A\u5BF8\u5DF2\u66F4\u65B0\u3002",
+    sizePresetDeleted: "\u5DF2\u522A\u9664\u9810\u8A2D\u300C{name}\u300D\u3002",
+    sizePresetDeleted2: "\u5C3A\u5BF8\u9810\u8A2D\u5DF2\u522A\u9664\u3002",
+    presetDeleteNoDefault: "\u9810\u8A2D\u9805\u76EE\u7121\u6CD5\u522A\u9664\u3002",
+    styleAddedNew: "\u5DF2\u65B0\u589E\u6A23\u5F0F\u3002",
+    styleUpdated: "\u6A23\u5F0F\u5DF2\u66F4\u65B0\u3002",
+    styleDefaultNoDelete: "\u9810\u8A2D\u6A23\u5F0F\u7121\u6CD5\u522A\u9664\u3002",
+    styleDeleted: "\u6A23\u5F0F\u5DF2\u522A\u9664\u3002",
+    styleEditNoDefault: "\u9810\u8A2D\u6A23\u5F0F\u7121\u6CD5\u7DE8\u8F2F\u3002",
+    descCopyEmpty: "\u6C92\u6709\u53EF\u8907\u88FD\u7684\u8AAA\u660E\u3002",
+    descCopied: "\u8AAA\u660E\u5DF2\u8907\u88FD\u5230\u526A\u8CBC\u7C3F\uFF01",
+    tipWidth: "\u5BEC\u5EA6",
+    tipHeight: "\u9AD8\u5EA6",
+    tipCornerRadius: "\u5713\u89D2",
+    tipStrokeWidth: "\u7B46\u756B\u5BEC\u5EA6",
+    tipStartOffset: "\u8D77\u9EDE\u504F\u79FB",
+    tipEndOffset: "\u7D42\u9EDE\u504F\u79FB",
+    tipLabelText: "\u6A19\u7C64\u6587\u5B57",
+    tipLabelPlaceholder: "\u65B0\u589E\u6A19\u7C64",
+    tipClearLabel: "\u6E05\u9664\u6A19\u7C64",
+    tipLabelFill: "\u6A19\u7C64\u586B\u8272",
+    tipLabelStroke: "\u6A19\u7C64\u7B46\u756B\u984F\u8272",
+    tipAlignLeft: "\u9760\u5DE6\u5C0D\u9F4A",
+    tipAlignCenter: "\u7F6E\u4E2D\u5C0D\u9F4A",
+    tipAlignRight: "\u9760\u53F3\u5C0D\u9F4A",
+    tipAddStyle: "\u65B0\u589E\u6A23\u5F0F",
+    tipStyleMore: "\u66F4\u591A\u9078\u9805",
+    tipStyleMoreLocked: "\u9810\u8A2D\u6A23\u5F0F\u7121\u6CD5\u7DE8\u8F2F\u6216\u522A\u9664",
+    tipFillColor: "\u586B\u8272",
+    tipStrokeColor: "\u7B46\u756B\u984F\u8272",
+    tipStrokeWeight: "\u7B46\u756B\u7C97\u7D30",
+    tipStepNumber: "\u5FBD\u7AE0\u7DE8\u865F",
+    tipStepStartNumber: "\u8D77\u59CB\u5FBD\u7AE0\u7DE8\u865F",
+    tipCornerTL: "\u5DE6\u4E0A",
+    tipCornerTR: "\u53F3\u4E0A",
+    tipCornerBL: "\u5DE6\u4E0B",
+    tipCornerBR: "\u53F3\u4E0B",
+    tipCopy: "\u8907\u88FD",
+    tipCopied: "\u5DF2\u8907\u88FD",
+    tipNoDesc: "\u5C1A\u672A\u8F38\u5165\u8AAA\u660E",
+    tipDescDisabled: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Description",
+    tipLinkDisabled: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Reference Link",
+    tipHexColor: "Hex \u984F\u8272",
+    tipClose: "\u95DC\u9589",
+    tipRefreshFrames: "\u5F9E\u756B\u5E03\u91CD\u65B0\u6574\u7406\u6846\u67B6",
+    tipSolid: "\u5BE6\u7DDA",
+    tipDashed: "\u865B\u7DDA",
+    tipDotted: "\u9EDE\u7DDA",
+    tipStartTerminal: "\u8D77\u9EDE\u7AEF\u9EDE",
+    tipEndTerminal: "\u7D42\u9EDE\u7AEF\u9EDE",
+    tipTermNone: "\u7121",
+    tipTermArrow: "\u7BAD\u982D",
+    tipTermCircle: "\u5713\u5F62",
+    tipTermDiamond: "\u83F1\u5F62",
+    tipRouteOrtho: "\u76F4\u89D2",
+    tipRouteSCurve: "S \u66F2\u7DDA",
+    tipRouteCurve: "\u66F2\u7DDA",
+    tipRouteStraight: "\u76F4\u7DDA",
+    tipGizmoSource: "\u8D77\u9EDE",
+    tipGizmoTarget: "\u7D42\u9EDE",
+    tipMixed: "\u6DF7\u5408",
+    tipActive: "\u555F\u7528",
+    tipAddSize: "\u65B0\u589E\u5C3A\u5BF8",
+    tipAddSizeDisabled: "\u6B64\u5716\u5F62\u7121\u6CD5\u65B0\u589E\u5C3A\u5BF8",
+    tipSizeMore: "\u66F4\u591A\u9078\u9805",
+    tipSizeMoreDisabled: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Size \u9078\u9805",
+    tipDefaultPresetLocked: "\u9810\u8A2D\u9805\u76EE\u7121\u6CD5\u7DE8\u8F2F\u6216\u522A\u9664",
+    tipSizeMode: "\u9078\u64C7\u9AD8\u5EA6\u6A21\u5F0F",
+    tipSizeModeDisabled: "\u6B64\u5716\u5F62\u7121\u6CD5\u8B8A\u66F4 Size \u6A21\u5F0F",
+    sizeModeFixed: "\u56FA\u5B9A\u9AD8\u5EA6",
+    sizeModeHug: "\u7B26\u5408\u5167\u5BB9",
+    sizeModeFit: "\u586B\u6EFF\u5167\u5BB9",
+    tipPresetDims: "{name} {w}\xD7{h}",
+    tipPresetDisabledShape: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Size \u9810\u8A2D",
+    tipConnectorColor: "\u9023\u63A5\u5668\u984F\u8272",
+    tipQuotaBlocked: "\u5DF2\u9054\u514D\u8CBB\u7248\u4E0A\u9650\u3002\u5347\u7D1A\u5F8C\u53EF\u5EFA\u7ACB\u66F4\u591A\u5143\u7D20\u3002",
+    noticeSizeOnlyScreen: "Size \u50C5\u9069\u7528\u65BC Screen \u7BC0\u9EDE",
+    noticeDescUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Description",
+    noticeElevationUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Elevation",
+    noticeStatusUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Status",
+    noticeStepUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Step Badges",
+    noticeLinkUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Reference Link",
+    noticeMixed: "\u6DF7\u5408\u9078\u53D6\u4E0D\u53EF\u7528",
+    connectStatusSelectNodes: "\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u4EE5\u9032\u884C\u9023\u63A5",
+    connectStatusReadyTwoNodes: "2 \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5",
+    connectStatusReadyMultiNodes: "{count} \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5",
+    connectStatusReady: "\u6E96\u5099\u9023\u63A5",
+    connectStatusChangesReady: "\u8B8A\u66F4\u5DF2\u6E96\u5099\u5957\u7528",
+    connectStatusConnected: "\u5DF2\u9023\u63A5",
+    connectStatusNoChanges: "\u7121\u8B8A\u66F4",
+    stepDescStartsFromNumber: "\u5F9E\u6307\u5B9A\u7DE8\u865F\u958B\u59CB",
+    stepTipEnterStartNumber: "\u8F38\u5165\u8D77\u59CB\u7DE8\u865F",
+    stepTipAddStepBadges: "\u65B0\u589E\u6B65\u9A5F\u5FBD\u7AE0",
+    connectTipNoChanges: "\u6C92\u6709\u53EF\u5957\u7528\u7684\u8B8A\u66F4",
+    connectTipApplyChanges: "\u5957\u7528\u9023\u63A5\u5668\u8B8A\u66F4",
+    connectTipConnectNodes: "\u9023\u63A5\u6240\u9078\u7BC0\u9EDE"
+  };
+  var ES = {
+    // 1. Quota & Entitlement
+    limitReached: "Se ha alcanzado el l\xEDmite de elementos de Flooow ({current}/{limit}). Elimina elementos existentes y vuelve a intentarlo.",
+    // 2. Node CRUD
+    nodeCreated: 'Nodo "{title}" creado',
+    nodeCreateFailed: "No se pudo crear el nodo: {error}",
+    nodeNotFoundSelect: "No se encontr\xF3 el nodo que quieres editar. Selecciona un nodo en el lienzo.",
+    nodeUpdated: 'Nodo "{title}" actualizado',
+    nodeUpdateFailed: "No se pudo actualizar el nodo: {error}",
+    nodesBatchUpdated: "{count} nodos actualizados",
+    nodesBatchUpdateFailed: "No se pudieron actualizar los nodos: {error}",
+    nodeGone: "No se encontr\xF3 el nodo.",
+    // 3. Connect & Chain
+    connectNodesNotFound: "No se encontraron los nodos que quieres conectar.",
+    connectNeedTwoDifferent: "Selecciona dos nodos diferentes para conectarlos.",
+    connectDone: "Conectado",
+    connectDoneLabel: 'Conectado con la etiqueta "{label}"',
+    connectCreateFailed: "No se pudo crear la conexi\xF3n: {error}",
+    connectNeedTwoOrMore: "Selecciona al menos 2 nodos para conectarlos.",
+    connectNeedTwoDifferentOrMore: "Selecciona al menos 2 nodos diferentes.",
+    connectNeedTwo: "Selecciona al menos 2 nodos para conectarlos.",
+    autoConnectDone: "Conexi\xF3n ortogonal completada",
+    autoConnectDoneLabel: 'Conexi\xF3n ortogonal completada con la etiqueta "{label}"',
+    autoChainDone: "\u26A1 {nodes} nodos conectados en secuencia ({conns} conexiones).",
+    autoConnectFailed: "No se pudo realizar la conexi\xF3n autom\xE1tica: {error}",
+    chainExistsAll: "Todas las conexiones ya existen.",
+    chainCreatedPartial: "{created} conexiones creadas ({skipped} ya exist\xEDan)",
+    chainCreated: "{created} conexiones creadas",
+    chainFailed: "No se pudo crear la cadena: {error}",
+    // 4. Connector Editing
+    connectorSelectForLabel: "Selecciona una conexi\xF3n en el lienzo para editarla.",
+    connectorLabelSet: 'Etiqueta central establecida como "{label}"',
+    connectorLabelCleared: "Etiqueta central eliminada.",
+    connectorLabelFailed: "No se pudo actualizar el texto de la conexi\xF3n: {error}",
+    connectorNotFound: "No se encontr\xF3 la conexi\xF3n que quieres editar.",
+    connectorOffsetConverted: "Convertida autom\xE1ticamente en una conexi\xF3n ortogonal personalizada para aplicar los desplazamientos.",
+    connectorUpdateFailed: "No se pudo actualizar la conexi\xF3n: {error}",
+    connectorSelectForLineType: "Selecciona una conexi\xF3n en el lienzo para cambiarla.",
+    connectorLineElbowed: "\u{1F4D0} Conexi\xF3n cambiada a ortogonal",
+    connectorLineStraight: "\u{1F4CF} Conexi\xF3n cambiada a recta",
+    connectorLineTypeFailed: "No se pudo cambiar el tipo de l\xEDnea: {error}",
+    connectorsNoneToConvert: "No hay conexiones en el lienzo para convertir.",
+    connectorsConvertedAll: "\u26A1 {count} conexiones convertidas a ortogonales",
+    connectorsAlreadyElbowed: "{count} conexiones ya son ortogonales",
+    connectorsConvertFailed: "No se pudieron convertir las conexiones: {error}",
+    // 5. Status Badge
+    statusNeedSelection: "Selecciona al menos 1 elemento para establecer el estado.",
+    statusRemoved: "Insignias de estado eliminadas de {count} nodos.",
+    statusAttached: 'Insignia de estado "{label}" a\xF1adida a {count} nodos',
+    // 6. Elevation
+    elevationNeedSelection: "Selecciona elementos para aplicar Elevation.",
+    elevationRemoved: "Elevation eliminada de {count} nodos.",
+    elevationApplied: "Elevation de nivel {level} aplicada a {count} nodos.",
+    // 7. Step Badges
+    stepNeedSelection: "Selecciona elementos en el lienzo para numerarlos.",
+    stepApplied: "N\xFAmeros de paso aplicados a {count} nodos.",
+    stepRemoveNeedSelection: "Selecciona elementos en el lienzo para eliminar los n\xFAmeros de paso.",
+    stepRemoved: "N\xFAmeros de paso eliminados de {count} nodos.",
+    stepNoneExist: "Los nodos seleccionados no tienen n\xFAmeros de paso.",
+    // 8. Settings & Tokens
+    settingsSaved: "Configuraci\xF3n de integraci\xF3n con Figma guardada.",
+    variablesUnsupported: "Esta versi\xF3n de Figma no admite la API de Variables.",
+    variablesNoneLocal: "No hay Variables locales en el archivo abierto. Ejec\xFAtalo desde la pesta\xF1a del archivo UI3 Kit.",
+    tokensExtracted: "\u{1F3A8} Se han extra\xEDdo {count} tokens de dise\xF1o de UI3.",
+    tokensFailed: "No se pudieron extraer las Variables de UI3: {error}",
+    // 9. Undo / Redo
+    undoHint: "Deshaz los cambios con Cmd+Z (Mac) o Ctrl+Z (Windows) en el lienzo.",
+    redoHint: "Rehaz los cambios con Cmd+Shift+Z (Mac) o Ctrl+Y (Windows) en el lienzo.",
+    undoCancelled: "Cambios descartados.",
+    undone: "Deshecho.",
+    // 10. Validation
+    titleMax32: "Los t\xEDtulos pueden tener hasta 32 caracteres.",
+    max999: "El valor m\xE1ximo es 999.",
+    sizeMinW: "El ancho m\xEDnimo es {px}px.",
+    sizeMaxW: "El ancho m\xE1ximo es {px}px.",
+    sizeMinH: "La altura m\xEDnima es {px}px.",
+    sizeMaxH: "La altura m\xE1xima es {px}px.",
+    sizeMaxCorner: "El valor m\xE1ximo es {px}.",
+    // 11. Presets & Styles
+    sizePresetAdded: 'Preajuste de tama\xF1o "{name}" a\xF1adido.',
+    sizeUpdated: "Tama\xF1o actualizado.",
+    sizePresetDeleted: 'Preajuste "{name}" eliminado.',
+    sizePresetDeleted2: "Preajuste de tama\xF1o eliminado.",
+    presetDeleteNoDefault: "Los preajustes predeterminados no se pueden eliminar.",
+    styleAddedNew: "Nuevo estilo a\xF1adido.",
+    styleUpdated: "Estilo actualizado.",
+    styleDefaultNoDelete: "Los estilos predeterminados no se pueden eliminar.",
+    styleDeleted: "Estilo eliminado.",
+    styleEditNoDefault: "Los estilos predeterminados no se pueden editar.",
+    // 12. Description
+    descCopyEmpty: "No hay ninguna descripci\xF3n para copiar.",
+    descCopied: "Descripci\xF3n copiada al portapapeles.",
+    // 13. Control Tooltips
+    tipWidth: "Ancho",
+    tipHeight: "Altura",
+    tipCornerRadius: "Radio de esquina",
+    tipStrokeWidth: "Grosor del trazo",
+    tipStartOffset: "Desplazamiento inicial",
+    tipEndOffset: "Desplazamiento final",
+    tipLabelText: "Texto de etiqueta",
+    tipLabelPlaceholder: "A\xF1adir etiqueta",
+    tipClearLabel: "Borrar etiqueta",
+    tipLabelFill: "Color de relleno de etiqueta",
+    tipLabelStroke: "Color de trazo de etiqueta",
+    tipAlignLeft: "Alinear a la izquierda",
+    tipAlignCenter: "Alinear al centro",
+    tipAlignRight: "Alinear a la derecha",
+    tipAddStyle: "A\xF1adir estilo",
+    tipStyleMore: "M\xE1s opciones",
+    tipStyleMoreLocked: "Los estilos predeterminados no se pueden editar ni eliminar",
+    tipFillColor: "Color de relleno",
+    tipStrokeColor: "Color de trazo",
+    tipStrokeWeight: "Grosor del trazo",
+    tipStepNumber: "N\xFAmero de insignia",
+    tipStepStartNumber: "N\xFAmero inicial de insignia",
+    tipCornerTL: "Superior izquierda",
+    tipCornerTR: "Superior derecha",
+    tipCornerBL: "Inferior izquierda",
+    tipCornerBR: "Inferior derecha",
+    tipCopy: "Copiar",
+    tipCopied: "Copiado",
+    tipNoDesc: "No se ha introducido ninguna descripci\xF3n",
+    tipDescDisabled: "Description no est\xE1 disponible para esta forma",
+    tipLinkDisabled: "Reference Link no est\xE1 disponible para esta forma",
+    tipHexColor: "Color hexadecimal",
+    tipClose: "Cerrar",
+    tipRefreshFrames: "Actualizar frames desde el lienzo",
+    tipSolid: "S\xF3lida",
+    tipDashed: "Discontinua",
+    tipDotted: "Punteada",
+    tipStartTerminal: "Forma inicial",
+    tipEndTerminal: "Forma final",
+    tipTermNone: "Ninguna",
+    tipTermArrow: "Flecha",
+    tipTermCircle: "C\xEDrculo",
+    tipTermDiamond: "Rombo",
+    tipRouteOrtho: "Ortogonal",
+    tipRouteSCurve: "Curva en S",
+    tipRouteCurve: "Curva",
+    tipRouteStraight: "Recta",
+    tipGizmoSource: "Origen",
+    tipGizmoTarget: "Destino",
+    tipMixed: "Mixto",
+    tipActive: "Activo",
+    tipAddSize: "A\xF1adir tama\xF1o",
+    tipAddSizeDisabled: "No se puede a\xF1adir tama\xF1o a esta forma",
+    tipSizeMore: "M\xE1s opciones",
+    tipSizeMoreDisabled: "Las opciones de Size no est\xE1n disponibles para esta forma",
+    tipDefaultPresetLocked: "Los preajustes predeterminados no se pueden editar ni eliminar",
+    tipSizeMode: "Seleccionar modo de altura",
+    tipSizeModeDisabled: "El modo de Size no se puede cambiar para esta forma",
+    sizeModeFixed: "Altura fija",
+    sizeModeHug: "Ajustar al contenido",
+    sizeModeFit: "Rellenar contenido",
+    tipPresetDims: "{name} {w}\xD7{h}",
+    tipPresetDisabledShape: "Los preajustes de Size no est\xE1n disponibles para esta forma",
+    tipConnectorColor: "Color de conexi\xF3n",
+    tipQuotaBlocked: "L\xEDmite gratuito alcanzado. Actualiza para crear m\xE1s.",
+    // 14. Shape Notices
+    noticeSizeOnlyScreen: "Size solo est\xE1 disponible para nodos Screen",
+    noticeDescUnsupported: "Description no est\xE1 disponible para esta forma",
+    noticeElevationUnsupported: "Elevation no est\xE1 disponible para esta forma",
+    noticeStatusUnsupported: "Status no est\xE1 disponible para esta forma",
+    noticeStepUnsupported: "Step Badges no est\xE1 disponible para esta forma",
+    noticeLinkUnsupported: "Reference Link no est\xE1 disponible para esta forma",
+    noticeMixed: "No disponible para una selecci\xF3n mixta",
+    // 15. Connect Status Text
+    connectStatusSelectNodes: "Selecciona 2 o m\xE1s nodos para conectar",
+    connectStatusReadyTwoNodes: "2 nodos listos para conectar",
+    connectStatusReadyMultiNodes: "{count} nodos listos para conectar",
+    connectStatusReady: "Listo para conectar",
+    connectStatusChangesReady: "Cambios listos para aplicar",
+    connectStatusConnected: "Conectado",
+    connectStatusNoChanges: "Sin cambios",
+    // 16. Action Buttons & Tooltips
+    stepDescStartsFromNumber: "Comienza desde el n\xFAmero especificado",
+    stepTipEnterStartNumber: "Introduce un n\xFAmero inicial",
+    stepTipAddStepBadges: "A\xF1adir Step Badges",
+    connectTipNoChanges: "No hay cambios para aplicar",
+    connectTipApplyChanges: "Aplicar cambios de conexi\xF3n",
+    connectTipConnectNodes: "Conectar nodos seleccionados"
+  };
+  var DE = {
+    // 1. Quota & Entitlement
+    limitReached: "Das Limit f\xFCr Flooow-Elemente ist erreicht ({current}/{limit}). L\xF6sche vorhandene Elemente und versuche es erneut.",
+    // 2. Node CRUD
+    nodeCreated: 'Knoten "{title}" erstellt',
+    nodeCreateFailed: "Knoten konnte nicht erstellt werden: {error}",
+    nodeNotFoundSelect: "Der zu bearbeitende Knoten wurde nicht gefunden. W\xE4hle einen Knoten auf der Arbeitsfl\xE4che aus.",
+    nodeUpdated: 'Knoten "{title}" aktualisiert',
+    nodeUpdateFailed: "Knoten konnte nicht aktualisiert werden: {error}",
+    nodesBatchUpdated: "{count} Knoten aktualisiert",
+    nodesBatchUpdateFailed: "Knoten konnten nicht aktualisiert werden: {error}",
+    nodeGone: "Knoten nicht gefunden.",
+    // 3. Connect & Chain
+    connectNodesNotFound: "Zu verbindende Knoten wurden nicht gefunden.",
+    connectNeedTwoDifferent: "W\xE4hle zwei verschiedene Knoten zum Verbinden aus.",
+    connectDone: "Verbunden",
+    connectDoneLabel: 'Mit der Beschriftung "{label}" verbunden',
+    connectCreateFailed: "Verbindung konnte nicht erstellt werden: {error}",
+    connectNeedTwoOrMore: "W\xE4hle mindestens 2 Knoten zum Verbinden aus.",
+    connectNeedTwoDifferentOrMore: "W\xE4hle mindestens 2 verschiedene Knoten aus.",
+    connectNeedTwo: "W\xE4hle mindestens 2 Knoten zum Verbinden aus.",
+    autoConnectDone: "Orthogonale Verbindung erstellt",
+    autoConnectDoneLabel: 'Orthogonale Verbindung mit der Beschriftung "{label}" erstellt',
+    autoChainDone: "\u26A1 {nodes} Knoten nacheinander verbunden ({conns} Verbindungen).",
+    autoConnectFailed: "Automatische Verbindung fehlgeschlagen: {error}",
+    chainExistsAll: "Alle Verbindungen sind bereits vorhanden.",
+    chainCreatedPartial: "{created} Verbindungen erstellt ({skipped} bereits vorhanden)",
+    chainCreated: "{created} Verbindungen erstellt",
+    chainFailed: "Kettenverbindung fehlgeschlagen: {error}",
+    // 4. Connector Editing
+    connectorSelectForLabel: "W\xE4hle eine Verbindung auf der Arbeitsfl\xE4che aus, um sie zu bearbeiten.",
+    connectorLabelSet: 'Mittlere Beschriftung auf "{label}" gesetzt',
+    connectorLabelCleared: "Mittlere Beschriftung entfernt.",
+    connectorLabelFailed: "Text der Verbindung konnte nicht aktualisiert werden: {error}",
+    connectorNotFound: "Die zu bearbeitende Verbindung wurde nicht gefunden.",
+    connectorOffsetConverted: "Zur Anwendung von Vers\xE4tzen automatisch in eine benutzerdefinierte orthogonale Verbindung umgewandelt.",
+    connectorUpdateFailed: "Verbindung konnte nicht aktualisiert werden: {error}",
+    connectorSelectForLineType: "W\xE4hle eine Verbindung auf der Arbeitsfl\xE4che aus, um sie zu \xE4ndern.",
+    connectorLineElbowed: "\u{1F4D0} Verbindung auf orthogonal ge\xE4ndert",
+    connectorLineStraight: "\u{1F4CF} Verbindung auf gerade ge\xE4ndert",
+    connectorLineTypeFailed: "Linientyp konnte nicht ge\xE4ndert werden: {error}",
+    connectorsNoneToConvert: "Keine Verbindungen auf der Arbeitsfl\xE4che zum Umwandeln vorhanden.",
+    connectorsConvertedAll: "\u26A1 {count} Verbindungen in orthogonale Verbindungen umgewandelt",
+    connectorsAlreadyElbowed: "{count} Verbindungen sind bereits orthogonal",
+    connectorsConvertFailed: "Verbindungen konnten nicht umgewandelt werden: {error}",
+    // 5. Status Badge
+    statusNeedSelection: "W\xE4hle mindestens 1 Element aus, um einen Status festzulegen.",
+    statusRemoved: "Status-Badges von {count} Knoten entfernt.",
+    statusAttached: 'Status-Badge "{label}" an {count} Knoten angebracht',
+    // 6. Elevation
+    elevationNeedSelection: "W\xE4hle Elemente aus, um Elevation anzuwenden.",
+    elevationRemoved: "Elevation von {count} Knoten entfernt.",
+    elevationApplied: "Elevation der Stufe {level} auf {count} Knoten angewendet.",
+    // 7. Step Badges
+    stepNeedSelection: "W\xE4hle Elemente auf der Arbeitsfl\xE4che aus, um sie zu nummerieren.",
+    stepApplied: "Schrittnummern auf {count} Knoten angewendet.",
+    stepRemoveNeedSelection: "W\xE4hle Elemente auf der Arbeitsfl\xE4che aus, um Schrittnummern zu entfernen.",
+    stepRemoved: "Schrittnummern von {count} Knoten entfernt.",
+    stepNoneExist: "Die ausgew\xE4hlten Knoten haben keine Schrittnummern.",
+    // 8. Settings & Tokens
+    settingsSaved: "Figma-Integrationseinstellungen gespeichert.",
+    variablesUnsupported: "Diese Figma-Version unterst\xFCtzt die Variables-API nicht.",
+    variablesNoneLocal: "Keine lokalen Variablen in der ge\xF6ffneten Datei. F\xFChre den Vorgang \xFCber den UI3-Kit-Dateireiter aus.",
+    tokensExtracted: "\u{1F3A8} {count} UI3-Designtokens extrahiert.",
+    tokensFailed: "UI3-Variablen konnten nicht extrahiert werden: {error}",
+    // 9. Undo / Redo
+    undoHint: "Auf der Arbeitsfl\xE4che mit Cmd+Z (Mac) oder Strg+Z (Windows) r\xFCckg\xE4ngig machen.",
+    redoHint: "Auf der Arbeitsfl\xE4che mit Cmd+Umschalt+Z (Mac) oder Strg+Y (Windows) wiederholen.",
+    undoCancelled: "\xC4nderungen verworfen.",
+    undone: "R\xFCckg\xE4ngig gemacht.",
+    // 10. Validation
+    titleMax32: "Titel d\xFCrfen maximal 32 Zeichen lang sein.",
+    max999: "Der H\xF6chstwert ist 999.",
+    sizeMinW: "Die Mindestbreite betr\xE4gt {px}px.",
+    sizeMaxW: "Die maximale Breite betr\xE4gt {px}px.",
+    sizeMinH: "Die Mindesth\xF6he betr\xE4gt {px}px.",
+    sizeMaxH: "Die maximale H\xF6he betr\xE4gt {px}px.",
+    sizeMaxCorner: "Der H\xF6chstwert ist {px}.",
+    // 11. Presets & Styles
+    sizePresetAdded: 'Gr\xF6\xDFen-Preset "{name}" hinzugef\xFCgt.',
+    sizeUpdated: "Gr\xF6\xDFe aktualisiert.",
+    sizePresetDeleted: 'Preset "{name}" gel\xF6scht.',
+    sizePresetDeleted2: "Gr\xF6\xDFen-Preset gel\xF6scht.",
+    presetDeleteNoDefault: "Standard-Presets k\xF6nnen nicht gel\xF6scht werden.",
+    styleAddedNew: "Neuer Stil hinzugef\xFCgt.",
+    styleUpdated: "Stil aktualisiert.",
+    styleDefaultNoDelete: "Standardstile k\xF6nnen nicht gel\xF6scht werden.",
+    styleDeleted: "Stil gel\xF6scht.",
+    styleEditNoDefault: "Standardstile k\xF6nnen nicht bearbeitet werden.",
+    // 12. Description
+    descCopyEmpty: "Keine Beschreibung zum Kopieren vorhanden.",
+    descCopied: "Beschreibung in die Zwischenablage kopiert.",
+    // 13. Control Tooltips
+    tipWidth: "Breite",
+    tipHeight: "H\xF6he",
+    tipCornerRadius: "Eckenradius",
+    tipStrokeWidth: "Konturst\xE4rke",
+    tipStartOffset: "Startversatz",
+    tipEndOffset: "Endversatz",
+    tipLabelText: "Beschriftungstext",
+    tipLabelPlaceholder: "Label hinzuf\xFCgen",
+    tipClearLabel: "Label l\xF6schen",
+    tipLabelFill: "F\xFCllfarbe der Beschriftung",
+    tipLabelStroke: "Konturfarbe der Beschriftung",
+    tipAlignLeft: "Linksb\xFCndig",
+    tipAlignCenter: "Zentriert",
+    tipAlignRight: "Rechtsb\xFCndig",
+    tipAddStyle: "Stil hinzuf\xFCgen",
+    tipStyleMore: "Weitere Optionen",
+    tipStyleMoreLocked: "Standardstile k\xF6nnen nicht bearbeitet oder gel\xF6scht werden",
+    tipFillColor: "F\xFCllfarbe",
+    tipStrokeColor: "Konturfarbe",
+    tipStrokeWeight: "Konturst\xE4rke",
+    tipStepNumber: "Badge-Nummer",
+    tipStepStartNumber: "Startnummer des Badges",
+    tipCornerTL: "Oben links",
+    tipCornerTR: "Oben rechts",
+    tipCornerBL: "Unten links",
+    tipCornerBR: "Unten rechts",
+    tipCopy: "Kopieren",
+    tipCopied: "Kopiert",
+    tipNoDesc: "Keine Beschreibung eingegeben",
+    tipDescDisabled: "Description ist f\xFCr diese Form nicht verf\xFCgbar",
+    tipLinkDisabled: "Reference Link ist f\xFCr diese Form nicht verf\xFCgbar",
+    tipHexColor: "Hex-Farbe",
+    tipClose: "Schlie\xDFen",
+    tipRefreshFrames: "Frames von der Arbeitsfl\xE4che aktualisieren",
+    tipSolid: "Durchgezogen",
+    tipDashed: "Gestrichelt",
+    tipDotted: "Gepunktet",
+    tipStartTerminal: "Anfangsform",
+    tipEndTerminal: "Endform",
+    tipTermNone: "Keine",
+    tipTermArrow: "Pfeil",
+    tipTermCircle: "Kreis",
+    tipTermDiamond: "Raute",
+    tipRouteOrtho: "Orthogonal",
+    tipRouteSCurve: "S-Kurve",
+    tipRouteCurve: "Kurve",
+    tipRouteStraight: "Gerade",
+    tipGizmoSource: "Quelle",
+    tipGizmoTarget: "Ziel",
+    tipMixed: "Gemischt",
+    tipActive: "Aktiv",
+    tipAddSize: "Gr\xF6\xDFe hinzuf\xFCgen",
+    tipAddSizeDisabled: "F\xFCr diese Form kann keine Gr\xF6\xDFe hinzugef\xFCgt werden",
+    tipSizeMore: "Weitere Optionen",
+    tipSizeMoreDisabled: "Size-Optionen sind f\xFCr diese Form nicht verf\xFCgbar",
+    tipDefaultPresetLocked: "Standard-Presets k\xF6nnen nicht bearbeitet oder gel\xF6scht werden",
+    tipSizeMode: "H\xF6henmodus ausw\xE4hlen",
+    tipSizeModeDisabled: "Der Size-Modus kann f\xFCr diese Form nicht ge\xE4ndert werden",
+    sizeModeFixed: "Feste H\xF6he",
+    sizeModeHug: "An Inhalt anpassen",
+    sizeModeFit: "Inhalt ausf\xFCllen",
+    tipPresetDims: "{name} {w}\xD7{h}",
+    tipPresetDisabledShape: "Size-Presets sind f\xFCr diese Form nicht verf\xFCgbar",
+    tipConnectorColor: "Verbindungsfarbe",
+    tipQuotaBlocked: "Kostenloses Limit erreicht. Upgrade f\xFCr weitere Elemente.",
+    // 14. Shape Notices
+    noticeSizeOnlyScreen: "Size ist nur f\xFCr Screen-Knoten verf\xFCgbar",
+    noticeDescUnsupported: "Description ist f\xFCr diese Form nicht verf\xFCgbar",
+    noticeElevationUnsupported: "Elevation ist f\xFCr diese Form nicht verf\xFCgbar",
+    noticeStatusUnsupported: "Status ist f\xFCr diese Form nicht verf\xFCgbar",
+    noticeStepUnsupported: "Step Badges sind f\xFCr diese Form nicht verf\xFCgbar",
+    noticeLinkUnsupported: "Reference Link ist f\xFCr diese Form nicht verf\xFCgbar",
+    noticeMixed: "Bei gemischter Auswahl nicht verf\xFCgbar",
+    // 15. Connect Status Text
+    connectStatusSelectNodes: "Mindestens 2 Knoten zum Verbinden ausw\xE4hlen",
+    connectStatusReadyTwoNodes: "2 Knoten zum Verbinden bereit",
+    connectStatusReadyMultiNodes: "{count} Knoten zum Verbinden bereit",
+    connectStatusReady: "Bereit zum Verbinden",
+    connectStatusChangesReady: "\xC4nderungen zum Anwenden bereit",
+    connectStatusConnected: "Verbunden",
+    connectStatusNoChanges: "Keine \xC4nderungen",
+    // 16. Action Buttons & Tooltips
+    stepDescStartsFromNumber: "Beginnt mit der angegebenen Nummer",
+    stepTipEnterStartNumber: "Startnummer eingeben",
+    stepTipAddStepBadges: "Step Badges hinzuf\xFCgen",
+    connectTipNoChanges: "Keine \xC4nderungen zum Anwenden",
+    connectTipApplyChanges: "Verbindungs\xE4nderungen anwenden",
+    connectTipConnectNodes: "Ausgew\xE4hlte Knoten verbinden"
+  };
+  var FR = {
+    // 1. Quota & Entitlement
+    limitReached: "La limite d\u2019\xE9l\xE9ments Flooow est atteinte ({current}/{limit}). Supprimez des \xE9l\xE9ments existants, puis r\xE9essayez.",
+    // 2. Node CRUD
+    nodeCreated: 'N\u0153ud "{title}" cr\xE9\xE9',
+    nodeCreateFailed: "\xC9chec de la cr\xE9ation du n\u0153ud : {error}",
+    nodeNotFoundSelect: "N\u0153ud \xE0 modifier introuvable. S\xE9lectionnez un n\u0153ud sur le canevas.",
+    nodeUpdated: 'N\u0153ud "{title}" mis \xE0 jour',
+    nodeUpdateFailed: "\xC9chec de la mise \xE0 jour du n\u0153ud : {error}",
+    nodesBatchUpdated: "{count} n\u0153uds mis \xE0 jour",
+    nodesBatchUpdateFailed: "\xC9chec de la mise \xE0 jour des n\u0153uds : {error}",
+    nodeGone: "N\u0153ud introuvable.",
+    // 3. Connect & Chain
+    connectNodesNotFound: "N\u0153uds \xE0 connecter introuvables.",
+    connectNeedTwoDifferent: "S\xE9lectionnez deux n\u0153uds diff\xE9rents \xE0 connecter.",
+    connectDone: "Connect\xE9",
+    connectDoneLabel: 'Connect\xE9 avec le libell\xE9 "{label}"',
+    connectCreateFailed: "\xC9chec de la cr\xE9ation de la connexion : {error}",
+    connectNeedTwoOrMore: "S\xE9lectionnez au moins 2 n\u0153uds \xE0 connecter.",
+    connectNeedTwoDifferentOrMore: "S\xE9lectionnez au moins 2 n\u0153uds diff\xE9rents.",
+    connectNeedTwo: "S\xE9lectionnez au moins 2 n\u0153uds \xE0 connecter.",
+    autoConnectDone: "Connexion orthogonale termin\xE9e",
+    autoConnectDoneLabel: 'Connexion orthogonale termin\xE9e avec le libell\xE9 "{label}"',
+    autoChainDone: "\u26A1 {nodes} n\u0153uds connect\xE9s en s\xE9quence ({conns} connexions).",
+    autoConnectFailed: "\xC9chec de la connexion automatique : {error}",
+    chainExistsAll: "Toutes les connexions existent d\xE9j\xE0.",
+    chainCreatedPartial: "{created} connexions cr\xE9\xE9es ({skipped} existent d\xE9j\xE0)",
+    chainCreated: "{created} connexions cr\xE9\xE9es",
+    chainFailed: "\xC9chec de la cr\xE9ation de la cha\xEEne : {error}",
+    // 4. Connector Editing
+    connectorSelectForLabel: "S\xE9lectionnez une connexion sur le canevas pour la modifier.",
+    connectorLabelSet: 'Libell\xE9 central d\xE9fini sur "{label}"',
+    connectorLabelCleared: "Libell\xE9 central supprim\xE9.",
+    connectorLabelFailed: "\xC9chec de la mise \xE0 jour du texte de la connexion : {error}",
+    connectorNotFound: "Connexion \xE0 modifier introuvable.",
+    connectorOffsetConverted: "Convertie automatiquement en connexion orthogonale personnalis\xE9e pour appliquer les d\xE9calages.",
+    connectorUpdateFailed: "\xC9chec de la mise \xE0 jour de la connexion : {error}",
+    connectorSelectForLineType: "S\xE9lectionnez une connexion sur le canevas pour la modifier.",
+    connectorLineElbowed: "\u{1F4D0} Connexion pass\xE9e en mode orthogonal",
+    connectorLineStraight: "\u{1F4CF} Connexion pass\xE9e en ligne droite",
+    connectorLineTypeFailed: "\xC9chec de la modification du type de ligne : {error}",
+    connectorsNoneToConvert: "Aucune connexion \xE0 convertir sur le canevas.",
+    connectorsConvertedAll: "\u26A1 {count} connexions converties en mode orthogonal",
+    connectorsAlreadyElbowed: "{count} connexions sont d\xE9j\xE0 orthogonales",
+    connectorsConvertFailed: "\xC9chec de la conversion des connexions : {error}",
+    // 5. Status Badge
+    statusNeedSelection: "S\xE9lectionnez au moins 1 \xE9l\xE9ment pour d\xE9finir un statut.",
+    statusRemoved: "Badges de statut supprim\xE9s de {count} n\u0153uds.",
+    statusAttached: 'Badge de statut "{label}" ajout\xE9 \xE0 {count} n\u0153uds',
+    // 6. Elevation
+    elevationNeedSelection: "S\xE9lectionnez des \xE9l\xE9ments pour appliquer Elevation.",
+    elevationRemoved: "Elevation supprim\xE9e de {count} n\u0153uds.",
+    elevationApplied: "Elevation de niveau {level} appliqu\xE9e \xE0 {count} n\u0153uds.",
+    // 7. Step Badges
+    stepNeedSelection: "S\xE9lectionnez des \xE9l\xE9ments sur le canevas pour les num\xE9roter.",
+    stepApplied: "Num\xE9ros d\u2019\xE9tape appliqu\xE9s \xE0 {count} n\u0153uds.",
+    stepRemoveNeedSelection: "S\xE9lectionnez des \xE9l\xE9ments sur le canevas pour supprimer les num\xE9ros d\u2019\xE9tape.",
+    stepRemoved: "Num\xE9ros d\u2019\xE9tape supprim\xE9s de {count} n\u0153uds.",
+    stepNoneExist: "Les n\u0153uds s\xE9lectionn\xE9s n\u2019ont aucun num\xE9ro d\u2019\xE9tape.",
+    // 8. Settings & Tokens
+    settingsSaved: "Param\xE8tres d\u2019int\xE9gration Figma enregistr\xE9s.",
+    variablesUnsupported: "Cette version de Figma ne prend pas en charge l\u2019API Variables.",
+    variablesNoneLocal: "Aucune Variable locale dans le fichier ouvert. Ex\xE9cutez depuis l\u2019onglet du fichier UI3 Kit.",
+    tokensExtracted: "\u{1F3A8} {count} jetons de design UI3 extraits.",
+    tokensFailed: "\xC9chec de l\u2019extraction des Variables UI3 : {error}",
+    // 9. Undo / Redo
+    undoHint: "Annulez avec Cmd+Z (Mac) ou Ctrl+Z (Windows) sur le canevas.",
+    redoHint: "R\xE9tablissez avec Cmd+Maj+Z (Mac) ou Ctrl+Y (Windows) sur le canevas.",
+    undoCancelled: "Modifications annul\xE9es.",
+    undone: "Annul\xE9.",
+    // 10. Validation
+    titleMax32: "Les titres peuvent contenir jusqu\u2019\xE0 32 caract\xE8res.",
+    max999: "La valeur maximale est 999.",
+    sizeMinW: "La largeur minimale est de {px}px.",
+    sizeMaxW: "La largeur maximale est de {px}px.",
+    sizeMinH: "La hauteur minimale est de {px}px.",
+    sizeMaxH: "La hauteur maximale est de {px}px.",
+    sizeMaxCorner: "La valeur maximale est de {px}.",
+    // 11. Presets & Styles
+    sizePresetAdded: 'Pr\xE9r\xE9glage de taille "{name}" ajout\xE9.',
+    sizeUpdated: "Taille mise \xE0 jour.",
+    sizePresetDeleted: 'Pr\xE9r\xE9glage "{name}" supprim\xE9.',
+    sizePresetDeleted2: "Pr\xE9r\xE9glage de taille supprim\xE9.",
+    presetDeleteNoDefault: "Les pr\xE9r\xE9glages par d\xE9faut ne peuvent pas \xEAtre supprim\xE9s.",
+    styleAddedNew: "Nouveau style ajout\xE9.",
+    styleUpdated: "Style mis \xE0 jour.",
+    styleDefaultNoDelete: "Les styles par d\xE9faut ne peuvent pas \xEAtre supprim\xE9s.",
+    styleDeleted: "Style supprim\xE9.",
+    styleEditNoDefault: "Les styles par d\xE9faut ne peuvent pas \xEAtre modifi\xE9s.",
+    // 12. Description
+    descCopyEmpty: "Aucune description \xE0 copier.",
+    descCopied: "Description copi\xE9e dans le presse-papiers.",
+    // 13. Control Tooltips
+    tipWidth: "Largeur",
+    tipHeight: "Hauteur",
+    tipCornerRadius: "Rayon des angles",
+    tipStrokeWidth: "\xC9paisseur du contour",
+    tipStartOffset: "D\xE9calage de d\xE9but",
+    tipEndOffset: "D\xE9calage de fin",
+    tipLabelText: "Texte du libell\xE9",
+    tipLabelPlaceholder: "Ajouter un libell\xE9",
+    tipClearLabel: "Effacer le libell\xE9",
+    tipLabelFill: "Couleur de remplissage du libell\xE9",
+    tipLabelStroke: "Couleur du contour du libell\xE9",
+    tipAlignLeft: "Aligner \xE0 gauche",
+    tipAlignCenter: "Centrer",
+    tipAlignRight: "Aligner \xE0 droite",
+    tipAddStyle: "Ajouter un style",
+    tipStyleMore: "Plus d\u2019options",
+    tipStyleMoreLocked: "Les styles par d\xE9faut ne peuvent \xEAtre ni modifi\xE9s ni supprim\xE9s",
+    tipFillColor: "Couleur de remplissage",
+    tipStrokeColor: "Couleur du contour",
+    tipStrokeWeight: "\xC9paisseur du contour",
+    tipStepNumber: "Num\xE9ro du badge",
+    tipStepStartNumber: "Num\xE9ro de d\xE9part du badge",
+    tipCornerTL: "En haut \xE0 gauche",
+    tipCornerTR: "En haut \xE0 droite",
+    tipCornerBL: "En bas \xE0 gauche",
+    tipCornerBR: "En bas \xE0 droite",
+    tipCopy: "Copier",
+    tipCopied: "Copi\xE9",
+    tipNoDesc: "Aucune description saisie",
+    tipDescDisabled: "Description n\u2019est pas disponible pour cette forme",
+    tipLinkDisabled: "Reference Link n\u2019est pas disponible pour cette forme",
+    tipHexColor: "Couleur hexad\xE9cimale",
+    tipClose: "Fermer",
+    tipRefreshFrames: "Actualiser les frames depuis le canevas",
+    tipSolid: "Plein",
+    tipDashed: "Tirets",
+    tipDotted: "Pointill\xE9s",
+    tipStartTerminal: "Forme de d\xE9but",
+    tipEndTerminal: "Forme de fin",
+    tipTermNone: "Aucune",
+    tipTermArrow: "Fl\xE8che",
+    tipTermCircle: "Cercle",
+    tipTermDiamond: "Losange",
+    tipRouteOrtho: "Orthogonal",
+    tipRouteSCurve: "Courbe en S",
+    tipRouteCurve: "Courbe",
+    tipRouteStraight: "Ligne droite",
+    tipGizmoSource: "Source",
+    tipGizmoTarget: "Cible",
+    tipMixed: "Mixte",
+    tipActive: "Actif",
+    tipAddSize: "Ajouter une taille",
+    tipAddSizeDisabled: "Impossible d\u2019ajouter une taille pour cette forme",
+    tipSizeMore: "Plus d\u2019options",
+    tipSizeMoreDisabled: "Les options de Size ne sont pas disponibles pour cette forme",
+    tipDefaultPresetLocked: "Les pr\xE9r\xE9glages par d\xE9faut ne peuvent \xEAtre ni modifi\xE9s ni supprim\xE9s",
+    tipSizeMode: "S\xE9lectionner le mode de hauteur",
+    tipSizeModeDisabled: "Le mode de Size ne peut pas \xEAtre modifi\xE9 pour cette forme",
+    sizeModeFixed: "Hauteur fixe",
+    sizeModeHug: "Ajuster au contenu",
+    sizeModeFit: "Remplir le contenu",
+    tipPresetDims: "{name} {w}\xD7{h}",
+    tipPresetDisabledShape: "Les pr\xE9r\xE9glages de Size ne sont pas disponibles pour cette forme",
+    tipConnectorColor: "Couleur de la connexion",
+    tipQuotaBlocked: "Limite gratuite atteinte. Passez \xE0 Pro pour en cr\xE9er davantage.",
+    // 14. Shape Notices
+    noticeSizeOnlyScreen: "Size est disponible uniquement pour les n\u0153uds Screen",
+    noticeDescUnsupported: "Description n\u2019est pas disponible pour cette forme",
+    noticeElevationUnsupported: "Elevation n\u2019est pas disponible pour cette forme",
+    noticeStatusUnsupported: "Status n\u2019est pas disponible pour cette forme",
+    noticeStepUnsupported: "Step Badges ne sont pas disponibles pour cette forme",
+    noticeLinkUnsupported: "Reference Link n\u2019est pas disponible pour cette forme",
+    noticeMixed: "Indisponible pour une s\xE9lection mixte",
+    // 15. Connect Status Text
+    connectStatusSelectNodes: "S\xE9lectionnez 2 n\u0153uds ou plus pour connecter",
+    connectStatusReadyTwoNodes: "2 n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s",
+    connectStatusReadyMultiNodes: "{count} n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s",
+    connectStatusReady: "Pr\xEAt \xE0 connecter",
+    connectStatusChangesReady: "Modifications pr\xEAtes \xE0 \xEAtre appliqu\xE9es",
+    connectStatusConnected: "Connect\xE9",
+    connectStatusNoChanges: "Aucune modification",
+    // 16. Action Buttons & Tooltips
+    stepDescStartsFromNumber: "Commence \xE0 partir du num\xE9ro sp\xE9cifi\xE9",
+    stepTipEnterStartNumber: "Saisissez un num\xE9ro de d\xE9part",
+    stepTipAddStepBadges: "Ajouter des Step Badges",
+    connectTipNoChanges: "Aucune modification \xE0 appliquer",
+    connectTipApplyChanges: "Appliquer les modifications de connexion",
+    connectTipConnectNodes: "Connecter les n\u0153uds s\xE9lectionn\xE9s"
+  };
+  var CATALOGS = {
+    ko: KO,
+    en: EN,
+    ja: JA,
+    "zh-CN": ZH_CN,
+    "zh-TW": ZH_TW,
+    es: ES,
+    de: DE,
+    fr: FR
+  };
   function t(key, params, locale) {
-    const catalog = (locale || activeLocale) === "en" ? EN : KO;
-    let text = catalog[key];
+    const targetLocale = locale || activeLocale;
+    const catalog = CATALOGS[targetLocale] || EN;
+    let text = catalog[key] || EN[key] || KO[key] || "";
     if (params) {
       for (const [name, value] of Object.entries(params)) {
         text = text.split(`{${name}}`).join(String(value));
@@ -31208,7 +32306,8 @@
       if (isApplyingMultiDraftRef.current) return;
       if (!nodes || nodes.length < 2) return;
       if (!hasMultiDraft) return;
-      if (nodes.some((n) => n && !n.isFlowNode)) return;
+      const flowTargets = nodes.filter((n) => n && n.isFlowNode);
+      if (flowTargets.length === 0) return;
       const currentSortedIds = nodes.map((n) => n?.id).filter(Boolean).sort();
       const draftSortedIds = multiDraftSelectionRef.current;
       const isIdSetMatch = currentSortedIds.length === draftSortedIds.length && currentSortedIds.every((id, idx) => id === draftSortedIds[idx]);
@@ -31223,7 +32322,8 @@
         }
       });
       if (!hasField) return;
-      const targetNodes = nodes.filter((n) => n && draftSortedIds.includes(n.id));
+      const targetNodes = flowTargets.filter((n) => n && draftSortedIds.includes(n.id));
+      if (targetNodes.length === 0) return;
       const batchItems = targetNodes.map((node) => {
         const origPatch = {};
         Object.keys(patch).forEach((k) => {
@@ -31258,7 +32358,7 @@
         pluginMessage: {
           type: "BATCH_UPDATE_FLOW_NODES",
           payload: {
-            nodeIds: [...draftSortedIds],
+            nodeIds: targetNodes.map((n) => n.id),
             patch
           }
         }
@@ -32018,7 +33118,9 @@
       const hasLabel = Boolean(lastConnectorConfigRef.current.labelOn);
       const label = hasLabel ? (lastConnectorConfigRef.current.labelText || "").trim() : "";
       const colorRaw = lastConnectorConfigRef.current.connectorColorInput;
-      const color = colorRaw && colorRaw.trim() ? colorRaw : void 0;
+      const fallbackRaw = connectorDirty ? uiStateRef.current.selectedConnectorColor : void 0;
+      const fallback = fallbackRaw && fallbackRaw.trim() ? fallbackRaw : void 0;
+      const color = colorRaw && colorRaw.trim() ? colorRaw : fallback;
       const weightStr = lastConnectorConfigRef.current.strokeWeightInput;
       const weight = weightStr && weightStr.trim() !== "" ? parseFloat(weightStr) : void 0;
       const startTermRaw = lastConnectorConfigRef.current.startTerminalInput;
@@ -32930,6 +34032,7 @@
       isMultiFlowNode: flowNodeCount > 1,
       isSingleConnector: connectorCount === 1 && flowNodeCount === 0,
       isMultiConnector: connectorCount > 1 && flowNodeCount === 0,
+      isMixedWithConnectors: flowNodeCount >= 1 && connectorCount >= 1,
       // 플로우 노드 속성 요약
       color: getCommonProperty(flowNodes, (n) => n.fillColorHex, caseInsensitiveEqual, "style"),
       strokeWeight: getCommonProperty(flowNodes, (n) => n.strokeWeight, void 0, "style"),
@@ -35659,11 +36762,16 @@
         setSizeModeDropdownOpen(false);
       }
     }, [isSizeAllowed, dropdownOpen, setSizeModeDropdownOpen]);
+    const sizeJudgeNodes = selectedNodes.filter((n) => n && n.isFlowNode);
+    const judgeW = getCommonProperty(sizeJudgeNodes, (n) => n.width);
+    const judgeH = getCommonProperty(sizeJudgeNodes, (n) => n.height);
+    const judgeR = getCommonProperty(sizeJudgeNodes, (n) => n.cornerRadius);
+    const judgeSizeMode = getCommonProperty(sizeJudgeNodes, (n) => n.sizeMode);
     const currentSizeMode = (() => {
       if (multiDraft.sizeMode) return multiDraft.sizeMode;
-      if (summary.isMultiFlowNode) {
-        if (summary.sizeMode.isMixed) return "mixed";
-        return summary.sizeMode.value || nodeOptionState.sizeMode || "hug";
+      if (summary.isMultiFlowNode || summary.isMixedWithConnectors) {
+        if (judgeSizeMode.isMixed) return "mixed";
+        return judgeSizeMode.value || summary.sizeMode.value || nodeOptionState.sizeMode || "hug";
       }
       if (summary.isSingleFlowNode) {
         return summary.sizeMode.value || nodeOptionState.sizeMode || "hug";
@@ -35675,11 +36783,12 @@
       const el = document.getElementById("select-size-mode");
       if (el && el.value !== currentSizeMode) el.value = currentSizeMode;
     }, [currentSizeMode]);
-    const isWMixed = multiDraft.width !== void 0 ? false : summary.isMultiFlowNode && summary.width.isMixed;
-    const isHMixed = multiDraft.height !== void 0 ? false : summary.isMultiFlowNode && summary.height.isMixed;
-    const isRMixed = multiDraft.cornerRadius !== void 0 ? false : summary.isMultiFlowNode && summary.cornerRadius.isMixed;
+    const isMultiForSize = summary.isMultiFlowNode || summary.isMixedWithConnectors;
+    const isWMixed = multiDraft.width !== void 0 ? false : isMultiForSize && (judgeW.isMixed || summary.width.isMixed);
+    const isHMixed = multiDraft.height !== void 0 ? false : isMultiForSize && (judgeH.isMixed || summary.height.isMixed);
+    const isRMixed = multiDraft.cornerRadius !== void 0 ? false : isMultiForSize && (judgeR.isMixed || summary.cornerRadius.isMixed);
     const isSizeDrafted = multiDraft.width !== void 0 || multiDraft.height !== void 0;
-    const isSizeMixed = !isSizeDrafted && summary.isMultiFlowNode && (isWMixed || isHMixed);
+    const isSizeMixed = !isSizeDrafted && isMultiForSize && (isWMixed || isHMixed);
     const sizePresetCounts = import_react12.default.useMemo(() => {
       if (!isSizeMixed) return {};
       const counts = {};
@@ -35705,21 +36814,24 @@
         return;
       }
       if (validNodes.length > 0) {
-        if (summary.isMultiFlowNode) {
+        if (summary.isMultiFlowNode || summary.isMixedWithConnectors) {
+          const dispW = judgeW.value !== void 0 ? judgeW.value : summary.width.value;
+          const dispH = judgeH.value !== void 0 ? judgeH.value : summary.height.value;
+          const dispR = judgeR.value !== void 0 ? judgeR.value : summary.cornerRadius.value;
           if (!isFocusedRef.current.w) {
-            setWidthInput(multiDraft.width !== void 0 ? String(multiDraft.width) : isWMixed ? "" : summary.width.value !== void 0 ? String(summary.width.value) : "");
+            setWidthInput(multiDraft.width !== void 0 ? String(multiDraft.width) : isWMixed ? "" : dispW !== void 0 ? String(dispW) : "");
           }
           if (!isFocusedRef.current.h) {
-            setHeightInput(multiDraft.height !== void 0 ? String(multiDraft.height) : isHMixed ? "" : summary.height.value !== void 0 ? String(summary.height.value) : "");
+            setHeightInput(multiDraft.height !== void 0 ? String(multiDraft.height) : isHMixed ? "" : dispH !== void 0 ? String(dispH) : "");
           }
           if (!isFocusedRef.current.r) {
-            setRadiusInput(multiDraft.cornerRadius !== void 0 ? String(multiDraft.cornerRadius) : isRMixed ? "" : summary.cornerRadius.value !== void 0 ? String(summary.cornerRadius.value) : "");
+            setRadiusInput(multiDraft.cornerRadius !== void 0 ? String(multiDraft.cornerRadius) : isRMixed ? "" : dispR !== void 0 ? String(dispR) : "");
           }
           if (isDifferentNode) {
             if (isSizeMixed) {
               setSelectedSizePresetId(null);
             } else {
-              const matched = sizePresets.find((p) => p.w === summary.width.value && p.h === summary.height.value);
+              const matched = sizePresets.find((p) => p.w === dispW && p.h === dispH);
               setSelectedSizePresetId(matched ? matched.id : null);
             }
           }
@@ -35778,6 +36890,7 @@
     }, [
       selectedNodes,
       summary.isMultiFlowNode,
+      summary.isMixedWithConnectors,
       isWMixed,
       isHMixed,
       isRMixed,
@@ -36190,7 +37303,7 @@
                         children: [
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "size-mode-btn-content figma-dropdown-btn-content", children: [
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-current-icon figma-dropdown-current-icon", id: "size-mode-current-icon", children: currentSizeMode === "hug" ? HUG_SVG : currentSizeMode === "fit" ? FIT_SVG : currentSizeMode === "mixed" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(MixedDashChip, { size: 16 }) : FIXED_SVG }),
-                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-current-text figma-dropdown-current-text", id: "size-mode-current-text", children: currentSizeMode === "hug" ? "Hug contents" : currentSizeMode === "fit" ? "Fit contents" : currentSizeMode === "mixed" ? "Mixed" : "Fixed height" })
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-current-text figma-dropdown-current-text", id: "size-mode-current-text", children: currentSizeMode === "hug" ? t("sizeModeHug") : currentSizeMode === "fit" ? t("sizeModeFit") : currentSizeMode === "mixed" ? "Mixed" : t("sizeModeFixed") })
                           ] }),
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                             "span",
@@ -36227,17 +37340,17 @@
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "fixed" ? " selected" : ""}`, "data-value": "fixed", onClick: () => selectSizeMode("fixed"), children: [
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: CHECK_SVG }),
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: FIXED_SVG }),
-                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Fixed height" })
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: t("sizeModeFixed") })
                           ] }),
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "hug" ? " selected" : ""}`, "data-value": "hug", onClick: () => selectSizeMode("hug"), children: [
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: CHECK_SVG }),
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: HUG_SVG }),
-                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Hug contents" })
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: t("sizeModeHug") })
                           ] }),
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "fit" ? " selected" : ""}`, "data-value": "fit", onClick: () => selectSizeMode("fit"), children: [
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: CHECK_SVG }),
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: FIT_SVG }),
-                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Fit contents" })
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: t("sizeModeFit") })
                           ] })
                         ]
                       }
@@ -36323,12 +37436,13 @@
     } = useApp();
     const summary = useSelectionSummary();
     const btnMoreRef = (0, import_react13.useRef)(null);
-    const isFillMixed = multiDraft.colorHex !== void 0 ? false : summary.isMultiFlowNode ? summary.color.isMixed : false;
-    const isStrokeMixed = multiDraft.strokeColor !== void 0 ? false : summary.isMultiFlowNode ? summary.strokeColor.isMixed : false;
-    const isWeightMixed = multiDraft.strokeWeight !== void 0 ? false : summary.isMultiFlowNode ? summary.strokeWeight.isMixed : false;
-    const effectiveFillColor = multiDraft.colorHex !== void 0 ? multiDraft.colorHex : (summary.isMultiFlowNode ? summary.color.value : summary.isSingleFlowNode ? summary.color.value : nodeOptionState.fillColor) || nodeOptionState.fillColor || "#FFFFFF";
-    const effectiveStrokeColor = multiDraft.strokeColor !== void 0 ? multiDraft.strokeColor : (summary.isMultiFlowNode ? summary.strokeColor.value : summary.isSingleFlowNode ? summary.strokeColor.value : nodeOptionState.strokeColor) || nodeOptionState.strokeColor || "#000000";
-    const rawWeight = summary.isMultiFlowNode ? summary.strokeWeight.value : summary.isSingleFlowNode ? summary.strokeWeight.value : nodeOptionState.strokeWeight;
+    const isMultiForStyle = summary.isMultiFlowNode || summary.isMixedWithConnectors;
+    const isFillMixed = multiDraft.colorHex !== void 0 ? false : isMultiForStyle ? summary.color.isMixed : false;
+    const isStrokeMixed = multiDraft.strokeColor !== void 0 ? false : isMultiForStyle ? summary.strokeColor.isMixed : false;
+    const isWeightMixed = multiDraft.strokeWeight !== void 0 ? false : isMultiForStyle ? summary.strokeWeight.isMixed : false;
+    const effectiveFillColor = multiDraft.colorHex !== void 0 ? multiDraft.colorHex : (isMultiForStyle ? summary.color.value : summary.isSingleFlowNode ? nodeOptionState.fillColor || summary.color.value : nodeOptionState.fillColor) || nodeOptionState.fillColor || "#FFFFFF";
+    const effectiveStrokeColor = multiDraft.strokeColor !== void 0 ? multiDraft.strokeColor : (isMultiForStyle ? summary.strokeColor.value : summary.isSingleFlowNode ? nodeOptionState.strokeColor || summary.strokeColor.value : nodeOptionState.strokeColor) || nodeOptionState.strokeColor || "#000000";
+    const rawWeight = isMultiForStyle ? summary.strokeWeight.value : summary.isSingleFlowNode ? typeof nodeOptionState.strokeWeight === "number" ? nodeOptionState.strokeWeight : summary.strokeWeight.value : nodeOptionState.strokeWeight;
     const effectiveStrokeWeight = multiDraft.strokeWeight !== void 0 ? multiDraft.strokeWeight : typeof rawWeight === "number" ? rawWeight : typeof nodeOptionState.strokeWeight === "number" ? nodeOptionState.strokeWeight : 1.5;
     const isStrokeNone = !isStrokeMixed && (effectiveStrokeWeight === 0 || !effectiveStrokeColor || effectiveStrokeColor.toLowerCase() === "none");
     const isFillNone = !isFillMixed && (effectiveFillColor.toLowerCase() === "none" || effectiveFillColor.toLowerCase() === "transparent");
@@ -36392,7 +37506,7 @@
         return branchVariantUsesStroke(normalizeBranchVariant(n?.branchVariant));
       });
     })();
-    const isNodeColorMixed = !isStyleDrafted && summary.isMultiFlowNode && (summary.color.isMixed || !hasShapeNode && (summary.strokeWeight.isMixed || summary.strokeColor.isMixed));
+    const isNodeColorMixed = !isStyleDrafted && (summary.isMultiFlowNode || summary.isMixedWithConnectors) && (summary.color.isMixed || !hasShapeNode && (summary.strokeWeight.isMixed || summary.strokeColor.isMixed));
     const activeStylePreset = isNodeColorMixed ? void 0 : stylePresets.find((p) => {
       const pFill = normalizeColorHex(p.fillColor);
       const effFill = normalizeColorHex(effectiveFillColor);
@@ -36418,6 +37532,7 @@
         const styleKey = `${styleScopeId}:fill:${formatted.toUpperCase()}`;
         if (styleCommitRef.current === styleKey) return;
         styleCommitRef.current = styleKey;
+        setSelectedStylePresetId(null);
         if (selectedNodes.length >= 2) {
           updateMultiDraft({ colorHex: formatted });
           return;
@@ -36425,19 +37540,20 @@
         setNodeOptionState({ fillColor: formatted });
         applyCurrentNodeState(void 0, { colorHex: formatted });
       },
-      [selectedNodes, updateMultiDraft, setNodeOptionState, applyCurrentNodeState]
+      [selectedNodes, updateMultiDraft, setSelectedStylePresetId, setNodeOptionState, applyCurrentNodeState]
     );
     const applyFillNone = (0, import_react13.useCallback)(() => {
       const styleKey = `${styleScopeId}:fill:None`;
       if (styleCommitRef.current === styleKey) return;
       styleCommitRef.current = styleKey;
+      setSelectedStylePresetId(null);
       if (selectedNodes.length >= 2) {
         updateMultiDraft({ colorHex: "None" });
         return;
       }
       setNodeOptionState({ fillColor: "None" });
       applyCurrentNodeState(void 0, { colorHex: "None" });
-    }, [selectedNodes, updateMultiDraft, setNodeOptionState, applyCurrentNodeState]);
+    }, [selectedNodes, updateMultiDraft, setSelectedStylePresetId, setNodeOptionState, applyCurrentNodeState]);
     const handleFillChipClick = () => {
       if (isFillNone) {
         const restoreColor = lastValidFillRef.current && !["none", "transparent"].includes(
@@ -36452,13 +37568,14 @@
       const styleKey = `${styleScopeId}:stroke:none`;
       if (styleCommitRef.current === styleKey) return;
       styleCommitRef.current = styleKey;
+      setSelectedStylePresetId(null);
       if (selectedNodes.length >= 2) {
-        updateMultiDraft({ strokeWeight: 0 });
+        updateMultiDraft({ strokeColor: "None", strokeWeight: 0 });
         return;
       }
       setNodeOptionState({ strokeWeight: 0 });
       applyCurrentNodeState(void 0, { strokeWeight: 0 });
-    }, [selectedNodes, updateMultiDraft, setNodeOptionState, applyCurrentNodeState]);
+    }, [selectedNodes, updateMultiDraft, setSelectedStylePresetId, setNodeOptionState, applyCurrentNodeState]);
     const applyStrokeColor = (0, import_react13.useCallback)(
       (newStrokeHex, explicitWeight) => {
         const formatted = newStrokeHex.startsWith("#") ? newStrokeHex : `#${newStrokeHex}`;
@@ -36466,6 +37583,7 @@
         const styleKey = `${styleScopeId}:stroke:${formatted.toUpperCase()}:${targetWeight}`;
         if (styleCommitRef.current === styleKey) return;
         styleCommitRef.current = styleKey;
+        setSelectedStylePresetId(null);
         if (selectedNodes.length >= 2) {
           updateMultiDraft({ strokeColor: formatted, strokeWeight: targetWeight });
           return;
@@ -36482,6 +37600,7 @@
       [
         selectedNodes,
         updateMultiDraft,
+        setSelectedStylePresetId,
         effectiveStrokeWeight,
         setNodeOptionState,
         applyCurrentNodeState
@@ -36493,6 +37612,7 @@
         const styleKey = `${styleScopeId}:strokeWeight:${validWeight}`;
         if (styleCommitRef.current === styleKey) return;
         styleCommitRef.current = styleKey;
+        setSelectedStylePresetId(null);
         if (selectedNodes.length >= 2) {
           updateMultiDraft({ strokeWeight: validWeight });
           return;
@@ -36500,7 +37620,7 @@
         setNodeOptionState({ strokeWeight: validWeight });
         applyCurrentNodeState(void 0, { strokeWeight: validWeight });
       },
-      [selectedNodes, updateMultiDraft, setNodeOptionState, applyCurrentNodeState]
+      [selectedNodes, updateMultiDraft, setSelectedStylePresetId, setNodeOptionState, applyCurrentNodeState]
     );
     const handleStrokeIconClick = () => {
       if (isStrokeNone) {
@@ -37262,15 +38382,6 @@
       }
     }, [nodeOptionState.fillColor, nodeOptionState.strokeWeight, nodeOptionState.strokeColor, selectedStylePresetId, summary.connectorCount]);
     (0, import_react15.useEffect)(() => {
-      if (selectedConnectorColor) {
-        const formatted = selectedConnectorColor.toUpperCase();
-        setSelectedColor(formatted);
-        setHexInput(formatted.replace("#", ""));
-        const colSel = document.getElementById("conn-line-color");
-        if (colSel) colSel.value = formatted;
-      }
-    }, [selectedConnectorColor]);
-    (0, import_react15.useEffect)(() => {
       function handleDocClick(e) {
         const target = e.target;
         if (!target.closest("#wrap-start-terminal")) {
@@ -37398,19 +38509,21 @@
         setEndTermVal(endVal);
         const endSel = document.getElementById("select-end-terminal");
         if (endSel) endSel.value = endVal;
-        setIsColorMixed(props.connectorColor.isMixed);
-        if (!props.connectorColor.isMixed && props.connectorColor.value) {
-          const hex = props.connectorColor.value.toUpperCase();
-          setSelectedColor(hex);
-          setHexInput(hex.replace("#", ""));
-          const colSel = document.getElementById("conn-line-color");
-          if (colSel) colSel.value = hex;
-        } else if (props.connectorColor.isMixed) {
-          setSelectedColor("");
-          setHexInput("");
-        } else {
-          setSelectedColor("");
-          setHexInput("");
+        if (isDifferentSelection) {
+          setIsColorMixed(props.connectorColor.isMixed);
+          if (!props.connectorColor.isMixed && props.connectorColor.value) {
+            const hex = props.connectorColor.value.toUpperCase();
+            setSelectedColor(hex);
+            setHexInput(hex.replace("#", ""));
+            const colSel = document.getElementById("conn-line-color");
+            if (colSel) colSel.value = hex;
+          } else if (props.connectorColor.isMixed) {
+            setSelectedColor("");
+            setHexInput("");
+          } else {
+            setSelectedColor("");
+            setHexInput("");
+          }
         }
         const isConnWeightMixed = Boolean(props.connectorStrokeWeight.isMixed);
         const connWeightVal = props.connectorStrokeWeight.value;
@@ -37594,6 +38707,9 @@
         setEndOffsetInputState(cfg.endOffsetInput);
       }
       if (cfg.connectorColorInput !== void 0 && cfg.connectorColorInput !== selectedColor) {
+        if (cfg.connectorColorInput) {
+          setIsColorMixed(false);
+        }
         setSelectedColorState(cfg.connectorColorInput);
         setHexInput(cfg.connectorColorInput.replace("#", ""));
       }
@@ -37608,6 +38724,7 @@
     (0, import_react15.useEffect)(() => {
       if (selectedConnectorColor) {
         const formatted = selectedConnectorColor.toUpperCase();
+        setIsColorMixed(false);
         setSelectedColor(formatted);
         setHexInput(formatted.replace("#", ""));
         const selectEl = document.getElementById("conn-line-color");
@@ -37966,7 +39083,7 @@
                         e.stopPropagation();
                         setStartTermPopupOpen(false);
                         setEndTermPopupOpen(false);
-                        setUIState({ selectedConnectorColor: selectedColor });
+                        setUIState({ selectedConnectorColor: isColorMixed ? "" : selectedColor });
                         setActiveModal("connector-color");
                       },
                       children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
@@ -38687,6 +39804,7 @@
       isMixedWithNodes
     ]);
     const displayText = isMultiConnector ? connectorLabelDraft.labelText !== void 0 ? connectorLabelDraft.labelText : summary.connectorLabel.isMixed ? "" : summary.connectorLabel.value || "" : labelText;
+    const hasLabelText = Boolean(isMultiConnector ? displayText : labelText);
     const isTextMixed = isMultiConnector && connectorLabelDraft.labelText === void 0 && summary.connectorLabel.isMixed;
     const displayFill = isMultiConnector ? connectorLabelDraft.labelFillColor ?? (summary.connectorLabelFillColor.isMixed ? "" : summary.connectorLabelFillColor.value || "#FFFFFF") : fillColor;
     const isFillMixed = isMultiConnector && connectorLabelDraft.labelFillColor === void 0 && summary.connectorLabelFillColor.isMixed;
@@ -38748,6 +39866,22 @@
       labelDebounceRef.current = setTimeout(() => {
         markConnectorDirty();
       }, 250);
+    }
+    function handleClear(e) {
+      e.stopPropagation();
+      if (labelInputRef.current) {
+        labelInputRef.current.value = "";
+      }
+      setLabelText("");
+      if (isMultiConnector) {
+        updateConnectorLabelDraft({ labelText: "" });
+        labelInputRef.current?.focus();
+        return;
+      }
+      setLastConnectorConfig({ labelText: "" });
+      if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
+      markConnectorDirty();
+      labelInputRef.current?.focus();
     }
     function handleFillColorSelect(color) {
       const norm = normalizeHex(color);
@@ -38875,34 +40009,65 @@
         )
       ] }),
       effectiveIsOn && /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("div", { className: "section-body", children: /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("div", { className: "conn-label-body", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
-          "input",
-          {
-            ref: labelInputRef,
-            type: "text",
-            id: "input-conn-label",
-            className: "conn-label-input",
-            "data-tooltip": t("tipLabelText"),
-            placeholder: isTextMixed ? "Mixed" : "Add a label",
-            ...isMultiConnector ? { value: displayText } : { defaultValue: lastConnectorConfig.labelText || "" },
-            onFocus: () => {
-              isFocusedRef.current = true;
-            },
-            onBlur: () => {
-              isFocusedRef.current = false;
-              markConnectorDirty();
-            },
-            onInput: handleInput,
-            onCompositionEnd: (e) => {
-              const raw = e.currentTarget.value;
-              const clamped = clampText(raw, measureFittingLength(e.currentTarget, raw));
-              if (clamped !== raw) e.currentTarget.value = clamped;
-              handleInput(e);
-            },
-            spellCheck: false,
-            autoComplete: "off"
-          }
-        ),
+        /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("div", { className: "conn-label-input-wrap", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
+            "input",
+            {
+              ref: labelInputRef,
+              type: "text",
+              id: "input-conn-label",
+              className: `conn-label-input${hasLabelText ? " has-text" : ""}`,
+              "data-tooltip": t("tipLabelText"),
+              placeholder: isTextMixed ? "Mixed" : t("tipLabelPlaceholder"),
+              ...isMultiConnector ? { value: displayText } : { defaultValue: lastConnectorConfig.labelText || "" },
+              onFocus: () => {
+                isFocusedRef.current = true;
+              },
+              onBlur: () => {
+                isFocusedRef.current = false;
+                markConnectorDirty();
+              },
+              onInput: handleInput,
+              onCompositionEnd: (e) => {
+                const raw = e.currentTarget.value;
+                const clamped = clampText(raw, measureFittingLength(e.currentTarget, raw));
+                if (clamped !== raw) e.currentTarget.value = clamped;
+                handleInput(e);
+              },
+              spellCheck: false,
+              autoComplete: "off"
+            }
+          ),
+          hasLabelText && /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "conn-label-clear-btn",
+              "aria-label": t("tipClearLabel"),
+              onClick: handleClear,
+              children: /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
+                "svg",
+                {
+                  width: "12",
+                  height: "12",
+                  viewBox: "0 0 12 12",
+                  fill: "none",
+                  xmlns: "http://www.w3.org/2000/svg",
+                  children: /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
+                    "path",
+                    {
+                      d: "M9 3L3 9M3 3L9 9",
+                      stroke: "currentColor",
+                      strokeWidth: "1.3",
+                      strokeLinecap: "round",
+                      strokeLinejoin: "round"
+                    }
+                  )
+                }
+              )
+            }
+          )
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("div", { className: "style-inputs-row", children: [
           /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("div", { className: "style-input-box style-color-input-box", "data-tooltip": t("tipLabelFill"), children: [
             /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
@@ -39448,7 +40613,7 @@
                             children: [
                               /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "size-dropdown-left", style: { display: "flex", alignItems: "center", gap: 6 }, children: [
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }, children: sizeMode === "hug" ? HUG_SVG2 : sizeMode === "fit" ? FIT_SVG2 : FIXED_SVG2 }),
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { id: `text-${mode}-size-mode`, style: { fontSize: 11, color: "#ffffff" }, children: sizeMode === "fixed" ? "Fixed height" : sizeMode === "fit" ? "Fit contents" : "Hug contents" })
+                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { id: `text-${mode}-size-mode`, style: { fontSize: 11, color: "#ffffff" }, children: sizeMode === "fixed" ? t("sizeModeFixed") : sizeMode === "fit" ? t("sizeModeFit") : t("sizeModeHug") })
                               ] }),
                               /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
                                 "svg",
@@ -39498,7 +40663,7 @@
                               children: [
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "fixed" && CHECK_SVG3 }),
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: FIXED_SVG2 }),
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: "Fixed height" })
+                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: t("sizeModeFixed") })
                               ]
                             }
                           ),
@@ -39519,7 +40684,7 @@
                               children: [
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "hug" && CHECK_SVG3 }),
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: HUG_SVG2 }),
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: "Hug contents" })
+                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: t("sizeModeHug") })
                               ]
                             }
                           ),
@@ -39540,7 +40705,7 @@
                               children: [
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "fit" && CHECK_SVG3 }),
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: FIT_SVG2 }),
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: "Fit contents" })
+                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: t("sizeModeFit") })
                               ]
                             }
                           )
@@ -40105,6 +41270,13 @@
   var import_jsx_runtime23 = __toESM(require_jsx_runtime());
   function hexToHsv(hex, fallbackHue = 0) {
     let clean = hex.replace("#", "").trim();
+    if (!clean) {
+      return {
+        h: fallbackHue,
+        s: 100,
+        v: 100
+      };
+    }
     if (clean.length === 3) {
       clean = clean.split("").map((c) => c + c).join("");
     }
@@ -40521,12 +41693,16 @@
       nodeOptionState,
       setNodeOptionState,
       setUIState,
+      selectedStylePresetId,
+      setSelectedStylePresetId,
       applyCurrentNodeState,
       stylePresets,
       addStylePreset,
       updateStylePreset,
       showToast,
-      selectedNodes
+      selectedNodes,
+      updateMultiDraft,
+      triggerFormChange
     } = useApp();
     const targetPreset = mode === "edit" && editingPresetId ? stylePresets.find((p) => p.id === editingPresetId) : null;
     const rawInitFill = targetPreset ? targetPreset.fillColor : initialColor || nodeOptionState.fillColor || "#EA2039";
@@ -40569,6 +41745,10 @@
           strokeWeight: finalStrokeWeight,
           strokeColor: finalStrokeColor
         });
+        setSelectedStylePresetId(editingPresetId);
+        setUIState({
+          selectedStylePresetId: editingPresetId
+        });
       } else {
         addStylePreset({
           name: isFillNone ? "Custom None" : `Custom ${finalFillColor}`,
@@ -40576,25 +41756,26 @@
           strokeWeight: finalStrokeWeight,
           strokeColor: finalStrokeColor
         });
-        showToast(t("styleAddedNew"), "success");
-      }
-      if (mode === "edit" && editingPresetId) {
-        setUIState({
-          selectedStylePresetId: editingPresetId
-        });
       }
       setNodeOptionState({
         fillColor: finalFillColor,
         strokeWeight: finalStrokeWeight,
         strokeColor: finalStrokeColor
       });
-      if (selectedNodes.length > 0) {
+      if (selectedNodes.length >= 2) {
+        updateMultiDraft({
+          colorHex: finalFillColor,
+          strokeWeight: finalStrokeWeight,
+          strokeColor: finalStrokeColor
+        });
+      } else if (selectedNodes.length === 1) {
         applyCurrentNodeState(void 0, {
           colorHex: finalFillColor,
           strokeWeight: finalStrokeWeight,
           strokeColor: finalStrokeColor
         });
       }
+      triggerFormChange();
       onClose();
     }
     const modalTitle = mode === "edit" ? "Edit style" : "Add style";
@@ -40917,7 +42098,6 @@
       setIsMixed(Boolean(initialIsMixed));
     }, [initialIsMixed]);
     function handleSelectPreset(hex) {
-      console.log("[FLOOOW-CONN-COLOR] chip click", hex);
       setIsMixed(false);
       const formatted = hex.replace("#", "").toUpperCase();
       setColorHex(formatted);
@@ -41918,13 +43098,17 @@
       if (nodeCount >= 2) {
         const flowNodeCount = selectedNodes.filter((n) => n && n.isFlowNode).length;
         const connCount = selectedNodes.filter((n) => n && n.isConnector).length;
+        const figmaCount = selectedNodes.filter((n) => n && !n.isFlowNode && !n.isConnector).length;
+        const countableCount = flowNodeCount + figmaCount;
         let selText = "";
-        if (connCount > 0 && flowNodeCount === 0) {
+        if (countableCount === 0) {
           selText = `${connCount} connector${connCount > 1 ? "s" : ""} selected`;
-        } else if (flowNodeCount > 0 && connCount === 0) {
+        } else if (flowNodeCount > 0 && figmaCount === 0) {
           selText = `${flowNodeCount} node${flowNodeCount > 1 ? "s" : ""} selected`;
+        } else if (flowNodeCount === 0 && figmaCount > 0) {
+          selText = `${figmaCount} Figma object${figmaCount > 1 ? "s" : ""} selected`;
         } else {
-          selText = `${nodeCount} objects selected`;
+          selText = `${flowNodeCount} node${flowNodeCount > 1 ? "s" : ""} and ${figmaCount} Figma object${figmaCount > 1 ? "s" : ""} selected`;
         }
         return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { id: "multi-selection-text", children: selText }) });
       }
@@ -42151,21 +43335,12 @@
                 uiState.selectedConnectorColor
               );
               setUIState({ selectedConnectorColor: formatted });
+              setLastConnectorConfig({ connectorColorInput: formatted });
               const connNodes = selectedNodes.filter((n) => n && n.isConnector);
-              console.log("[FLOOOW-CONN-COLOR] ui apply", {
-                colorHex: formatted,
-                selected: selectedNodes.map((n) => ({ id: n?.id, isConnector: n?.isConnector, type: n?.flowNodeType })),
-                connCount: connNodes.length
-              });
               if (connNodes.length > 1) {
-                console.log("[FLOOOW-CONN-COLOR] ui apply deferred: multi connector \u2192 footer Apply to All");
                 markConnectorDirty();
               } else {
-                if (connNodes.length === 0) {
-                  console.log("[FLOOOW-CONN-COLOR] ui apply skipped: no connector in selection");
-                }
                 connNodes.forEach((c) => {
-                  console.log("[FLOOOW-CONN-COLOR] post", { connectorId: c.id, colorHex: formatted });
                   parent.postMessage(
                     {
                       pluginMessage: {
@@ -42188,30 +43363,35 @@
         );
       })(),
       activeModal === "fill-color" && (() => {
-        const isFillMixed = summary.isMultiFlowNode ? multiDraft.colorHex !== void 0 ? false : summary.color.isMixed : false;
-        const currentFill = multiDraft.colorHex !== void 0 ? multiDraft.colorHex : (summary.isMultiFlowNode ? summary.color.value : summary.isSingleFlowNode ? summary.color.value : nodeOptionState.fillColor) || nodeOptionState.fillColor || "#FFFFFF";
+        const isMultiForFill = summary.isMultiFlowNode || summary.isMixedWithConnectors;
+        const isFillMixed = isMultiForFill ? multiDraft.colorHex !== void 0 ? false : summary.color.isMixed : false;
+        const currentFill = multiDraft.colorHex !== void 0 ? multiDraft.colorHex : (isMultiForFill ? summary.color.value : summary.isSingleFlowNode ? nodeOptionState.fillColor || summary.color.value : nodeOptionState.fillColor) || nodeOptionState.fillColor || "#FFFFFF";
         return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
           FillColorModal,
           {
             initialColor: currentFill,
             isMixed: isFillMixed,
             onApply: (colorHex) => {
+              const formatted = colorHex.toLowerCase() === "none" || colorHex.toLowerCase() === "transparent" ? "None" : colorHex.startsWith("#") ? colorHex.toUpperCase() : `#${colorHex.toUpperCase()}`;
+              setSelectedStylePresetId(null);
+              setNodeOptionState({ fillColor: formatted });
               if (selectedNodes.length >= 2) {
-                updateMultiDraft({ colorHex });
+                updateMultiDraft({ colorHex: formatted });
               } else {
-                setNodeOptionState({ fillColor: colorHex });
-                applyCurrentNodeState(void 0, { colorHex });
+                applyCurrentNodeState(void 0, { colorHex: formatted });
               }
+              triggerFormChange();
             },
             onClose: () => setActiveModal("none")
           }
         );
       })(),
       activeModal === "stroke-color" && (() => {
-        const isStrokeMixed = summary.isMultiFlowNode ? multiDraft.strokeColor !== void 0 ? false : summary.strokeColor.isMixed : false;
-        const isWeightMixed = summary.isMultiFlowNode ? multiDraft.strokeWeight !== void 0 ? false : summary.strokeWeight.isMixed : false;
-        const currentStrokeColor = multiDraft.strokeColor !== void 0 ? multiDraft.strokeColor : (summary.isMultiFlowNode ? summary.strokeColor.value : summary.isSingleFlowNode ? summary.strokeColor.value : nodeOptionState.strokeColor) || nodeOptionState.strokeColor || "#000000";
-        const rawWeight = summary.isMultiFlowNode ? summary.strokeWeight.value : summary.isSingleFlowNode ? summary.strokeWeight.value : nodeOptionState.strokeWeight;
+        const isMultiForStroke = summary.isMultiFlowNode || summary.isMixedWithConnectors;
+        const isStrokeMixed = isMultiForStroke ? multiDraft.strokeColor !== void 0 ? false : summary.strokeColor.isMixed : false;
+        const isWeightMixed = isMultiForStroke ? multiDraft.strokeWeight !== void 0 ? false : summary.strokeWeight.isMixed : false;
+        const currentStrokeColor = multiDraft.strokeColor !== void 0 ? multiDraft.strokeColor : (isMultiForStroke ? summary.strokeColor.value : summary.isSingleFlowNode ? nodeOptionState.strokeColor || summary.strokeColor.value : nodeOptionState.strokeColor) || nodeOptionState.strokeColor || "#000000";
+        const rawWeight = isMultiForStroke ? summary.strokeWeight.value : summary.isSingleFlowNode ? nodeOptionState.strokeWeight ?? summary.strokeWeight.value : nodeOptionState.strokeWeight;
         const currentStrokeWeight = multiDraft.strokeWeight !== void 0 ? multiDraft.strokeWeight : typeof rawWeight === "number" ? rawWeight : typeof nodeOptionState.strokeWeight === "number" ? nodeOptionState.strokeWeight : 1.5;
         return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
           StrokeColorModal,
@@ -42221,12 +43401,15 @@
             isColorMixed: isStrokeMixed,
             isWeightMixed,
             onApply: (strokeColor, strokeWeight) => {
+              const formattedColor = strokeColor.toLowerCase() === "none" || strokeColor.toLowerCase() === "transparent" ? "None" : strokeColor.startsWith("#") ? strokeColor.toUpperCase() : `#${strokeColor.toUpperCase()}`;
+              setSelectedStylePresetId(null);
+              setNodeOptionState({ strokeColor: formattedColor, strokeWeight });
               if (selectedNodes.length >= 2) {
-                updateMultiDraft({ strokeColor, strokeWeight });
+                updateMultiDraft({ strokeColor: formattedColor, strokeWeight });
               } else {
-                setNodeOptionState({ strokeColor, strokeWeight });
-                applyCurrentNodeState(void 0, { strokeColor, strokeWeight });
+                applyCurrentNodeState(void 0, { strokeColor: formattedColor, strokeWeight });
               }
+              triggerFormChange();
             },
             onClose: () => setActiveModal("none")
           }

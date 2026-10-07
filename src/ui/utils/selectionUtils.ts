@@ -1,4 +1,4 @@
-import { NodeInfo } from '../context/AppContext';
+import type { NodeInfo } from '../context/AppContext';
 import { DiagramNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition, ConnectorLabelAlign, ConnectorLabelBoxStyle, ConnectedConnectorDetail, PluginOption } from '../../types';
 import { normalizeNodeType, supportsOption } from '../../domain/nodeDomain';
 
@@ -66,6 +66,8 @@ export interface SelectionSummary {
   isMultiFlowNode: boolean;
   isSingleConnector: boolean;
   isMultiConnector: boolean;
+  /** 플로우 노드 1개 이상 + 커넥터 1개 이상 혼합 선택 (단일/복수 판정 모두 false가 되는 사각지대) */
+  isMixedWithConnectors: boolean;
 
   // 플로우 노드 설정 항목 요약
   color: PropertySummary<string>;
@@ -152,6 +154,7 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     isMultiFlowNode: flowNodeCount > 1,
     isSingleConnector: connectorCount === 1 && flowNodeCount === 0,
     isMultiConnector: connectorCount > 1 && flowNodeCount === 0,
+    isMixedWithConnectors: flowNodeCount >= 1 && connectorCount >= 1,
 
     // 플로우 노드 속성 요약
     color: getCommonProperty(flowNodes, (n) => n.fillColorHex, caseInsensitiveEqual, 'style'),

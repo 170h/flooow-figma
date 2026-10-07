@@ -189,6 +189,7 @@ export function LabelSection() {
         ? connectorLabelDraft.labelText
         : (summary.connectorLabel.isMixed ? '' : (summary.connectorLabel.value || '')))
     : labelText;
+  const hasLabelText = Boolean(isMultiConnector ? displayText : labelText);
   const isTextMixed = isMultiConnector && connectorLabelDraft.labelText === undefined && summary.connectorLabel.isMixed;
   const displayFill = isMultiConnector
     ? (connectorLabelDraft.labelFillColor ?? (summary.connectorLabelFillColor.isMixed ? '' : (summary.connectorLabelFillColor.value || '#FFFFFF')))
@@ -272,6 +273,24 @@ export function LabelSection() {
     labelDebounceRef.current = setTimeout(() => {
       markConnectorDirty();
     }, 250);
+  }
+
+  // X 버튼 클릭: 라벨 텍스트 완전 삭제
+  function handleClear(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (labelInputRef.current) {
+      labelInputRef.current.value = '';
+    }
+    setLabelText('');
+    if (isMultiConnector) {
+      updateConnectorLabelDraft({ labelText: '' });
+      labelInputRef.current?.focus();
+      return;
+    }
+    setLastConnectorConfig({ labelText: '' });
+    if (labelDebounceRef.current) clearTimeout(labelDebounceRef.current);
+    markConnectorDirty();
+    labelInputRef.current?.focus();
   }
 
   function handleFillColorSelect(color: string) {
@@ -419,32 +438,58 @@ export function LabelSection() {
         <div className="section-body">
           <div className="conn-label-body">
             {/* 2행: 텍스트 입력 인풋 (INV-05 DOM truth 규격) */}
-            <input
-              ref={labelInputRef}
-              type="text"
-              id="input-conn-label"
-              className="conn-label-input"
-              data-tooltip={t('tipLabelText')}
-              placeholder={isTextMixed ? 'Mixed' : 'Add a label'}
-              {...(isMultiConnector
-                ? { value: displayText }
-                : { defaultValue: lastConnectorConfig.labelText || '' })}
-              onFocus={() => { isFocusedRef.current = true; }}
-              onBlur={() => {
-                isFocusedRef.current = false;
-                markConnectorDirty();
-              }}
-              onInput={handleInput}
-              onCompositionEnd={e => {
-                // 한글 등 IME 조합이 끝난 뒤 폭 제한 적용 후 변경 내용 반영
-                const raw = e.currentTarget.value;
-                const clamped = clampText(raw, measureFittingLength(e.currentTarget, raw));
-                if (clamped !== raw) e.currentTarget.value = clamped;
-                handleInput(e);
-              }}
-              spellCheck={false}
-              autoComplete="off"
-            />
+            <div className="conn-label-input-wrap">
+              <input
+                ref={labelInputRef}
+                type="text"
+                id="input-conn-label"
+                className={`conn-label-input${hasLabelText ? ' has-text' : ''}`}
+                data-tooltip={t('tipLabelText')}
+                placeholder={isTextMixed ? 'Mixed' : t('tipLabelPlaceholder')}
+                {...(isMultiConnector
+                  ? { value: displayText }
+                  : { defaultValue: lastConnectorConfig.labelText || '' })}
+                onFocus={() => { isFocusedRef.current = true; }}
+                onBlur={() => {
+                  isFocusedRef.current = false;
+                  markConnectorDirty();
+                }}
+                onInput={handleInput}
+                onCompositionEnd={e => {
+                  // 한글 등 IME 조합이 끝난 뒤 폭 제한 적용 후 변경 내용 반영
+                  const raw = e.currentTarget.value;
+                  const clamped = clampText(raw, measureFittingLength(e.currentTarget, raw));
+                  if (clamped !== raw) e.currentTarget.value = clamped;
+                  handleInput(e);
+                }}
+                spellCheck={false}
+                autoComplete="off"
+              />
+              {hasLabelText && (
+                <button
+                  type="button"
+                  className="conn-label-clear-btn"
+                  aria-label={t('tipClearLabel')}
+                  onClick={handleClear}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M9 3L3 9M3 3L9 9"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
 
             {/* 3행: [배경색 인풋] [보더색 인풋] [텍스트 정렬 세그먼트] */}
             <div className="style-inputs-row">
