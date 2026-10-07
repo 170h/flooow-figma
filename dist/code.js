@@ -997,7 +997,28 @@
     return vector;
   }
   var nodeToConnectorsMap = /* @__PURE__ */ new Map();
-  var isUpdatingConnectors = false;
+  function createConnectorDragSyncGate() {
+    return { running: false, pending: null };
+  }
+  var connectorDragGate = createConnectorDragSyncGate();
+  function enqueueConnectorDrag(gate, ids) {
+    if (gate.running) {
+      if (!gate.pending) gate.pending = /* @__PURE__ */ new Set();
+      for (const id of ids) gate.pending.add(id);
+      return false;
+    }
+    gate.running = true;
+    return true;
+  }
+  function takePendingConnectorDrag(gate) {
+    const next = gate.pending;
+    gate.pending = null;
+    if (!next || next.size === 0) return null;
+    return next;
+  }
+  function finishConnectorDrag(gate) {
+    gate.running = false;
+  }
   function registerConnectorInRegistry(connectorNode) {
     if (connectorNode.type === "CONNECTOR") {
       const conn = connectorNode;
@@ -1570,8 +1591,18 @@
       x: p.x - minX,
       y: p.y - minY
     }));
-    vector.resize(width, height);
-    setNodeAbsoluteXY(vector, minX, minY);
+    if (Math.abs(vector.width - width) > 0.5 || Math.abs(vector.height - height) > 0.5) {
+      vector.resize(width, height);
+    }
+    try {
+      const absX = vector.absoluteTransform[0][2];
+      const absY = vector.absoluteTransform[1][2];
+      if (Math.abs(absX - minX) > 0.5 || Math.abs(absY - minY) > 0.5) {
+        setNodeAbsoluteXY(vector, minX, minY);
+      }
+    } catch (_) {
+      setNodeAbsoluteXY(vector, minX, minY);
+    }
     vector.setPluginData("connector_role", "line");
     if (termVector) {
       try {
@@ -1692,9 +1723,7 @@
       }
     }
   }
-  async function syncConnectorsForMovedNodes(nodeIds) {
-    if (isUpdatingConnectors || nodeIds.size === 0) return;
-    isUpdatingConnectors = true;
+  async function syncMovedNodeBatch(nodeIds) {
     try {
       const connIdsToUpdate = /* @__PURE__ */ new Set();
       for (const nid of nodeIds) {
@@ -1745,8 +1774,19 @@
       }
     } catch (err) {
       console.error("\uCEE4\uB125\uD130 \uC704\uCE58 \uB3D9\uAE30\uD654 \uC2E4\uD328:", err);
+    }
+  }
+  async function syncConnectorsForMovedNodes(nodeIds) {
+    if (nodeIds.size === 0) return;
+    if (!enqueueConnectorDrag(connectorDragGate, nodeIds)) return;
+    try {
+      let batch = nodeIds;
+      while (batch && batch.size > 0) {
+        await syncMovedNodeBatch(batch);
+        batch = takePendingConnectorDrag(connectorDragGate);
+      }
     } finally {
-      isUpdatingConnectors = false;
+      finishConnectorDrag(connectorDragGate);
     }
   }
 
@@ -2309,6 +2349,44 @@
       return term;
     }
     return defaultTerm;
+  }
+  function readConnectorStyleDetail(c) {
+    let colorHex = c.getPluginData("connector_color") || void 0;
+    const savedWeight = c.getPluginData("connector_weight");
+    let strokeWeight = savedWeight ? parseFloat(savedWeight) : void 0;
+    let vectorChild = null;
+    if (c.type === "VECTOR") {
+      vectorChild = c;
+    } else if ("findOne" in c) {
+      vectorChild = c.findOne((n) => n.type === "VECTOR");
+    }
+    if (vectorChild) {
+      if (!colorHex && Array.isArray(vectorChild.strokes) && vectorChild.strokes.length > 0) {
+        const first = vectorChild.strokes[0];
+        if (first.type === "SOLID") colorHex = rgbToHexColor(first.color);
+      }
+      if (strokeWeight === void 0 && typeof vectorChild.strokeWeight === "number") {
+        strokeWeight = vectorChild.strokeWeight;
+      }
+    }
+    const rawStartOff = c.getPluginData("start_offset") || (vectorChild ? vectorChild.getPluginData("start_offset") : "");
+    const rawEndOff = c.getPluginData("end_offset") || (vectorChild ? vectorChild.getPluginData("end_offset") : "");
+    return {
+      connectorColorHex: colorHex,
+      connectorStrokeWeight: strokeWeight,
+      connectorStartTerminal: normalizeConnectorTerminal(c.getPluginData("start_terminal"), "NONE"),
+      connectorEndTerminal: normalizeConnectorTerminal(c.getPluginData("end_terminal"), "ARROW"),
+      connectorStartOffset: rawStartOff ? parseFloat(rawStartOff) : 0,
+      connectorEndOffset: rawEndOff ? parseFloat(rawEndOff) : 0
+    };
+  }
+  function swapConnectorStyleEndpoints(style) {
+    const term = style.connectorStartTerminal;
+    style.connectorStartTerminal = style.connectorEndTerminal;
+    style.connectorEndTerminal = term;
+    const off = style.connectorStartOffset;
+    style.connectorStartOffset = style.connectorEndOffset;
+    style.connectorEndOffset = off;
   }
   slog("01 showUI:start");
   figma.showUI(__html__, {
@@ -4011,21 +4089,20 @@
     const flowNodeCount = flowNodes.length;
     const otherObjectCount = otherObjects.length;
     const connectorCount = connNodes.length;
-    let uniqueNodes = [];
-    if (flowNodeCount > 0 && otherObjectCount > 0 && connectorCount === 0) {
-      uniqueNodes = [...flowNodes, ...otherObjects];
+    let targetNodes = [];
+    if (flowNodeCount > 0 && otherObjectCount > 0) {
+      targetNodes = [...flowNodes, ...otherObjects];
     } else if (flowNodeCount > 0) {
-      uniqueNodes = flowNodes;
-    } else if (connectorCount > 0 && otherObjectCount === 0) {
-      uniqueNodes = connNodes;
+      targetNodes = flowNodes;
     } else {
-      uniqueNodes = otherObjects;
+      targetNodes = otherObjects;
     }
-    if (uniqueNodes.length === 2) {
-      uniqueNodes = sortNodesBySpatialPosition(uniqueNodes);
-    } else if (uniqueNodes.length >= 3) {
-      uniqueNodes = orderNodesForChain(uniqueNodes);
+    if (targetNodes.length === 2) {
+      targetNodes = sortNodesBySpatialPosition(targetNodes);
+    } else if (targetNodes.length >= 3) {
+      targetNodes = orderNodesForChain(targetNodes);
     }
+    const payloadNodes = [...targetNodes, ...connNodes];
     let multiConnectorSortedNodeNames = [];
     let multiConnectorSortedNodeTypes = [];
     if (connectorCount > 0 && flowNodeCount === 0) {
@@ -4049,7 +4126,7 @@
         multiConnectorSortedNodeTypes = sortedEndpoints.map((n) => gizmoEndpointTypeLabel(n));
       }
     }
-    const nodes = await Promise.all(uniqueNodes.map(async (node) => {
+    const nodes = await Promise.all(payloadNodes.map(async (node) => {
       const isFlowNode = safeGetPluginData2(node, "is_flow_node") === "true" || Boolean(safeGetPluginData2(node, "node_type"));
       let title = "";
       let description = "";
@@ -4310,8 +4387,8 @@
       };
     }));
     let currentStatus;
-    if (uniqueNodes.length === 1) {
-      const saved = uniqueNodes[0].getPluginData("workflow_status");
+    if (targetNodes.length === 1) {
+      const saved = targetNodes[0].getPluginData("workflow_status");
       if (saved) currentStatus = saved;
     }
     let suggestedSourceMagnet;
@@ -4319,12 +4396,12 @@
     let existingSourceMagnets = [];
     let existingTargetMagnets = [];
     let connectedConnectorCount = 0;
-    if (connectorCount === 1 && nodes.length > 0) {
+    if (connectorCount === 1 && flowNodeCount === 0 && otherObjectCount === 0 && nodes.length > 0) {
       suggestedSourceMagnet = nodes[0].connectorSourceMagnet;
       suggestedTargetMagnet = nodes[0].connectorTargetMagnet;
-    } else if (uniqueNodes.length === 2 && connectorCount === 0) {
-      const sourceId = uniqueNodes[0].id;
-      const targetIds = uniqueNodes.slice(1).map((n) => n.id);
+    } else if (targetNodes.length === 2 && (connectorCount === 0 || flowNodeCount + otherObjectCount === 2)) {
+      const sourceId = targetNodes[0].id;
+      const targetIds = targetNodes.slice(1).map((n) => n.id);
       const foundConnectors = figma.currentPage.findAll((n) => {
         try {
           if (!n) return false;
@@ -4383,11 +4460,16 @@
             if (tMag) srcMags.push(tMag);
             if (sMag) tgtMags.push(sMag);
           }
+          const styleFields = readConnectorStyleDetail(c);
+          if (!isForward) {
+            swapConnectorStyleEndpoints(styleFields);
+          }
           connectedConnectors.push({
             id: c.id,
             isReversed: !isForward,
             sourceMagnet: sMag,
-            targetMagnet: tMag
+            targetMagnet: tMag,
+            ...styleFields
           });
         }
         existingSourceMagnets = Array.from(new Set(srcMags));
@@ -4419,8 +4501,8 @@
       });
       slog("14 handleSelectionChange:done branch=2nodes");
       return;
-    } else if (uniqueNodes.length >= 3) {
-      const orderedNodeIds = uniqueNodes.map((n) => n.id);
+    } else if (targetNodes.length >= 3) {
+      const orderedNodeIds = targetNodes.map((n) => n.id);
       const existingPairKeys = buildPairKeySet(orderedNodeIds);
       let chainTotalPairs = 0;
       let chainConnectedPairs = 0;
@@ -4433,7 +4515,7 @@
       }
       const chainMissingPairs = chainTotalPairs - chainConnectedPairs;
       const hasExistingConnection = chainMissingPairs === 0;
-      const selectedNodeIdSet = new Set(uniqueNodes.map((n) => n.id));
+      const selectedNodeIdSet = new Set(targetNodes.map((n) => n.id));
       const foundConnectors = figma.currentPage.findAll((n) => {
         try {
           if (!n) return false;
@@ -4464,6 +4546,7 @@
         }
       }
       const multiNodeConnectors = [];
+      const connectorStyleById = /* @__PURE__ */ new Map();
       for (const c of Array.from(uniqueConnectorsMap.values())) {
         let sId;
         let tId;
@@ -4483,6 +4566,7 @@
           }
         }
         if (sId && tId) {
+          connectorStyleById.set(c.id, readConnectorStyleDetail(c));
           multiNodeConnectors.push({
             id: c.id,
             sourceId: sId,
@@ -4492,6 +4576,25 @@
           });
         }
       }
+      const connectedConnectors = multiNodeConnectors.map((mc) => {
+        const isReversed = mc.targetId === orderedNodeIds[0];
+        const styleFields = connectorStyleById.get(mc.id) ?? {
+          connectorStartTerminal: "NONE",
+          connectorEndTerminal: "ARROW",
+          connectorStartOffset: 0,
+          connectorEndOffset: 0
+        };
+        if (isReversed) {
+          swapConnectorStyleEndpoints(styleFields);
+        }
+        return {
+          id: mc.id,
+          isReversed,
+          sourceMagnet: mc.sourceMagnet,
+          targetMagnet: mc.targetMagnet,
+          ...styleFields
+        };
+      });
       postToUI({
         type: "SELECTION_CHANGED",
         count: flowNodeCount + otherObjectCount + connectorCount,
@@ -4508,7 +4611,7 @@
         connectedConnectorCount: chainConnectedPairs,
         hasExistingConnection,
         connectedConnectorIds: [],
-        connectedConnectors: [],
+        connectedConnectors,
         orderedNodeIds,
         chainTotalPairs,
         chainConnectedPairs,

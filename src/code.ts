@@ -102,6 +102,65 @@ function normalizeConnectorTerminal(term: string | undefined, defaultTerm: Conne
   return defaultTerm;
 }
 
+// ConnectedConnectorDetail의 스타일 필드 부분 타입 (additive payload 전용)
+type ConnectorStyleFields = Pick<
+  ConnectedConnectorDetail,
+  | 'connectorColorHex'
+  | 'connectorStrokeWeight'
+  | 'connectorStartTerminal'
+  | 'connectorEndTerminal'
+  | 'connectorStartOffset'
+  | 'connectorEndOffset'
+>;
+
+// Connector Property State(Color/Weight/Terminal/Offset) 표시용:
+// 기존 커넥터 노드에서 스타일 속성을 읽어 ConnectedConnectorDetail에 함께 전달한다.
+// 읽기 우선순위(플러그린 데이터 → 벡터 fallback)는 선택 커넥터 SelectedNodeInfo 추출과 동일하다.
+function readConnectorStyleDetail(c: SceneNode): ConnectorStyleFields {
+  let colorHex = c.getPluginData('connector_color') || undefined;
+  const savedWeight = c.getPluginData('connector_weight');
+  let strokeWeight = savedWeight ? parseFloat(savedWeight) : undefined;
+
+  let vectorChild: VectorNode | null = null;
+  if (c.type === 'VECTOR') {
+    vectorChild = c as VectorNode;
+  } else if ('findOne' in c) {
+    vectorChild = (c as GroupNode).findOne((n) => n.type === 'VECTOR') as VectorNode | null;
+  }
+  if (vectorChild) {
+    if (!colorHex && Array.isArray(vectorChild.strokes) && vectorChild.strokes.length > 0) {
+      const first = vectorChild.strokes[0];
+      if (first.type === 'SOLID') colorHex = rgbToHexColor(first.color);
+    }
+    if (strokeWeight === undefined && typeof vectorChild.strokeWeight === 'number') {
+      strokeWeight = vectorChild.strokeWeight;
+    }
+  }
+
+  const rawStartOff = c.getPluginData('start_offset') || (vectorChild ? vectorChild.getPluginData('start_offset') : '');
+  const rawEndOff = c.getPluginData('end_offset') || (vectorChild ? vectorChild.getPluginData('end_offset') : '');
+
+  return {
+    connectorColorHex: colorHex,
+    connectorStrokeWeight: strokeWeight,
+    connectorStartTerminal: normalizeConnectorTerminal(c.getPluginData('start_terminal'), 'NONE'),
+    connectorEndTerminal: normalizeConnectorTerminal(c.getPluginData('end_terminal'), 'ARROW'),
+    connectorStartOffset: rawStartOff ? parseFloat(rawStartOff) : 0,
+    connectorEndOffset: rawEndOff ? parseFloat(rawEndOff) : 0,
+  };
+}
+
+// 방향이 표시 기준(선택 순서/체인 시작점)과 반대인 커넥터의 시작/끝 속성을 스왑한다.
+// (선택 커넥터 SelectedNodeInfo의 reversed 스왑 규칙과 동일한 기준)
+function swapConnectorStyleEndpoints(style: ConnectorStyleFields): void {
+  const term = style.connectorStartTerminal;
+  style.connectorStartTerminal = style.connectorEndTerminal;
+  style.connectorEndTerminal = term;
+  const off = style.connectorStartOffset;
+  style.connectorStartOffset = style.connectorEndOffset;
+  style.connectorEndOffset = off;
+}
+
 // 플러그인 UI 창 열기 (Figma 신규 디자인 규격 360px 폭 및 라이트 테마 대응)
 slog('01 showUI:start');
 figma.showUI(__html__, {
@@ -2221,23 +2280,31 @@ async function handleSelectionChange() {
   // - 플로우 노드만 있으면 플로우 노드만 전달하여 일반 객체의 속성 오염/훼손 방지
   // - 플로우 노드가 전혀 없고 커넥터만 있으면 커넥터 전달
   // - 플로우 노드와 커넥터가 없고 일반 객체만 있으면 일반 객체 전달
-  let uniqueNodes: SceneNode[] = [];
-  if (flowNodeCount > 0 && otherObjectCount > 0 && connectorCount === 0) {
-    uniqueNodes = [...flowNodes, ...otherObjects];
+  // 1. Connection / Chain / 공간 정렬 / Gizmo 계산용 타깃 노드 집합:
+  // - 플로우 노드와 일반 객체가 함께 있으면 둘 다 포함 (Connection 전용)
+  // - 플로우 노드만 있으면 플로우 노드만 포함
+  // - 플로우 노드가 없으면 일반 객체 포함
+  // - 커넥터는 타깃 노드 집합에서 완전히 제외된다.
+  let targetNodes: SceneNode[] = [];
+  if (flowNodeCount > 0 && otherObjectCount > 0) {
+    targetNodes = [...flowNodes, ...otherObjects];
   } else if (flowNodeCount > 0) {
-    uniqueNodes = flowNodes;
-  } else if (connectorCount > 0 && otherObjectCount === 0) {
-    uniqueNodes = connNodes;
+    targetNodes = flowNodes;
   } else {
-    uniqueNodes = otherObjects;
+    targetNodes = otherObjects;
   }
 
   // 복수 노드 선택 시: 2개 노드는 기존 가로/세로 우선 정렬, 3개 이상은 행 묶음 기반 순차 체인 정렬
-  if (uniqueNodes.length === 2) {
-    uniqueNodes = sortNodesBySpatialPosition(uniqueNodes);
-  } else if (uniqueNodes.length >= 3) {
-    uniqueNodes = orderNodesForChain(uniqueNodes);
+  // (커넥터는 타깃 정렬/체인 계산에 일체 포함되지 않음)
+  if (targetNodes.length === 2) {
+    targetNodes = sortNodesBySpatialPosition(targetNodes);
+  } else if (targetNodes.length >= 3) {
+    targetNodes = orderNodesForChain(targetNodes);
   }
+
+  // 2. UI 전송용 payloadNodes:
+  // 타깃 노드와 선택된 커넥터를 모두 포함한다.
+  const payloadNodes: SceneNode[] = [...targetNodes, ...connNodes];
 
   // 커넥터 선택 시 연결된 엔드포인트 노드들을 캔버스 2D 공간 배치(위/왼쪽 우선)로 정렬하여 수집
   let multiConnectorSortedNodeNames: string[] = [];
@@ -2264,7 +2331,7 @@ async function handleSelectionChange() {
     }
   }
 
-  const nodes: SelectedNodeInfo[] = await Promise.all(uniqueNodes.map(async (node) => {
+  const nodes: SelectedNodeInfo[] = await Promise.all(payloadNodes.map(async (node) => {
     const isFlowNode =
       safeGetPluginData(node, 'is_flow_node') === 'true' ||
       Boolean(safeGetPluginData(node, 'node_type'));
@@ -2564,8 +2631,8 @@ async function handleSelectionChange() {
   }));
 
   let currentStatus: WorkflowStatus | undefined;
-  if (uniqueNodes.length === 1) {
-    const saved = uniqueNodes[0].getPluginData('workflow_status') as WorkflowStatus;
+  if (targetNodes.length === 1) {
+    const saved = targetNodes[0].getPluginData('workflow_status') as WorkflowStatus;
     if (saved) currentStatus = saved;
   }
 
@@ -2576,14 +2643,16 @@ async function handleSelectionChange() {
   let existingTargetMagnets: MagnetPosition[] = [];
   let connectedConnectorCount = 0;
 
-  if (connectorCount === 1 && nodes.length > 0) {
-    // 커넥터 선택 시: 해당 커넥터의 실제 연결 포인트(마그넷)를 기즈모에 연동
+  if (connectorCount === 1 && flowNodeCount === 0 && otherObjectCount === 0 && nodes.length > 0) {
+    // 커넥터 단독 선택 시: 해당 커넥터의 실제 연결 포인트(마그넷)를 기즈모에 연동
+    // (노드+커넥터 혼합 선택은 아래 노드 분기에서 실제 연결 정보를 산출한다)
     suggestedSourceMagnet = nodes[0].connectorSourceMagnet;
     suggestedTargetMagnet = nodes[0].connectorTargetMagnet;
-  } else if (uniqueNodes.length === 2 && connectorCount === 0) {
+  } else if (targetNodes.length === 2 && (connectorCount === 0 || flowNodeCount + otherObjectCount === 2)) {
     // 2개 노드 선택 시: 선택된 두 노드 사이에 이미 연결되어 있는 커넥터 탐색 (기존 2-node 로직 보존)
-    const sourceId = uniqueNodes[0].id;
-    const targetIds = uniqueNodes.slice(1).map((n) => n.id);
+    // 노드+커넥터 혼합 선택(2개 노드+커넥터)도 동일하게 실제 연결 커넥터를 탐색한다.
+    const sourceId = targetNodes[0].id;
+    const targetIds = targetNodes.slice(1).map((n) => n.id);
 
     const foundConnectors = figma.currentPage.findAll((n) => {
       try {
@@ -2652,11 +2721,17 @@ async function handleSelectionChange() {
             if (sMag) tgtMags.push(sMag);
           }
 
+        // Connector Property State 표시용 스타일 필드 (additive: 기존 필드는 그대로 유지)
+        const styleFields = readConnectorStyleDetail(c);
+        if (!isForward) {
+          swapConnectorStyleEndpoints(styleFields);
+        }
         connectedConnectors.push({
           id: c.id,
           isReversed: !isForward,
           sourceMagnet: sMag,
           targetMagnet: tMag,
+          ...styleFields,
         });
       }
 
@@ -2691,9 +2766,9 @@ async function handleSelectionChange() {
     });
     slog('14 handleSelectionChange:done branch=2nodes');
     return;
-  } else if (uniqueNodes.length >= 3) {
+  } else if (targetNodes.length >= 3) {
     // 3개 이상 노드 선택 시: 순차 체인 기준 인접 Pair 검사 및 상태 집계
-    const orderedNodeIds = uniqueNodes.map((n) => n.id);
+    const orderedNodeIds = targetNodes.map((n) => n.id);
     const existingPairKeys = buildPairKeySet(orderedNodeIds);
 
     let chainTotalPairs = 0;
@@ -2711,7 +2786,7 @@ async function handleSelectionChange() {
     const hasExistingConnection = chainMissingPairs === 0;
 
     // 선택된 노드들 사이에 실제로 연결된 커넥터 탐색 (체인 여부 무관, Gizmo 상태용)
-    const selectedNodeIdSet = new Set(uniqueNodes.map((n) => n.id));
+    const selectedNodeIdSet = new Set(targetNodes.map((n) => n.id));
 
     const foundConnectors = figma.currentPage.findAll((n) => {
       try {
@@ -2745,6 +2820,7 @@ async function handleSelectionChange() {
     }
 
     const multiNodeConnectors: MultiNodeConnectorDetail[] = [];
+    const connectorStyleById = new Map<string, ConnectorStyleFields>();
     for (const c of Array.from(uniqueConnectorsMap.values())) {
       let sId: string | undefined;
       let tId: string | undefined;
@@ -2766,6 +2842,8 @@ async function handleSelectionChange() {
         }
 
       if (sId && tId) {
+        // Connector Property State 표시용 스타일 필드 수집 (additive)
+        connectorStyleById.set(c.id, readConnectorStyleDetail(c));
         multiNodeConnectors.push({
           id: c.id,
           sourceId: sId,
@@ -2775,6 +2853,30 @@ async function handleSelectionChange() {
         });
       }
     }
+
+    // 3+ 노드: 위에서 산출한 multiNodeConnectors를 connectedConnectors에도 반영한다.
+    // (색상/속성 적용 경로가 connectedConnectors를 소비하므로 빈 배열로 넘기지 않는다)
+    // isReversed는 2-node 분기와 동일한 기준 — 시작 노드(orderedNodeIds[0])를 향하는 방향.
+    // 스타일 필드는 같은 루프에서 수집한 값을 재사용한다 (기존 필드는 변경 없음).
+    const connectedConnectors: ConnectedConnectorDetail[] = multiNodeConnectors.map((mc) => {
+      const isReversed = mc.targetId === orderedNodeIds[0];
+      const styleFields: ConnectorStyleFields = connectorStyleById.get(mc.id) ?? {
+        connectorStartTerminal: 'NONE',
+        connectorEndTerminal: 'ARROW',
+        connectorStartOffset: 0,
+        connectorEndOffset: 0,
+      };
+      if (isReversed) {
+        swapConnectorStyleEndpoints(styleFields);
+      }
+      return {
+        id: mc.id,
+        isReversed,
+        sourceMagnet: mc.sourceMagnet,
+        targetMagnet: mc.targetMagnet,
+        ...styleFields,
+      };
+    });
 
     postToUI({
       type: 'SELECTION_CHANGED',
@@ -2792,7 +2894,7 @@ async function handleSelectionChange() {
       connectedConnectorCount: chainConnectedPairs,
       hasExistingConnection,
       connectedConnectorIds: [],
-      connectedConnectors: [],
+      connectedConnectors,
       orderedNodeIds,
       chainTotalPairs,
       chainConnectedPairs,

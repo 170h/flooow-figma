@@ -14,6 +14,7 @@ import {
 import { IcPalette, COLOR_MIXED_ICON } from '../shared/icons';
 import { DropdownMixedItem } from '../shared/DropdownMixedItem';
 import { computeGizmoMagnets } from '../../utils/gizmoState';
+import { getConnectedConnectorStyleSummary } from '../../utils/selectionUtils';
 
 // ============================================================
 // Figma UI3 공식 킷 기반 커넥터 터미널 옵션 및 SVG
@@ -200,8 +201,20 @@ export function ConnectSection() {
   };
 
   // 라우팅 및 선 스타일 Mixed 상태
-  const isRoutingMixed = summary.isMultiConnector && summary.connectorRoutingType.isMixed;
-  const isLinePatternMixed = summary.isMultiConnector && summary.connectorStrokePattern.isMixed;
+  // 선택된 커넥터들의 해당 속성이 서로 다르면 Mixed 상태로 판정한다.
+  const isRoutingMixed = summary.connectorRoutingType.isMixed;
+  const isLinePatternMixed = summary.connectorStrokePattern.isMixed;
+
+  // 선택된 커넥터 존재 여부 (Node/Object와 함께 선택된 경우 포함)
+  // Connector 스타일(Color/Weight/Terminal/Offset)은 선택 목록에서 Connector만 필터링한 결과(summary.connectorCount > 0)만을 기준으로 계산한다.
+  const hasSelectedConnectors = summary.connectorCount > 0;
+
+  // 혼합 선택의 Connector Property State: 선택 목록에 커넥터가 없고 대상 노드만 있는 경우,
+  // 기존 연결 커넥터의 실제 스타일(Color/Weight/Terminal/Offset)을 기준으로 표시한다.
+  // 선택된 커넥터가 있으면 null → 선택된 커넥터들의 스타일을 직접 사용한다.
+  const connectedStyleSummary = hasSelectedConnectors
+    ? null
+    : getConnectedConnectorStyleSummary(uiState.connectedConnectors);
 
   // 스타일 프리셋 중 보더컬러가 있는 것은 보더 컬러만, 없는 것은 배경 컬러 반환 (커넥터 라인 컬러)
   const getPresetLineColor = (preset: StylePreset): string => {
@@ -232,15 +245,16 @@ export function ConnectSection() {
 
   const hexInputRef = useRef<HTMLInputElement>(null);
   // 스타일 섹션의 컬러 및 프리셋 변경 시 커넥터 라인 컬러 동기화 (보더컬러 우선, 없을 시 배경컬러)
+  // 커넥터가 이미 선택되어 있는 경우(단일 또는 복수)에는 커넥터 자체의 스타일/Mixed 상태를 보존한다.
   useEffect(() => {
-    if (activeStylePreset) {
+    if (activeStylePreset && summary.connectorCount === 0) {
       const connectorColor = getPresetLineColor(activeStylePreset);
       setSelectedColor(connectorColor);
       setHexInput(connectorColor.replace('#', ''));
       const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
       if (colSel) colSel.value = connectorColor;
     }
-  }, [nodeOptionState.fillColor, nodeOptionState.strokeWeight, nodeOptionState.strokeColor, selectedStylePresetId]);
+  }, [nodeOptionState.fillColor, nodeOptionState.strokeWeight, nodeOptionState.strokeColor, selectedStylePresetId, summary.connectorCount]);
 
   // selectedConnectorColor 변경 시 로컬 입력필드 및 컬러칩 동기화 (모달 실시간 어플라이 연동)
   useEffect(() => {
@@ -282,6 +296,35 @@ export function ConnectSection() {
     }
 
     const isUserActionRecent = Date.now() - userActionTimestampRef.current < 800;
+
+    console.log('[Flooow:ConnectSection:sync]', {
+      selection: {
+        total: summary.totalCount,
+        connectorCount: summary.connectorCount,
+        flowNodeCount: summary.flowNodeCount,
+        isSingleConnector: summary.isSingleConnector,
+        isMultiConnector: summary.isMultiConnector,
+      },
+      connectorStyle: {
+        color: summary.connectorColor.value,
+        colorMixed: summary.connectorColor.isMixed,
+        weight: summary.connectorStrokeWeight.value,
+        weightMixed: summary.connectorStrokeWeight.isMixed,
+        startTerminal: summary.connectorStartTerminal.value,
+        startTerminalMixed: summary.connectorStartTerminal.isMixed,
+        endTerminal: summary.connectorEndTerminal.value,
+        endTerminalMixed: summary.connectorEndTerminal.isMixed,
+        startOffset: summary.connectorStartOffset.value,
+        startOffsetMixed: summary.connectorStartOffset.isMixed,
+        endOffset: summary.connectorEndOffset.value,
+        endOffsetMixed: summary.connectorEndOffset.isMixed,
+      },
+      styleSource: hasSelectedConnectors
+        ? 'selected-connectors'
+        : connectedStyleSummary
+          ? 'connected-connectors'
+          : 'none',
+    });
 
     if (summary.isSingleConnector) {
       // 커넥터 단일 선택
@@ -361,39 +404,46 @@ export function ConnectSection() {
         endOffEl.value = String(endOff);
         endOffEl.placeholder = '';
       }
-    } else if (summary.isMultiConnector) {
-      // 커넥터 복수 선택
+    } else if (hasSelectedConnectors || connectedStyleSummary) {
+      // 커넥터 복수 선택, 노드+커넥터 혼합 선택, 또는 대상과 기존 연결 커넥터가 함께 있는 혼합 선택.
+      // 선택된 Connector가 1개 이상 있으면 다른 노드/오브젝트 선택 여부와 무관하게 선택된 Connector들(summary)만을 기준으로 계산한다.
+      const props = hasSelectedConnectors ? summary : connectedStyleSummary!;
+
       // 1. 단자
-      const startVal = summary.connectorStartTerminal.isMixed
+      const startVal = props.connectorStartTerminal.isMixed
         ? 'MIXED'
-        : (summary.connectorStartTerminal.value || 'NONE');
+        : (props.connectorStartTerminal.value || 'NONE');
       setStartTermVal(startVal);
       const startSel = document.getElementById('select-start-terminal') as HTMLSelectElement | null;
       if (startSel) startSel.value = startVal;
 
-      const endVal = summary.connectorEndTerminal.isMixed
+      const endVal = props.connectorEndTerminal.isMixed
         ? 'MIXED'
-        : (summary.connectorEndTerminal.value || 'ARROW');
+        : (props.connectorEndTerminal.value || 'ARROW');
       setEndTermVal(endVal);
       const endSel = document.getElementById('select-end-terminal') as HTMLSelectElement | null;
       if (endSel) endSel.value = endVal;
 
       // 2. 컬러 (Mixed면 hidden 미러까지 비워 payload가 undefined=유지가 되도록)
-      setIsColorMixed(summary.connectorColor.isMixed);
-      if (!summary.connectorColor.isMixed && summary.connectorColor.value) {
-        const hex = summary.connectorColor.value.toUpperCase();
+      setIsColorMixed(props.connectorColor.isMixed);
+      if (!props.connectorColor.isMixed && props.connectorColor.value) {
+        const hex = props.connectorColor.value.toUpperCase();
         setSelectedColor(hex);
         setHexInput(hex.replace('#', ''));
         const colSel = document.getElementById('conn-line-color') as HTMLInputElement | null;
         if (colSel) colSel.value = hex;
-      } else if (summary.connectorColor.isMixed) {
+      } else if (props.connectorColor.isMixed) {
+        setSelectedColor('');
+        setHexInput('');
+      } else {
+        // 전체 커넥터에 색상이 없는 경우: 직전 선택의 색이 스와치/입력에 잔류하지 않도록 비운다 (undefined=유지)
         setSelectedColor('');
         setHexInput('');
       }
 
-      // 3. 선 굵기 (커넥터 복수 선택 시)
-      const isConnWeightMixed = Boolean(summary.connectorStrokeWeight.isMixed);
-      const connWeightVal = summary.connectorStrokeWeight.value;
+      // 3. 선 굵기 (커넥터 복수/혼합 선택 시)
+      const isConnWeightMixed = Boolean(props.connectorStrokeWeight.isMixed);
+      const connWeightVal = props.connectorStrokeWeight.value;
       setIsWeightMixed(isConnWeightMixed);
       const weightEl = document.getElementById('input-stroke-weight') as HTMLInputElement | null;
       if (isConnWeightMixed) {
@@ -411,33 +461,43 @@ export function ConnectSection() {
         }
       }
 
-      // 4. 라우팅 (Mixed면 'MIXED' 센티널 → Apply에서 undefined=유지, 단자 MIXED와 동일 규약)
-      if (!summary.connectorRoutingType.isMixed && summary.connectorRoutingType.value) {
-        setUIState({ selectedRoutingType: summary.connectorRoutingType.value });
-      } else if (summary.connectorRoutingType.isMixed) {
-        setUIState({ selectedRoutingType: 'MIXED' });
-      }
-
-      // 5. 선 스타일 (라우팅과 동일 규약)
-      if (!summary.connectorStrokePattern.isMixed && summary.connectorStrokePattern.value) {
-        setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
-      } else if (summary.connectorStrokePattern.isMixed) {
-        setUIState({ selectedLinePattern: 'MIXED' });
-      }
-
-      // 6. 마그넷 위치
-      if (!isUserActionRecent) {
-        if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
-          setUIState({ sourceMagnet: summary.connectorSourceMagnet.value as MagnetPosition });
+      if (hasSelectedConnectors) {
+        // 4. 라우팅 (Mixed면 'MIXED' 센티널 → Apply에서 undefined=유지, 단자 MIXED와 동일 규약)
+        if (summary.connectorRoutingType.isMixed) {
+          setUIState({ selectedRoutingType: 'MIXED' });
+        } else if (summary.connectorRoutingType.value) {
+          setUIState({ selectedRoutingType: summary.connectorRoutingType.value });
         }
-        if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
-          setUIState({ targetMagnet: summary.connectorTargetMagnet.value as MagnetPosition });
+
+        // 5. 선 스타일 (라우팅과 동일 규약)
+        if (summary.connectorStrokePattern.isMixed) {
+          setUIState({ selectedLinePattern: 'MIXED' });
+        } else if (summary.connectorStrokePattern.value) {
+          setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
+        }
+
+        // 6. 마그넷 위치 (Gizmo 상태 보존: 순수 커넥터 복수 선택에서만 동기화)
+        if (!isUserActionRecent && summary.isMultiConnector) {
+          if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
+            setUIState({ sourceMagnet: summary.connectorSourceMagnet.value as MagnetPosition });
+          }
+          if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
+            setUIState({ targetMagnet: summary.connectorTargetMagnet.value as MagnetPosition });
+          }
+        }
+      } else {
+        // 커넥터가 선택되지 않은 일반 노드 선택: MIXED 센티널이 신규 연결 생성에 유입되지 않도록 기본값으로 복원
+        if (selectedRoutingType === 'MIXED') {
+          setUIState({ selectedRoutingType: 'ORTHOGONAL' });
+        }
+        if (selectedLinePattern === 'MIXED') {
+          setUIState({ selectedLinePattern: 'SOLID' });
         }
       }
 
-      // 7. 시작/끝 오프셋 (커넥터 복수 선택 시)
-      const isStartOffMixed = Boolean(summary.connectorStartOffset.isMixed);
-      const startOffVal = summary.connectorStartOffset.value;
+      // 7. 시작/끝 오프셋 (커넥터 복수/혼합 선택 시)
+      const isStartOffMixed = Boolean(props.connectorStartOffset.isMixed);
+      const startOffVal = props.connectorStartOffset.value;
       setIsStartOffsetMixed(isStartOffMixed);
       const startOffEl = document.getElementById('input-start-offset') as HTMLInputElement | null;
       if (isStartOffMixed) {
@@ -455,8 +515,8 @@ export function ConnectSection() {
         }
       }
 
-      const isEndOffMixed = Boolean(summary.connectorEndOffset.isMixed);
-      const endOffVal = summary.connectorEndOffset.value;
+      const isEndOffMixed = Boolean(props.connectorEndOffset.isMixed);
+      const endOffVal = props.connectorEndOffset.value;
       setIsEndOffsetMixed(isEndOffMixed);
       const endOffEl = document.getElementById('input-end-offset') as HTMLInputElement | null;
       if (isEndOffMixed) {
@@ -534,6 +594,9 @@ export function ConnectSection() {
       }
     }
   }, [
+    summary.connectorCount,
+    hasSelectedConnectors,
+    connectedStyleSummary,
     summary.isSingleConnector,
     summary.isMultiConnector,
     summary.isMultiFlowNode,
@@ -551,6 +614,10 @@ export function ConnectSection() {
     summary.connectorStartTerminal.value,
     summary.connectorEndTerminal.isMixed,
     summary.connectorEndTerminal.value,
+    summary.connectorStartOffset.isMixed,
+    summary.connectorStartOffset.value,
+    summary.connectorEndOffset.isMixed,
+    summary.connectorEndOffset.value,
     summary.color.isMixed,
     summary.color.value,
     selectedNodes,
@@ -896,8 +963,8 @@ export function ConnectSection() {
   } else {
     node1DisplayName = selectedNodes[0]?.title || selectedNodes[0]?.name || 'Node 1';
     node1TypeLabel = gizmoTypeLabel(selectedNodes[0]);
-    if (selectedNodes.length >= 3) {
-      const moreCount = selectedNodes.length - 1;
+    if (summary.flowNodeCount >= 3) {
+      const moreCount = summary.flowNodeCount - 1;
       node2DisplayName = `${moreCount} more ${moreCount === 1 ? 'node' : 'nodes'}`;
       node2TypeLabel = 'Mixed';
     } else {
@@ -935,13 +1002,6 @@ export function ConnectSection() {
       <div className="section-header">
         <span className="section-title">
           Connector
-          {summary.isMultiConnector && (
-            isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed
-          ) && (
-            <span style={{ fontSize: '11px', color: 'var(--figma-color-text-tertiary, #999)', marginLeft: '6px', fontWeight: 'normal' }}>
-              (Mixed)
-            </span>
-          )}
         </span>
       </div>
       <div className="section-body">
@@ -1037,6 +1097,7 @@ export function ConnectSection() {
                 <button key={r.type}
                   className={`routing-btn${isActive ? ' active' : ''}`}
                   data-tooltip={t(r.type === 'ORTHOGONAL' ? 'tipRouteOrtho' : r.type === 'S_CURVE' ? 'tipRouteSCurve' : r.type === 'CURVED' ? 'tipRouteCurve' : 'tipRouteStraight')}
+                  disabled={isRoutingMixed}
                   onClick={() => selectRoutingType(r.type)}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" dangerouslySetInnerHTML={{ __html: r.svg }} />
                 </button>
@@ -1139,6 +1200,7 @@ export function ConnectSection() {
                 <button key={pattern}
                   className={`line-style-btn${isActive ? ' active' : ''}`}
                   data-tooltip={t(pattern === 'SOLID' ? 'tipSolid' : 'tipDashed')}
+                  disabled={isLinePatternMixed}
                   onClick={e => selectLinePattern(pattern, e.currentTarget)}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d={path} fill="currentColor"/></svg>
                 </button>
@@ -1147,6 +1209,7 @@ export function ConnectSection() {
             <button
               className={`line-style-btn${!isLinePatternMixed && selectedLinePattern === 'DOTTED' ? ' active' : ''}`}
               data-tooltip={t('tipDotted')}
+              disabled={isLinePatternMixed}
               onClick={e => selectLinePattern('DOTTED', e.currentTarget)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <g transform="translate(5, 11.3)">
@@ -1527,12 +1590,27 @@ export function ConnectSection() {
           const effectiveSource = endpointDraft.sourceMagnet ?? sourceMagnet;
           const effectiveTarget = endpointDraft.targetMagnet ?? targetMagnet;
 
-          // 커넥터만 선택한 경우와 이미 연결된 노드 2개는 섹션 버튼을 두지 않는다.
-          // 커넥터 1개는 즉시 반영되고, 커넥터 복수는 푸터 Undo / Apply to All을 쓴다.
-          const twoNodesConnected = selectedNodes.length === 2 && hasExisting && !isAllConnectors;
-          if (isAllConnectors || twoNodesConnected) return null;
+          // 대상(Node/Figma Object) 개수 — 커넥터는 제외
+          const targetCount = selectedNodes.filter((n) => n && !n.isConnector).length;
 
-          const showUpdate = isAllConnectors || hasExisting;
+          // 필요한 Chain 연결이 모두 완성되었는가 (기존 selection/connection 정보만 사용, 새 상태 없음).
+          // - 대상 2개: 두 노드 사이 연결 여부 = hasExistingConnection (Core 2-node 분기의 정확한 값)
+          // - 대상 3개 이상: Core가 보낸 chainMissingPairs === 0 (인접 pair 결손 없음)
+          const chainMissing = uiState.chainMissingPairs;
+          const isChainComplete = targetCount >= 2 && (
+            targetCount === 2
+              ? hasExisting
+              : typeof chainMissing === 'number' && !Number.isNaN(chainMissing) && chainMissing === 0
+          );
+
+          // 커넥터만 선택한 경우와 체인이 완성된 경우: 섹션 버튼 행 자체를 두지 않는다 (hidden).
+          // 커넥터 1개는 즉시 반영되고, 커넥터 복수는 푸터 Undo / Apply to All을 쓴다.
+          // 완성 시에는 Update 경로 자체가 없으므로 기존 커넥터를 수정/재생성할 수 없고,
+          // Connector style은 Footer Apply to All 경로만 쓴다.
+          if (isAllConnectors || isChainComplete) return null;
+
+          // 체인 미완성일 때만 Connect 모드. Update 모드는 대상 1 이하의 기존 동작만 남긴다.
+          const showUpdate = isAllConnectors || (hasExisting && targetCount < 2);
 
           // Quota UI 표시 전용: 신규 연결 생성이 막힌 상태 (업데이트는 제한하지 않음)
           const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
@@ -1541,7 +1619,7 @@ export function ConnectSection() {
           if (showUpdate) {
             // 기존 커넥터/연결은 설정이 바뀔 때만 Update
             isConnectDisabled = !connectorDirty;
-          } else if (selectedNodes.length < 2) {
+          } else if (targetCount < 2) {
             isConnectDisabled = true;
           } else {
             // 2개 이상: 기즈모가 없으면 각 쌍의 최단 단자로 연결한다.
@@ -1551,19 +1629,19 @@ export function ConnectSection() {
           let statusText = 'Select 2+ nodes to connect';
           if (isAllConnectors) {
             statusText = connectorDirty ? 'Changes ready to update' : 'No changes';
-          } else if (hasExisting) {
+          } else if (showUpdate) {
             statusText = connectorDirty ? 'Changes ready to update' : 'Connected';
-          } else if (selectedNodes.length === 2) {
+          } else if (targetCount === 2) {
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
             statusText = hasStart && hasEnd
               ? '2 nodes ready to connect'
               : 'Ready — anchors follow node distance';
-          } else if (selectedNodes.length > 2) {
+          } else if (targetCount > 2) {
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
             statusText = hasStart && hasEnd
-              ? `${selectedNodes.length} nodes ready to connect`
+              ? `${targetCount} nodes ready to connect`
               : 'Ready — anchors follow node distance';
           }
 

@@ -57,6 +57,19 @@ export function useFigmaMessage() {
             chainConnectedPairs,
             chainMissingPairs,
           } = msg;
+          console.log('[Flooow:useFigmaMessage:SELECTION_CHANGED]', {
+            count: msg.count,
+            flowNodeCount: msg.flowNodeCount,
+            connectorCount: msg.connectorCount,
+            otherObjectCount: msg.otherObjectCount,
+            nodes: (nodes || []).map((n: any) => ({
+              id: n?.id,
+              type: n?.nodeType,
+              name: n?.name,
+              isConnector: n?.isConnector,
+              isFlowNode: n?.isFlowNode,
+            })),
+          });
           handleSelectionChange(count || 0, nodes || [], meta || {});
 
           const isConn = (meta?.connectorCount || 0) > 0 || (nodes && nodes.some((n: any) => n?.isConnector));

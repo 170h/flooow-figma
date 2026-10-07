@@ -1,5 +1,5 @@
 import { NodeInfo } from '../context/AppContext';
-import { DiagramNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition, ConnectorLabelAlign, ConnectorLabelBoxStyle, PluginOption } from '../../types';
+import { DiagramNodeType, WorkflowStatus, BadgePosition, BadgeShape, ConnectorStrokePattern, ConnectorRoutingType, ConnectorTerminalType, MagnetPosition, ConnectorLabelAlign, ConnectorLabelBoxStyle, ConnectedConnectorDetail, PluginOption } from '../../types';
 import { normalizeNodeType, supportsOption } from '../../domain/nodeDomain';
 
 export interface PropertySummary<T> {
@@ -128,6 +128,19 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
   const figjamNodeCount = figjamNodes.length;
   const isFigJamObject = totalCount > 0 && figjamNodeCount === totalCount;
 
+  console.log('[Flooow:analyzeSelection]', {
+    inputNodes: validNodes.map((n) => ({
+      id: n.id,
+      type: n.nodeType,
+      name: n.name,
+      isConnector: n.isConnector,
+      isFlowNode: n.isFlowNode,
+    })),
+    totalCount,
+    flowNodeCount,
+    connectorCount,
+  });
+
   return {
     totalCount,
     flowNodeCount,
@@ -203,5 +216,40 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
     ),
     connectorLabelAlign: getCommonProperty(connectorNodes, (n) => n.connectorLabelAlign || 'CENTER'),
     connectorLabelBoxStyle: getCommonProperty(connectorNodes, (n) => n.connectorLabelBoxStyle || 'BOX'),
+  };
+}
+
+/**
+ * Connector Property State 요약에서 커넥터 스타일 4종(Color/Weight/Terminal/Offset)만 추린 타입.
+ * SelectionSummary와 필드명이 동일하므로 호출측이 summary와 동일한 방식으로 소비할 수 있다.
+ */
+export type ConnectorStyleSummary = Pick<
+  SelectionSummary,
+  | 'connectorColor'
+  | 'connectorStrokeWeight'
+  | 'connectorStartTerminal'
+  | 'connectorEndTerminal'
+  | 'connectorStartOffset'
+  | 'connectorEndOffset'
+>;
+
+/**
+ * 혼합 선택(노드/오브젝트 + 커넥터)에서 nodes payload에 포함되지 않는 기존 연결 커넥터의
+ * Connector Property State를 ConnectedConnectorDetail에서 계산한다.
+ * - getCommonProperty/PropertySummary를 그대로 재사용하므로 Mixed 판정 규칙은
+ *   커넥터 단독/복수 선택과 동일하다 (새로운 판정 로직을 만들지 않는다).
+ * - 커넥터가 하나도 없으면 null을 반환해 호출측의 기존 생성 설정 분기를 유지한다.
+ */
+export function getConnectedConnectorStyleSummary(
+  details: ConnectedConnectorDetail[] | undefined
+): ConnectorStyleSummary | null {
+  if (!details || details.length === 0) return null;
+  return {
+    connectorColor: getCommonProperty(details, (d) => d.connectorColorHex, caseInsensitiveEqual),
+    connectorStrokeWeight: getCommonProperty(details, (d) => d.connectorStrokeWeight),
+    connectorStartTerminal: getCommonProperty(details, (d) => d.connectorStartTerminal),
+    connectorEndTerminal: getCommonProperty(details, (d) => d.connectorEndTerminal),
+    connectorStartOffset: getCommonProperty(details, (d) => d.connectorStartOffset),
+    connectorEndOffset: getCommonProperty(details, (d) => d.connectorEndOffset),
   };
 }

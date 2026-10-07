@@ -3134,8 +3134,8 @@
     }
 
     .app-footer .btn-cta-primary:disabled {
-      background: #d9d9d9;
-      color: #ffffff;
+      background: var(--color-bg-tertiary);
+      color: var(--color-text-tertiary);
     }
 
     /* Ghost 버튼 (Modal footer Undo 기준: 투명 배경·보더 없음) */

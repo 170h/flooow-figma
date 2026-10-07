@@ -3140,8 +3140,8 @@
     }
 
     .app-footer .btn-cta-primary:disabled {
-      background: #d9d9d9;
-      color: #ffffff;
+      background: var(--color-bg-tertiary);
+      color: var(--color-text-tertiary);
     }
 
     /* Ghost 버튼 (Modal footer Undo 기준: 투명 배경·보더 없음) */
@@ -30381,6 +30381,9 @@
     }
     return result;
   }
+  function orderFlowNodesForChain(nodes) {
+    return orderNodesForChain(nodes.filter((node) => node.isFlowNode === true));
+  }
 
   // src/i18n.ts
   var activeLocale = "ko";
@@ -31832,9 +31835,18 @@
       setConnectorDirty(false);
     }, [clearConnectorLabelDraft, clearEndpointMagnetDraft]);
     const applyExistingConnectionState = (0, import_react2.useCallback)((customStartOffset, customEndOffset, includeMagnets = true) => {
-      const conns = uiStateRef.current.connectedConnectors || [];
-      if (conns.length === 0) return;
       const nodes = selectedNodesRef.current;
+      const directConns = uiStateRef.current.connectedConnectors || [];
+      const conns = directConns.length > 0 ? directConns : (uiStateRef.current.multiNodeConnectors || []).map((mc) => {
+        const startId = uiStateRef.current.orderedNodeIds?.[0] || nodes[0]?.id || "";
+        return {
+          id: mc.id,
+          isReversed: Boolean(startId) && mc.targetId === startId,
+          sourceMagnet: mc.sourceMagnet,
+          targetMagnet: mc.targetMagnet
+        };
+      });
+      if (conns.length === 0) return;
       const endpointDraftNow = includeMagnets ? endpointDraftRef.current : {};
       const magnetPatches = includeMagnets ? buildEndpointMagnetPatches(
         buildSelectionGizmoInput(nodes, uiStateRef.current, endpointDraftNow)
@@ -31915,8 +31927,10 @@
       const colorMirror = lastConnectorConfigRef.current.connectorColorInput;
       const color = colorMirror && colorMirror.trim() || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
       const weight = parseFloat(lastConnectorConfigRef.current.strokeWeightInput || "1.5") || 1.5;
-      const startTerm = lastConnectorConfigRef.current.startTerminalInput || "NONE";
-      const endTerm = lastConnectorConfigRef.current.endTerminalInput || "ARROW";
+      const startTermRaw = lastConnectorConfigRef.current.startTerminalInput;
+      const startTerm = startTermRaw && startTermRaw !== "MIXED" ? startTermRaw : "NONE";
+      const endTermRaw = lastConnectorConfigRef.current.endTerminalInput;
+      const endTerm = endTermRaw && endTermRaw !== "MIXED" ? endTermRaw : "ARROW";
       const startOff = parseFloat(lastConnectorConfigRef.current.startOffsetInput || "0") || 0;
       const endOff = parseFloat(lastConnectorConfigRef.current.endOffsetInput || "0") || 0;
       const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
@@ -31925,10 +31939,6 @@
       const labelAlign = lastConnectorConfigRef.current.labelAlign || "CENTER";
       const labelFillColor = lastConnectorConfigRef.current.labelFillColor || DEFAULT_LABEL_FILL;
       const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
-      if (uiStateRef.current.hasExistingConnection) {
-        applyExistingConnectionState();
-        return;
-      }
       if (nodes.length === 2) {
         parent.postMessage({
           pluginMessage: {
@@ -31961,12 +31971,13 @@
         const coreMatches = Boolean(
           orderedFromCore && orderedFromCore.length === connectable.length && connectable.every((n) => orderedFromCore.includes(n.id))
         );
-        const orderedIds = coreMatches && orderedFromCore ? orderedFromCore : orderNodesForChain(connectable.map((n) => ({
+        const orderedIds = coreMatches && orderedFromCore ? orderedFromCore : orderFlowNodesForChain(connectable.map((n) => ({
           id: n.id,
           x: n.x ?? 0,
           y: n.y ?? 0,
           width: n.width ?? 0,
-          height: n.height ?? 0
+          height: n.height ?? 0,
+          isFlowNode: Boolean(n.isFlowNode)
         }))).map((n) => n.id);
         parent.postMessage({
           pluginMessage: {
@@ -31994,7 +32005,8 @@
         }, "*");
       }
       clearEndpointMagnetDraft();
-    }, [applyCurrentConnectorState, applyExistingConnectionState, showToast, clearEndpointMagnetDraft]);
+      setConnectorDirty(false);
+    }, [applyCurrentConnectorState, showToast, clearEndpointMagnetDraft, setConnectorDirty]);
     const updateConnectedConnectorMagnets = (0, import_react2.useCallback)((sourceMagnet, targetMagnet) => {
       const connectedConnectors = uiStateRef.current.connectedConnectors || [];
       const connIds = uiStateRef.current.connectedConnectorIds || [];
@@ -32107,6 +32119,14 @@
           applyEndpointMagnetDraft();
         }
         applyMultiDraft();
+        if (connectorDirty) {
+          const hasConnectorTargets = (uiStateRef.current.connectedConnectors?.length ?? 0) > 0 || (uiStateRef.current.multiNodeConnectors?.length ?? 0) > 0;
+          if (hasConnectorTargets) {
+            applyExistingConnectionState(void 0, void 0, false);
+          } else {
+            setConnectorDirty(false);
+          }
+        }
         return;
       }
       const titleEl = document.getElementById("node-title-input");
@@ -32222,7 +32242,7 @@
           }
         }, "*");
       }
-    }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, setNodeOptionState, setUIState, setSelectedStylePresetId, showToast, stylePresets]);
+    }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, applyExistingConnectionState, connectorDirty, setNodeOptionState, setUIState, setSelectedStylePresetId, showToast, stylePresets]);
     const handleSelectionChange = (0, import_react2.useCallback)((count, nodes, meta) => {
       if (isApplyingMultiDraftRef.current) {
         if (applyTimeoutRef.current !== null) {
@@ -32309,12 +32329,13 @@
       } else if (count === 0) {
         setCurrentTab("node");
         if (isSelectionChanged) {
-          setNodeOptionState({ ...DEFAULT_NODE_OPTION_STATE });
           setFormTextDraft({ ...DEFAULT_FORM_TEXT_DRAFT });
         }
       } else {
-        const targetTab = lastNodeTabRef.current || "node";
-        setCurrentTab(targetTab);
+        if (isSelectionChanged) {
+          const targetTab = lastNodeTabRef.current || "node";
+          setCurrentTab(targetTab);
+        }
         const flowNodes = nodes.filter((n) => n && Boolean(n.isFlowNode));
         if (isSelectionChanged && nodes.length === 1 && flowNodes.length === 1) {
           const first = flowNodes[0];
@@ -32501,6 +32522,19 @@
               chainConnectedPairs,
               chainMissingPairs
             } = msg;
+            console.log("[Flooow:useFigmaMessage:SELECTION_CHANGED]", {
+              count: msg.count,
+              flowNodeCount: msg.flowNodeCount,
+              connectorCount: msg.connectorCount,
+              otherObjectCount: msg.otherObjectCount,
+              nodes: (nodes || []).map((n) => ({
+                id: n?.id,
+                type: n?.nodeType,
+                name: n?.name,
+                isConnector: n?.isConnector,
+                isFlowNode: n?.isFlowNode
+              }))
+            });
             handleSelectionChange(count || 0, nodes || [], meta || {});
             const isConn = (meta?.connectorCount || 0) > 0 || nodes && nodes.some((n) => n?.isConnector);
             const is3Plus = Boolean(nodes && nodes.length >= 3 && !isConn);
@@ -32624,6 +32658,18 @@
     const connectorCount = connectorNodes.length;
     const figjamNodeCount = figjamNodes.length;
     const isFigJamObject = totalCount > 0 && figjamNodeCount === totalCount;
+    console.log("[Flooow:analyzeSelection]", {
+      inputNodes: validNodes.map((n) => ({
+        id: n.id,
+        type: n.nodeType,
+        name: n.name,
+        isConnector: n.isConnector,
+        isFlowNode: n.isFlowNode
+      })),
+      totalCount,
+      flowNodeCount,
+      connectorCount
+    });
     return {
       totalCount,
       flowNodeCount,
@@ -32697,6 +32743,17 @@
       ),
       connectorLabelAlign: getCommonProperty(connectorNodes, (n) => n.connectorLabelAlign || "CENTER"),
       connectorLabelBoxStyle: getCommonProperty(connectorNodes, (n) => n.connectorLabelBoxStyle || "BOX")
+    };
+  }
+  function getConnectedConnectorStyleSummary(details) {
+    if (!details || details.length === 0) return null;
+    return {
+      connectorColor: getCommonProperty(details, (d) => d.connectorColorHex, caseInsensitiveEqual),
+      connectorStrokeWeight: getCommonProperty(details, (d) => d.connectorStrokeWeight),
+      connectorStartTerminal: getCommonProperty(details, (d) => d.connectorStartTerminal),
+      connectorEndTerminal: getCommonProperty(details, (d) => d.connectorEndTerminal),
+      connectorStartOffset: getCommonProperty(details, (d) => d.connectorStartOffset),
+      connectorEndOffset: getCommonProperty(details, (d) => d.connectorEndOffset)
     };
   }
 
@@ -36919,8 +36976,10 @@
         markConnectorDirty();
       }, 200);
     };
-    const isRoutingMixed = summary.isMultiConnector && summary.connectorRoutingType.isMixed;
-    const isLinePatternMixed = summary.isMultiConnector && summary.connectorStrokePattern.isMixed;
+    const isRoutingMixed = summary.connectorRoutingType.isMixed;
+    const isLinePatternMixed = summary.connectorStrokePattern.isMixed;
+    const hasSelectedConnectors = summary.connectorCount > 0;
+    const connectedStyleSummary = hasSelectedConnectors ? null : getConnectedConnectorStyleSummary(uiState.connectedConnectors);
     const getPresetLineColor2 = (preset) => {
       const hasBorder = (preset.strokeWeight ?? 0) > 0 && !!preset.strokeColor;
       return (hasBorder ? preset.strokeColor : preset.fillColor).toUpperCase();
@@ -36945,14 +37004,14 @@
     });
     const hexInputRef = (0, import_react15.useRef)(null);
     (0, import_react15.useEffect)(() => {
-      if (activeStylePreset) {
+      if (activeStylePreset && summary.connectorCount === 0) {
         const connectorColor = getPresetLineColor2(activeStylePreset);
         setSelectedColor(connectorColor);
         setHexInput(connectorColor.replace("#", ""));
         const colSel = document.getElementById("conn-line-color");
         if (colSel) colSel.value = connectorColor;
       }
-    }, [nodeOptionState.fillColor, nodeOptionState.strokeWeight, nodeOptionState.strokeColor, selectedStylePresetId]);
+    }, [nodeOptionState.fillColor, nodeOptionState.strokeWeight, nodeOptionState.strokeColor, selectedStylePresetId, summary.connectorCount]);
     (0, import_react15.useEffect)(() => {
       if (selectedConnectorColor) {
         const formatted = selectedConnectorColor.toUpperCase();
@@ -36985,6 +37044,30 @@
         lastSyncedSelectionColorRef.current = firstConn?.connectorColorHex ? firstConn.connectorColorHex.toUpperCase() : null;
       }
       const isUserActionRecent = Date.now() - userActionTimestampRef.current < 800;
+      console.log("[Flooow:ConnectSection:sync]", {
+        selection: {
+          total: summary.totalCount,
+          connectorCount: summary.connectorCount,
+          flowNodeCount: summary.flowNodeCount,
+          isSingleConnector: summary.isSingleConnector,
+          isMultiConnector: summary.isMultiConnector
+        },
+        connectorStyle: {
+          color: summary.connectorColor.value,
+          colorMixed: summary.connectorColor.isMixed,
+          weight: summary.connectorStrokeWeight.value,
+          weightMixed: summary.connectorStrokeWeight.isMixed,
+          startTerminal: summary.connectorStartTerminal.value,
+          startTerminalMixed: summary.connectorStartTerminal.isMixed,
+          endTerminal: summary.connectorEndTerminal.value,
+          endTerminalMixed: summary.connectorEndTerminal.isMixed,
+          startOffset: summary.connectorStartOffset.value,
+          startOffsetMixed: summary.connectorStartOffset.isMixed,
+          endOffset: summary.connectorEndOffset.value,
+          endOffsetMixed: summary.connectorEndOffset.isMixed
+        },
+        styleSource: hasSelectedConnectors ? "selected-connectors" : connectedStyleSummary ? "connected-connectors" : "none"
+      });
       if (summary.isSingleConnector) {
         const node = selectedNodes[0];
         setIsColorMixed(false);
@@ -37056,28 +37139,32 @@
           endOffEl.value = String(endOff);
           endOffEl.placeholder = "";
         }
-      } else if (summary.isMultiConnector) {
-        const startVal = summary.connectorStartTerminal.isMixed ? "MIXED" : summary.connectorStartTerminal.value || "NONE";
+      } else if (hasSelectedConnectors || connectedStyleSummary) {
+        const props = hasSelectedConnectors ? summary : connectedStyleSummary;
+        const startVal = props.connectorStartTerminal.isMixed ? "MIXED" : props.connectorStartTerminal.value || "NONE";
         setStartTermVal(startVal);
         const startSel = document.getElementById("select-start-terminal");
         if (startSel) startSel.value = startVal;
-        const endVal = summary.connectorEndTerminal.isMixed ? "MIXED" : summary.connectorEndTerminal.value || "ARROW";
+        const endVal = props.connectorEndTerminal.isMixed ? "MIXED" : props.connectorEndTerminal.value || "ARROW";
         setEndTermVal(endVal);
         const endSel = document.getElementById("select-end-terminal");
         if (endSel) endSel.value = endVal;
-        setIsColorMixed(summary.connectorColor.isMixed);
-        if (!summary.connectorColor.isMixed && summary.connectorColor.value) {
-          const hex = summary.connectorColor.value.toUpperCase();
+        setIsColorMixed(props.connectorColor.isMixed);
+        if (!props.connectorColor.isMixed && props.connectorColor.value) {
+          const hex = props.connectorColor.value.toUpperCase();
           setSelectedColor(hex);
           setHexInput(hex.replace("#", ""));
           const colSel = document.getElementById("conn-line-color");
           if (colSel) colSel.value = hex;
-        } else if (summary.connectorColor.isMixed) {
+        } else if (props.connectorColor.isMixed) {
+          setSelectedColor("");
+          setHexInput("");
+        } else {
           setSelectedColor("");
           setHexInput("");
         }
-        const isConnWeightMixed = Boolean(summary.connectorStrokeWeight.isMixed);
-        const connWeightVal = summary.connectorStrokeWeight.value;
+        const isConnWeightMixed = Boolean(props.connectorStrokeWeight.isMixed);
+        const connWeightVal = props.connectorStrokeWeight.value;
         setIsWeightMixed(isConnWeightMixed);
         const weightEl = document.getElementById("input-stroke-weight");
         if (isConnWeightMixed) {
@@ -37094,26 +37181,35 @@
             weightEl.placeholder = "";
           }
         }
-        if (!summary.connectorRoutingType.isMixed && summary.connectorRoutingType.value) {
-          setUIState({ selectedRoutingType: summary.connectorRoutingType.value });
-        } else if (summary.connectorRoutingType.isMixed) {
-          setUIState({ selectedRoutingType: "MIXED" });
-        }
-        if (!summary.connectorStrokePattern.isMixed && summary.connectorStrokePattern.value) {
-          setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
-        } else if (summary.connectorStrokePattern.isMixed) {
-          setUIState({ selectedLinePattern: "MIXED" });
-        }
-        if (!isUserActionRecent) {
-          if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
-            setUIState({ sourceMagnet: summary.connectorSourceMagnet.value });
+        if (hasSelectedConnectors) {
+          if (summary.connectorRoutingType.isMixed) {
+            setUIState({ selectedRoutingType: "MIXED" });
+          } else if (summary.connectorRoutingType.value) {
+            setUIState({ selectedRoutingType: summary.connectorRoutingType.value });
           }
-          if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
-            setUIState({ targetMagnet: summary.connectorTargetMagnet.value });
+          if (summary.connectorStrokePattern.isMixed) {
+            setUIState({ selectedLinePattern: "MIXED" });
+          } else if (summary.connectorStrokePattern.value) {
+            setUIState({ selectedLinePattern: summary.connectorStrokePattern.value });
+          }
+          if (!isUserActionRecent && summary.isMultiConnector) {
+            if (!summary.connectorSourceMagnet.isMixed && summary.connectorSourceMagnet.value) {
+              setUIState({ sourceMagnet: summary.connectorSourceMagnet.value });
+            }
+            if (!summary.connectorTargetMagnet.isMixed && summary.connectorTargetMagnet.value) {
+              setUIState({ targetMagnet: summary.connectorTargetMagnet.value });
+            }
+          }
+        } else {
+          if (selectedRoutingType === "MIXED") {
+            setUIState({ selectedRoutingType: "ORTHOGONAL" });
+          }
+          if (selectedLinePattern === "MIXED") {
+            setUIState({ selectedLinePattern: "SOLID" });
           }
         }
-        const isStartOffMixed = Boolean(summary.connectorStartOffset.isMixed);
-        const startOffVal = summary.connectorStartOffset.value;
+        const isStartOffMixed = Boolean(props.connectorStartOffset.isMixed);
+        const startOffVal = props.connectorStartOffset.value;
         setIsStartOffsetMixed(isStartOffMixed);
         const startOffEl = document.getElementById("input-start-offset");
         if (isStartOffMixed) {
@@ -37130,8 +37226,8 @@
             startOffEl.placeholder = "";
           }
         }
-        const isEndOffMixed = Boolean(summary.connectorEndOffset.isMixed);
-        const endOffVal = summary.connectorEndOffset.value;
+        const isEndOffMixed = Boolean(props.connectorEndOffset.isMixed);
+        const endOffVal = props.connectorEndOffset.value;
         setIsEndOffsetMixed(isEndOffMixed);
         const endOffEl = document.getElementById("input-end-offset");
         if (isEndOffMixed) {
@@ -37200,6 +37296,9 @@
         }
       }
     }, [
+      summary.connectorCount,
+      hasSelectedConnectors,
+      connectedStyleSummary,
       summary.isSingleConnector,
       summary.isMultiConnector,
       summary.isMultiFlowNode,
@@ -37217,6 +37316,10 @@
       summary.connectorStartTerminal.value,
       summary.connectorEndTerminal.isMixed,
       summary.connectorEndTerminal.value,
+      summary.connectorStartOffset.isMixed,
+      summary.connectorStartOffset.value,
+      summary.connectorEndOffset.isMixed,
+      summary.connectorEndOffset.value,
       summary.color.isMixed,
       summary.color.value,
       selectedNodes,
@@ -37521,8 +37624,8 @@
     } else {
       node1DisplayName = selectedNodes[0]?.title || selectedNodes[0]?.name || "Node 1";
       node1TypeLabel = gizmoTypeLabel(selectedNodes[0]);
-      if (selectedNodes.length >= 3) {
-        const moreCount = selectedNodes.length - 1;
+      if (summary.flowNodeCount >= 3) {
+        const moreCount = summary.flowNodeCount - 1;
         node2DisplayName = `${moreCount} more ${moreCount === 1 ? "node" : "nodes"}`;
         node2TypeLabel = "Mixed";
       } else {
@@ -37551,10 +37654,7 @@
       { type: "STRAIGHT", title: "Straight", svg: '<path d="M17.2714 6.02145C17.4667 5.82618 17.7832 5.82618 17.9785 6.02145C18.1737 6.21671 18.1737 6.53322 17.9785 6.72848L6.72848 17.9785C6.53322 18.1737 6.21671 18.1737 6.02145 17.9785C5.82618 17.7832 5.82618 17.4667 6.02145 17.2714L17.2714 6.02145Z" fill="currentColor"/>' }
     ];
     return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-block", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("span", { className: "section-title", children: [
-        "Connector",
-        summary.isMultiConnector && (isColorMixed || isWeightMixed || isRoutingMixed || isLinePatternMixed || summary.connectorStartTerminal.isMixed || summary.connectorEndTerminal.isMixed) && /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { style: { fontSize: "11px", color: "var(--figma-color-text-tertiary, #999)", marginLeft: "6px", fontWeight: "normal" }, children: "(Mixed)" })
-      ] }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "section-header", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: "section-title", children: "Connector" }) }),
       /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "section-body", children: [
         /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { style: { display: "flex", gap: "6px", alignItems: "center" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: "conn-color-input-wrapper", id: "wrap-conn-color", children: [
@@ -37652,6 +37752,7 @@
               {
                 className: `routing-btn${isActive ? " active" : ""}`,
                 "data-tooltip": t(r.type === "ORTHOGONAL" ? "tipRouteOrtho" : r.type === "S_CURVE" ? "tipRouteSCurve" : r.type === "CURVED" ? "tipRouteCurve" : "tipRouteStraight"),
+                disabled: isRoutingMixed,
                 onClick: () => selectRoutingType(r.type),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", dangerouslySetInnerHTML: { __html: r.svg } })
               },
@@ -37762,6 +37863,7 @@
                 {
                   className: `line-style-btn${isActive ? " active" : ""}`,
                   "data-tooltip": t(pattern === "SOLID" ? "tipSolid" : "tipDashed"),
+                  disabled: isLinePatternMixed,
                   onClick: (e) => selectLinePattern(pattern, e.currentTarget),
                   children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: path, fill: "currentColor" }) })
                 },
@@ -37773,6 +37875,7 @@
               {
                 className: `line-style-btn${!isLinePatternMixed && selectedLinePattern === "DOTTED" ? " active" : ""}`,
                 "data-tooltip": t("tipDotted"),
+                disabled: isLinePatternMixed,
                 onClick: (e) => selectLinePattern("DOTTED", e.currentTarget),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("g", { transform: "translate(5, 11.3)", children: [
                   /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M0.7 0C0.31 0 0 0.31 0 0.7C0 1.09 0.31 1.4 0.7 1.4C1.09 1.4 1.4 1.09 1.4 0.7C1.4 0.31 1.09 0 0.7 0Z", fill: "currentColor" }),
@@ -38126,14 +38229,16 @@
           const hasExisting2 = Boolean(uiState.hasExistingConnection);
           const effectiveSource = endpointDraft.sourceMagnet ?? sourceMagnet;
           const effectiveTarget = endpointDraft.targetMagnet ?? targetMagnet;
-          const twoNodesConnected = selectedNodes.length === 2 && hasExisting2 && !isAllConnectors;
-          if (isAllConnectors || twoNodesConnected) return null;
-          const showUpdate = isAllConnectors || hasExisting2;
+          const targetCount = selectedNodes.filter((n) => n && !n.isConnector).length;
+          const chainMissing = uiState.chainMissingPairs;
+          const isChainComplete = targetCount >= 2 && (targetCount === 2 ? hasExisting2 : typeof chainMissing === "number" && !Number.isNaN(chainMissing) && chainMissing === 0);
+          if (isAllConnectors || isChainComplete) return null;
+          const showUpdate = isAllConnectors || hasExisting2 && targetCount < 2;
           const usageBlocked = flooowUsage !== null && !flooowUsage.canCreate;
           let isConnectDisabled = false;
           if (showUpdate) {
             isConnectDisabled = !connectorDirty;
-          } else if (selectedNodes.length < 2) {
+          } else if (targetCount < 2) {
             isConnectDisabled = true;
           } else {
             isConnectDisabled = usageBlocked;
@@ -38141,16 +38246,16 @@
           let statusText = "Select 2+ nodes to connect";
           if (isAllConnectors) {
             statusText = connectorDirty ? "Changes ready to update" : "No changes";
-          } else if (hasExisting2) {
+          } else if (showUpdate) {
             statusText = connectorDirty ? "Changes ready to update" : "Connected";
-          } else if (selectedNodes.length === 2) {
+          } else if (targetCount === 2) {
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
             statusText = hasStart && hasEnd ? "2 nodes ready to connect" : "Ready \u2014 anchors follow node distance";
-          } else if (selectedNodes.length > 2) {
+          } else if (targetCount > 2) {
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
-            statusText = hasStart && hasEnd ? `${selectedNodes.length} nodes ready to connect` : "Ready \u2014 anchors follow node distance";
+            statusText = hasStart && hasEnd ? `${targetCount} nodes ready to connect` : "Ready \u2014 anchors follow node distance";
           }
           return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
             "div",
@@ -41655,7 +41760,7 @@
           /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
             "div",
             {
-              className: `footer-left${planLoading ? "" : " footer-clickable"}`,
+              className: `footer-left${planLoading || planIssue ? "" : " footer-clickable"}`,
               onClick: planLoading || planIssue ? void 0 : () => {
                 setActiveModal("subscription");
                 requestFlooowUsage();
@@ -41677,61 +41782,54 @@
               ] })
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "footer-right", children: planLoading ? null : planIssue ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("button", { className: "btn-ghost", type: "button", onClick: retryPlanLoad, children: "Refresh" }) : nodeCount === 1 ? null : isMultiFlow || isMultiConn ? (
-            /* 노드 복수 선택·커넥터만 복수 선택: Undo(초안 취소) + Apply to All */
-            /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
-                "button",
-                {
-                  id: "btn-undo",
-                  className: "btn-ghost",
-                  type: "button",
-                  disabled: isMultiConn ? !hasConnectorLabelDraft && !canUndo && !endpointDirty : !hasMultiDraft && !canUndo && !endpointDirty,
-                  onClick: handleUndo,
-                  children: "Undo"
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
-                "button",
-                {
-                  id: "btn-main-cta",
-                  className: `btn-cta-primary${(isMultiConn ? !hasConnectorLabelDraft && !connectorDirty && !endpointDirty : !hasMultiDraft && !endpointDirty) || isApplyingMultiDraft ? " disabled" : ""}`,
-                  type: "button",
-                  disabled: (isMultiConn ? !hasConnectorLabelDraft && !connectorDirty && !endpointDirty : !hasMultiDraft && !endpointDirty) || isApplyingMultiDraft,
-                  onClick: handleMainAction,
-                  children: "Apply to All"
-                }
-              )
-            ] })
+          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "footer-right", children: planLoading ? null : planIssue ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("button", { className: "btn-ghost", type: "button", onClick: retryPlanLoad, children: "Refresh" }) : nodeCount === 1 ? null : nodeCount >= 2 ? (
+            /* 노드 복수 선택 / 커넥터 복수 선택 / 혼합 복수 선택: Undo(초안 취소) + Apply to All */
+            (() => {
+              const hasDirty = Boolean(hasMultiDraft || connectorDirty || endpointDirty || hasConnectorLabelDraft);
+              const isApplyDisabled = !hasDirty || isApplyingMultiDraft;
+              const isUndoDisabled = !canUndo && !hasDirty;
+              return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+                  "button",
+                  {
+                    id: "btn-undo",
+                    className: "btn-ghost",
+                    type: "button",
+                    disabled: isUndoDisabled,
+                    onClick: handleUndo,
+                    children: "Undo"
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+                  "button",
+                  {
+                    id: "btn-main-cta",
+                    className: `btn-cta-primary${isApplyDisabled ? " disabled" : ""}`,
+                    type: "button",
+                    disabled: isApplyDisabled,
+                    onClick: handleMainAction,
+                    children: "Apply to All"
+                  }
+                )
+              ] });
+            })()
           ) : (
-            /* 기타 상태 (0개 선택 생성 모드, 커넥터 선택 등) */
-            /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
-              isConnSel && canUndo && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
-                "button",
-                {
-                  id: "btn-undo",
-                  className: "btn-ghost",
-                  type: "button",
-                  onClick: handleUndo,
-                  children: "Undo"
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
-                "button",
-                {
-                  id: "btn-main-cta",
-                  className: `btn-cta-primary${isFigjamSelected && !isMultiFigjam || !isConnSel && usageBlocked ? " disabled" : ""}`,
-                  type: "button",
-                  disabled: isFigjamSelected && !isMultiFigjam || !isConnSel && usageBlocked,
-                  title: !isConnSel && usageBlocked ? t("tipQuotaBlocked") : void 0,
-                  onClick: handleMainAction,
-                  children: isConnSel ? "Apply" : /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { className: "create-node-plus", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M8 3.25c.331 0 .6.269.6.6v3.55H12.15a.6.6 0 0 1 0 1.2H8.6V12.15a.6.6 0 0 1-1.2 0V8.6H3.85a.6.6 0 0 1 0-1.2h3.55V3.85c0-.331.269-.6.6-.6Z", fill: "currentColor" }) }),
-                    "Create Node"
-                  ] })
-                }
-              )
-            ] })
+            /* 0개 선택 생성 모드 (nodeCount === 0) */
+            /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
+              "button",
+              {
+                id: "btn-main-cta",
+                className: `btn-cta-primary${usageBlocked ? " disabled" : ""}`,
+                type: "button",
+                disabled: usageBlocked,
+                title: usageBlocked ? t("tipQuotaBlocked") : void 0,
+                onClick: handleMainAction,
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { className: "create-node-plus", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M8 3.25c.331 0 .6.269.6.6v3.55H12.15a.6.6 0 0 1 0 1.2H8.6V12.15a.6.6 0 0 1-1.2 0V8.6H3.85a.6.6 0 0 1 0-1.2h3.55V3.85c0-.331.269-.6.6-.6Z", fill: "currentColor" }) }),
+                  "Create Node"
+                ]
+              }
+            )
           ) })
         ] });
       })(),
@@ -41810,26 +41908,31 @@
                 selected: selectedNodes.map((n) => ({ id: n?.id, isConnector: n?.isConnector, type: n?.flowNodeType })),
                 connCount: connNodes.length
               });
-              if (connNodes.length === 0) {
-                console.log("[FLOOOW-CONN-COLOR] ui apply skipped: no connector in selection");
-              }
-              connNodes.forEach((c) => {
-                console.log("[FLOOOW-CONN-COLOR] post", { connectorId: c.id, colorHex: formatted });
-                parent.postMessage(
-                  {
-                    pluginMessage: {
-                      type: "UPDATE_CONNECTOR_PROPERTIES",
-                      payload: {
-                        connectorId: c.id,
-                        colorHex: formatted,
-                        ...fillIsDefault ? { labelFillColor: "#FFFFFF" } : {},
-                        ...strokeFollows ? { labelStrokeColor: formatted } : {}
+              if (connNodes.length > 1) {
+                console.log("[FLOOOW-CONN-COLOR] ui apply deferred: multi connector \u2192 footer Apply to All");
+                markConnectorDirty();
+              } else {
+                if (connNodes.length === 0) {
+                  console.log("[FLOOOW-CONN-COLOR] ui apply skipped: no connector in selection");
+                }
+                connNodes.forEach((c) => {
+                  console.log("[FLOOOW-CONN-COLOR] post", { connectorId: c.id, colorHex: formatted });
+                  parent.postMessage(
+                    {
+                      pluginMessage: {
+                        type: "UPDATE_CONNECTOR_PROPERTIES",
+                        payload: {
+                          connectorId: c.id,
+                          colorHex: formatted,
+                          ...fillIsDefault ? { labelFillColor: "#FFFFFF" } : {},
+                          ...strokeFollows ? { labelStrokeColor: formatted } : {}
+                        }
                       }
-                    }
-                  },
-                  "*"
-                );
-              });
+                    },
+                    "*"
+                  );
+                });
+              }
             },
             onClose: () => setActiveModal("none")
           }

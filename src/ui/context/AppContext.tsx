@@ -22,7 +22,7 @@ import {
   isGizmoDraftDirty,
   type ComputeGizmoMagnetsInput,
 } from '../utils/gizmoState';
-import { orderNodesForChain } from '../../chainOrder';
+import { orderFlowNodesForChain } from '../../chainOrder';
 import { t, getAppLocale } from '../../i18n';
 
 // ============================================================
@@ -1738,14 +1738,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [clearConnectorLabelDraft, clearEndpointMagnetDraft]);
 
   const applyExistingConnectionState = useCallback((customStartOffset?: number, customEndOffset?: number, includeMagnets: boolean = true) => {
-    const conns = uiStateRef.current.connectedConnectors || [];
+    const nodes = selectedNodesRef.current;
+    // 2-node 경로는 connectedConnectors, 3+ 경로는 multiNodeConnectors에 연결 정보가 실린다.
+    // connectedConnectors가 비어 있으면 multiNodeConnectors를 fallback으로 사용하고,
+    // 연결 정보가 하나도 없으면 기존과 같이 아무 것도 적용하지 않는다.
+    const directConns = uiStateRef.current.connectedConnectors || [];
+    const conns: ConnectedConnectorDetail[] = directConns.length > 0
+      ? directConns
+      : (uiStateRef.current.multiNodeConnectors || []).map((mc) => {
+          const startId = uiStateRef.current.orderedNodeIds?.[0] || nodes[0]?.id || '';
+          return {
+            id: mc.id,
+            isReversed: Boolean(startId) && mc.targetId === startId,
+            sourceMagnet: mc.sourceMagnet,
+            targetMagnet: mc.targetMagnet,
+          };
+        });
     if (conns.length === 0) return;
 
     // BUG-2: Draft가 있으면 stale uiState magnet으로 덮어쓰지 않는다.
     // Draft가 있는 endpoint만 buildEndpointMagnetPatches() 결과를 사용하고,
     // Draft가 없는 endpoint는 undefined(기존값 유지)로 전송한다.
     // liveApply(즉시 적용) 경로(includeMagnets=false)에서는 magnet을 전송하지 않고 Draft를 보존한다.
-    const nodes = selectedNodesRef.current;
     const endpointDraftNow = includeMagnets ? endpointDraftRef.current : {};
     const magnetPatches = includeMagnets ? buildEndpointMagnetPatches(
       buildSelectionGizmoInput(nodes, uiStateRef.current, endpointDraftNow)
@@ -1852,8 +1866,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const color = (colorMirror && colorMirror.trim()) || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
     // weight/terminal/offset은 ConnectSection 로컬 state 미러에서 읽는다 (DOM read 제거, 정규화·기본값 동일).
     const weight = parseFloat(lastConnectorConfigRef.current.strokeWeightInput || '1.5') || 1.5;
-    const startTerm = lastConnectorConfigRef.current.startTerminalInput || 'NONE';
-    const endTerm = lastConnectorConfigRef.current.endTerminalInput || 'ARROW';
+    // 단자 MIXED 센티널: 적용 경로에서는 undefined=유지로 정규화되지만, 신규 생성에는 기본값을 쓴다.
+    const startTermRaw = lastConnectorConfigRef.current.startTerminalInput;
+    const startTerm = startTermRaw && startTermRaw !== 'MIXED' ? startTermRaw : 'NONE';
+    const endTermRaw = lastConnectorConfigRef.current.endTerminalInput;
+    const endTerm = endTermRaw && endTermRaw !== 'MIXED' ? endTermRaw : 'ARROW';
     const startOff = parseFloat(lastConnectorConfigRef.current.startOffsetInput || '0') || 0;
     const endOff = parseFloat(lastConnectorConfigRef.current.endOffsetInput || '0') || 0;
     const { selectedLinePattern, selectedRoutingType, sourceMagnet, targetMagnet } = uiStateRef.current;
@@ -1865,11 +1882,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const labelFillColor = lastConnectorConfigRef.current.labelFillColor || DEFAULT_LABEL_FILL;
     const labelStrokeColor = lastConnectorConfigRef.current.labelStrokeColor || uiStateRef.current.selectedConnectorColor || DEFAULT_CONNECTOR_COLOR;
 
-    // 이미 연결된 쌍은 새로 만들지 않고 기존 커넥터에 반영한다
-    if (uiStateRef.current.hasExistingConnection) {
-      applyExistingConnectionState();
-      return;
-    }
+    // Connection 생성/Chain 연결과 Connector property update는 분리한다.
+    // 기존 커넥터의 속성은 Footer Apply to All 경로(applyExistingConnectionState)에서만 적용하며,
+    // Connect/Update 버튼이 기존 커넥터 전체 속성을 덮어쓰지 않는다.
 
     if (nodes.length === 2) {
       parent.postMessage({
@@ -1898,7 +1913,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     } else {
-      // 3개 이상: Flow Node와 Figma 오브젝트를 함께 공간 정렬해 연결한다.
+      // 3개 이상: Flow Node만 공간 정렬해 연결한다.
       // Core가 이미 같은 집합을 정렬해 둔 경우는 그 순서를 쓴다.
       const connectable = nodes.filter((n) => n && !n.isConnector);
       const orderedFromCore = uiStateRef.current.orderedNodeIds;
@@ -1909,12 +1924,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       );
       const orderedIds = coreMatches && orderedFromCore
         ? orderedFromCore
-        : orderNodesForChain(connectable.map((n) => ({
+        : orderFlowNodesForChain(connectable.map((n) => ({
             id: n.id,
             x: n.x ?? 0,
             y: n.y ?? 0,
             width: n.width ?? 0,
             height: n.height ?? 0,
+            isFlowNode: Boolean(n.isFlowNode),
           }))).map((n) => n.id);
 
       parent.postMessage({
@@ -1944,7 +1960,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     // BUG-3: Draft를 payload에 담은 뒤 clear — 동일 selection 재push 시 stale Draft로 dirty가 true가 되지 않는다.
     clearEndpointMagnetDraft();
-  }, [applyCurrentConnectorState, applyExistingConnectionState, showToast, clearEndpointMagnetDraft]);
+    setConnectorDirty(false);
+  }, [applyCurrentConnectorState, showToast, clearEndpointMagnetDraft, setConnectorDirty]);
 
   const updateConnectedConnectorMagnets = useCallback((sourceMagnet?: MagnetPosition, targetMagnet?: MagnetPosition) => {
     const connectedConnectors = uiStateRef.current.connectedConnectors || [];
@@ -2063,12 +2080,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // 다중 플로우 노드 선택 시: endpoint Draft와 노드 multiDraft를 각각 반영한다.
+    // 다중 플로우 노드 선택 시: endpoint Draft / 노드 multiDraft / Connector property를 각각 반영한다.
     if (nodes.length >= 2) {
       if (isGizmoDraftDirty(buildSelectionGizmoInput(nodes, uiStateRef.current, endpointDraftRef.current))) {
         applyEndpointMagnetDraft();
       }
+      // Node property → 기존 Node apply (multiDraft가 없으면 알아서 no-op)
       applyMultiDraft();
+      // Connector property → 기존 Connector apply (Footer Apply to All가 유일한 다중 적용 경로)
+      if (connectorDirty) {
+        const hasConnectorTargets =
+          (uiStateRef.current.connectedConnectors?.length ?? 0) > 0 ||
+          (uiStateRef.current.multiNodeConnectors?.length ?? 0) > 0;
+        if (hasConnectorTargets) {
+          // magnet은 applyEndpointMagnetDraft가 전담 — 속성 적용 시 magnet은 전송하지 않는다 (BUG-1/BUG-2 유지)
+          applyExistingConnectionState(undefined, undefined, false);
+        } else {
+          // 적용 대상 커넥터가 없으면 Core 전송 없이 더티만 소모한다
+          setConnectorDirty(false);
+        }
+      }
       return;
     }
 
@@ -2201,7 +2232,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }, '*');
     }
-  }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, setNodeOptionState, setUIState, setSelectedStylePresetId, showToast, stylePresets]);
+  }, [applyCurrentConnectorState, applyEndpointMagnetDraft, applyMultiDraft, applyExistingConnectionState, connectorDirty, setNodeOptionState, setUIState, setSelectedStylePresetId, showToast, stylePresets]);
 
   const handleSelectionChange = useCallback((
     count: number,
@@ -2329,18 +2360,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // 노드 + FigJam 오브젝트: Connection만 사용
       setCurrentTab('connection');
     } else if (count === 0) {
-      // 바탕화면 클릭 (신규 생성 모드): Screen / Hug / White / Elevation off
+      // 바탕화면 클릭 (신규 생성 모드)
       setCurrentTab('node');
-      // 선택 해제 전환 시에만 생성 폼을 팩토리 기본값으로 복원한다.
-      // 동일 0-선택 재수신(문서 변경 등)에서는 입력 중인 생성값을 보존한다.
+      // 선택 해제 전환 시 텍스트 입력 초안만 초기화하고, 생성 옵션(nodeOptionState)은 반복 생성을 위해 유지한다.
       if (isSelectionChanged) {
-        setNodeOptionState({ ...DEFAULT_NODE_OPTION_STATE });
         setFormTextDraft({ ...DEFAULT_FORM_TEXT_DRAFT });
       }
     } else {
-      // 일반 노드 선택: 이전 노드에서 마지막으로 선택했던 탭으로 복원
-      const targetTab = lastNodeTabRef.current || 'node';
-      setCurrentTab(targetTab);
+      // 일반 노드 선택: 새로운 노드 선택 시에만 이전 노드에서 마지막으로 선택했던 탭으로 복원 (동일 노드 속성 갱신 시 현재 탭 유지)
+      if (isSelectionChanged) {
+        const targetTab = lastNodeTabRef.current || 'node';
+        setCurrentTab(targetTab);
+      }
 
       // 다른 단일 플로우 노드를 선택한 경우에만 NodeOptionState를 노드 값으로 로드한다.
       // 같은 노드의 SELECTION_CHANGED 재수신은 편집 중인 옵션을 덮지 않는다.

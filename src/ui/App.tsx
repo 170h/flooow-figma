@@ -470,7 +470,7 @@ export function App() {
           <footer className="app-footer">
             {/* 왼쪽: 구독 정보 로딩 중에는 플랜 묶음 대신 스피너 */}
             <div
-              className={`footer-left${planLoading ? '' : ' footer-clickable'}`}
+              className={`footer-left${planLoading || planIssue ? '' : ' footer-clickable'}`}
               onClick={planLoading || planIssue ? undefined : () => {
                 setActiveModal('subscription');
                 requestFlooowUsage();
@@ -503,59 +503,51 @@ export function App() {
                 <button className="btn-ghost" type="button" onClick={retryPlanLoad}>
                   Refresh
                 </button>
-              ) : nodeCount === 1 ? null : isMultiFlow || isMultiConn ? (
-                /* 노드 복수 선택·커넥터만 복수 선택: Undo(초안 취소) + Apply to All */
-                <>
-                  <button
-                    id="btn-undo"
-                    className="btn-ghost"
-                    type="button"
-                    disabled={isMultiConn ? (!hasConnectorLabelDraft && !canUndo && !endpointDirty) : (!hasMultiDraft && !canUndo && !endpointDirty)}
-                    onClick={handleUndo}
-                  >
-                    Undo
-                  </button>
-                  <button
-                    id="btn-main-cta"
-                    className={`btn-cta-primary${(isMultiConn ? (!hasConnectorLabelDraft && !connectorDirty && !endpointDirty) : (!hasMultiDraft && !endpointDirty)) || isApplyingMultiDraft ? ' disabled' : ''}`}
-                    type="button"
-                    disabled={(isMultiConn ? (!hasConnectorLabelDraft && !connectorDirty && !endpointDirty) : (!hasMultiDraft && !endpointDirty)) || isApplyingMultiDraft}
-                    onClick={handleMainAction}
-                  >
-                    Apply to All
-                  </button>
-                </>
+              ) : nodeCount === 1 ? null : nodeCount >= 2 ? (
+                /* 노드 복수 선택 / 커넥터 복수 선택 / 혼합 복수 선택: Undo(초안 취소) + Apply to All */
+                (() => {
+                  const hasDirty = Boolean(hasMultiDraft || connectorDirty || endpointDirty || hasConnectorLabelDraft);
+                  const isApplyDisabled = !hasDirty || isApplyingMultiDraft;
+                  const isUndoDisabled = !canUndo && !hasDirty;
+
+                  return (
+                    <>
+                      <button
+                        id="btn-undo"
+                        className="btn-ghost"
+                        type="button"
+                        disabled={isUndoDisabled}
+                        onClick={handleUndo}
+                      >
+                        Undo
+                      </button>
+                      <button
+                        id="btn-main-cta"
+                        className={`btn-cta-primary${isApplyDisabled ? ' disabled' : ''}`}
+                        type="button"
+                        disabled={isApplyDisabled}
+                        onClick={handleMainAction}
+                      >
+                        Apply to All
+                      </button>
+                    </>
+                  );
+                })()
               ) : (
-                /* 기타 상태 (0개 선택 생성 모드, 커넥터 선택 등) */
-                <>
-                  {(isConnSel && canUndo) && (
-                    <button
-                      id="btn-undo"
-                      className="btn-ghost"
-                      type="button"
-                      onClick={handleUndo}
-                    >
-                      Undo
-                    </button>
-                  )}
-                  <button
-                    id="btn-main-cta"
-                    className={`btn-cta-primary${((isFigjamSelected && !isMultiFigjam) || (!isConnSel && usageBlocked)) ? ' disabled' : ''}`}
-                    type="button"
-                    disabled={(isFigjamSelected && !isMultiFigjam) || (!isConnSel && usageBlocked)}
-                    title={!isConnSel && usageBlocked ? t('tipQuotaBlocked') : undefined}
-                    onClick={handleMainAction}
-                  >
-                    {isConnSel ? 'Apply' : (
-                      <>
-                        <svg className="create-node-plus" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                          <path d="M8 3.25c.331 0 .6.269.6.6v3.55H12.15a.6.6 0 0 1 0 1.2H8.6V12.15a.6.6 0 0 1-1.2 0V8.6H3.85a.6.6 0 0 1 0-1.2h3.55V3.85c0-.331.269-.6.6-.6Z" fill="currentColor" />
-                        </svg>
-                        Create Node
-                      </>
-                    )}
-                  </button>
-                </>
+                /* 0개 선택 생성 모드 (nodeCount === 0) */
+                <button
+                  id="btn-main-cta"
+                  className={`btn-cta-primary${usageBlocked ? ' disabled' : ''}`}
+                  type="button"
+                  disabled={usageBlocked}
+                  title={usageBlocked ? t('tipQuotaBlocked') : undefined}
+                  onClick={handleMainAction}
+                >
+                  <svg className="create-node-plus" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M8 3.25c.331 0 .6.269.6.6v3.55H12.15a.6.6 0 0 1 0 1.2H8.6V12.15a.6.6 0 0 1-1.2 0V8.6H3.85a.6.6 0 0 1 0-1.2h3.55V3.85c0-.331.269-.6.6-.6Z" fill="currentColor" />
+                  </svg>
+                  Create Node
+                </button>
               )}
             </div>
           </footer>
@@ -638,26 +630,36 @@ export function App() {
                 selected: selectedNodes.map((n) => ({ id: n?.id, isConnector: n?.isConnector, type: n?.flowNodeType })),
                 connCount: connNodes.length,
               });
-              if (connNodes.length === 0) {
-                console.log('[FLOOOW-CONN-COLOR] ui apply skipped: no connector in selection');
-              }
-              connNodes.forEach((c) => {
-                console.log('[FLOOOW-CONN-COLOR] post', { connectorId: c.id, colorHex: formatted });
-                parent.postMessage(
-                  {
-                    pluginMessage: {
-                      type: 'UPDATE_CONNECTOR_PROPERTIES',
-                      payload: {
-                        connectorId: c.id,
-                        colorHex: formatted,
-                        ...(fillIsDefault ? { labelFillColor: '#FFFFFF' } : {}),
-                        ...(strokeFollows ? { labelStrokeColor: formatted } : {}),
+              if (connNodes.length > 1) {
+                // 다중 커넥터 선택: 즉시 UPDATE 경로를 쓰지 않는다.
+                // connectorDirty만 설정하고 Footer Apply to All 경로(applyCurrentConnectorState)로만 적용한다.
+                console.log('[FLOOOW-CONN-COLOR] ui apply deferred: multi connector → footer Apply to All');
+                markConnectorDirty();
+              } else {
+                // 예외 A(커넥터 1개 단독): 기존 즉시 적용(직접 UPDATE) 유지.
+                // 예외 B(대상 2개 + 커넥터 1개, connNodes=0): selectedConnectorColor 동기화 효과의
+                // markConnectorDirty가 기존 live-apply 조건 그대로 즉시 적용한다 (경로 변경 없음).
+                if (connNodes.length === 0) {
+                  console.log('[FLOOOW-CONN-COLOR] ui apply skipped: no connector in selection');
+                }
+                connNodes.forEach((c) => {
+                  console.log('[FLOOOW-CONN-COLOR] post', { connectorId: c.id, colorHex: formatted });
+                  parent.postMessage(
+                    {
+                      pluginMessage: {
+                        type: 'UPDATE_CONNECTOR_PROPERTIES',
+                        payload: {
+                          connectorId: c.id,
+                          colorHex: formatted,
+                          ...(fillIsDefault ? { labelFillColor: '#FFFFFF' } : {}),
+                          ...(strokeFollows ? { labelStrokeColor: formatted } : {}),
+                        },
                       },
                     },
-                  },
-                  '*'
-                );
-              });
+                    '*'
+                  );
+                });
+              }
             }}
             onClose={() => setActiveModal('none')}
           />

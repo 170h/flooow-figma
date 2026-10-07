@@ -377,11 +377,19 @@ export type PluginAction =
   | { type: 'INIT'; locale?: AppLocale };
 
 // 연결된 커넥터 세부 정보 (방향 역전 여부 및 각 엔드포인트 마그넷)
+// + Connector Property State 표시용 스타일 필드 (additive: 기존 필드는 변경 없음)
 export interface ConnectedConnectorDetail {
   id: string;
   isReversed: boolean;
   sourceMagnet?: MagnetPosition;
   targetMagnet?: MagnetPosition;
+  // 혼합 선택에서 UI가 실제 커넥터 값을 표시할 수 있도록 연결 커넥터의 스타일 속성을 함께 전달한다.
+  connectorColorHex?: string;
+  connectorStrokeWeight?: number;
+  connectorStartTerminal?: ConnectorTerminalType;
+  connectorEndTerminal?: ConnectorTerminalType;
+  connectorStartOffset?: number;
+  connectorEndOffset?: number;
 }
 
 // 3+ 노드 선택 시 선택 노드 간 커넥터 세부 정보

@@ -1049,7 +1049,39 @@ export async function createOrthogonalVectorConnector(
 
 // nodeId -> Set<connectorNodeId> (O(1) 인메모리 빠른 매핑)
 const nodeToConnectorsMap = new Map<string, Set<string>>();
-let isUpdatingConnectors = false;
+
+export interface ConnectorDragSyncGate {
+  running: boolean;
+  pending: Set<string> | null;
+}
+
+export function createConnectorDragSyncGate(): ConnectorDragSyncGate {
+  return { running: false, pending: null };
+}
+
+const connectorDragGate = createConnectorDragSyncGate();
+
+// 이미 갱신 중이면 새 실행을 시작하지 않고 id만 모은다. true면 이 호출이 실행을 맡는다.
+export function enqueueConnectorDrag(gate: ConnectorDragSyncGate, ids: Iterable<string>): boolean {
+  if (gate.running) {
+    if (!gate.pending) gate.pending = new Set();
+    for (const id of ids) gate.pending.add(id);
+    return false;
+  }
+  gate.running = true;
+  return true;
+}
+
+export function takePendingConnectorDrag(gate: ConnectorDragSyncGate): Set<string> | null {
+  const next = gate.pending;
+  gate.pending = null;
+  if (!next || next.size === 0) return null;
+  return next;
+}
+
+export function finishConnectorDrag(gate: ConnectorDragSyncGate): void {
+  gate.running = false;
+}
 
 // 커넥터 등록
 export function registerConnectorInRegistry(connectorNode: SceneNode) {
@@ -1853,8 +1885,18 @@ export async function updateOrthogonalVectorConnector(
     y: p.y - minY,
   }));
 
-  vector.resize(width, height);
-  setNodeAbsoluteXY(vector, minX, minY);
+  if (Math.abs(vector.width - width) > 0.5 || Math.abs(vector.height - height) > 0.5) {
+    vector.resize(width, height);
+  }
+  try {
+    const absX = vector.absoluteTransform[0][2];
+    const absY = vector.absoluteTransform[1][2];
+    if (Math.abs(absX - minX) > 0.5 || Math.abs(absY - minY) > 0.5) {
+      setNodeAbsoluteXY(vector, minX, minY);
+    }
+  } catch (_) {
+    setNodeAbsoluteXY(vector, minX, minY);
+  }
   vector.setPluginData('connector_role', 'line');
 
   // 과거 생성된 별도 단자 벡터(ConnectorTerminals)가 남아있다면 네이티브 Cap 통합에 따라 제거
@@ -2006,10 +2048,7 @@ export function copyConnectorData(source: SceneNode, target: SceneNode) {
 // 특정 노드들이 드래그 이동되었을 때 연결된 커넥터 일괄 갱신.
 // 자동은 관통·방향 반전·주축 불일치·포트 겹침 시 최적 쌍으로 떨어진다.
 // 수동은 앵커 대비 이동량이 임계를 넘거나 관통·방향 반전(완화)일 때만 해제된다.
-export async function syncConnectorsForMovedNodes(nodeIds: Set<string>) {
-  if (isUpdatingConnectors || nodeIds.size === 0) return;
-  isUpdatingConnectors = true;
-
+async function syncMovedNodeBatch(nodeIds: Set<string>) {
   try {
     const connIdsToUpdate = new Set<string>();
 
@@ -2068,7 +2107,22 @@ export async function syncConnectorsForMovedNodes(nodeIds: Set<string>) {
     }
   } catch (err) {
     console.error('커넥터 위치 동기화 실패:', err);
+  }
+}
+
+// 갱신 중 들어온 이동은 병렬로 돌리지 않고, 현재 배치가 끝난 뒤 한 번에 다시 읽는다.
+// 각 배치는 저장된 좌표가 아니라 그때의 노드 x/y를 읽으므로 마지막 배치가 최신 위치다.
+export async function syncConnectorsForMovedNodes(nodeIds: Set<string>) {
+  if (nodeIds.size === 0) return;
+  if (!enqueueConnectorDrag(connectorDragGate, nodeIds)) return;
+
+  try {
+    let batch: Set<string> | null = nodeIds;
+    while (batch && batch.size > 0) {
+      await syncMovedNodeBatch(batch);
+      batch = takePendingConnectorDrag(connectorDragGate);
+    }
   } finally {
-    isUpdatingConnectors = false;
+    finishConnectorDrag(connectorDragGate);
   }
 }
