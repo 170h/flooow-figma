@@ -942,9 +942,9 @@ export function StepBadgesSection() {
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
                 }}
-                title="Starts numbering from the start number."
+                title={t('stepDescStartsFromNumber')}
               >
-                Starts numbering from the start number.
+                {t('stepDescStartsFromNumber')}
               </span>
               <button
                 type="button"
@@ -953,8 +953,8 @@ export function StepBadgesSection() {
                 onClick={handleAddStepBadgesMulti}
                 title={
                   !isStartNumberDefined
-                    ? "Please define a start number"
-                    : "Add Step Badges"
+                    ? t('stepTipEnterStartNumber')
+                    : t('stepTipAddStepBadges')
                 }
               >
                 {/* 반짝이/별 아이콘 */}

@@ -1626,23 +1626,23 @@ export function ConnectSection() {
             isConnectDisabled = usageBlocked;
           }
 
-          let statusText = 'Select 2+ nodes to connect';
+          let statusText = t('connectStatusSelectNodes');
           if (isAllConnectors) {
-            statusText = connectorDirty ? 'Changes ready to update' : 'No changes';
+            statusText = connectorDirty ? t('connectStatusChangesReady') : t('connectStatusNoChanges');
           } else if (showUpdate) {
-            statusText = connectorDirty ? 'Changes ready to update' : 'Connected';
+            statusText = connectorDirty ? t('connectStatusChangesReady') : t('connectStatusConnected');
           } else if (targetCount === 2) {
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
             statusText = hasStart && hasEnd
-              ? '2 nodes ready to connect'
-              : 'Ready — anchors follow node distance';
+              ? t('connectStatusReadyTwoNodes')
+              : t('connectStatusReady');
           } else if (targetCount > 2) {
             const hasStart = Boolean(effectiveSource);
             const hasEnd = Boolean(effectiveTarget);
             statusText = hasStart && hasEnd
-              ? `${targetCount} nodes ready to connect`
-              : 'Ready — anchors follow node distance';
+              ? t('connectStatusReadyMultiNodes', { count: targetCount })
+              : t('connectStatusReady');
           }
 
           return (
@@ -1676,10 +1676,10 @@ export function ConnectSection() {
                 onClick={connectSelectedNodes}
                 title={
                   showUpdate
-                    ? (isConnectDisabled ? 'No changes to update' : 'Apply connector changes')
+                    ? (isConnectDisabled ? t('connectTipNoChanges') : t('connectTipApplyChanges'))
                     : isConnectDisabled
-                    ? (usageBlocked ? 'Free limit reached (20 elements). Upgrade to create more.' : statusText)
-                    : 'Connect selected nodes'
+                    ? (usageBlocked ? t('tipQuotaBlocked') : statusText)
+                    : t('connectTipConnectNodes')
                 }
               >
                 {/* 커넥터 연결 아이콘 */}

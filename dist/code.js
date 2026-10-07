@@ -1860,155 +1860,377 @@
     return activeLocale;
   }
   var KO = {
+    // ==========================================================================
+    // 1. 플랜 한도 (Quota & Entitlement)
+    // ==========================================================================
+    /** [사용처] Core/UI 한도 도달 알림 | [조건] 무료 플랜 20개 초과 시 | [비고] {current}, {limit} 치환 */
     limitReached: "Flooow element\uAC00 \uAC00\uB4DD \uCC3C\uC2B5\uB2C8\uB2E4 ({current}/{limit}). \uAE30\uC874 element\uB97C \uC0AD\uC81C\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
+    // ==========================================================================
+    // 2. 노드 생성 및 수정 (Node CRUD)
+    // ==========================================================================
+    /** [사용처] Core 노드 단일 생성 완료 토스트 | [조건] 노드 1개 생성 성공 시 | [비고] {title} 치환 */
     nodeCreated: '\uB178\uB4DC "{title}"\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4',
+    /** [사용처] Core 노드 생성 실패 토스트 | [조건] 노드 생성 예외 발생 시 | [비고] {error} 치환 */
     nodeCreateFailed: "\uB178\uB4DC \uC0DD\uC131 \uC2E4\uD328: {error}",
+    /** [사용처] Core 노드 수정 실패 안내 | [조건] 수정할 노드가 캔버스에서 선택되지 않았을 때 */
     nodeNotFoundSelect: "\uC218\uC815\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE94\uBC84\uC2A4\uC5D0\uC11C \uB178\uB4DC\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 노드 단일 수정 완료 토스트 | [조건] 노드 속성 수정 성공 시 | [비고] {title} 치환 */
     nodeUpdated: '\uB178\uB4DC "{title}"\uC744 \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4',
+    /** [사용처] Core 노드 수정 실패 토스트 | [조건] 노드 수정 중 예외 발생 시 | [비고] {error} 치환 */
     nodeUpdateFailed: "\uB178\uB4DC \uC218\uC815 \uC2E4\uD328: {error}",
+    /** [사용처] Core 노드 다중 수정 완료 토스트 | [조건] 2개 이상 노드 일괄 업데이트 성공 시 | [비고] {count} 치환 */
     nodesBatchUpdated: "{count}\uAC1C \uB178\uB4DC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4!",
+    /** [사용처] Core 노드 다중 수정 실패 토스트 | [조건] 다중 업데이트 처리 중 예외 발생 시 | [비고] {error} 치환 */
     nodesBatchUpdateFailed: "\uB2E4\uC911 \uB178\uB4DC \uC5C5\uB370\uC774\uD2B8 \uC2E4\uD328: {error}",
-    connectNodesNotFound: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
-    connectNeedTwoDifferent: "\uC11C\uB85C \uB2E4\uB978 \uB450 \uB178\uB4DC\uB97C \uC120\uD0DD\uD558\uC5EC \uC5F0\uACB0\uD574 \uC8FC\uC138\uC694.",
-    connectDone: "\uC5F0\uACB0 \uC644\uB8CC",
-    connectDoneLabel: '\uB77C\uBCA8 "{label}" \uC5F0\uACB0 \uC644\uB8CC',
-    connectCreateFailed: "\uC5F0\uACB0\uC120 \uC0DD\uC131 \uC2E4\uD328: {error}",
-    connectNeedTwoOrMore: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
-    connectNeedTwoDifferentOrMore: "\uC11C\uB85C \uB2E4\uB978 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
-    autoConnectDone: "\uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC",
-    autoConnectDoneLabel: '\uB77C\uBCA8 "{label}" \uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC',
-    autoChainDone: "\u26A1 \uCD1D {nodes}\uAC1C \uB178\uB4DC\uAC00 \uCE7C\uAC01 \uC9C1\uAC01 \uC21C\uCC28 \uC5F0\uACB0\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({conns}\uAC1C \uC5F0\uACB0\uC120).",
-    autoConnectFailed: "\uC21C\uCC28 \uC790\uB3D9 \uC5F0\uACB0 \uC2E4\uD328: {error}",
-    chainExistsAll: "\uBAA8\uB4E0 \uC5F0\uACB0\uC774 \uC774\uBBF8 \uC874\uC7AC\uD569\uB2C8\uB2E4.",
-    chainCreatedPartial: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC ({skipped}\uAC1C\uB294 \uC774\uBBF8 \uC5F0\uACB0\uB428)",
-    chainCreated: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC",
-    chainFailed: "\uCCB4\uC778 \uC5F0\uACB0 \uC2E4\uD328: {error}",
-    connectorSelectForLabel: "\uC218\uC815\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
-    connectorLabelSet: '\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 "{label}"(\uC73C)\uB85C \uBC18\uC601\uB418\uC5C8\uC2B5\uB2C8\uB2E4!',
-    connectorLabelCleared: "\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 \uC9C0\uC6CC\uC84C\uC2B5\uB2C8\uB2E4.",
-    connectorLabelFailed: "\uC120 \uD14D\uC2A4\uD2B8 \uC218\uC815 \uC2E4\uD328: {error}",
-    connectorNotFound: "\uC218\uC815\uD560 \uCEE4\uB125\uD130\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
-    connectorOffsetConverted: "\uC624\uD504\uC14B \uC801\uC6A9\uC744 \uC704\uD574 \uC9C1\uAC01 \uCEE4\uC2A4\uD140 \uCEE4\uB125\uD130\uB85C \uC790\uB3D9 \uBCC0\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    connectorUpdateFailed: "\uCEE4\uB125\uD130 \uC218\uC815 \uC2E4\uD328: {error}",
-    connectorSelectForLineType: "\uBCC0\uACBD\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
-    connectorLineElbowed: "\u{1F4D0} \uC5F0\uACB0\uC120\uC744 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
-    connectorLineStraight: "\u{1F4CF} \uC5F0\uACB0\uC120\uC744 \uC9C1\uC120\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
-    connectorLineTypeFailed: "\uC5F0\uACB0\uC120 \uD615\uD0DC \uBCC0\uACBD \uC2E4\uD328: {error}",
-    connectorsNoneToConvert: "\uCE94\uBC84\uC2A4\uC5D0 \uBCC0\uD658\uD560 \uC5F0\uACB0\uC120\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
-    connectorsConvertedAll: "\u26A1 \uC5F0\uACB0\uC120 {count}\uAC1C\uB97C \uBAA8\uB450 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uD658\uD588\uC2B5\uB2C8\uB2E4",
-    connectorsAlreadyElbowed: "\uC5F0\uACB0\uC120 {count}\uAC1C\uAC00 \uC774\uBBF8 \uBAA8\uB450 \uC9C1\uAC01 \uC0C1\uD0DC\uC785\uB2C8\uB2E4",
-    connectorsConvertFailed: "\uC5F0\uACB0\uC120 \uC77C\uAD04 \uBCC0\uD658 \uC2E4\uD328: {error}",
-    statusNeedSelection: "\uC0C1\uD0DC\uB97C \uC9C0\uC815\uD560 \uC694\uC18C\uB97C 1\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
-    statusRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    statusAttached: '{count}\uAC1C \uB178\uB4DC\uC5D0 \uC0C1\uD0DC \uBC43\uC9C0 "{label}"\uC744 \uBD80\uCC29\uD588\uC2B5\uB2C8\uB2E4',
-    elevationNeedSelection: "\uC5D8\uB9AC\uBCA0\uC774\uC158\uC744 \uC801\uC6A9\uD560 \uC694\uC18C\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
-    elevationRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    elevationApplied: "{count}\uAC1C \uB178\uB4DC\uC5D0 Level {level} \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    stepNeedSelection: "\uC2A4\uD15D \uBC88\uD638\uB97C \uB9E4\uAE38 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
-    stepApplied: "{count}\uAC1C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    stepRemoveNeedSelection: "\uC2A4\uD15D \uBC88\uD638\uB97C \uC81C\uAC70\uD560 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
-    stepRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    stepNoneExist: "\uC120\uD0DD\uD55C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC874\uC7AC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 노드 참조 실패 알림 | [조건] 참조하던 노드가 캔버스에서 삭제되었을 때 */
     nodeGone: "\uD574\uB2F9 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
-    settingsSaved: "\uD53C\uADF8\uB9C8 \uC5F0\uB3D9 \uC124\uC815\uC774 \uC548\uC804\uD558\uAC8C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    variablesUnsupported: "\uC774 \uD53C\uADF8\uB9C8 \uBC84\uC804\uC5D0\uC11C\uB294 Variables API\uB97C \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
-    variablesNoneLocal: "\uD604\uC7AC \uC5F4\uB9B0 \uD30C\uC77C\uC5D0 \uB4F1\uB85D\uB41C \uB85C\uCEEC \uBCC0\uC218(Variables)\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. UI3 Kit \uD30C\uC77C \uD0ED\uC5D0\uC11C \uC2E4\uD589\uD574 \uC8FC\uC138\uC694.",
-    tokensExtracted: "\u{1F3A8} \uCD1D {count}\uAC1C\uC758 UI3 \uB514\uC790\uC778 \uD1A0\uD070\uC774 \uCD94\uCD9C\uB418\uC5C8\uC2B5\uB2C8\uB2E4!",
-    tokensFailed: "UI3 \uBCC0\uC218 \uCD94\uCD9C \uC2E4\uD328: {error}",
-    undoHint: "\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Z (Mac) \uB610\uB294 Ctrl+Z (Windows)\uB85C \uC791\uC5C5\uC744 \uB418\uB3CC\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
-    redoHint: "\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Shift+Z (Mac) \uB610\uB294 Ctrl+Y (Windows)\uB85C \uB2E4\uC2DC \uC2E4\uD589\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
-    undoCancelled: "\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    undone: "\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.",
-    titleMax32: "\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
-    sizePresetAdded: '"{name}" \uC0AC\uC774\uC988\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.',
-    sizeUpdated: "\uC0AC\uC774\uC988\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    sizePresetDeleted: '"{name}" \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.',
-    styleAddedNew: "\uC0C8 \uC2A4\uD0C0\uC77C\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    styleUpdated: "\uC2A4\uD0C0\uC77C\uC774 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    styleDefaultNoDelete: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
-    styleDeleted: "\uC2A4\uD0C0\uC77C\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    // ==========================================================================
+    // 3. 커넥터 생성 및 체인 연결 (Connect & Chain)
+    // ==========================================================================
+    /** [사용처] Core 커넥터 생성 오류 | [조건] 연결할 대상 노드를 찾을 수 없을 때 */
+    connectNodesNotFound: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 커넥터 생성 검증 | [조건] 동일한 노드를 선택했거나 2개 노드가 구별되지 않을 때 */
+    connectNeedTwoDifferent: "\uC11C\uB85C \uB2E4\uB978 \uB450 \uB178\uB4DC\uB97C \uC120\uD0DD\uD558\uC5EC \uC5F0\uACB0\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 커넥터 생성 완료 토스트 | [조건] 라벨 없는 커넥터 생성 성공 시 */
+    connectDone: "\uC5F0\uACB0 \uC644\uB8CC",
+    /** [사용처] Core 커넥터 생성 완료 토스트 | [조건] 라벨이 포함된 커넥터 생성 성공 시 | [비고] {label} 치환 */
+    connectDoneLabel: '\uB77C\uBCA8 "{label}" \uC5F0\uACB0 \uC644\uB8CC',
+    /** [사용처] Core 커넥터 생성 실패 토스트 | [조건] 커넥터 생성 중 예외 발생 시 | [비고] {error} 치환 */
+    connectCreateFailed: "\uC5F0\uACB0\uC120 \uC0DD\uC131 \uC2E4\uD328: {error}",
+    /** [사용처] Core 다중 노드 연결 검증 | [조건] 연결 대상 노드가 2개 미만으로 선택되었을 때 */
+    connectNeedTwoOrMore: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 다중 노드 연결 검증 | [조건] 서로 다른 노드가 2개 미만일 때 */
+    connectNeedTwoDifferentOrMore: "\uC11C\uB85C \uB2E4\uB978 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] UI 연결 버튼 검증 안내 | [조건] 노드가 2개 미만으로 선택되었을 때 */
     connectNeedTwo: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 직각 연결 완료 토스트 | [조건] 직각 커넥터 생성 성공 시 */
+    autoConnectDone: "\uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC",
+    /** [사용처] Core 직각 연결 완료 토스트 | [조건] 라벨 포함 직각 커넥터 생성 성공 시 | [비고] {label} 치환 */
+    autoConnectDoneLabel: '\uB77C\uBCA8 "{label}" \uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC',
+    /** [사용처] Core 순차 체인 연결 완료 토스트 | [조건] 3개 이상 노드 순차 체인 생성 성공 시 | [비고] {nodes}, {conns} 치환 */
+    autoChainDone: "\u26A1 \uCD1D {nodes}\uAC1C \uB178\uB4DC\uAC00 \uCE7C\uAC01 \uC9C1\uAC01 \uC21C\uCC28 \uC5F0\uACB0\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({conns}\uAC1C \uC5F0\uACB0\uC120).",
+    /** [사용처] Core 자동 연결 실패 토스트 | [조건] 자동 연결 실행 중 오류 발생 시 | [비고] {error} 치환 */
+    autoConnectFailed: "\uC21C\uCC28 \uC790\uB3D9 \uC5F0\uACB0 \uC2E4\uD328: {error}",
+    /** [사용처] Core 체인 생성 안내 | [조건] 선택한 노드들 사이의 모든 연결선이 이미 존재할 때 */
+    chainExistsAll: "\uBAA8\uB4E0 \uC5F0\uACB0\uC774 \uC774\uBBF8 \uC874\uC7AC\uD569\uB2C8\uB2E4.",
+    /** [사용처] Core 부분 체인 연결 토스트 | [조건] 기존 연결은 건너뛰고 일부만 신규 생성되었을 때 | [비고] {created}, {skipped} 치환 */
+    chainCreatedPartial: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC ({skipped}\uAC1C\uB294 \uC774\uBBF8 \uC5F0\uACB0\uB428)",
+    /** [사용처] Core 체인 연결 완료 토스트 | [조건] 전체 체인 연결 신규 생성 완료 시 | [비고] {created} 치환 */
+    chainCreated: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC",
+    /** [사용처] Core 체인 연결 실패 토스트 | [조건] 체인 생성 중 예외 발생 시 | [비고] {error} 치환 */
+    chainFailed: "\uCCB4\uC778 \uC5F0\uACB0 \uC2E4\uD328: {error}",
+    // ==========================================================================
+    // 4. 커넥터 라벨 및 속성 수정 (Connector Editing)
+    // ==========================================================================
+    /** [사용처] Core 커넥터 라벨 수정 검증 | [조건] 캔버스에 선택된 커넥터가 없을 때 */
+    connectorSelectForLabel: "\uC218\uC815\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 커넥터 라벨 설정 토스트 | [조건] 커넥터에 텍스트 라벨 적용 시 | [비고] {label} 치환 */
+    connectorLabelSet: '\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 "{label}"(\uC73C)\uB85C \uBC18\uC601\uB418\uC5C8\uC2B5\uB2C8\uB2E4!',
+    /** [사용처] Core 커넥터 라벨 제거 토스트 | [조건] 커넥터 텍스트 라벨을 삭제했을 때 */
+    connectorLabelCleared: "\uC120 \uC911\uC559 \uD14D\uC2A4\uD2B8\uAC00 \uC9C0\uC6CC\uC84C\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 커넥터 라벨 수정 실패 | [조건] 라벨 변경 예외 발생 시 | [비고] {error} 치환 */
+    connectorLabelFailed: "\uC120 \uD14D\uC2A4\uD2B8 \uC218\uC815 \uC2E4\uD328: {error}",
+    /** [사용처] Core 커넥터 탐색 실패 알림 | [조건] 수정할 커넥터 노드가 없을 때 */
+    connectorNotFound: "\uC218\uC815\uD560 \uCEE4\uB125\uD130\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 커넥터 자동 변환 알림 | [조건] 네이티브 커넥터에 오프셋 부여로 직각 커스텀 변환될 때 */
+    connectorOffsetConverted: "\uC624\uD504\uC14B \uC801\uC6A9\uC744 \uC704\uD574 \uC9C1\uAC01 \uCEE4\uC2A4\uD140 \uCEE4\uB125\uD130\uB85C \uC790\uB3D9 \uBCC0\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 커넥터 수정 실패 토스트 | [조건] 커넥터 속성 갱신 중 예외 발생 시 | [비고] {error} 치환 */
+    connectorUpdateFailed: "\uCEE4\uB125\uD130 \uC218\uC815 \uC2E4\uD328: {error}",
+    /** [사용처] Core 라인 타입 변경 검증 | [조건] 커넥터가 선택되지 않은 상태에서 라인 타입 변경 시도 시 */
+    connectorSelectForLineType: "\uBCC0\uACBD\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 직각 변환 완료 토스트 | [조건] 커넥터를 직각 형태로 변경했을 때 */
+    connectorLineElbowed: "\u{1F4D0} \uC5F0\uACB0\uC120\uC744 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
+    /** [사용처] Core 직선 변환 완료 토스트 | [조건] 커넥터를 직선 형태로 변경했을 때 */
+    connectorLineStraight: "\u{1F4CF} \uC5F0\uACB0\uC120\uC744 \uC9C1\uC120\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
+    /** [사용처] Core 라인 형태 변경 실패 | [조건] 라인 형태 변경 중 예외 발생 시 | [비고] {error} 치환 */
+    connectorLineTypeFailed: "\uC5F0\uACB0\uC120 \uD615\uD0DC \uBCC0\uACBD \uC2E4\uD328: {error}",
+    /** [사용처] Core 일괄 변환 대상 없음 알림 | [조건] 캔버스에 변환할 커넥터가 없을 때 */
+    connectorsNoneToConvert: "\uCE94\uBC84\uC2A4\uC5D0 \uBCC0\uD658\uD560 \uC5F0\uACB0\uC120\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 전체 직각 일괄 변환 토스트 | [조건] 캔버스의 모든 커넥터를 직각으로 변환 완료 시 | [비고] {count} 치환 */
+    connectorsConvertedAll: "\u26A1 \uC5F0\uACB0\uC120 {count}\uAC1C\uB97C \uBAA8\uB450 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uD658\uD588\uC2B5\uB2C8\uB2E4",
+    /** [사용처] Core 일괄 변환 기완료 안내 | [조건] 캔버스의 모든 커넥터가 이미 직각일 때 | [비고] {count} 치환 */
+    connectorsAlreadyElbowed: "\uC5F0\uACB0\uC120 {count}\uAC1C\uAC00 \uC774\uBBF8 \uBAA8\uB450 \uC9C1\uAC01 \uC0C1\uD0DC\uC785\uB2C8\uB2E4",
+    /** [사용처] Core 일괄 변환 실패 토스트 | [조건] 일괄 변환 처리 중 오류 발생 시 | [비고] {error} 치환 */
+    connectorsConvertFailed: "\uC5F0\uACB0\uC120 \uC77C\uAD04 \uBCC0\uD658 \uC2E4\uD328: {error}",
+    // ==========================================================================
+    // 5. 어피어런스 - 상태 (Status Badge)
+    // ==========================================================================
+    /** [사용처] Core 상태 뱃지 선택 검증 | [조건] 선택된 노드 없이 상태 지정 시도 시 */
+    statusNeedSelection: "\uC0C1\uD0DC\uB97C \uC9C0\uC815\uD560 \uC694\uC18C\uB97C 1\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 상태 뱃지 제거 토스트 | [조건] 노드에서 상태 뱃지 삭제 완료 시 | [비고] {count} 치환 */
+    statusRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 상태 뱃지 부착 토스트 | [조건] 노드에 특정 상태 뱃지 부착 완료 시 | [비고] {count}, {label} 치환 */
+    statusAttached: '{count}\uAC1C \uB178\uB4DC\uC5D0 \uC0C1\uD0DC \uBC43\uC9C0 "{label}"\uC744 \uBD80\uCC29\uD588\uC2B5\uB2C8\uB2E4',
+    // ==========================================================================
+    // 6. 어피어런스 - 엘리베이션 (Elevation)
+    // ==========================================================================
+    /** [사용처] Core 엘리베이션 선택 검증 | [조건] 선택된 노드 없이 엘리베이션 지정 시도 시 */
+    elevationNeedSelection: "\uC5D8\uB9AC\uBCA0\uC774\uC158\uC744 \uC801\uC6A9\uD560 \uC694\uC18C\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 엘리베이션 제거 토스트 | [조건] 노드에서 그림자(Elevation) 제거 완료 시 | [비고] {count} 치환 */
+    elevationRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 엘리베이션 적용 토스트 | [조건] 노드에 레벨별 그림자 적용 완료 시 | [비고] {count}, {level} 치환 */
+    elevationApplied: "{count}\uAC1C \uB178\uB4DC\uC5D0 Level {level} \uC5D8\uB9AC\uBCA0\uC774\uC158\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    // ==========================================================================
+    // 7. 어피어런스 - 스텝 뱃지 (Step Badges)
+    // ==========================================================================
+    /** [사용처] Core 스텝 번호 선택 검증 | [조건] 선택 노드 없이 스텝 번호 적용 시도 시 */
+    stepNeedSelection: "\uC2A4\uD15D \uBC88\uD638\uB97C \uB9E4\uAE38 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 스텝 번호 적용 토스트 | [조건] 노드에 스텝 번호 부여 완료 시 | [비고] {count} 치환 */
+    stepApplied: "{count}\uAC1C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 스텝 번호 제거 선택 검증 | [조건] 선택 노드 없이 스텝 번호 제거 시도 시 */
+    stepRemoveNeedSelection: "\uC2A4\uD15D \uBC88\uD638\uB97C \uC81C\uAC70\uD560 \uC694\uC18C\uB97C \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 스텝 번호 제거 토스트 | [조건] 노드에서 스텝 번호 뱃지 삭제 완료 시 | [비고] {count} 치환 */
+    stepRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 스텝 번호 없음 알림 | [조건] 선택한 노드들에 스텝 번호가 없을 때 */
+    stepNoneExist: "\uC120\uD0DD\uD55C \uB178\uB4DC\uC5D0 \uC2A4\uD15D \uBC88\uD638\uAC00 \uC874\uC7AC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+    // ==========================================================================
+    // 8. 환경설정 및 디자인 토큰 (Settings & Tokens)
+    // ==========================================================================
+    /** [사용처] Core 환경설정 저장 알림 | [조건] clientStorage에 설정 저장 완료 시 */
+    settingsSaved: "\uD53C\uADF8\uB9C8 \uC5F0\uB3D9 \uC124\uC815\uC774 \uC548\uC804\uD558\uAC8C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 변수 API 미지원 알림 | [조건] 현재 피그마 버전에서 figma.variables가 없을 때 */
+    variablesUnsupported: "\uC774 \uD53C\uADF8\uB9C8 \uBC84\uC804\uC5D0\uC11C\uB294 Variables API\uB97C \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 로컬 변수 없음 안내 | [조건] 열려 있는 파일에 로컬 Variables가 없을 때 */
+    variablesNoneLocal: "\uD604\uC7AC \uC5F4\uB9B0 \uD30C\uC77C\uC5D0 \uB4F1\uB85D\uB41C \uB85C\uCEEC \uBCC0\uC218(Variables)\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. UI3 Kit \uD30C\uC77C \uD0ED\uC5D0\uC11C \uC2E4\uD589\uD574 \uC8FC\uC138\uC694.",
+    /** [사용처] Core 디자인 토큰 추출 완료 알림 | [조건] UI3 토큰 추출 성공 시 | [비고] {count} 치환 */
+    tokensExtracted: "\u{1F3A8} \uCD1D {count}\uAC1C\uC758 UI3 \uB514\uC790\uC778 \uD1A0\uD070\uC774 \uCD94\uCD9C\uB418\uC5C8\uC2B5\uB2C8\uB2E4!",
+    /** [사용처] Core 토큰 추출 실패 알림 | [조건] UI3 토큰 추출 중 예외 발생 시 | [비고] {error} 치환 */
+    tokensFailed: "UI3 \uBCC0\uC218 \uCD94\uCD9C \uC2E4\uD328: {error}",
+    // ==========================================================================
+    // 9. 실행 취소 / 다시 실행 (Undo / Redo)
+    // ==========================================================================
+    /** [사용처] UI 실행 취소 힌트 툴팁 | [조건] 캔버스 실행 취소 힌트 노출 시 */
+    undoHint: "\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Z (Mac) \uB610\uB294 Ctrl+Z (Windows)\uB85C \uC791\uC5C5\uC744 \uB418\uB3CC\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] UI 다시 실행 힌트 툴팁 | [조건] 캔버스 다시 실행 힌트 노출 시 */
+    redoHint: "\uCE94\uBC84\uC2A4\uC5D0\uC11C Cmd+Shift+Z (Mac) \uB610\uB294 Ctrl+Y (Windows)\uB85C \uB2E4\uC2DC \uC2E4\uD589\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 작업 취소 토스트 | [조건] 진행 중인 작업 변경사항이 취소되었을 때 */
+    undoCancelled: "\uBCC0\uACBD\uC0AC\uD56D\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 작업 되돌림 완료 토스트 | [조건] 직전 작업이 취소/되돌려졌을 때 */
+    undone: "\uC791\uC5C5\uC774 \uB418\uB3CC\uB824\uC84C\uC2B5\uB2C8\uB2E4.",
+    // ==========================================================================
+    // 10. 입력 유효성 검사 (Validation)
+    // ==========================================================================
+    /** [사용처] UI 제목 입력 제한 안내 | [조건] 제목이 32자를 초과했을 때 */
+    titleMax32: "\uC81C\uBAA9\uC740 \uCD5C\uB300 32\uC790\uAE4C\uC9C0 \uC785\uB825\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] UI 수치 최대값 제한 안내 | [조건] 입력값이 999를 초과했을 때 */
     max999: "\uCD5C\uB300\uAC12\uC740 999\uC785\uB2C8\uB2E4.",
+    /** [사용처] UI 최소 너비 제한 안내 | [조건] 입력 너비가 최소값 미만일 때 | [비고] {px} 치환 */
     sizeMinW: "\uCD5C\uC18C \uB108\uBE44\uB294 {px}px\uC785\uB2C8\uB2E4.",
+    /** [사용처] UI 최대 너비 제한 안내 | [조건] 입력 너비가 최대값 초과일 때 | [비고] {px} 치환 */
     sizeMaxW: "\uCD5C\uB300 \uB108\uBE44\uB294 {px}px\uC785\uB2C8\uB2E4.",
+    /** [사용처] UI 최소 높이 제한 안내 | [조건] 입력 높이가 최소값 미만일 때 | [비고] {px} 치환 */
     sizeMinH: "\uCD5C\uC18C \uB192\uC774\uB294 {px}px\uC785\uB2C8\uB2E4.",
+    /** [사용처] UI 최대 높이 제한 안내 | [조건] 입력 높이가 최대값 초과일 때 | [비고] {px} 치환 */
     sizeMaxH: "\uCD5C\uB300 \uB192\uC774\uB294 {px}px\uC785\uB2C8\uB2E4.",
+    /** [사용처] UI 모서리 곡률 최대값 제한 | [조건] 모서리 곡률이 최대 허용치를 초과했을 때 | [비고] {px} 치환 */
     sizeMaxCorner: "\uCD5C\uB300\uAC12\uC740 {px}\uC785\uB2C8\uB2E4.",
-    styleEditNoDefault: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
-    presetDeleteNoDefault: "\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    // ==========================================================================
+    // 11. 사이즈 및 스타일 프리셋 (Presets & Styles)
+    // ==========================================================================
+    /** [사용처] Core 사이즈 프리셋 추가 알림 | [조건] 새 커스텀 사이즈 프리셋 저장 완료 시 | [비고] {name} 치환 */
+    sizePresetAdded: '"{name}" \uC0AC\uC774\uC988\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.',
+    /** [사용처] Core 사이즈 속성 갱신 알림 | [조건] 노드 사이즈 속성 반영 완료 시 */
+    sizeUpdated: "\uC0AC\uC774\uC988\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 사이즈 프리셋 삭제 알림 | [조건] 특정 사이즈 프리셋 삭제 완료 시 | [비고] {name} 치환 */
+    sizePresetDeleted: '"{name}" \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.',
+    /** [사용처] Core 사이즈 프리셋 삭제 알림 | [조건] 사이즈 프리셋 삭제 완료 시 */
     sizePresetDeleted2: "\uC0AC\uC774\uC988 \uD504\uB9AC\uC14B\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] UI 기본 프리셋 보호 알림 | [조건] 기본 빌트인 프리셋 삭제 시도 시 */
+    presetDeleteNoDefault: "\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 스타일 프리셋 추가 알림 | [조건] 새 커스텀 스타일 저장 완료 시 */
+    styleAddedNew: "\uC0C8 \uC2A4\uD0C0\uC77C\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 스타일 프리셋 수정 알림 | [조건] 스타일 프리셋 갱신 완료 시 */
+    styleUpdated: "\uC2A4\uD0C0\uC77C\uC774 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] UI/Core 기본 스타일 보호 알림 | [조건] 기본 White/Black 스타일 삭제 시도 시 */
+    styleDefaultNoDelete: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] Core 스타일 프리셋 삭제 알림 | [조건] 커스텀 스타일 삭제 완료 시 */
+    styleDeleted: "\uC2A4\uD0C0\uC77C\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] UI 기본 스타일 보호 알림 | [조건] 기본 White/Black 스타일 수정 시도 시 */
+    styleEditNoDefault: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    // ==========================================================================
+    // 12. 디스크립션 클립보드 복사 (Description)
+    // ==========================================================================
+    /** [사용처] UI 설명 복사 검증 | [조건] 설명 내용이 비어있는 상태에서 복사 클릭 시 */
     descCopyEmpty: "\uBCF5\uC0AC\uD560 \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] UI 설명 복사 완료 피드백 | [조건] 클립보드 복사 성공 시 */
     descCopied: "\uB514\uC2A4\uD06C\uB9BD\uC158\uC744 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4",
+    // ==========================================================================
+    // 13. UI 컨트롤 및 필드 툴팁 (Control Tooltips)
+    // ==========================================================================
+    /** [사용처] UI SizeSection | [조건] W 너비 스크러버 마우스 오버 */
     tipWidth: "\uB108\uBE44",
+    /** [사용처] UI SizeSection | [조건] H 높이 스크러버 마우스 오버 */
     tipHeight: "\uB192\uC774",
+    /** [사용처] UI SizeSection | [조건] R 모서리 곡률 인풋 마우스 오버 */
     tipCornerRadius: "\uBAA8\uC11C\uB9AC \uACE1\uB960",
+    /** [사용처] UI ConnectorSection | [조건] 선 두께 스크러버 마우스 오버 */
     tipStrokeWidth: "\uC120 \uB450\uAED8",
+    /** [사용처] UI ConnectorSection | [조건] 시작 간격 오프셋 인풋 마우스 오버 */
     tipStartOffset: "\uC2DC\uC791 \uC624\uD504\uC14B",
+    /** [사용처] UI ConnectorSection | [조건] 끝 간격 오프셋 인풋 마우스 오버 */
     tipEndOffset: "\uB05D \uC624\uD504\uC14B",
+    /** [사용처] UI ConnectorSection | [조건] 커넥터 중앙 라벨 인풋 마우스 오버 */
     tipLabelText: "\uB77C\uBCA8 \uD14D\uC2A4\uD2B8",
+    /** [사용처] UI ConnectorSection | [조건] 라벨 배경색 컬러 피커 마우스 오버 */
     tipLabelFill: "\uB77C\uBCA8 \uBC30\uACBD \uC0C9\uC0C1",
+    /** [사용처] UI ConnectorSection | [조건] 라벨 보더색 컬러 피커 마우스 오버 */
     tipLabelStroke: "\uB77C\uBCA8 \uBCF4\uB354 \uC0C9\uC0C1",
+    /** [사용처] UI TextAlignment | [조건] 텍스트 좌측 정렬 버튼 마우스 오버 */
     tipAlignLeft: "\uC67C\uCABD \uC815\uB82C",
+    /** [사용처] UI TextAlignment | [조건] 텍스트 가운데 정렬 버튼 마우스 오버 */
     tipAlignCenter: "\uAC00\uC6B4\uB370 \uC815\uB82C",
+    /** [사용처] UI TextAlignment | [조건] 텍스트 우측 정렬 버튼 마우스 오버 */
     tipAlignRight: "\uC624\uB978\uCABD \uC815\uB82C",
+    /** [사용처] UI StyleSection | [조건] 스타일 추가(+) 버튼 마우스 오버 */
     tipAddStyle: "\uC2A4\uD0C0\uC77C \uCD94\uAC00",
+    /** [사용처] UI StyleSection | [조건] 스타일 더보기(…) 메뉴 마우스 오버 */
     tipStyleMore: "\uCD94\uAC00 \uC635\uC158",
+    /** [사용처] UI StyleSection | [조건] 기본 스타일 더보기 메뉴 마우스 오버 (수정/삭제 잠금 안내) */
     tipStyleMoreLocked: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD558\uAC70\uB098 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI StyleSection | [조건] 노드 배경(Fill) 색상 피커 마우스 오버 */
     tipFillColor: "\uBC30\uACBD \uC0C9\uC0C1",
+    /** [사용처] UI StyleSection | [조건] 노드 보더(Stroke) 색상 피커 마우스 오버 */
     tipStrokeColor: "\uBCF4\uB354 \uC0C9\uC0C1",
+    /** [사용처] UI StyleSection | [조건] 노드 보더 두께 스크러버 마우스 오버 */
     tipStrokeWeight: "\uBCF4\uB354 \uB450\uAED8",
+    /** [사용처] UI StepBadgesSection | [조건] 개별 노드 스텝 번호 배지 마우스 오버 */
     tipStepNumber: "\uBC30\uC9C0 \uBC88\uD638",
+    /** [사용처] UI StepBadgesSection | [조건] 시작 배지 번호 입력 인풋 마우스 오버 */
     tipStepStartNumber: "\uC2DC\uC791 \uBC30\uC9C0 \uBC88\uD638",
+    /** [사용처] UI StepBadgesSection | [조건] 좌상단 코너 위치 라디오 버튼 마우스 오버 */
     tipCornerTL: "\uC67C\uCABD \uC704",
+    /** [사용처] UI StepBadgesSection | [조건] 우상단 코너 위치 라디오 버튼 마우스 오버 */
     tipCornerTR: "\uC624\uB978\uCABD \uC704",
+    /** [사용처] UI StepBadgesSection | [조건] 좌하단 코너 위치 라디오 버튼 마우스 오버 */
     tipCornerBL: "\uC67C\uCABD \uC544\uB798",
+    /** [사용처] UI StepBadgesSection | [조건] 우하단 코너 위치 라디오 버튼 마우스 오버 */
     tipCornerBR: "\uC624\uB978\uCABD \uC544\uB798",
+    /** [사용처] UI DescriptionSection | [조건] 설명 복사 버튼 마우스 오버 */
     tipCopy: "\uBCF5\uC0AC",
+    /** [사용처] UI DescriptionSection | [조건] 복사 완료 직후 툴팁 */
     tipCopied: "\uBCF5\uC0AC \uC644\uB8CC",
+    /** [사용처] UI DescriptionSection | [조건] 설명이 비어있을 때 마우스 오버 */
     tipNoDesc: "\uC785\uB825\uB41C \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI DescriptionSection | [조건] Description 미지원 도형 선택 시 비활성 툴팁 */
     tipDescDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Description\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI LinkSection | [조건] Reference Link 미지원 도형 선택 시 비활성 툴팁 */
     tipLinkDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Reference Link\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI ColorPicker | [조건] Hex 색상 코드 입력 필드 마우스 오버 */
     tipHexColor: "Hex \uC0C9\uC0C1",
+    /** [사용처] UI Popover / Modal | [조건] 팝오버 닫기(X) 버튼 마우스 오버 */
     tipClose: "\uB2EB\uAE30",
+    /** [사용처] UI ScreenFrameSelect | [조건] 캔버스 프레임 새로고침 아이콘 마우스 오버 */
     tipRefreshFrames: "\uCE94\uBC84\uC2A4\uC5D0\uC11C \uD504\uB808\uC784 \uC0C8\uB85C\uACE0\uCE68",
+    /** [사용처] UI ConnectorSection | [조건] 실선 스타일 세그먼트 버튼 마우스 오버 */
     tipSolid: "\uC2E4\uC120",
+    /** [사용처] UI ConnectorSection | [조건] 파선(대시) 스타일 세그먼트 버튼 마우스 오버 */
     tipDashed: "\uD30C\uC120",
+    /** [사용처] UI ConnectorSection | [조건] 점선 스타일 세그먼트 버튼 마우스 오버 */
     tipDotted: "\uC810\uC120",
+    /** [사용처] UI ConnectorSection | [조건] 시작 단자 형태 선택 드롭다운 마우스 오버 */
     tipStartTerminal: "\uC2DC\uC791 \uB2E8\uC790",
+    /** [사용처] UI ConnectorSection | [조건] 끝 단자 형태 선택 드롭다운 마우스 오버 */
     tipEndTerminal: "\uB05D \uB2E8\uC790",
+    /** [사용처] UI ConnectorSection | [조건] 단자 없음(None) 옵션 마우스 오버 */
     tipTermNone: "\uC5C6\uC74C",
+    /** [사용처] UI ConnectorSection | [조건] 화살표 단자 옵션 마우스 오버 */
     tipTermArrow: "\uD654\uC0B4\uD45C",
+    /** [사용처] UI ConnectorSection | [조건] 원형 단자 옵션 마우스 오버 */
     tipTermCircle: "\uC6D0",
+    /** [사용처] UI ConnectorSection | [조건] 마름모 단자 옵션 마우스 오버 */
     tipTermDiamond: "\uB9C8\uB984\uBAA8",
+    /** [사용처] UI ConnectorSection | [조건] 직각 라우팅 옵션 마우스 오버 */
     tipRouteOrtho: "\uC9C1\uAC01",
+    /** [사용처] UI ConnectorSection | [조건] S자 곡선 라우팅 옵션 마우스 오버 */
     tipRouteSCurve: "S\uC790 \uACE1\uC120",
+    /** [사용처] UI ConnectorSection | [조건] 곡선 라우팅 옵션 마우스 오버 */
     tipRouteCurve: "\uACE1\uC120",
+    /** [사용처] UI ConnectorSection | [조건] 직선 라우팅 옵션 마우스 오버 */
     tipRouteStraight: "\uC9C1\uC120",
+    /** [사용처] UI ConnectorSection | [조건] 시작 단자 앵커(기즈모) 마우스 오버 */
     tipGizmoSource: "\uC2DC\uC791",
+    /** [사용처] UI ConnectorSection | [조건] 끝 단자 앵커(기즈모) 마우스 오버 */
     tipGizmoTarget: "\uB05D",
+    /** [사용처] UI 다중 선택 | [조건] 서로 다른 속성값이 섞여있는 Mixed 필드 마우스 오버 */
     tipMixed: "\uD63C\uD569",
+    /** [사용처] UI 토글 컨트롤 | [조건] 활성화 상태 스위치 마우스 오버 */
     tipActive: "\uD65C\uC131",
+    /** [사용처] UI SizeSection | [조건] 커스텀 사이즈 프리셋 추가 버튼 마우스 오버 */
     tipAddSize: "\uC0AC\uC774\uC988 \uCD94\uAC00",
+    /** [사용처] UI SizeSection | [조건] Screen 외 도형 선택 시 사이즈 추가 비활성 툴팁 */
     tipAddSizeDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 \uC0AC\uC774\uC988\uB97C \uCD94\uAC00\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI SizeSection | [조건] 사이즈 프리셋 더보기(…) 메뉴 마우스 오버 */
     tipSizeMore: "\uCD94\uAC00 \uC635\uC158",
+    /** [사용처] UI SizeSection | [조건] Screen 외 도형 선택 시 사이즈 더보기 비활성 툴팁 */
     tipSizeMoreDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Size \uC635\uC158\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI SizeSection | [조건] 기본 사이즈 프리셋 마우스 오버 (수정/삭제 잠금 안내) */
     tipDefaultPresetLocked: "\uAE30\uBCF8 \uD504\uB9AC\uC14B\uC740 \uC218\uC815\uD558\uAC70\uB098 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI SizeSection | [조건] 높이 모드 선택 드롭다운 마우스 오버 */
     tipSizeMode: "\uB192\uC774 \uBAA8\uB4DC \uC120\uD0DD",
+    /** [사용처] UI SizeSection | [조건] Screen 외 도형 선택 시 높이 모드 비활성 툴팁 */
     tipSizeModeDisabled: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Size \uBAA8\uB4DC\uB97C \uBCC0\uACBD\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI SizeSection | [조건] 사이즈 프리셋 칩 마우스 오버 | [비고] {name}, {w}, {h} 치환 */
     tipPresetDims: "{name} {w}\xD7{h}",
+    /** [사용처] UI SizeSection | [조건] Screen 외 도형 선택 시 프리셋 칩 비활성 툴팁 */
     tipPresetDisabledShape: "\uC774 \uB3C4\uD615\uC5D0\uC11C\uB294 Size \uD504\uB9AC\uC14B\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI ConnectorSection | [조건] 커넥터 선 색상 피커 마우스 오버 */
     tipConnectorColor: "\uCEE4\uB125\uD130 \uC0C9\uC0C1",
+    /** [사용처] UI Footer / Action | [조건] 무료 생성 한도(20개) 도달 시 비활성 툴팁 */
     tipQuotaBlocked: "\uBB34\uB8CC \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC2B5\uB2C8\uB2E4. \uC5C5\uADF8\uB808\uC774\uB4DC\uD558\uBA74 \uB354 \uB9CC\uB4E4 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
+    // ==========================================================================
+    // 14. 도형 타입별 지원 여부 안내 (Shape Notices)
+    // ==========================================================================
+    /** [사용처] UI SizeSection 패널 | [조건] Screen 타입 노드가 아닌 일반 도형 선택 시 */
     noticeSizeOnlyScreen: "Size\uB294 Screen \uB178\uB4DC\uC5D0\uC11C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI DescriptionSection 패널 | [조건] Description 미지원 도형 선택 시 */
     noticeDescUnsupported: "Description\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI ElevationSection 패널 | [조건] Elevation 미지원 도형 선택 시 */
     noticeElevationUnsupported: "Elevation\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI StatusSection 패널 | [조건] Status 미지원 도형 선택 시 */
     noticeStatusUnsupported: "Status\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI StepBadgesSection 패널 | [조건] Step Badges 미지원 도형 선택 시 */
     noticeStepUnsupported: "Step Badges\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    /** [사용처] UI LinkSection 패널 | [조건] Reference Link 미지원 도형 선택 시 */
     noticeLinkUnsupported: "Reference Link\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
-    noticeMixed: "\uD63C\uD569 \uC120\uD0DD\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4"
+    /** [사용처] UI 어피어런스 패널 | [조건] 서로 다른 타입 노드 혼합 선택 시 */
+    noticeMixed: "\uD63C\uD569 \uC120\uD0DD\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    // ==========================================================================
+    // 15. 하단 액션바 연결 상태 라벨 (Connect Status Text)
+    // ==========================================================================
+    /** [사용처] UI ConnectSection 상태 라벨 | [조건] 캔버스에서 선택된 노드가 0개 또는 1개일 때 */
+    connectStatusSelectNodes: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD",
+    /** [사용처] UI ConnectSection 상태 라벨 | [조건] 2개 노드가 선택되고 명시적 단자 연결 준비 완료 시 */
+    connectStatusReadyTwoNodes: "2\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC",
+    /** [사용처] UI ConnectSection 상태 라벨 | [조건] 3개 이상 노드 선택 시 | [비고] {count} 치환 */
+    connectStatusReadyMultiNodes: "{count}\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC",
+    /** [사용처] UI ConnectSection 상태 라벨 | [조건] AUTO 단자 등 기본 연결 준비 완료 시 */
+    connectStatusReady: "\uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC",
+    /** [사용처] UI ConnectSection 상태 라벨 | [조건] 선택된 커넥터에 변경사항이 존재할 때 */
+    connectStatusChangesReady: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC900\uBE44 \uC644\uB8CC",
+    /** [사용처] UI ConnectSection 상태 라벨 | [조건] 커넥터 연결/적용 작업이 완료되었을 때 */
+    connectStatusConnected: "\uC5F0\uACB0\uB428",
+    /** [사용처] UI ConnectSection 상태 라벨 | [조건] 선택된 커넥터에 변경사항이 없을 때 */
+    connectStatusNoChanges: "\uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C",
+    // ==========================================================================
+    // 16. 주요 액션 버튼 안내 및 툴팁 (Action Buttons & Tooltips)
+    // ==========================================================================
+    /** [사용처] UI StepBadgesSection 안내 문구 | [조건] Add Step Badges 버튼 좌측에 상시 표시 */
+    stepDescStartsFromNumber: "\uC9C0\uC815\uD55C \uBC88\uD638\uBD80\uD130 \uC2DC\uC791",
+    /** [사용처] UI StepBadgesSection 버튼 툴팁 | [조건] 시작 번호 미입력으로 버튼 비활성화 시 */
+    stepTipEnterStartNumber: "\uC2DC\uC791 \uBC88\uD638\uB97C \uC785\uB825\uD558\uC138\uC694",
+    /** [사용처] UI StepBadgesSection 버튼 툴팁 | [조건] 시작 번호 입력되어 버튼 활성화 시 */
+    stepTipAddStepBadges: "\uC2A4\uD15D \uBC43\uC9C0 \uCD94\uAC00",
+    /** [사용처] UI ConnectSection 버튼 툴팁 | [조건] 선택된 커넥터에 적용할 변경사항이 없을 때 */
+    connectTipNoChanges: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C",
+    /** [사용처] UI ConnectSection 버튼 툴팁 | [조건] 선택된 커넥터의 옵션 변경사항 적용 준비 시 */
+    connectTipApplyChanges: "\uCEE4\uB125\uD130 \uBCC0\uACBD\uC0AC\uD56D \uC801\uC6A9",
+    /** [사용처] UI ConnectSection 버튼 툴팁 | [조건] 2개 이상 선택된 노드 신규 연결 준비 시 */
+    connectTipConnectNodes: "\uC120\uD0DD\uD55C \uB178\uB4DC \uC5F0\uACB0"
   };
   var EN = {
+    // 1. Quota & Entitlement
     limitReached: "Flooow elements are full ({current}/{limit}). Delete existing elements and try again.",
+    // 2. Node CRUD
     nodeCreated: 'Created node "{title}"',
     nodeCreateFailed: "Failed to create node: {error}",
     nodeNotFoundSelect: "Node to edit not found. Select a node on the canvas.",
@@ -2016,6 +2238,8 @@
     nodeUpdateFailed: "Failed to update node: {error}",
     nodesBatchUpdated: "Updated {count} nodes",
     nodesBatchUpdateFailed: "Failed to update nodes: {error}",
+    nodeGone: "Node not found.",
+    // 3. Connect & Chain
     connectNodesNotFound: "Nodes to connect not found.",
     connectNeedTwoDifferent: "Select two different nodes to connect.",
     connectDone: "Connected",
@@ -2023,6 +2247,7 @@
     connectCreateFailed: "Failed to create connector: {error}",
     connectNeedTwoOrMore: "Select 2 or more nodes to connect.",
     connectNeedTwoDifferentOrMore: "Select 2 or more different nodes.",
+    connectNeedTwo: "Select 2 or more nodes to connect.",
     autoConnectDone: "Orthogonal connection complete",
     autoConnectDoneLabel: 'Orthogonal connection complete with label "{label}"',
     autoChainDone: "\u26A1 Connected {nodes} nodes in sequence ({conns} connectors).",
@@ -2031,6 +2256,7 @@
     chainCreatedPartial: "{created} connections created ({skipped} already connected)",
     chainCreated: "{created} connections created",
     chainFailed: "Chain connection failed: {error}",
+    // 4. Connector Editing
     connectorSelectForLabel: "Select a connector on the canvas to edit.",
     connectorLabelSet: 'Center label set to "{label}"',
     connectorLabelCleared: "Center label cleared.",
@@ -2046,47 +2272,54 @@
     connectorsConvertedAll: "\u26A1 Converted {count} connectors to orthogonal",
     connectorsAlreadyElbowed: "{count} connectors are already orthogonal",
     connectorsConvertFailed: "Failed to convert connectors: {error}",
+    // 5. Status Badge
     statusNeedSelection: "Select 1 or more elements to set a status.",
     statusRemoved: "Removed status badges from {count} nodes.",
     statusAttached: 'Attached status badge "{label}" to {count} nodes',
+    // 6. Elevation
     elevationNeedSelection: "Select elements to apply elevation.",
     elevationRemoved: "Removed elevation from {count} nodes.",
     elevationApplied: "Applied Level {level} elevation to {count} nodes.",
+    // 7. Step Badges
     stepNeedSelection: "Select elements on the canvas to number.",
     stepApplied: "Applied step numbers to {count} nodes.",
     stepRemoveNeedSelection: "Select elements on the canvas to remove step numbers.",
     stepRemoved: "Removed step numbers from {count} nodes.",
     stepNoneExist: "Selected nodes have no step numbers.",
-    nodeGone: "Node not found.",
+    // 8. Settings & Tokens
     settingsSaved: "Figma integration settings saved.",
     variablesUnsupported: "This Figma version does not support the Variables API.",
     variablesNoneLocal: "No local Variables in the open file. Run it from the UI3 Kit file tab.",
     tokensExtracted: "\u{1F3A8} Extracted {count} UI3 design tokens.",
     tokensFailed: "Failed to extract UI3 variables: {error}",
+    // 9. Undo / Redo
     undoHint: "Undo with Cmd+Z (Mac) or Ctrl+Z (Windows) on the canvas.",
     redoHint: "Redo with Cmd+Shift+Z (Mac) or Ctrl+Y (Windows) on the canvas.",
     undoCancelled: "Changes discarded.",
     undone: "Undone.",
+    // 10. Validation
     titleMax32: "Titles can be up to 32 characters.",
-    sizePresetAdded: 'Added size preset "{name}".',
-    sizeUpdated: "Size updated.",
-    sizePresetDeleted: 'Deleted preset "{name}".',
-    styleAddedNew: "New style added.",
-    styleUpdated: "Style updated.",
-    styleDefaultNoDelete: "Default styles cannot be deleted.",
-    styleDeleted: "Style deleted.",
-    connectNeedTwo: "Select 2 or more nodes to connect.",
     max999: "Maximum is 999.",
     sizeMinW: "Minimum width is {px}px.",
     sizeMaxW: "Maximum width is {px}px.",
     sizeMinH: "Minimum height is {px}px.",
     sizeMaxH: "Maximum height is {px}px.",
     sizeMaxCorner: "Maximum is {px}.",
-    styleEditNoDefault: "Default styles cannot be edited.",
-    presetDeleteNoDefault: "Default presets cannot be deleted.",
+    // 11. Presets & Styles
+    sizePresetAdded: 'Added size preset "{name}".',
+    sizeUpdated: "Size updated.",
+    sizePresetDeleted: 'Deleted preset "{name}".',
     sizePresetDeleted2: "Size preset deleted.",
+    presetDeleteNoDefault: "Default presets cannot be deleted.",
+    styleAddedNew: "New style added.",
+    styleUpdated: "Style updated.",
+    styleDefaultNoDelete: "Default styles cannot be deleted.",
+    styleDeleted: "Style deleted.",
+    styleEditNoDefault: "Default styles cannot be edited.",
+    // 12. Description
     descCopyEmpty: "No description to copy.",
     descCopied: "Description copied to clipboard!",
+    // 13. Control Tooltips
     tipWidth: "Width",
     tipHeight: "Height",
     tipCornerRadius: "Corner radius",
@@ -2147,13 +2380,29 @@
     tipPresetDisabledShape: "Size presets are disabled for this shape",
     tipConnectorColor: "Connector color",
     tipQuotaBlocked: "Free limit reached. Upgrade to create more.",
+    // 14. Shape Notices
     noticeSizeOnlyScreen: "Size is only available for Screen nodes",
     noticeDescUnsupported: "Description is not available for this shape",
     noticeElevationUnsupported: "Elevation is not available for this shape",
     noticeStatusUnsupported: "Status is not available for this shape",
     noticeStepUnsupported: "Step Badges are not available for this shape",
     noticeLinkUnsupported: "Reference Link is not available for this shape",
-    noticeMixed: "Not available for mixed selection"
+    noticeMixed: "Not available for mixed selection",
+    // 15. Connect Status Text
+    connectStatusSelectNodes: "Select 2+ nodes to connect",
+    connectStatusReadyTwoNodes: "2 nodes ready to connect",
+    connectStatusReadyMultiNodes: "{count} nodes ready to connect",
+    connectStatusReady: "Ready to connect",
+    connectStatusChangesReady: "Changes ready to apply",
+    connectStatusConnected: "Connected",
+    connectStatusNoChanges: "No changes",
+    // 16. Action Buttons & Tooltips
+    stepDescStartsFromNumber: "Starts from the specified number",
+    stepTipEnterStartNumber: "Enter a start number",
+    stepTipAddStepBadges: "Add Step Badges",
+    connectTipNoChanges: "No changes to update",
+    connectTipApplyChanges: "Apply connector changes",
+    connectTipConnectNodes: "Connect selected nodes"
   };
   function t(key, params, locale) {
     const catalog = (locale || activeLocale) === "en" ? EN : KO;
