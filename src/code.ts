@@ -899,6 +899,13 @@ const trackedNodes = new Set<string>();
 const trackedConnectors = new Set<string>();
 /** true면 id 집합이 현재 프로젝트의 완전한 목록이다. 부분 집합은 저장하지 않는다. */
 let trackComplete = false;
+/**
+ * Free gate baseline freshness (세션 카운트 + 생성/삭제 델타 판정용).
+ * - true면 세션 추적값이 최신이므로 파일 전체 스캔 없이 gate를 판정한다.
+ * - scanCurrentProject()가 성공하면 true가 된다 (추적 id 집합까지 재동기화됨).
+ * - 모듈 상태이므로 재시작/파일 재오픈 시 false로 리셋된다 → 첫 생성에서 1회 스캔으로 정확성을 보장한다.
+ */
+let gateBaselineFresh = false;
 /** clientStorage index 한 프로젝트 값. 예전 저장분은 숫자(합계)만 있을 수 있다. */
 type UsageIndexEntry = { nodes: number; connectors: number };
 
@@ -1316,6 +1323,7 @@ function scanCurrentProject(): FlooowElementCount {
   sessionNodes = count.nodes;
   sessionConnectors = count.connectors;
   trackComplete = true;
+  gateBaselineFresh = true;
   persistTrack();
   return count;
 }
@@ -1437,7 +1445,15 @@ function runCreateExclusive<T>(task: () => Promise<T> | T): Promise<T> {
   return run;
 }
 
-// 생성 승인. Free만 현재 프로젝트를 fresh scan해서 20개 제한을 본다.
+// Free gate용 카운트: baseline이 fresh하면 세션 추적값(생성/삭제 델타 반영)을 쓴다.
+// baseline이 없으면(재시작·파일 재오픈·추적 불완전) 전체 스캔 1회로 baseline을 수립한다.
+// 스캔 실패 시 예외는 그대로 전달한다 (기존 approveNewElements 동작과 동일).
+function getGateCount(): FlooowElementCount {
+  if (gateBaselineFresh) return sessionElementCount();
+  return scanCurrentProject();
+}
+
+// 생성 승인. Free는 세션 추적 카운트 + 델타로 20개 제한을 본다 (스캔은 baseline 수립 시 1회만).
 // Pro/Dev는 count를 계산하지 않고 바로 허용한다.
 function approveNewElements(requestedCount: number): CreateGateResult {
   const entitlement = getCreateEntitlement();
@@ -1448,7 +1464,7 @@ function approveNewElements(requestedCount: number): CreateGateResult {
       entitlement,
     });
   }
-  const count = scanCurrentProject();
+  const count = getGateCount();
   enqueueUsageIndex(count);
   postFlooowUsage(false);
   return canCreateFlooowElements({
@@ -4119,6 +4135,9 @@ async function createFlowNode(payload: FlowNodePayload) {
     }
 
     figma.currentPage.appendChild(card);
+    // Free gate 세션 카운트 정합: 생성 직후 동기 추적한다.
+    // 뒤따르는 documentchange CREATE는 Set 중복 제거로 무시된다.
+    trackSceneNode(card);
     if (nodeType === 'Decision' || branchVariant === 'TAG') {
       const createdTitle = card.findOne(
         (c) => c.type === 'TEXT' && (c.name === 'TitleText' || safeGetPluginData(c, 'node_role') === 'title')
@@ -4956,6 +4975,9 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
   } else if (nodeType !== 'Branch') {
     card.setPluginData('branch_variant', '');
   }
+  // Free gate 세션 카운트 정합: 네이티브→플로우 전환(is_flow_node/node_type 태깅)은
+  // CREATE 이벤트 없이 일어나므로 여기서 동기 추적한다. 이미 추적 중이면 no-op이다.
+  trackSceneNode(card);
 }
 
 // ----------------------------------------------------
@@ -5426,7 +5448,7 @@ async function createSingleConnector(
   const connColor: RGB = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
 
   // 커스텀 VectorNode 커넥터 생성 (선택된 라우팅 스타일 및 시작점/끝점 단자 형태에 맞춰 렌더링)
-  return await createOrthogonalVectorConnector(
+  const created = await createOrthogonalVectorConnector(
     sourceNode,
     sourceMagnet,
     targetNode,
@@ -5450,6 +5472,9 @@ async function createSingleConnector(
       labelOn: Boolean(label && label.trim()),
     }
   );
+  // Free gate 세션 카운트 정합: 생성 직후 동기 추적한다 (documentchange 중복은 Set이 제거).
+  trackSceneNode(created);
+  return created;
 }
 
 // 스마트 자동 직각 연결 (2개: 최단 방향 직각 연결 / 3개 이상: 캔버스 흐름에 따른 순차 연속 체인 연결 1->2->3...)

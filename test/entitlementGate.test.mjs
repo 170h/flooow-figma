@@ -188,6 +188,29 @@ runTest('Lapsed여도 기존 수정/삭제는 Gate 대상 아님 (생성 Gate만
   assert.equal(gate.currentCount, 57); // 기존 57개는 그대로 유지 (삭제·잠금 없음)
 });
 
+runTest('Free session sequence: 생성→거부→삭제→생성→Pro→Free (gate arithmetic)', () => {
+  // 세션 카운트 + 델타 기반 gate가 공급하는 currentCount 전제로 gate 연산을 고정한다.
+  // (생성 +1 / 삭제 -1 델타는 Core 세션 추적이 담당, 여기서는 연산만 검증)
+  let current = 19;
+  let g = canCreateFlooowElements({ currentCount: current, requestedCount: 1, entitlement: 'FREE' });
+  assert.equal(g.allowed, true);
+  current += 1; // 생성 → 20
+  g = canCreateFlooowElements({ currentCount: current, requestedCount: 1, entitlement: 'FREE' });
+  assert.equal(g.allowed, false); // 20 → 추가 생성 거부
+  assert.equal(g.reason, 'LIMIT_EXCEEDED');
+  current -= 1; // 삭제 델타 → 19
+  g = canCreateFlooowElements({ currentCount: current, requestedCount: 1, entitlement: 'FREE' });
+  assert.equal(g.allowed, true); // 삭제 후 다시 생성 허용
+  current += 1;
+  // Pro 전환: gate 우회 (currentCount 무관 허용)
+  g = canCreateFlooowElements({ currentCount: current, requestedCount: 5, entitlement: 'PAID_ACTIVE' });
+  assert.equal(g.allowed, true);
+  // Pro → Free 복귀 (25개 보유 가정): 신규 생성 거부, 기존 요소는 그대로 유지
+  g = canCreateFlooowElements({ currentCount: 25, requestedCount: 1, entitlement: normalizePaymentStatus('UNPAID') });
+  assert.equal(g.allowed, false);
+  assert.equal(g.limit, 20);
+});
+
 console.log(`\nResult: ${passCount} passed, ${failCount} failed.`);
 if (failCount > 0) {
   process.exit(1);

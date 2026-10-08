@@ -4266,6 +4266,7 @@
   var trackedNodes = /* @__PURE__ */ new Set();
   var trackedConnectors = /* @__PURE__ */ new Set();
   var trackComplete = false;
+  var gateBaselineFresh = false;
   var showIndexedTotal = false;
   var indexSumCache = null;
   var loadedUsageIndex = null;
@@ -4607,6 +4608,7 @@
     sessionNodes = count.nodes;
     sessionConnectors = count.connectors;
     trackComplete = true;
+    gateBaselineFresh = true;
     persistTrack();
     return count;
   }
@@ -4708,6 +4710,10 @@
     );
     return run;
   }
+  function getGateCount() {
+    if (gateBaselineFresh) return sessionElementCount();
+    return scanCurrentProject();
+  }
   function approveNewElements(requestedCount) {
     const entitlement = getCreateEntitlement();
     if (isUnlimitedEntitlement(entitlement)) {
@@ -4717,7 +4723,7 @@
         entitlement
       });
     }
-    const count = scanCurrentProject();
+    const count = getGateCount();
     enqueueUsageIndex(count);
     postFlooowUsage(false);
     return canCreateFlooowElements({
@@ -6910,6 +6916,7 @@
         card.y = center.y - Math.round(height / 2);
       }
       figma.currentPage.appendChild(card);
+      trackSceneNode(card);
       if (nodeType === "Decision" || branchVariant === "TAG") {
         const createdTitle = card.findOne(
           (c) => c.type === "TEXT" && (c.name === "TitleText" || safeGetPluginData2(c, "node_role") === "title")
@@ -7598,6 +7605,7 @@
     } else if (nodeType !== "Branch") {
       card.setPluginData("branch_variant", "");
     }
+    trackSceneNode(card);
   }
   async function updateFlowNode(payload) {
     try {
@@ -7978,7 +7986,7 @@
   async function createSingleConnector(sourceNode, sourceMagnet, targetNode, targetMagnet, label, colorHex, strokeWeight, routingType, startTerminal, endTerminal, strokePattern, startOffset, endOffset, labelBoxStyle, labelAlign, labelFillColor, labelStrokeColor) {
     const connWeight = typeof strokeWeight === "number" ? strokeWeight : 1.5;
     const connColor = colorHex ? hexToRgbColor(colorHex) : { r: 0, g: 0, b: 0 };
-    return await createOrthogonalVectorConnector(
+    const created = await createOrthogonalVectorConnector(
       sourceNode,
       sourceMagnet,
       targetNode,
@@ -8002,6 +8010,8 @@
         labelOn: Boolean(label && label.trim())
       }
     );
+    trackSceneNode(created);
+    return created;
   }
   async function autoConnectSelected(label) {
     try {
