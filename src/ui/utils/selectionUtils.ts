@@ -130,18 +130,18 @@ export function analyzeSelection(nodes: (NodeInfo | null | undefined)[]): Select
   const figjamNodeCount = figjamNodes.length;
   const isFigJamObject = totalCount > 0 && figjamNodeCount === totalCount;
 
-  console.log('[Flooow:analyzeSelection]', {
-    inputNodes: validNodes.map((n) => ({
-      id: n.id,
-      type: n.nodeType,
-      name: n.name,
-      isConnector: n.isConnector,
-      isFlowNode: n.isFlowNode,
-    })),
-    totalCount,
-    flowNodeCount,
-    connectorCount,
-  });
+  // console.log('[Flooow:analyzeSelection]', {
+  //   inputNodes: validNodes.map((n) => ({
+  //     id: n.id,
+  //     type: n.nodeType,
+  //     name: n.name,
+  //     isConnector: n.isConnector,
+  //     isFlowNode: n.isFlowNode,
+  //   })),
+  //   totalCount,
+  //   flowNodeCount,
+  //   connectorCount,
+  // });
 
   return {
     totalCount,

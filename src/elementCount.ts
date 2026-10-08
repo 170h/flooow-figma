@@ -43,11 +43,11 @@ const COUNT_T0: number =
   typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
 function clog(label: string): void {
   try {
-    const now =
-      typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
-    if (typeof console !== 'undefined' && typeof console.log === 'function') {
-      console.log(`[FLOOOW-COUNT] ${label} +${Math.round(now - COUNT_T0)}ms`);
-    }
+    // const now =
+    //   typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    // if (typeof console !== 'undefined' && typeof console.log === 'function') {
+    //   console.log(`[FLOOOW-COUNT] ${label} +${Math.round(now - COUNT_T0)}ms`);
+    // }
   } catch (_) {
     // 계측 로그 실패는 본 로직에 영향 없음
   }

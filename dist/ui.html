@@ -33873,19 +33873,6 @@
               chainConnectedPairs,
               chainMissingPairs
             } = msg;
-            console.log("[Flooow:useFigmaMessage:SELECTION_CHANGED]", {
-              count: msg.count,
-              flowNodeCount: msg.flowNodeCount,
-              connectorCount: msg.connectorCount,
-              otherObjectCount: msg.otherObjectCount,
-              nodes: (nodes || []).map((n) => ({
-                id: n?.id,
-                type: n?.nodeType,
-                name: n?.name,
-                isConnector: n?.isConnector,
-                isFlowNode: n?.isFlowNode
-              }))
-            });
             handleSelectionChange(count || 0, nodes || [], meta || {});
             const isConn = (meta?.connectorCount || 0) > 0 || nodes && nodes.some((n) => n?.isConnector);
             const is3Plus = Boolean(nodes && nodes.length >= 3 && !isConn);
@@ -34009,18 +33996,6 @@
     const connectorCount = connectorNodes.length;
     const figjamNodeCount = figjamNodes.length;
     const isFigJamObject = totalCount > 0 && figjamNodeCount === totalCount;
-    console.log("[Flooow:analyzeSelection]", {
-      inputNodes: validNodes.map((n) => ({
-        id: n.id,
-        type: n.nodeType,
-        name: n.name,
-        isConnector: n.isConnector,
-        isFlowNode: n.isFlowNode
-      })),
-      totalCount,
-      flowNodeCount,
-      connectorCount
-    });
     return {
       totalCount,
       flowNodeCount,
@@ -38404,30 +38379,6 @@
         lastSyncedSelectionColorRef.current = firstConn?.connectorColorHex ? firstConn.connectorColorHex.toUpperCase() : null;
       }
       const isUserActionRecent = Date.now() - userActionTimestampRef.current < 800;
-      console.log("[Flooow:ConnectSection:sync]", {
-        selection: {
-          total: summary.totalCount,
-          connectorCount: summary.connectorCount,
-          flowNodeCount: summary.flowNodeCount,
-          isSingleConnector: summary.isSingleConnector,
-          isMultiConnector: summary.isMultiConnector
-        },
-        connectorStyle: {
-          color: summary.connectorColor.value,
-          colorMixed: summary.connectorColor.isMixed,
-          weight: summary.connectorStrokeWeight.value,
-          weightMixed: summary.connectorStrokeWeight.isMixed,
-          startTerminal: summary.connectorStartTerminal.value,
-          startTerminalMixed: summary.connectorStartTerminal.isMixed,
-          endTerminal: summary.connectorEndTerminal.value,
-          endTerminalMixed: summary.connectorEndTerminal.isMixed,
-          startOffset: summary.connectorStartOffset.value,
-          startOffsetMixed: summary.connectorStartOffset.isMixed,
-          endOffset: summary.connectorEndOffset.value,
-          endOffsetMixed: summary.connectorEndOffset.isMixed
-        },
-        styleSource: hasSelectedConnectors ? "selected-connectors" : connectedStyleSummary ? "connected-connectors" : "none"
-      });
       if (summary.isSingleConnector) {
         const node = selectedNodes[0];
         setIsColorMixed(false);

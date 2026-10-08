@@ -79,9 +79,9 @@ const STARTUP_T0: number =
   typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
 function slog(label: string): void {
   try {
-    const now =
-      typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
-    console.log(`[FLOOOW-STARTUP] ${label} +${Math.round(now - STARTUP_T0)}ms`);
+    // const now =
+    //   typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    // console.log(`[FLOOOW-STARTUP] ${label} +${Math.round(now - STARTUP_T0)}ms`);
   } catch (_) {
     // 계측 로그 실패는 본 로직에 영향 없음
   }
@@ -1053,7 +1053,7 @@ function parseUsageIndexEntry(value: unknown): UsageIndexEntry | null {
 
 function logUsage(label: string, detail: Record<string, unknown>): void {
   try {
-    console.log(`[FLOOOW-USAGE] ${label}`, detail);
+    // console.log(`[FLOOOW-USAGE] ${label}`, detail);
   } catch (_) {
     /* 진단 로그 실패는 합산에 영향 없음 */
   }

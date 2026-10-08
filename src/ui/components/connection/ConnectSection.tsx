@@ -286,34 +286,34 @@ export function ConnectSection() {
 
     const isUserActionRecent = Date.now() - userActionTimestampRef.current < 800;
 
-    console.log('[Flooow:ConnectSection:sync]', {
-      selection: {
-        total: summary.totalCount,
-        connectorCount: summary.connectorCount,
-        flowNodeCount: summary.flowNodeCount,
-        isSingleConnector: summary.isSingleConnector,
-        isMultiConnector: summary.isMultiConnector,
-      },
-      connectorStyle: {
-        color: summary.connectorColor.value,
-        colorMixed: summary.connectorColor.isMixed,
-        weight: summary.connectorStrokeWeight.value,
-        weightMixed: summary.connectorStrokeWeight.isMixed,
-        startTerminal: summary.connectorStartTerminal.value,
-        startTerminalMixed: summary.connectorStartTerminal.isMixed,
-        endTerminal: summary.connectorEndTerminal.value,
-        endTerminalMixed: summary.connectorEndTerminal.isMixed,
-        startOffset: summary.connectorStartOffset.value,
-        startOffsetMixed: summary.connectorStartOffset.isMixed,
-        endOffset: summary.connectorEndOffset.value,
-        endOffsetMixed: summary.connectorEndOffset.isMixed,
-      },
-      styleSource: hasSelectedConnectors
-        ? 'selected-connectors'
-        : connectedStyleSummary
-          ? 'connected-connectors'
-          : 'none',
-    });
+    // console.log('[Flooow:ConnectSection:sync]', {
+    //   selection: {
+    //     total: summary.totalCount,
+    //     connectorCount: summary.connectorCount,
+    //     flowNodeCount: summary.flowNodeCount,
+    //     isSingleConnector: summary.isSingleConnector,
+    //     isMultiConnector: summary.isMultiConnector,
+    //   },
+    //   connectorStyle: {
+    //     color: summary.connectorColor.value,
+    //     colorMixed: summary.connectorColor.isMixed,
+    //     weight: summary.connectorStrokeWeight.value,
+    //     weightMixed: summary.connectorStrokeWeight.isMixed,
+    //     startTerminal: summary.connectorStartTerminal.value,
+    //     startTerminalMixed: summary.connectorStartTerminal.isMixed,
+    //     endTerminal: summary.connectorEndTerminal.value,
+    //     endTerminalMixed: summary.connectorEndTerminal.isMixed,
+    //     startOffset: summary.connectorStartOffset.value,
+    //     startOffsetMixed: summary.connectorStartOffset.isMixed,
+    //     endOffset: summary.connectorEndOffset.value,
+    //     endOffsetMixed: summary.connectorEndOffset.isMixed,
+    //   },
+    //   styleSource: hasSelectedConnectors
+    //     ? 'selected-connectors'
+    //     : connectedStyleSummary
+    //       ? 'connected-connectors'
+    //       : 'none',
+    // });
 
     if (summary.isSingleConnector) {
       // 커넥터 단일 선택

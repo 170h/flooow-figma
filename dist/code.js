@@ -3469,10 +3469,6 @@
   var COUNT_T0 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
   function clog(label) {
     try {
-      const now = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-      if (typeof console !== "undefined" && typeof console.log === "function") {
-        console.log(`[FLOOOW-COUNT] ${label} +${Math.round(now - COUNT_T0)}ms`);
-      }
     } catch (_) {
     }
   }
@@ -3633,8 +3629,6 @@
   var STARTUP_T0 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
   function slog(label) {
     try {
-      const now = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-      console.log(`[FLOOOW-STARTUP] ${label} +${Math.round(now - STARTUP_T0)}ms`);
     } catch (_) {
     }
   }
@@ -4387,7 +4381,6 @@
   }
   function logUsage(label, detail) {
     try {
-      console.log(`[FLOOOW-USAGE] ${label}`, detail);
     } catch (_) {
     }
   }
