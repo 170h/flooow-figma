@@ -30425,6 +30425,33 @@
     return orderNodesForChain(nodes.filter((node) => node.isFlowNode === true));
   }
 
+  // src/presetStore.ts
+  var PRESET_LOCAL_KEYS = {
+    style: "ui_flow_style_presets",
+    size: "ui_flow_size_presets"
+  };
+  function asRecord(value) {
+    if (typeof value !== "object" || value === null) return null;
+    return value;
+  }
+  function parsePresetEnvelope(raw) {
+    if (Array.isArray(raw)) {
+      return raw.length > 0 ? { savedAt: 0, items: raw } : null;
+    }
+    const rec = asRecord(raw);
+    if (!rec) return null;
+    if (typeof rec.savedAt !== "number" || !Number.isFinite(rec.savedAt)) return null;
+    if (!Array.isArray(rec.items) || rec.items.length === 0) return null;
+    return { savedAt: Math.max(0, Math.floor(rec.savedAt)), items: rec.items };
+  }
+  function isStoredNewer(localSavedAt, stored) {
+    if (!stored) return false;
+    return stored.savedAt > localSavedAt;
+  }
+  function makePresetEnvelope(items) {
+    return { savedAt: Date.now(), items };
+  }
+
   // src/i18n.ts
   var SUPPORTED_LOCALES = [
     "ko",
@@ -32067,6 +32094,30 @@
     { id: "style-black", name: "Black", fillColor: "#000000", strokeWeight: 0, strokeColor: "#000000", isDefault: true }
   ];
   var DEFAULT_STYLE_PRESET_IDS = /* @__PURE__ */ new Set(["style-white", "style-black"]);
+  var LEGACY_REMOVED_STYLE_IDS = /* @__PURE__ */ new Set([
+    "style-red-1",
+    "style-red-2",
+    "style-coral-1",
+    "style-coral-2",
+    "style-orange",
+    "style-pink",
+    "style-purple"
+  ]);
+  function readLocalPresetEnvelope(kind) {
+    try {
+      const raw = localStorage.getItem(PRESET_LOCAL_KEYS[kind]);
+      if (!raw) return null;
+      return parsePresetEnvelope(JSON.parse(raw));
+    } catch (_) {
+      return null;
+    }
+  }
+  function writeLocalPresetEnvelope(kind, envelope) {
+    try {
+      localStorage.setItem(PRESET_LOCAL_KEYS[kind], JSON.stringify(envelope));
+    } catch (_) {
+    }
+  }
   function matchStylePresetId(presets, fillColor, strokeWeight, strokeColor) {
     if (!fillColor || strokeWeight === void 0) return null;
     const matched = presets.find((p) => {
@@ -32380,53 +32431,55 @@
       setUsageCounting(true);
       parent.postMessage({ pluginMessage: { type: "GET_FLOOOW_USAGE", refresh: true } }, "*");
     }, []);
+    const requestCheckout = (0, import_react2.useCallback)(() => {
+      parent.postMessage({ pluginMessage: { type: "INITIATE_CHECKOUT" } }, "*");
+    }, []);
+    (0, import_react2.useEffect)(() => {
+      parent.postMessage({ pluginMessage: { type: "LOAD_PRESETS", kind: "style" } }, "*");
+      parent.postMessage({ pluginMessage: { type: "LOAD_PRESETS", kind: "size" } }, "*");
+    }, []);
     const [sizePresets, setSizePresets] = (0, import_react2.useState)(() => {
-      try {
-        const saved = localStorage.getItem("ui_flow_size_presets");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch (_) {
-      }
+      const env = readLocalPresetEnvelope("size");
+      const items = env?.items ?? [];
+      if (items.length > 0) return items;
       return DEFAULT_SIZE_PRESETS;
     });
     const savePresets = (0, import_react2.useCallback)((next) => {
       setSizePresets(next);
-      try {
-        localStorage.setItem("ui_flow_size_presets", JSON.stringify(next));
-      } catch (_) {
-      }
+      const envelope = makePresetEnvelope(next);
+      writeLocalPresetEnvelope("size", envelope);
+      parent.postMessage({ pluginMessage: { type: "SAVE_PRESETS", kind: "size", presets: envelope } }, "*");
     }, []);
     const [stylePresets, setStylePresets] = (0, import_react2.useState)(() => {
-      try {
-        const saved = localStorage.getItem("ui_flow_style_presets");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const legacyRemoved = /* @__PURE__ */ new Set([
-              "style-red-1",
-              "style-red-2",
-              "style-coral-1",
-              "style-coral-2",
-              "style-orange",
-              "style-pink",
-              "style-purple"
-            ]);
-            const filtered = parsed.filter((p) => !legacyRemoved.has(p.id));
-            if (filtered.length > 0) return filtered;
-          }
-        }
-      } catch (_) {
-      }
+      const env = readLocalPresetEnvelope("style");
+      const items = (env?.items ?? []).filter((p) => !LEGACY_REMOVED_STYLE_IDS.has(p?.id));
+      if (items.length > 0) return items;
       return DEFAULT_STYLE_PRESETS;
     });
     const saveStylePresets = (0, import_react2.useCallback)((next) => {
       setStylePresets(next);
-      try {
-        localStorage.setItem("ui_flow_style_presets", JSON.stringify(next));
-      } catch (_) {
+      const envelope = makePresetEnvelope(next);
+      writeLocalPresetEnvelope("style", envelope);
+      parent.postMessage({ pluginMessage: { type: "SAVE_PRESETS", kind: "style", presets: envelope } }, "*");
+    }, []);
+    const applyLoadedPresets = (0, import_react2.useCallback)((kind, stored) => {
+      const local = readLocalPresetEnvelope(kind);
+      const localSavedAt = local?.savedAt ?? 0;
+      if (!isStoredNewer(localSavedAt, stored)) return;
+      if (kind === "size") {
+        const items = stored.items.filter(
+          (p) => !!p && typeof p.id === "string"
+        );
+        if (items.length === 0) return;
+        setSizePresets(items);
+      } else {
+        const items = stored.items.filter(
+          (p) => !!p && typeof p.id === "string" && !LEGACY_REMOVED_STYLE_IDS.has(p.id)
+        );
+        if (items.length === 0) return;
+        setStylePresets(items);
       }
+      writeLocalPresetEnvelope(kind, stored);
     }, []);
     const selectedNodesRef = (0, import_react2.useRef)(selectedNodes);
     const isConnectorSelectedRef = (0, import_react2.useRef)(isConnectorSelected);
@@ -33781,6 +33834,8 @@
       usageCounting,
       setUsageCounting,
       requestFlooowUsage,
+      requestCheckout,
+      applyLoadedPresets,
       planIssue,
       setPlanIssue,
       retryPlanLoad,
@@ -33847,7 +33902,8 @@
       setDesignFrames,
       setFlooowUsage,
       setUsageCounting,
-      setPlanIssue
+      setPlanIssue,
+      applyLoadedPresets
     } = useApp();
     const handlerRef = (0, import_react3.useRef)(null);
     const prevNodeIdRef = (0, import_react3.useRef)(void 0);
@@ -33926,6 +33982,10 @@
             setDesignFrames(msg.frames || []);
             break;
           }
+          case "PRESETS_LOADED": {
+            applyLoadedPresets(msg.kind, msg.stored ?? null);
+            break;
+          }
           case "FLOOOW_USAGE": {
             if (msg.error === "blocked") {
               setPlanIssue("blocked");
@@ -33955,7 +34015,7 @@
       return () => {
         window.removeEventListener("message", handler);
       };
-    }, [handleSelectionChange, setUIState, setFlooowUsage, setUsageCounting, setPlanIssue]);
+    }, [handleSelectionChange, setUIState, setFlooowUsage, setUsageCounting, setPlanIssue, applyLoadedPresets]);
   }
 
   // src/ui/hooks/useSelectionSummary.ts
@@ -35667,7 +35727,7 @@
   var BADGE_SHAPES = [
     { id: "Square", label: "Square" },
     { id: "Circle", label: "Circle" },
-    { id: "RoundBox", label: "Round Box" }
+    { id: "RoundBox", label: "Round" }
   ];
   var COLOR_OPTIONS = [
     { id: "Style", label: "Style" },
@@ -42739,7 +42799,7 @@
       fill: "currentColor"
     }
   ) });
-  function SubscriptionModal({ usage, scanning = false, onClose }) {
+  function SubscriptionModal({ usage, scanning = false, onClose, onUpgrade }) {
     const paidByEntitlement = isUnlimitedEntitlement(usage?.entitlement);
     const subscriptionStatus = paidByEntitlement && typeof usage?.periodEndsAt === "number" && typeof usage.autoRenew === "boolean" ? formatSubscriptionStatus({
       autoRenew: usage.autoRenew,
@@ -42794,7 +42854,7 @@
                     /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "subscription-plan-name", children: planShortName(isPaid ? usage?.entitlement : "FREE") }),
                     cycleLabel && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "subscription-plan-cycle", children: cycleLabel })
                   ] }),
-                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: `subscription-plan-desc${isPaid ? " is-pro" : ""}`, children: isPaid ? "Unlimited elements, every project" : "Create up to 20 elements per project" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: `subscription-plan-desc${isPaid ? " is-pro" : ""}`, children: isPaid ? "Unlimited elements, every project" : "Create up to 20 elements per file" }),
                   isPaid && subscriptionStatus && subscriptionStatus.text !== "" && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: `subscription-plan-status is-${subscriptionStatus.tone}`, children: subscriptionStatus.text })
                 ] }),
                 /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: `subscription-usage-section${isPaid ? " is-pro" : ""}`, children: [
@@ -42822,7 +42882,16 @@
                 ] }),
                 !isPaid && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "subscription-upgrade-section", children: /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)("div", { className: "subscription-upgrade-box", children: [
                   /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "subscription-upgrade-title", children: "Upgrade to Pro" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "subscription-upgrade-desc", children: "Unlimited elements, every project" })
+                  /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "subscription-upgrade-desc", children: "Unlimited elements, every project" }),
+                  onUpgrade && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
+                    "button",
+                    {
+                      type: "button",
+                      className: "btn-cta-primary",
+                      onClick: onUpgrade,
+                      children: "Upgrade"
+                    }
+                  )
                 ] }) })
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime29.jsx)("div", { className: "subscription-modal-footer", children: /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
@@ -42900,6 +42969,7 @@
       flooowUsage,
       usageCounting,
       requestFlooowUsage,
+      requestCheckout,
       planIssue,
       retryPlanLoad
     } = useApp();
@@ -43139,7 +43209,7 @@
         const unlimited = isUnlimitedEntitlement(flooowUsage?.entitlement);
         const planBadgeText = flooowUsage === null ? "" : `${planShortName(flooowUsage.entitlement)} Plan`;
         const limitReached = usageBlocked && !unlimited;
-        const meterText = flooowUsage === null ? "" : unlimited ? "Unlimited elements" : limitReached ? "Limit reached in this project" : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
+        const meterText = flooowUsage === null ? "" : unlimited ? "Unlimited elements" : limitReached ? "Limit reached in this file" : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
         return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("footer", { className: "app-footer", children: [
           /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
             "div",
@@ -43412,7 +43482,8 @@
         {
           usage: flooowUsage,
           scanning: usageCounting,
-          onClose: () => setActiveModal("none")
+          onClose: () => setActiveModal("none"),
+          onUpgrade: requestCheckout
         }
       ),
       /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(FigmaTooltip, {})

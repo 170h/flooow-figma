@@ -60,5 +60,5 @@
     "src/ui/App.tsx"
   ],
   "post_message_core_to_ui": { "file": "src/code.ts", "function": "postToUI" },
-  "client_storage_keys": ["figma_token", "figma_file_url", "flooow_usage_index"]
+  "client_storage_keys": ["figma_token", "figma_file_url", "flooow_usage_index", "flooow_style_presets", "flooow_size_presets"]
 }

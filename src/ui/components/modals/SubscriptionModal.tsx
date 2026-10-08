@@ -19,6 +19,8 @@ export interface SubscriptionModalProps {
   usage: FlooowUsageState | null;
   scanning?: boolean;
   onClose: () => void;
+  /** Figma 네이티브 결제 플로우 진입점. 없으면 Upgrade 버튼을 표시하지 않는다. */
+  onUpgrade?: () => void;
 }
 
 /**
@@ -29,7 +31,7 @@ export interface SubscriptionModalProps {
  * - 구독 일정(periodEndsAt, autoRenew)이 있을 때만 갱신/만료 문구를 만든다.
  *   7일 이하는 연도를 붙이지 않는다. 자동갱신 꺼짐 + 기간 종료는 Free로 보여 준다.
  */
-export function SubscriptionModal({ usage, scanning = false, onClose }: SubscriptionModalProps) {
+export function SubscriptionModal({ usage, scanning = false, onClose, onUpgrade }: SubscriptionModalProps) {
   const paidByEntitlement = isUnlimitedEntitlement(usage?.entitlement);
   const subscriptionStatus =
     paidByEntitlement &&
@@ -104,7 +106,7 @@ export function SubscriptionModal({ usage, scanning = false, onClose }: Subscrip
             <div className={`subscription-plan-desc${isPaid ? " is-pro" : ""}`}>
               {isPaid
                 ? "Unlimited elements, every project"
-                : "Create up to 20 elements per project"}
+                : "Create up to 20 elements per file"}
             </div>
             {isPaid && subscriptionStatus && subscriptionStatus.text !== "" && (
               <div className={`subscription-plan-status is-${subscriptionStatus.tone}`}>
@@ -148,7 +150,7 @@ export function SubscriptionModal({ usage, scanning = false, onClose }: Subscrip
             </div>
           </div>
 
-          {/* Free 전용 Upgrade 안내 (표시 전용, 구매 플로우 없음) */}
+          {/* Free 전용 Upgrade 안내 + Figma 네이티브 결제 진입 */}
           {!isPaid && (
             <div className="subscription-upgrade-section">
               <div className="subscription-upgrade-box">
@@ -156,6 +158,15 @@ export function SubscriptionModal({ usage, scanning = false, onClose }: Subscrip
                 <div className="subscription-upgrade-desc">
                   Unlimited elements, every project
                 </div>
+                {onUpgrade && (
+                  <button
+                    type="button"
+                    className="btn-cta-primary"
+                    onClick={onUpgrade}
+                  >
+                    Upgrade
+                  </button>
+                )}
               </div>
             </div>
           )}

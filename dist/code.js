@@ -3466,18 +3466,7 @@
   }
 
   // src/elementCount.ts
-  var COUNT_T0 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-  function clog(label) {
-    try {
-    } catch (_) {
-    }
-  }
-  var countFindTopConnectorCalls = 0;
-  var countFindTopFlowCalls = 0;
-  var countReadPluginDataCalls = 0;
-  var countAncestorSteps = 0;
   function readPluginData(node, key) {
-    countReadPluginDataCalls++;
     try {
       if (node && typeof node.getPluginData === "function") {
         return node.getPluginData(key) || "";
@@ -3493,15 +3482,12 @@
     return readPluginData(node, "is_connector_label") === "true" || node != null && node.name === "ConnectorLabel";
   }
   function findTopConnectorNode(node) {
-    countFindTopConnectorCalls++;
     let curr = node;
     while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
-      countAncestorSteps++;
       if (curr.type === "CONNECTOR" || isTaggedConnector(curr)) {
         let top = curr;
         let parentScan = curr.parent;
         while (parentScan && parentScan.type !== "PAGE" && parentScan.type !== "DOCUMENT") {
-          countAncestorSteps++;
           if (parentScan.type === "CONNECTOR" || isTaggedConnector(parentScan)) {
             top = parentScan;
           }
@@ -3514,12 +3500,10 @@
     return null;
   }
   function findTopFlowNode(node) {
-    countFindTopFlowCalls++;
     if (!node) return null;
     if (findTopConnectorNode(node)) return null;
     let curr = node;
     while (curr && curr.type !== "PAGE" && curr.type !== "DOCUMENT") {
-      countAncestorSteps++;
       if (readPluginData(curr, "is_flow_node") === "true" || Boolean(readPluginData(curr, "node_type"))) {
         return curr;
       }
@@ -3531,21 +3515,8 @@
     const nodeIds = /* @__PURE__ */ new Set();
     const connectorIds = /* @__PURE__ */ new Set();
     const includeNative = options?.includeNativeConnectors === true;
-    const totalNodes = allNodes.length;
-    countFindTopConnectorCalls = 0;
-    countFindTopFlowCalls = 0;
-    countReadPluginDataCalls = 0;
-    countAncestorSteps = 0;
-    clog(`start nodes=${totalNodes}`);
-    let processed = 0;
-    let nextMilestone = 1e4;
     for (const n of allNodes) {
       if (!n) continue;
-      processed++;
-      if (processed >= nextMilestone) {
-        clog(`progress ${processed}/${totalNodes}`);
-        nextMilestone += 1e4;
-      }
       const connTop = findTopConnectorNode(n);
       if (connTop) {
         if (isConnectorLabel(connTop)) continue;
@@ -3563,17 +3534,31 @@
         nodeIds.add(flowTop.id);
       }
     }
-    clog(`iteration:done processed=${processed}/${totalNodes}`);
-    clog(
-      `counters findTopConnector=${countFindTopConnectorCalls} findTopFlow=${countFindTopFlowCalls} readPluginData=${countReadPluginDataCalls} ancestorSteps=${countAncestorSteps}`
-    );
-    const result = {
+    return {
       nodes: nodeIds.size,
       connectors: connectorIds.size,
       total: nodeIds.size + connectorIds.size
     };
-    clog(`done nodes=${result.nodes} connectors=${result.connectors} total=${result.total}`);
-    return result;
+  }
+
+  // src/presetStore.ts
+  var PRESET_STORAGE_KEYS = {
+    style: "flooow_style_presets",
+    size: "flooow_size_presets"
+  };
+  function asRecord(value) {
+    if (typeof value !== "object" || value === null) return null;
+    return value;
+  }
+  function parsePresetEnvelope(raw) {
+    if (Array.isArray(raw)) {
+      return raw.length > 0 ? { savedAt: 0, items: raw } : null;
+    }
+    const rec = asRecord(raw);
+    if (!rec) return null;
+    if (typeof rec.savedAt !== "number" || !Number.isFinite(rec.savedAt)) return null;
+    if (!Array.isArray(rec.items) || rec.items.length === 0) return null;
+    return { savedAt: Math.max(0, Math.floor(rec.savedAt)), items: rec.items };
   }
 
   // src/entitlementGate.ts
@@ -9146,6 +9131,26 @@
     await figma.clientStorage.setAsync("figma_file_url", fileUrl);
     notify(t("settingsSaved"), "success");
   }
+  async function loadPresetStore(kind) {
+    try {
+      const key = PRESET_STORAGE_KEYS[kind];
+      if (!key) return null;
+      const raw = await figma.clientStorage.getAsync(key);
+      return parsePresetEnvelope(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+  async function savePresetStore(kind, presets) {
+    try {
+      const key = PRESET_STORAGE_KEYS[kind];
+      if (!key) return;
+      const parsed = parsePresetEnvelope(presets);
+      if (!parsed) return;
+      await figma.clientStorage.setAsync(key, parsed);
+    } catch (_) {
+    }
+  }
   async function extractUI3Variables() {
     try {
       if (!("variables" in figma) || !figma.variables) {
@@ -9332,6 +9337,15 @@
           break;
         case "LOAD_SETTINGS":
           break;
+        case "LOAD_PRESETS": {
+          const stored = await loadPresetStore(msg.kind);
+          postToUI({ type: "PRESETS_LOADED", kind: msg.kind, stored });
+          break;
+        }
+        case "SAVE_PRESETS": {
+          await savePresetStore(msg.kind, msg.presets);
+          break;
+        }
         case "CLOSE_PLUGIN":
           figma.closePlugin();
           break;
@@ -9344,6 +9358,14 @@
         case "NOTIFY":
           notify(msg.message, msg.level);
           break;
+        case "INITIATE_CHECKOUT": {
+          try {
+            await figma.payments?.initiateCheckoutAsync?.({ interstitial: "SKIP" });
+          } catch (_) {
+          }
+          postFlooowUsage(false);
+          break;
+        }
         case "RESIZE_WINDOW": {
           const targetW = msg.width || 360;
           const targetH = Math.max(200, Math.min(1200, Math.round(msg.height)));

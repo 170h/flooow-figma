@@ -65,6 +65,12 @@ import { orderNodesForChain, makePairKey, resolveCreatedPairMagnets } from './ch
 import { setAppLocale, t } from './i18n';
 import { countFlooowElements, type FlooowElementCount } from './elementCount';
 import {
+  parsePresetEnvelope,
+  PRESET_STORAGE_KEYS,
+  type PresetEnvelope,
+  type PresetKind,
+} from './presetStore';
+import {
   canCreateFlooowElements,
   assembleFlooowUsage,
   isUnlimitedEntitlement,
@@ -6984,6 +6990,32 @@ async function saveSettings(token: string, fileUrl: string) {
   notify(t('settingsSaved'), 'success');
 }
 
+// 사용자 프리셋 영속화 (신뢰 저장소 = Core clientStorage).
+// UI는 localStorage 부트스트랩 캐시 + envelope newer-wins로 병합하므로,
+// Core는 받은 envelope을 그대로 저장하고 읽은 값을 그대로 돌려준다.
+async function loadPresetStore(kind: PresetKind): Promise<PresetEnvelope | null> {
+  try {
+    const key = PRESET_STORAGE_KEYS[kind];
+    if (!key) return null;
+    const raw = await figma.clientStorage.getAsync(key);
+    return parsePresetEnvelope(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function savePresetStore(kind: PresetKind, presets: PresetEnvelope | null | undefined): Promise<void> {
+  try {
+    const key = PRESET_STORAGE_KEYS[kind];
+    if (!key) return;
+    const parsed = parsePresetEnvelope(presets);
+    if (!parsed) return;
+    await figma.clientStorage.setAsync(key, parsed);
+  } catch (_) {
+    /* 저장 실패는 로컬 캐시를 유지한다 */
+  }
+}
+
 // ----------------------------------------------------
 // 현재 피그마 파일의 모든 Variables(UI3 디자인 토큰) 자동 추출
 // ----------------------------------------------------
@@ -7190,6 +7222,15 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       case 'LOAD_SETTINGS':
         // 저장 설정 UI push 제거됨(dead message 정리) — 현재 UI에서 요청하지 않음
         break;
+      case 'LOAD_PRESETS': {
+        const stored = await loadPresetStore(msg.kind);
+        postToUI({ type: 'PRESETS_LOADED', kind: msg.kind, stored });
+        break;
+      }
+      case 'SAVE_PRESETS': {
+        await savePresetStore(msg.kind, msg.presets);
+        break;
+      }
       case 'CLOSE_PLUGIN':
         figma.closePlugin();
         break;
@@ -7202,6 +7243,18 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       case 'NOTIFY':
         notify(msg.message, msg.level);
         break;
+      case 'INITIATE_CHECKOUT': {
+        // Figma 네이티브 결제 플로우를 연동한다 (읽기 전용 status 게이팅과 쌍을 이룸).
+        // 자체 업그레이드 CTA(Plan & Usage 모달)가 있으므로 interstitial은 SKIP한다.
+        try {
+          await figma.payments?.initiateCheckoutAsync?.({ interstitial: 'SKIP' });
+        } catch (_) {
+          // 사용자가 결제창을 닫았거나 호출 불가 환경이면 조용히 유지한다.
+        }
+        // 결제 후 상태가 바뀌었을 수 있으므로 entitlement를 다시 읽어 usage를 재발행한다.
+        postFlooowUsage(false);
+        break;
+      }
       case 'RESIZE_WINDOW': {
         const targetW = msg.width || 360;
         const targetH = Math.max(200, Math.min(1200, Math.round(msg.height)));

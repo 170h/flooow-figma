@@ -87,6 +87,7 @@ export function App() {
     flooowUsage,
     usageCounting,
     requestFlooowUsage,
+    requestCheckout,
     planIssue,
     retryPlanLoad,
   } = useApp();
@@ -468,7 +469,7 @@ export function App() {
           : unlimited
             ? 'Unlimited elements'
             : limitReached
-              ? 'Limit reached in this project'
+              ? 'Limit reached in this file'
               : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
 
         return (
@@ -799,6 +800,7 @@ export function App() {
           usage={flooowUsage}
           scanning={usageCounting}
           onClose={() => setActiveModal('none')}
+          onUpgrade={requestCheckout}
         />
       )}
 

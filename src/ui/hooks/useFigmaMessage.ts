@@ -29,6 +29,7 @@ export function useFigmaMessage() {
     setFlooowUsage,
     setUsageCounting,
     setPlanIssue,
+    applyLoadedPresets,
   } = useApp();
 
   const handlerRef = useRef<((event: MessageEvent) => void) | null>(null);
@@ -57,19 +58,6 @@ export function useFigmaMessage() {
             chainConnectedPairs,
             chainMissingPairs,
           } = msg;
-          // console.log('[Flooow:useFigmaMessage:SELECTION_CHANGED]', {
-          //   count: msg.count,
-          //   flowNodeCount: msg.flowNodeCount,
-          //   connectorCount: msg.connectorCount,
-          //   otherObjectCount: msg.otherObjectCount,
-          //   nodes: (nodes || []).map((n: any) => ({
-          //     id: n?.id,
-          //     type: n?.nodeType,
-          //     name: n?.name,
-          //     isConnector: n?.isConnector,
-          //     isFlowNode: n?.isFlowNode,
-          //   })),
-          // });
           handleSelectionChange(count || 0, nodes || [], meta || {});
 
           const isConn = (meta?.connectorCount || 0) > 0 || (nodes && nodes.some((n: any) => n?.isConnector));
@@ -134,6 +122,11 @@ export function useFigmaMessage() {
           break;
         }
 
+        case 'PRESETS_LOADED': {
+          applyLoadedPresets(msg.kind, msg.stored ?? null);
+          break;
+        }
+
         case 'FLOOOW_USAGE': {
           if (msg.error === 'blocked') {
             setPlanIssue('blocked');
@@ -171,5 +164,5 @@ export function useFigmaMessage() {
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, [handleSelectionChange, setUIState, setFlooowUsage, setUsageCounting, setPlanIssue]);
+  }, [handleSelectionChange, setUIState, setFlooowUsage, setUsageCounting, setPlanIssue, applyLoadedPresets]);
 }

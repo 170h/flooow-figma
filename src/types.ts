@@ -1,6 +1,8 @@
 import type { FlooowUsageState } from './entitlementGate';
+import type { PresetEnvelope, PresetKind } from './presetStore';
 
 export type { FlooowUsageState };
+export type { PresetEnvelope, PresetKind };
 
 export type AppLocale =
   | 'ko'
@@ -382,7 +384,10 @@ export type PluginAction =
   | { type: 'CLOSE_PLUGIN' }
   | { type: 'NOTIFY'; message: string; level?: 'info' | 'success' | 'warning' | 'error' }
   | { type: 'RESIZE_WINDOW'; width?: number; height: number }
-  | { type: 'INIT'; locale?: AppLocale };
+  | { type: 'INIT'; locale?: AppLocale }
+  | { type: 'INITIATE_CHECKOUT' }
+  | { type: 'LOAD_PRESETS'; kind: PresetKind }
+  | { type: 'SAVE_PRESETS'; kind: PresetKind; presets: PresetEnvelope };
 
 // 연결된 커넥터 세부 정보 (방향 역전 여부 및 각 엔드포인트 마그넷)
 // + Connector Property State 표시용 스타일 필드 (additive: 기존 필드는 변경 없음)
@@ -492,6 +497,11 @@ export type CoreToUIMessage =
   | {
       type: 'DESIGN_FRAMES_LOADED';
       frames: DesignFrameItem[];
+    }
+  | {
+      type: 'PRESETS_LOADED';
+      kind: PresetKind;
+      stored: PresetEnvelope | null;
     }
   | {
       type: 'FLOOOW_USAGE';

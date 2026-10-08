@@ -77,7 +77,7 @@ const BADGE_CORNERS = [
 const BADGE_SHAPES = [
   { id: "Square", label: "Square" },
   { id: "Circle", label: "Circle" },
-  { id: "RoundBox", label: "Round Box" },
+  { id: "RoundBox", label: "Round" },
 ] as const;
 
 const COLOR_OPTIONS: { id: BadgeColorMode; label: string }[] = [
@@ -789,7 +789,7 @@ export function StepBadgesSection() {
             </div>
           </div>
 
-          {/* Row 2: 컬러 드롭다운 (w: 100) + 셰이프 선택 (Square, Circle, Round Box) */}
+          {/* Row 2: 컬러 드롭다운 (w: 100) + 셰이프 선택 (Square, Circle, Round) */}
           <div
             style={{
               display: "flex",
@@ -903,7 +903,7 @@ export function StepBadgesSection() {
               )}
             </div>
 
-            {/* 우측 Shape Segmented Controls (Square, Circle, Round Box) */}
+            {/* 우측 Shape Segmented Controls (Square, Circle, Round) */}
             <div className="shape-segment-group">
               {BADGE_SHAPES.map((s) => {
                 const active = selectedBadgeShape === s.id;

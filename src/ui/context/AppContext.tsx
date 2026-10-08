@@ -23,6 +23,14 @@ import {
   type ComputeGizmoMagnetsInput,
 } from '../utils/gizmoState';
 import { orderFlowNodesForChain } from '../../chainOrder';
+import {
+  isStoredNewer,
+  makePresetEnvelope,
+  parsePresetEnvelope,
+  PRESET_LOCAL_KEYS,
+  type PresetEnvelope,
+  type PresetKind,
+} from '../../presetStore';
 import { t, getAppLocale } from '../../i18n';
 
 // ============================================================
@@ -76,6 +84,29 @@ export const DEFAULT_STYLE_PRESETS: StylePreset[] = [
 ];
 
 const DEFAULT_STYLE_PRESET_IDS = new Set(['style-white', 'style-black']);
+
+// 구형 기본 스타일 ID (읽기 시 제외 — 저장된 사용자 프리셋은 그대로 둔다)
+const LEGACY_REMOVED_STYLE_IDS = new Set([
+  'style-red-1', 'style-red-2', 'style-coral-1', 'style-coral-2',
+  'style-orange', 'style-pink', 'style-purple'
+]);
+
+// iframe localStorage 동기 부트스트랩 캐시 IO (envelope 규칙은 presetStore가 소유)
+function readLocalPresetEnvelope(kind: PresetKind): PresetEnvelope | null {
+  try {
+    const raw = localStorage.getItem(PRESET_LOCAL_KEYS[kind]);
+    if (!raw) return null;
+    return parsePresetEnvelope(JSON.parse(raw));
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeLocalPresetEnvelope(kind: PresetKind, envelope: PresetEnvelope): void {
+  try {
+    localStorage.setItem(PRESET_LOCAL_KEYS[kind], JSON.stringify(envelope));
+  } catch (_) {}
+}
 
 /**
  * 스타일 값(fill/weight/stroke)과 일치하는 프리셋 ID 탐색.
@@ -317,6 +348,8 @@ export interface AppContextValue {
   usageCounting: boolean;
   setUsageCounting: (counting: boolean) => void;
   requestFlooowUsage: () => void;
+  requestCheckout: () => void;
+  applyLoadedPresets: (kind: PresetKind, stored: PresetEnvelope | null) => void;
   /** null이면 로딩 또는 정상. retryable은 Refresh, blocked는 Figma 쪽 중단. */
   planIssue: PlanLoadIssue | null;
   setPlanIssue: React.Dispatch<React.SetStateAction<PlanLoadIssue | null>>;
@@ -767,49 +800,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     parent.postMessage({ pluginMessage: { type: 'GET_FLOOOW_USAGE', refresh: true } }, '*');
   }, []);
 
-  // 사이즈 프리셋 상태 관리 (기본값 및 로컬스토리지 영속화)
+  const requestCheckout = useCallback(() => {
+    parent.postMessage({ pluginMessage: { type: 'INITIATE_CHECKOUT' } }, '*');
+  }, []);
+
+  // 사용자 프리셋 Hydration: Core clientStorage(신뢰 저장소)에서 newer-wins로 복원한다 (마운트 1회).
+  useEffect(() => {
+    parent.postMessage({ pluginMessage: { type: 'LOAD_PRESETS', kind: 'style' } }, '*');
+    parent.postMessage({ pluginMessage: { type: 'LOAD_PRESETS', kind: 'size' } }, '*');
+  }, []);
+
+  // 사이즈 프리셋 상태 관리 (기본값 및 영속화 — 신뢰 저장소는 Core clientStorage)
   const [sizePresets, setSizePresets] = useState<SizePreset[]>(() => {
-    try {
-      const saved = localStorage.getItem('ui_flow_size_presets');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (_) {}
+    const env = readLocalPresetEnvelope('size');
+    const items = (env?.items ?? []) as SizePreset[];
+    if (items.length > 0) return items;
     return DEFAULT_SIZE_PRESETS;
   });
 
   const savePresets = useCallback((next: SizePreset[]) => {
     setSizePresets(next);
-    try {
-      localStorage.setItem('ui_flow_size_presets', JSON.stringify(next));
-    } catch (_) {}
+    const envelope = makePresetEnvelope(next);
+    writeLocalPresetEnvelope('size', envelope);
+    parent.postMessage({ pluginMessage: { type: 'SAVE_PRESETS', kind: 'size', presets: envelope } }, '*');
   }, []);
 
   // 스타일 프리셋 상태 관리 (보더 두께, 보더 컬러, 채움 컬러 영속화)
   const [stylePresets, setStylePresets] = useState<StylePreset[]>(() => {
-    try {
-      const saved = localStorage.getItem('ui_flow_style_presets');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const legacyRemoved = new Set([
-            'style-red-1', 'style-red-2', 'style-coral-1', 'style-coral-2',
-            'style-orange', 'style-pink', 'style-purple'
-          ]);
-          const filtered = parsed.filter((p: StylePreset) => !legacyRemoved.has(p.id));
-          if (filtered.length > 0) return filtered;
-        }
-      }
-    } catch (_) {}
+    const env = readLocalPresetEnvelope('style');
+    const items = ((env?.items ?? []) as StylePreset[]).filter((p) => !LEGACY_REMOVED_STYLE_IDS.has(p?.id));
+    if (items.length > 0) return items;
     return DEFAULT_STYLE_PRESETS;
   });
 
   const saveStylePresets = useCallback((next: StylePreset[]) => {
     setStylePresets(next);
-    try {
-      localStorage.setItem('ui_flow_style_presets', JSON.stringify(next));
-    } catch (_) {}
+    const envelope = makePresetEnvelope(next);
+    writeLocalPresetEnvelope('style', envelope);
+    parent.postMessage({ pluginMessage: { type: 'SAVE_PRESETS', kind: 'style', presets: envelope } }, '*');
+  }, []);
+
+  // Core 신뢰 저장소에서 온 프리셋을 newer-wins로 병합한다.
+  // 저장 시각이 로컬보다 새로울 때만 적용하고 로컬 캐시도 갱신한다.
+  const applyLoadedPresets = useCallback((kind: PresetKind, stored: PresetEnvelope | null) => {
+    const local = readLocalPresetEnvelope(kind);
+    const localSavedAt = local?.savedAt ?? 0;
+    if (!isStoredNewer(localSavedAt, stored)) return;
+    if (kind === 'size') {
+      const items = stored.items.filter(
+        (p: unknown): p is SizePreset => !!p && typeof (p as SizePreset).id === 'string'
+      );
+      if (items.length === 0) return;
+      setSizePresets(items);
+    } else {
+      const items = stored.items.filter(
+        (p: unknown): p is StylePreset =>
+          !!p &&
+          typeof (p as StylePreset).id === 'string' &&
+          !LEGACY_REMOVED_STYLE_IDS.has((p as StylePreset).id)
+      );
+      if (items.length === 0) return;
+      setStylePresets(items);
+    }
+    writeLocalPresetEnvelope(kind, stored);
   }, []);
 
   // ref로 최신 상태 참조 (콜백에서 stale closure 방지)
@@ -2485,6 +2538,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     usageCounting,
     setUsageCounting,
     requestFlooowUsage,
+    requestCheckout,
+    applyLoadedPresets,
     planIssue,
     setPlanIssue,
     retryPlanLoad,
