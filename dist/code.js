@@ -3958,6 +3958,10 @@
     themeColors: true,
     title: "Flooow"
   });
+  postToUI({
+    type: "EDITOR_CONTEXT",
+    editorType: figma.editorType === "figjam" ? "figjam" : "figma"
+  });
   slog("02 showUI:done");
   var ELEVATION_EFFECTS_LIGHT = {
     // E100 (Shapes): 0 0 0.5px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15)
@@ -9819,6 +9823,10 @@
         }
         case "INIT":
           slog("50 INIT:received");
+          postToUI({
+            type: "EDITOR_CONTEXT",
+            editorType: figma.editorType === "figjam" ? "figjam" : "figma"
+          });
           setAppLocale(msg.locale);
           if (!shouldSkipInitSelectionSync()) {
             slog("51 INIT:handleSelectionChange:start");

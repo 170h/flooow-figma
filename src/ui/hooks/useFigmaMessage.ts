@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { resolveAppLocale, setAppLocale } from '../../i18n';
 import type { AppLocale, FlooowUsageState } from '../../types';
+import { applyEditorBrand } from '../tokens/ui3Colors';
 
 function isReadyUsage(value: unknown): value is FlooowUsageState {
   if (!value || typeof value !== 'object') return false;
@@ -137,6 +138,11 @@ export function useFigmaMessage() {
             edgeCount: msg.edgeCount,
             empty: msg.empty,
           });
+          break;
+        }
+
+        case 'EDITOR_CONTEXT': {
+          applyEditorBrand(msg.editorType === 'figjam' ? 'figjam' : 'figma');
           break;
         }
 

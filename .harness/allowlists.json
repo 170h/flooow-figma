@@ -30,8 +30,7 @@
     "conn-link-group",
     "conn-anchor-preview-box",
     "preview-node-1-text",
-    "preview-node-2-text",
-    "flooow-theme-override"
+    "preview-node-2-text"
   ],
   "dom_access_files": [
     "src/ui/hooks/useAutoResize.ts",

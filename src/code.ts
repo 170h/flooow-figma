@@ -182,6 +182,10 @@ figma.showUI(__html__, {
   themeColors: true,
   title: 'Flooow',
 });
+postToUI({
+  type: 'EDITOR_CONTEXT',
+  editorType: figma.editorType === 'figjam' ? 'figjam' : 'figma',
+});
 slog('02 showUI:done');
 
 // ============================================================
@@ -7454,6 +7458,10 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       }
       case 'INIT':
         slog('50 INIT:received');
+        postToUI({
+          type: 'EDITOR_CONTEXT',
+          editorType: figma.editorType === 'figjam' ? 'figjam' : 'figma',
+        });
         setAppLocale(msg.locale);
         // Startup 중복 스캔 coalesce: 모듈-init 실행 직후 같은 selection에 대한
         // INIT 2회차 반복일 때만 skip한다. selection이 바뀌었거나 1회차가 아직

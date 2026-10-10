@@ -66,7 +66,6 @@ export function App() {
     markConnectorDirty,
     showToast,
     flowExport, setFlowExport,
-    themeMode, setThemeMode,
     autoResizeWindow,
     stylePresets,
     selectedStylePresetId,
@@ -113,9 +112,17 @@ export function App() {
 
   // Export 실행 (Settings 모달에서 호출 — Copy for AI / Download JSON)
   const pendingExportRef = useRef<'copy' | 'file' | null>(null);
+  const [exportCopied, setExportCopied] = useState(false);
+  const [exportCopying, setExportCopying] = useState(false);
+  const exportCopiedTimerRef = useRef<number | null>(null);
 
   const requestFlowExport = (action: 'copy' | 'file', scope: ExportScope = 'board') => {
+    if (action === 'copy' && exportCopying) return;
     pendingExportRef.current = action;
+    if (action === 'copy') {
+      setExportCopied(false);
+      setExportCopying(true);
+    }
     parent.postMessage({ pluginMessage: { type: 'EXPORT_FLOW', scope } }, '*');
   };
 
@@ -166,13 +173,19 @@ export function App() {
     const action = pendingExportRef.current;
     pendingExportRef.current = null;
     if (flowExport.empty) {
+      if (action === 'copy') setExportCopying(false);
       showToast(t('exportEmpty'), 'warning');
       setFlowExport(null);
       return;
     }
     if (action === 'copy') {
       copyTextToClipboard(flowExport.aiText).then((ok) => {
+        setExportCopying(false);
         showToast(t(ok ? 'exportCopied' : 'exportFailed'), ok ? 'success' : 'error');
+        if (!ok) return;
+        setExportCopied(true);
+        if (exportCopiedTimerRef.current != null) window.clearTimeout(exportCopiedTimerRef.current);
+        exportCopiedTimerRef.current = window.setTimeout(() => setExportCopied(false), 1800);
       });
     } else {
       const ok = downloadJsonFile(flowExport.fileName, flowExport.jsonText);
@@ -887,11 +900,10 @@ export function App() {
       )}
       {activeModal === 'settings' && (
         <SettingsModal
-          showTheme
-          themeMode={themeMode}
-          onThemeChange={setThemeMode}
           boardLabel="Entire canvas"
           onClose={() => setActiveModal('none')}
+          copied={exportCopied}
+          copying={exportCopying}
           onCopy={(scope) => requestFlowExport('copy', scope)}
           onDownload={(scope) => requestFlowExport('file', scope)}
         />

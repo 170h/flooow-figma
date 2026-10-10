@@ -4,6 +4,7 @@ import { AppProvider } from './context/AppContext';
 import { App } from './App';
 import { resolveAppLocale, setAppLocale } from '../i18n';
 import type { AppLocale } from '../types';
+import { initUi3Theme } from './tokens/ui3Colors';
 
 // UI 부팅 시점에 로케일 확정 (이후 모든 showToast 문구에 적용)
 function resolveBootLocale(): AppLocale {
@@ -14,6 +15,8 @@ function resolveBootLocale(): AppLocale {
   return resolveAppLocale(typeof navigator !== 'undefined' ? navigator.language : undefined);
 }
 setAppLocale(resolveBootLocale());
+// UI3 컬러 토큰 적용 (라이트/다크 모드 대응)
+initUi3Theme();
 
 const container = document.getElementById('root');
 if (!container) throw new Error('#root not found');

@@ -505,6 +505,10 @@ export type CoreToUIMessage =
       stored: PresetEnvelope | null;
     }
   | {
+      type: 'EDITOR_CONTEXT';
+      editorType: 'figma' | 'figjam';
+    }
+  | {
       type: 'FLOW_EXPORTED';
       jsonText: string;
       aiText: string;

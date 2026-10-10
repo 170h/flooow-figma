@@ -239,7 +239,7 @@ export function SizeModal({
                   <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {sizeMode === 'hug' ? HUG_SVG : sizeMode === 'fit' ? FIT_SVG : FIXED_SVG}
                   </span>
-                  <span id={`text-${mode}-size-mode`} style={{ fontSize: 11, color: '#ffffff' }}>
+                  <span id={`text-${mode}-size-mode`} style={{ fontSize: 11, color: 'var(--color-text-onbrand)' }}>
                     {sizeMode === 'fixed' ? 'Fixed height' : sizeMode === 'fit' ? 'Fit contents' : 'Hug contents'}
                   </span>
                 </div>
@@ -249,47 +249,41 @@ export function SizeModal({
                 </svg>
               </div>
 
-              {/* 드롭다운 메뉴 팝오버 */}
+              {/* 드롭다운 메뉴 팝오버 (표준 .figma-dropdown-menu) */}
               {dropdownOpen && (
-                <div style={{
-                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, width: '100%',
-                  background: '#222222', border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: 8, padding: 4, boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-                  zIndex: 200, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 2,
-                  animation: 'modalFadeIn 0.12s ease-out',
-                }}>
+                <div
+                  className="figma-dropdown-menu active"
+                  style={{
+                    left: 0, width: '100%',
+                    zIndex: 200,
+                    animation: 'modalFadeIn 0.12s ease-out',
+                  }}>
                   {/* Fixed height 항목 */}
                   <div
                     onClick={() => { setSizeMode('fixed'); setDropdownOpen(false); }}
-                    style={{ height: 28, padding: '0 6px', borderRadius: 5, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11, color: '#ffffff', background: 'transparent', transition: 'background 0.12s, color 0.12s' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#8C4CF6'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    className={`figma-dropdown-item${sizeMode === 'fixed' ? ' selected' : ''}`}
                   >
-                    <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{sizeMode === 'fixed' && CHECK_SVG}</span>
-                    <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{FIXED_SVG}</span>
-                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>Fixed height</span>
+                    <span className="figma-dropdown-check-slot">{CHECK_SVG}</span>
+                    <span className="figma-dropdown-icon-slot">{FIXED_SVG}</span>
+                    <span className="figma-dropdown-label">Fixed height</span>
                   </div>
                   {/* Hug contents 항목 */}
                   <div
                     onClick={() => { setSizeMode('hug'); setDropdownOpen(false); }}
-                    style={{ height: 28, padding: '0 6px', borderRadius: 5, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11, color: '#ffffff', background: 'transparent', transition: 'background 0.12s, color 0.12s' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#8C4CF6'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    className={`figma-dropdown-item${sizeMode === 'hug' ? ' selected' : ''}`}
                   >
-                    <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{sizeMode === 'hug' && CHECK_SVG}</span>
-                    <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{HUG_SVG}</span>
-                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>Hug contents</span>
+                    <span className="figma-dropdown-check-slot">{CHECK_SVG}</span>
+                    <span className="figma-dropdown-icon-slot">{HUG_SVG}</span>
+                    <span className="figma-dropdown-label">Hug contents</span>
                   </div>
                   {/* Fit contents 항목 */}
                   <div
                     onClick={() => { setSizeMode('fit'); setDropdownOpen(false); }}
-                    style={{ height: 28, padding: '0 6px', borderRadius: 5, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11, color: '#ffffff', background: sizeMode === 'fit' ? '#8C4CF6' : 'transparent', transition: 'background 0.12s, color 0.12s' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#8C4CF6'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = sizeMode === 'fit' ? '#8C4CF6' : 'transparent'; }}
+                    className={`figma-dropdown-item${sizeMode === 'fit' ? ' selected' : ''}`}
                   >
-                    <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{sizeMode === 'fit' && CHECK_SVG}</span>
-                    <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{FIT_SVG}</span>
-                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>Fit contents</span>
+                    <span className="figma-dropdown-check-slot">{CHECK_SVG}</span>
+                    <span className="figma-dropdown-icon-slot">{FIT_SVG}</span>
+                    <span className="figma-dropdown-label">Fit contents</span>
                   </div>
                 </div>
               )}
