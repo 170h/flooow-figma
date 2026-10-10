@@ -838,7 +838,7 @@ export function SizeSection() {
                 className={`chip-btn${isPresetActive ? ' active' : ''}${!isSizeAllowed ? ' disabled' : ''}`}
                 onClick={() => isSizeAllowed && applySizePreset(p)}
                 disabled={!isSizeAllowed}
-                data-tooltip={!isSizeAllowed ? t('tipPresetDisabledShape') : t('tipPresetDims', { name: p.name, w: p.w, h: p.h })}
+                data-tooltip={!isSizeAllowed ? t('tipPresetDisabledShape') : t('tipPresetDims', { w: p.w, h: p.h })}
               >
                 <span className="tab-label">{p.name}</span>
                 {count > 0 && <span className="tab-badge">{count}</span>}

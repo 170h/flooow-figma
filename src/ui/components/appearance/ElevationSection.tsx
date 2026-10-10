@@ -251,7 +251,6 @@ export function ElevationSection() {
                 <div
                   key={level}
                   className={`elevation-card elev-${level}${isSelected ? ' selected' : ''}`}
-                  data-tooltip={`${label} ${desc}`}
                   aria-label={`${label} (${desc})`}
                   onClick={() => selectElevation(level)}
                 >
