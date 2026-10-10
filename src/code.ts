@@ -21,6 +21,7 @@ import type {
   DesignFrameItem,
   ConnectedConnectorDetail,
   MultiNodeConnectorDetail,
+  ExportScope,
 } from './types';
 import {
   STATUS_CONFIG,
@@ -71,9 +72,15 @@ import {
   type PresetKind,
 } from './presetStore';
 import {
+  buildFlowExport,
+  type FlowInputNode,
+  type FlowInputEdge,
+} from './flowExport';
+import {
   canCreateFlooowElements,
   assembleFlooowUsage,
   isUnlimitedEntitlement,
+  isAllowlistedDevUser,
   normalizePaymentStatus,
   type CreateEntitlement,
   type CreateGateResult,
@@ -589,6 +596,7 @@ function getTextFillsByBackground(bgColor: RGB): {
 
 /**
  * 노드 배경색의 채도와 명도를 분석하여 스테이터스 뱃지의 배경 및 텍스트 색상을 반환
+ * - 판단 기준은 실제 채움색의 명도뿐이다 (node_theme 등 외부 플래그를 보지 않는다).
  * - 노드 배경색이 일정 채도(Saturation) 이상인 유채색인 경우:
  *   스타일 컬러와의 색상 충돌 방지를 위해 무채색 뱃지로 전환
  *   - 노드가 어두운 배경(Luminance < 0.5): 흰색 배경에 검정 글자
@@ -598,8 +606,7 @@ function getTextFillsByBackground(bgColor: RGB): {
  */
 function getStatusBadgeColors(
   status: WorkflowStatus,
-  nodeBgColor: RGB,
-  isDarkTheme = false
+  nodeBgColor: RGB
 ): {
   badgeBg: RGB;
   badgeTextColor: RGB;
@@ -619,9 +626,9 @@ function getStatusBadgeColors(
   const isChromatic = saturation >= 0.15 && delta >= 0.08;
 
   if (isChromatic) {
-    // 2. 명도(Luminance) 계산
+    // 2. 명도(Luminance) 계산 — 실제 채움색만 본다 (테마 플래그 무시)
     const luminance = 0.299 * nodeBgColor.r + 0.587 * nodeBgColor.g + 0.114 * nodeBgColor.b;
-    const isBgDark = isDarkTheme || luminance < 0.5;
+    const isBgDark = luminance < 0.5;
 
     if (isBgDark) {
       // 어두운 유채색 배경: 화이트 배경에 노드의 배경색 글자
@@ -1426,11 +1433,17 @@ function isFigmaPluginDevelopment(): boolean {
 
 // Create Gate entitlement (Step 4): Figma Plugin Payments 실측.
 // - 개발 런타임 → DEV_ACTIVE (Pro와 동일 권한, 표시 이름 Dev). 배포본에서는 이 분기가 열리지 않는다.
+// - 지인 무료 허용 (DEV_ALLOWLIST_IDS, 기간 제한 없음) → DEV_ACTIVE.
 // - 배포본: PAID → PAID_ACTIVE, 그 외 → FREE.
 // - clientStorage/pluginData/UI 값은 절대 사용하지 않는다 (위조 불가 구조).
 function getCreateEntitlement(): CreateEntitlement {
   try {
     if (isFigmaPluginDevelopment()) return 'DEV_ACTIVE';
+    try {
+      if (isAllowlistedDevUser(figma.currentUser?.id)) return 'DEV_ACTIVE';
+    } catch (_) {
+      /* currentuser 접근 실패는 무시하고 결제 상태로 계속 판정 */
+    }
     return normalizePaymentStatus(figma.payments?.status?.type);
   } catch (_) {
     return 'FREE';
@@ -3424,7 +3437,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   // 상태 뱃지 복원 (타이틀과 독립하여 카드 우하단에 위치)
   if (status && STATUS_CONFIG[status]) {
     const cfg = STATUS_CONFIG[status];
-    const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, bgColor, isDark);
+    const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, bgColor);
     const statusBadge = figma.createFrame();
     statusBadge.name = 'StatusBadge';
     statusBadge.layoutMode = 'HORIZONTAL';
@@ -3551,7 +3564,7 @@ async function convertShapeToFrameNode(shape: ShapeWithTextNode): Promise<FrameN
   if (elevData !== '') {
     const elev = parseInt(elevData, 10);
     card.setPluginData('node_elevation', elevData);
-    card.effects = getElevationEffects(elev, isDark);
+    card.effects = getElevationEffects(elev, isBgDark);
     card.clipsContent = false;
   }
 
@@ -4044,7 +4057,7 @@ async function createFlowNode(payload: FlowNodePayload) {
       card.setPluginData('workflow_status', payload.status);
       if (STATUS_CONFIG[payload.status]) {
         const cfg = STATUS_CONFIG[payload.status];
-        const { badgeBg, badgeTextColor } = getStatusBadgeColors(payload.status, bgColor, isDark);
+        const { badgeBg, badgeTextColor } = getStatusBadgeColors(payload.status, bgColor);
         const statusBadge = figma.createFrame();
         statusBadge.name = 'StatusBadge';
         statusBadge.layoutMode = 'HORIZONTAL';
@@ -4724,7 +4737,7 @@ async function applyNodePatch(card: FrameNode, patch: FlowNodePatch): Promise<vo
     );
     statusBadge.constraints = { horizontal: 'MAX', vertical: 'MAX' };
 
-    const { badgeBg, badgeTextColor } = getStatusBadgeColors(effectiveStatus, bgColor, isDark);
+    const { badgeBg, badgeTextColor } = getStatusBadgeColors(effectiveStatus, bgColor);
     statusBadge.fills = [{ type: 'SOLID', color: badgeBg }];
     const bText = statusBadge.children.find((c) => c.type === 'TEXT') as TextNode | undefined;
     if (bText) {
@@ -5885,9 +5898,10 @@ async function updateConnectorProperties(payload: {
       const mapCap = (term?: ConnectorTerminalType): ConnectorStrokeCap => {
         switch (term) {
           case 'ARROW':
-          case 'TRIANGLE_ARROW':
           case 'REVERSED_TRIANGLE_ARROW':
             return 'ARROW_LINES';
+          case 'TRIANGLE_ARROW':
+            return 'ARROW_EQUILATERAL';
           case 'DIAMOND':
             return 'DIAMOND_FILLED';
           case 'CIRCLE':
@@ -6378,8 +6392,7 @@ async function applyStatusToSelected(status?: WorkflowStatus | '') {
         if (Array.isArray(cardFills) && cardFills.length > 0 && cardFills[0].type === 'SOLID') {
           nodeBgColor = cardFills[0].color;
         }
-        const isDarkTheme = card.getPluginData('node_theme') === 'dark';
-        const { badgeBg, badgeTextColor } = getStatusBadgeColors(status as WorkflowStatus, nodeBgColor, isDarkTheme);
+        const { badgeBg, badgeTextColor } = getStatusBadgeColors(status as WorkflowStatus, nodeBgColor);
 
         statusBadge.paddingLeft = 9;
         statusBadge.paddingRight = 9;
@@ -6467,13 +6480,13 @@ async function applyElevationToSelected(level: number | null) {
         card.setPluginData('node_elevation', '');
         card.effects = [];
       } else {
-        const nodeTheme = card.getPluginData('node_theme');
-        let isDark = nodeTheme === 'dark';
+        // 그림자 톤은 실제 채움 명도로만 판단한다 (테마 플래그 무시)
+        let isDark = false;
         if ('fills' in card && Array.isArray(card.fills) && card.fills.length > 0) {
           const firstFill = card.fills[0];
           if (firstFill.type === 'SOLID') {
             const lum = 0.299 * firstFill.color.r + 0.587 * firstFill.color.g + 0.114 * firstFill.color.b;
-            if (lum < 0.5) isDark = true;
+            isDark = lum < 0.5;
           }
         }
         card.setPluginData('node_elevation', `${level}`);
@@ -7016,6 +7029,153 @@ async function savePresetStore(kind: PresetKind, presets: PresetEnvelope | null 
   }
 }
 
+// Export 수집 (현재 페이지): 플로우 노드 + 커넥터를 기록으로 변환한다.
+// - 판정은 countFlooowElements와 같은 규칙(findConnectorNode 우선, findFlowNode 추적).
+// - 텍스트 추출·라벨 해석 등 의미 부여는 순수 모듈(buildFlowExport)이 담당한다.
+function collectFlowExportRecords(scope: ExportScope): { nodes: FlowInputNode[]; edges: FlowInputEdge[] } {
+  const nodes: FlowInputNode[] = [];
+  const edges: FlowInputEdge[] = [];
+  const nodeIds = new Set<string>();
+  const seenConnectors = new Set<string>();
+  let allNodes: SceneNode[] = [];
+  try {
+    if (scope === 'selection') {
+      // 선택 범위: 선택된 top-level 요소 + 선택 노드 사이를 잇는 커넥터(페이지에서 탐색).
+      // resolveFlowTop이 수집된 노드 집합 멤버십으로 걸러내므로 외부 연결은 자동 제외된다.
+      const selection = [...figma.currentPage.selection] as SceneNode[];
+      const pageConnectors = figma.currentPage.findAll((n) => {
+        try {
+          if (!n) return false;
+          if (n.type === 'CONNECTOR') return true;
+          if (n.type === 'GROUP' || n.type === 'VECTOR') {
+            return (
+              safeGetPluginData(n, 'is_custom_connector') === 'true' ||
+              safeGetPluginData(n, 'is_flow_connector') === 'true'
+            );
+          }
+          return false;
+        } catch (_) {
+          return false;
+        }
+      }) as SceneNode[];
+      allNodes = [...selection, ...pageConnectors];
+    } else {
+      allNodes = figma.currentPage.findAll(() => true) as SceneNode[];
+    }
+  } catch (_) {
+    return { nodes, edges };
+  }
+
+  const resolveFlowTop = (id: string | undefined): string | null => {
+    if (!id) return null;
+    try {
+      const raw = figma.getNodeById(id);
+      if (!raw) return null;
+      const flow = findFlowNode(raw as SceneNode);
+      if (!flow || !nodeIds.has(flow.id)) return null;
+      return flow.id;
+    } catch (_) {
+      return null;
+    }
+  };
+
+  // 1패스: 노드 (top-level id 중복 제거)
+  for (const n of allNodes) {
+    try {
+      if (!n || findConnectorNode(n)) continue;
+      const flow = findFlowNode(n);
+      if (!flow || nodeIds.has(flow.id)) continue;
+      nodeIds.add(flow.id);
+      const record = buildFlowNodeRecord(flow);
+      if (record) nodes.push(record);
+    } catch (_) {
+      /* 단일 노드 실패는 건너뛴다 */
+    }
+  }
+
+  // 2패스: 커넥터 (양끝이 수집된 노드일 때만 엣지)
+  for (const n of allNodes) {
+    try {
+      if (!n) continue;
+      const connTop = findConnectorNode(n);
+      if (!connTop || seenConnectors.has(connTop.id)) continue;
+      seenConnectors.add(connTop.id);
+      const edge = extractConnectorEdge(connTop, resolveFlowTop);
+      if (edge) edges.push(edge);
+    } catch (_) {
+      /* 단일 커넥터 실패는 건너뛴다 */
+    }
+  }
+  return { nodes, edges };
+}
+
+function buildFlowNodeRecord(flow: FrameNode | ShapeWithTextNode): FlowInputNode | null {
+  try {
+    const flowNodeType = normalizeNodeType(safeGetPluginData(flow, 'node_type'));
+    const { title, description } = extractNodeText(flow as SceneNode);
+    const record: FlowInputNode = {
+      id: flow.id,
+      type: flowNodeType,
+      title: title || flow.name || 'Untitled',
+    };
+    if (description) record.description = description;
+    const status = safeGetPluginData(flow, 'workflow_status');
+    if (status) record.status = status;
+    const stepRaw = safeGetPluginData(flow, 'step_number');
+    const stepNumber = stepRaw ? parseInt(stepRaw, 10) : NaN;
+    if (Number.isFinite(stepNumber)) record.stepNumber = stepNumber;
+    if (flowNodeType === 'Branch') {
+      const variant = normalizeBranchVariant(safeGetPluginData(flow, 'branch_variant'));
+      record.branchVariant = variant;
+      if (variant === 'TAG' && !isDefaultNodeTitle(record.title)) {
+        record.branchText = record.title;
+      }
+    }
+    const link = safeGetPluginData(flow, 'figma_link');
+    if (link) record.link = link;
+    return record;
+  } catch (_) {
+    return null;
+  }
+}
+
+function extractConnectorEdge(
+  connTop: SceneNode,
+  resolveFlowTop: (id: string | undefined) => string | null
+): FlowInputEdge | null {
+  try {
+    let sourceId: string | null = null;
+    let targetId: string | null = null;
+    let label: string | undefined;
+    if (connTop.type === 'CONNECTOR') {
+      const conn = connTop as ConnectorNode;
+      const s = conn.connectorStart;
+      const t = conn.connectorEnd;
+      const sId = s && 'endpointNodeId' in s ? (s.endpointNodeId as string) : undefined;
+      const tId = t && 'endpointNodeId' in t ? (t.endpointNodeId as string) : undefined;
+      sourceId = resolveFlowTop(sId);
+      targetId = resolveFlowTop(tId);
+      try {
+        const text = (conn as ConnectorNode).text?.characters?.trim();
+        if (text) label = text;
+      } catch (_) {
+        label = undefined;
+      }
+    } else {
+      sourceId = resolveFlowTop(safeGetPluginData(connTop, 'source_node_id') || undefined);
+      targetId = resolveFlowTop(safeGetPluginData(connTop, 'target_node_id') || undefined);
+      const storedLabel = safeGetPluginData(connTop, 'connector_label').trim();
+      if (storedLabel) label = storedLabel;
+    }
+    if (!sourceId || !targetId) return null;
+    const edge: FlowInputEdge = { source: sourceId, target: targetId };
+    if (label) edge.label = label;
+    return edge;
+  } catch (_) {
+    return null;
+  }
+}
+
 // ----------------------------------------------------
 // 현재 피그마 파일의 모든 Variables(UI3 디자인 토큰) 자동 추출
 // ----------------------------------------------------
@@ -7229,6 +7389,37 @@ figma.ui.onmessage = async (msg: PluginAction) => {
       }
       case 'SAVE_PRESETS': {
         await savePresetStore(msg.kind, msg.presets);
+        break;
+      }
+      case 'EXPORT_FLOW': {
+        const pageName = (() => {
+          try {
+            return figma.currentPage.name || 'Untitled flow';
+          } catch (_) {
+            return 'Untitled flow';
+          }
+        })();
+        const scope: ExportScope = msg.scope === 'selection' ? 'selection' : 'board';
+        const records = collectFlowExportRecords(scope);
+        const built = buildFlowExport({
+          title: pageName,
+          exportedAt: new Date().toISOString(),
+          nodes: records.nodes,
+          edges: records.edges,
+        });
+        const fileName = (() => {
+          const safe = pageName.replace(/[\\/:*?"<>|]/g, '_').trim();
+          return `flooow-${safe || 'flow'}.json`;
+        })();
+        postToUI({
+          type: 'FLOW_EXPORTED',
+          jsonText: built.jsonText,
+          aiText: built.aiText,
+          fileName,
+          nodeCount: built.nodeCount,
+          edgeCount: built.edgeCount,
+          empty: built.empty,
+        });
         break;
       }
       case 'CLOSE_PLUGIN':

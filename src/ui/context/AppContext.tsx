@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from 'react';
 import { getPluginIdealHeight } from '../hooks/useAutoResize';
-import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload, ConnectorLabelBoxStyle, ConnectorLabelAlign, FlooowUsageState, PlanLoadIssue } from '../../types';
+import type { ConnectorTerminalType, DiagramNodeType, WorkflowStatus, NodePatchPayload, UpdateNodePayload, ConnectorLabelBoxStyle, ConnectorLabelAlign, FlooowUsageState, FlowExportPayload, PlanLoadIssue, AppLocale } from '../../types';
 import {
   NODE_TYPE_SHAPE_SPECS,
   normalizeNodeType,
@@ -28,10 +28,12 @@ import {
   makePresetEnvelope,
   parsePresetEnvelope,
   PRESET_LOCAL_KEYS,
+  MAX_CUSTOM_STYLE_PRESETS,
+  countCustomStylePresets,
   type PresetEnvelope,
   type PresetKind,
 } from '../../presetStore';
-import { t, getAppLocale } from '../../i18n';
+import { t, getAppLocale, setAppLocale } from '../../i18n';
 
 // ============================================================
 // 타입 정의
@@ -83,7 +85,10 @@ export const DEFAULT_STYLE_PRESETS: StylePreset[] = [
   { id: 'style-black', name: 'Black', fillColor: '#000000', strokeWeight: 0, strokeColor: '#000000', isDefault: true },
 ];
 
-const DEFAULT_STYLE_PRESET_IDS = new Set(['style-white', 'style-black']);
+export const DEFAULT_STYLE_PRESET_IDS = new Set(['style-white', 'style-black']);
+
+/** UI 테마 모드 (Settings 모달 Theme 섹션 — figma형) */
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 // 구형 기본 스타일 ID (읽기 시 제외 — 저장된 사용자 프리셋은 그대로 둔다)
 const LEGACY_REMOVED_STYLE_IDS = new Set([
@@ -131,6 +136,13 @@ function matchStylePresetId(
 }
 
 const getCurrentUITheme = (): 'light' | 'dark' => {
+  // 명시적 오버라이드 우선 (Settings Theme) — style 원소의 마커로 판정
+  try {
+    const el = document.getElementById('flooow-theme-override');
+    const marker = el?.textContent || '';
+    if (marker.includes('flooow-theme:dark')) return 'dark';
+    if (marker.includes('flooow-theme:light')) return 'light';
+  } catch (_) {}
   if (typeof document !== 'undefined' && (
     document.documentElement.classList.contains('figma-dark') ||
     document.body.classList.contains('figma-dark') ||
@@ -293,7 +305,7 @@ function normalizeTerminal(term?: string, fallback: string = 'NONE'): string {
 }
 
 // 모달 타입
-export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color' | 'label-fill-color' | 'label-stroke-color' | 'subscription';
+export type ModalType = 'none' | 'add-size' | 'edit-size' | 'figma-design-picker' | 'add-style' | 'edit-style' | 'confirmation' | 'delete' | 'connector-color' | 'fill-color' | 'stroke-color' | 'label-fill-color' | 'label-stroke-color' | 'subscription' | 'settings';
 
 export interface AppContextValue {
   // 선택 상태
@@ -345,11 +357,17 @@ export interface AppContextValue {
   // Flooow usage (Core 세션/index. 표시용)
   flooowUsage: FlooowUsageState | null;
   setFlooowUsage: React.Dispatch<React.SetStateAction<FlooowUsageState | null>>;
+  flowExport: FlowExportPayload | null;
+  setFlowExport: React.Dispatch<React.SetStateAction<FlowExportPayload | null>>;
   usageCounting: boolean;
   setUsageCounting: (counting: boolean) => void;
   requestFlooowUsage: () => void;
   requestCheckout: () => void;
   applyLoadedPresets: (kind: PresetKind, stored: PresetEnvelope | null) => void;
+  locale: AppLocale;
+  setLocale: (locale: AppLocale) => void;
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
   /** null이면 로딩 또는 정상. retryable은 Refresh, blocked는 Figma 쪽 중단. */
   planIssue: PlanLoadIssue | null;
   setPlanIssue: React.Dispatch<React.SetStateAction<PlanLoadIssue | null>>;
@@ -361,7 +379,7 @@ export interface AppContextValue {
   updateSizePreset: (id: string, preset: Partial<SizePreset>) => void;
   deleteSizePreset: (id: string) => void;
   stylePresets: StylePreset[];
-  addStylePreset: (preset: Omit<StylePreset, 'id'>) => void;
+  addStylePreset: (preset: Omit<StylePreset, 'id'>) => boolean;
   updateStylePreset: (id: string, preset: Partial<StylePreset>) => void;
   deleteStylePreset: (id: string) => void;
   applyCurrentNodeState: (
@@ -581,6 +599,128 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Flooow usage. startup은 캐시만 받고, refresh 요청일 때만 Core가 현재 프로젝트를 다시 센다.
   const [flooowUsage, setFlooowUsage] = useState<FlooowUsageState | null>(null);
+  const [flowExport, setFlowExport] = useState<FlowExportPayload | null>(null);
+
+  // UI 로케일 (Settings Language 드롭다운). localStorage 우선, 없으면 부팅 시 확정값.
+  const [locale, setLocaleState] = useState<AppLocale>(() => {
+    try {
+      const stored = localStorage.getItem('flooow_locale');
+      if (stored) return setAppLocale(stored as AppLocale);
+    } catch (_) {}
+    return getAppLocale();
+  });
+
+  const setLocale = useCallback((next: AppLocale) => {
+    const applied = setAppLocale(next);
+    setLocaleState(applied);
+    try {
+      localStorage.setItem('flooow_locale', applied);
+    } catch (_) {}
+    // Core 토스트 언어도 동기화 (INIT 재전송 — 선택/usage 재동기는 멱등)
+    parent.postMessage({ pluginMessage: { type: 'INIT', locale: applied } }, '*');
+  }, []);
+
+  // UI 테마 모드 (Settings Theme 세그먼트 — figma형). system이면 Figma 추종.
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
+    try {
+      const stored = localStorage.getItem('flooow_theme');
+      if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
+    } catch (_) {}
+    return 'system';
+  });
+
+  const setThemeMode = useCallback((mode: ThemeMode) => {
+    setThemeModeState(mode);
+    try {
+      localStorage.setItem('flooow_theme', mode);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    // 명시적 테마는 전용 <style> 원소에 !important 변수로 강제한다.
+    // (data-theme/body 클래스 등 공유 신호는 Figma 클라이언트가 관리하므로 건드리지 않는다.
+    //  공유 신호 싸움에서 지는 대신, 명시도 경쟁 자체를 우회한다.)
+    // system 모드에서는 원소를 제거해 Figma 추종(동작 확인됨)으로 돌린다.
+    const VAR_SETS: Record<'light' | 'dark', Array<readonly [string, string]>> = {
+      light: [
+        ['--color-bg', '#ffffff'],
+        ['--color-bg-secondary', '#f5f5f5'],
+        ['--color-bg-tertiary', '#ebebeb'],
+        ['--color-bg-hover', 'rgba(0, 0, 0, 0.04)'],
+        ['--color-text-primary', '#000000'],
+        ['--color-text-secondary', 'rgba(0, 0, 0, 0.6)'],
+        ['--color-text-tertiary', 'rgba(0, 0, 0, 0.4)'],
+        ['--color-border', 'rgba(0, 0, 0, 0.08)'],
+        ['--color-border-subtle', 'rgba(0, 0, 0, 0.05)'],
+        ['--color-border-strong', 'rgba(0, 0, 0, 0.16)'],
+        ['--color-chip-border', 'rgba(0, 0, 0, 0.1)'],
+        ['--color-chip-icon', 'rgba(0, 0, 0, 0.9)'],
+        ['--color-stroke-icon-line', 'rgba(0, 0, 0, 0.15)'],
+        ['--switch-track-on', '#8C4CF6'],
+        ['--switch-track-off', '#D9D9D9'],
+        ['--switch-track-disabled-on', '#E6E6E6'],
+        ['--switch-track-disabled-off', '#E6E6E6'],
+        ['--switch-track-disabled-mixed', '#E6E6E6'],
+        ['--switch-thumb-color', '#FFFFFF'],
+        ['--switch-thumb-disabled', '#FFFFFF'],
+        ['--switch-dash-color', 'rgba(255, 255, 255, 0.5)'],
+        ['--switch-dash-disabled', 'rgba(255, 255, 255, 0.5)'],
+      ],
+      dark: [
+        ['--color-bg', '#2c2c2c'],
+        ['--color-bg-secondary', '#1e1e1e'],
+        ['--color-bg-tertiary', '#383838'],
+        ['--color-bg-hover', 'rgba(255, 255, 255, 0.06)'],
+        ['--color-text-primary', '#ffffff'],
+        ['--color-text-secondary', 'rgba(255, 255, 255, 0.65)'],
+        ['--color-text-tertiary', 'rgba(255, 255, 255, 0.4)'],
+        ['--color-border', 'rgba(255, 255, 255, 0.12)'],
+        ['--color-border-subtle', 'rgba(255, 255, 255, 0.08)'],
+        ['--color-border-strong', 'rgba(255, 255, 255, 0.2)'],
+        ['--color-chip-border', 'rgba(255, 255, 255, 0.12)'],
+        ['--color-chip-icon', 'rgba(255, 255, 255, 0.9)'],
+        ['--color-stroke-icon-line', 'rgba(255, 255, 255, 0.35)'],
+        ['--switch-track-on', '#8C4CF6'],
+        ['--switch-track-off', '#383838'],
+        ['--switch-track-disabled-on', '#444444'],
+        ['--switch-track-disabled-off', '#444444'],
+        ['--switch-track-disabled-mixed', '#444444'],
+        ['--switch-thumb-color', '#FFFFFF'],
+        ['--switch-thumb-disabled', '#757575'],
+        ['--switch-dash-color', 'rgba(255, 255, 255, 0.5)'],
+        ['--switch-dash-disabled', 'rgba(255, 255, 255, 0.25)'],
+      ],
+    };
+    try {
+      const root = document.documentElement;
+      let el = document.getElementById('flooow-theme-override') as HTMLStyleElement | null;
+      if (themeMode === 'system') {
+        if (el) el.remove();
+        root.removeAttribute('data-flooow-theme');
+        root.style.colorScheme = '';
+        return;
+      }
+      const decls = VAR_SETS[themeMode]
+        .map(([k, v]) => `${k}:${v} !important;`)
+        .join('');
+      const iconColor = themeMode === 'dark' ? '#ffffff' : '#1e1e1e';
+      // 변수 선언을 body에 직접 내려야 상속 한계를 넘어선다
+      // (:root 상속값은 body의 일반 선언을 이기지 못한다).
+      // 전용 어트리뷰트라 Figma가 건드리지 않으며 명시도로도 항상 우선한다.
+      const css =
+        `/*flooow-theme:${themeMode}*/` +
+        `:root[data-flooow-theme="${themeMode}"] body{${decls}}` +
+        `:root[data-flooow-theme="${themeMode}"] body .type-icon-btn{color:${iconColor} !important;}`;
+      root.setAttribute('data-flooow-theme', themeMode);
+      if (!el) {
+        el = document.createElement('style');
+        el.id = 'flooow-theme-override';
+        document.head.appendChild(el);
+      }
+      if (el.textContent !== css) el.textContent = css;
+      root.style.colorScheme = themeMode;
+    } catch (_) {}
+  }, [themeMode]);
   const [usageCounting, setUsageCounting] = useState(false);
   const [planIssue, setPlanIssue] = useState<PlanLoadIssue | null>(null);
 
@@ -1580,6 +1720,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [sizePresets, savePresets, showToast]);
 
   const addStylePreset = useCallback((preset: Omit<StylePreset, 'id'>) => {
+    if (countCustomStylePresets(stylePresets, DEFAULT_STYLE_PRESET_IDS) >= MAX_CUSTOM_STYLE_PRESETS) {
+      showToast(t('styleCustomLimitReached'), 'warning');
+      return false;
+    }
     const newId = `style-${typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`}`;
     const newPreset: StylePreset = {
       ...preset,
@@ -1602,6 +1746,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       strokeColor: preset.strokeColor,
     });
     showToast(t('styleAddedNew'), 'success');
+    return true;
   }, [stylePresets, saveStylePresets, setUIState, setNodeOptionState, applyCurrentNodeState, showToast]);
 
   const updateStylePreset = useCallback((id: string, partial: Partial<StylePreset>) => {
@@ -2535,6 +2680,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadDesignFrames,
     flooowUsage,
     setFlooowUsage,
+    flowExport,
+    setFlowExport,
+    locale,
+    setLocale,
+    themeMode,
+    setThemeMode,
     usageCounting,
     setUsageCounting,
     requestFlooowUsage,

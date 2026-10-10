@@ -770,12 +770,12 @@ export function SizeSection() {
                 </span>
                 <span className="size-mode-current-text figma-dropdown-current-text" id="size-mode-current-text">
                   {currentSizeMode === 'hug'
-                    ? t('sizeModeHug')
+                    ? 'Hug contents'
                     : currentSizeMode === 'fit'
-                    ? t('sizeModeFit')
+                    ? 'Fit contents'
                     : currentSizeMode === 'mixed'
                     ? 'Mixed'
-                    : t('sizeModeFixed')}
+                    : 'Fixed height'}
                 </span>
               </div>
               <span
@@ -808,17 +808,17 @@ export function SizeSection() {
                 <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'fixed' ? ' selected' : ''}`} data-value="fixed" onClick={() => selectSizeMode('fixed')}>
                   <span className="size-mode-menu-item-check figma-dropdown-check-slot">{CHECK_SVG}</span>
                   <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">{FIXED_SVG}</span>
-                  <span className="size-mode-menu-item-label figma-dropdown-label">{t('sizeModeFixed')}</span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">Fixed height</span>
                 </div>
                 <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'hug' ? ' selected' : ''}`} data-value="hug" onClick={() => selectSizeMode('hug')}>
                   <span className="size-mode-menu-item-check figma-dropdown-check-slot">{CHECK_SVG}</span>
                   <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">{HUG_SVG}</span>
-                  <span className="size-mode-menu-item-label figma-dropdown-label">{t('sizeModeHug')}</span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">Hug contents</span>
                 </div>
                 <div className={`size-mode-menu-item figma-dropdown-item${currentSizeMode === 'fit' ? ' selected' : ''}`} data-value="fit" onClick={() => selectSizeMode('fit')}>
                   <span className="size-mode-menu-item-check figma-dropdown-check-slot">{CHECK_SVG}</span>
                   <span className="size-mode-menu-item-icon figma-dropdown-icon-slot">{FIT_SVG}</span>
-                  <span className="size-mode-menu-item-label figma-dropdown-label">{t('sizeModeFit')}</span>
+                  <span className="size-mode-menu-item-label figma-dropdown-label">Fit contents</span>
                 </div>
               </div>
             )}

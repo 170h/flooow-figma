@@ -16,6 +16,8 @@ import {
   makePresetEnvelope,
   PRESET_STORAGE_KEYS,
   PRESET_LOCAL_KEYS,
+  MAX_CUSTOM_STYLE_PRESETS,
+  countCustomStylePresets,
 } from '../src/presetStore.ts';
 
 console.log('=== presetStore.test.mjs — Repository Regression Test ===');
@@ -86,6 +88,52 @@ runTest('JSON 왕복 후에도 파싱 가능 (clientStorage 저장 형태)', () 
   const env = makePresetEnvelope([{ id: 'a' }, { id: 'b' }]);
   const revived = parsePresetEnvelope(JSON.parse(JSON.stringify(env)));
   assert.deepEqual(revived, env);
+});
+
+runTest('커스텀 스타일 상한 = 7', () => {
+  assert.equal(MAX_CUSTOM_STYLE_PRESETS, 7);
+});
+
+runTest('countCustomStylePresets: 기본 제외·사용자만 계수', () => {
+  const defaults = new Set(['style-white', 'style-black']);
+  assert.equal(countCustomStylePresets(null, defaults), 0);
+  assert.equal(countCustomStylePresets([], defaults), 0);
+  assert.equal(
+    countCustomStylePresets(
+      [
+        { id: 'style-white', isDefault: true },
+        { id: 'style-black', isDefault: true },
+      ],
+      defaults
+    ),
+    0
+  );
+  // isDefault 플래그가 없는 구형 기본값도 id로 제외
+  assert.equal(countCustomStylePresets([{ id: 'style-white' }], defaults), 0);
+  assert.equal(
+    countCustomStylePresets(
+      [
+        { id: 'style-white', isDefault: true },
+        { id: 'c1' },
+        { id: 'c2' },
+        { id: null },
+        null,
+      ],
+      defaults
+    ),
+    2
+  );
+});
+
+runTest('countCustomStylePresets: 7개 도달 판정', () => {
+  const defaults = new Set(['style-white', 'style-black']);
+  const customs = Array.from({ length: 7 }, (_, i) => ({ id: `c${i}` }));
+  assert.equal(countCustomStylePresets(customs, defaults), 7);
+  assert.ok(countCustomStylePresets(customs, defaults) >= MAX_CUSTOM_STYLE_PRESETS);
+  assert.ok(
+    countCustomStylePresets([{ id: 'style-white', isDefault: true }, ...customs.slice(0, 6)], defaults) <
+      MAX_CUSTOM_STYLE_PRESETS
+  );
 });
 
 console.log(`\nResult: ${passCount} passed, ${failCount} failed.`);

@@ -459,9 +459,10 @@
   function terminalToStrokeCap(terminal) {
     switch (terminal) {
       case "ARROW":
-      case "TRIANGLE_ARROW":
       case "REVERSED_TRIANGLE_ARROW":
         return "ARROW_LINES";
+      case "TRIANGLE_ARROW":
+        return "ARROW_EQUILATERAL";
       case "CIRCLE":
         return "CIRCLE_FILLED";
       case "DIAMOND":
@@ -1877,13 +1878,13 @@
     limitReached: "Flooow element\uAC00 \uAC00\uB4DD \uCC3C\uC2B5\uB2C8\uB2E4 ({current}/{limit}). \uAE30\uC874 element\uB97C \uC0AD\uC81C\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
     // 2. 노드 생성 및 수정 (Node CRUD)
     /** [사용처] Core 노드 단일 생성 완료 토스트 | [조건] 노드 1개 생성 성공 시 | [비고] {title} 치환 */
-    nodeCreated: '\uB178\uB4DC "{title}"\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4',
+    nodeCreated: '\uB178\uB4DC "{title}"\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4.',
     /** [사용처] Core 노드 생성 실패 토스트 | [조건] 노드 생성 예외 발생 시 | [비고] {error} 치환 */
     nodeCreateFailed: "\uB178\uB4DC \uC0DD\uC131 \uC2E4\uD328: {error}",
     /** [사용처] Core 노드 수정 실패 안내 | [조건] 수정할 노드가 캔버스에서 선택되지 않았을 때 */
     nodeNotFoundSelect: "\uC218\uC815\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE94\uBC84\uC2A4\uC5D0\uC11C \uB178\uB4DC\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 노드 단일 수정 완료 토스트 | [조건] 노드 속성 수정 성공 시 | [비고] {title} 치환 */
-    nodeUpdated: '\uB178\uB4DC "{title}"\uC744 \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4',
+    nodeUpdated: '\uB178\uB4DC "{title}"\uC744 \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4.',
     /** [사용처] Core 노드 수정 실패 토스트 | [조건] 노드 수정 중 예외 발생 시 | [비고] {error} 치환 */
     nodeUpdateFailed: "\uB178\uB4DC \uC218\uC815 \uC2E4\uD328: {error}",
     /** [사용처] Core 노드 다중 수정 완료 토스트 | [조건] 2개 이상 노드 일괄 업데이트 성공 시 | [비고] {count} 치환 */
@@ -1898,9 +1899,9 @@
     /** [사용처] Core 커넥터 생성 검증 | [조건] 동일한 노드를 선택했거나 2개 노드가 구별되지 않을 때 */
     connectNeedTwoDifferent: "\uC11C\uB85C \uB2E4\uB978 \uB450 \uB178\uB4DC\uB97C \uC120\uD0DD\uD558\uC5EC \uC5F0\uACB0\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 커넥터 생성 완료 토스트 | [조건] 라벨 없는 커넥터 생성 성공 시 */
-    connectDone: "\uC5F0\uACB0 \uC644\uB8CC",
+    connectDone: "\uC5F0\uACB0 \uC644\uB8CC.",
     /** [사용처] Core 커넥터 생성 완료 토스트 | [조건] 라벨이 포함된 커넥터 생성 성공 시 | [비고] {label} 치환 */
-    connectDoneLabel: '\uB77C\uBCA8 "{label}" \uC5F0\uACB0 \uC644\uB8CC',
+    connectDoneLabel: '\uB77C\uBCA8 "{label}" \uC5F0\uACB0 \uC644\uB8CC.',
     /** [사용처] Core 커넥터 생성 실패 토스트 | [조건] 커넥터 생성 중 예외 발생 시 | [비고] {error} 치환 */
     connectCreateFailed: "\uC5F0\uACB0\uC120 \uC0DD\uC131 \uC2E4\uD328: {error}",
     /** [사용처] Core 다중 노드 연결 검증 | [조건] 연결 대상 노드가 2개 미만으로 선택되었을 때 */
@@ -1910,9 +1911,9 @@
     /** [사용처] UI 연결 버튼 검증 안내 | [조건] 노드가 2개 미만으로 선택되었을 때 */
     connectNeedTwo: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 직각 연결 완료 토스트 | [조건] 직각 커넥터 생성 성공 시 */
-    autoConnectDone: "\uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC",
+    autoConnectDone: "\uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC.",
     /** [사용처] Core 직각 연결 완료 토스트 | [조건] 라벨 포함 직각 커넥터 생성 성공 시 | [비고] {label} 치환 */
-    autoConnectDoneLabel: '\uB77C\uBCA8 "{label}" \uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC',
+    autoConnectDoneLabel: '\uB77C\uBCA8 "{label}" \uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC.',
     /** [사용처] Core 순차 체인 연결 완료 토스트 | [조건] 3개 이상 노드 순차 체인 생성 성공 시 | [비고] {nodes}, {conns} 치환 */
     autoChainDone: "\u26A1 \uCD1D {nodes}\uAC1C \uB178\uB4DC\uAC00 \uCE7C\uAC01 \uC9C1\uAC01 \uC21C\uCC28 \uC5F0\uACB0\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({conns}\uAC1C \uC5F0\uACB0\uC120).",
     /** [사용처] Core 자동 연결 실패 토스트 | [조건] 자동 연결 실행 중 오류 발생 시 | [비고] {error} 치환 */
@@ -1920,9 +1921,9 @@
     /** [사용처] Core 체인 생성 안내 | [조건] 선택한 노드들 사이의 모든 연결선이 이미 존재할 때 */
     chainExistsAll: "\uBAA8\uB4E0 \uC5F0\uACB0\uC774 \uC774\uBBF8 \uC874\uC7AC\uD569\uB2C8\uB2E4.",
     /** [사용처] Core 부분 체인 연결 토스트 | [조건] 기존 연결은 건너뛰고 일부만 신규 생성되었을 때 | [비고] {created}, {skipped} 치환 */
-    chainCreatedPartial: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC ({skipped}\uAC1C\uB294 \uC774\uBBF8 \uC5F0\uACB0\uB428)",
+    chainCreatedPartial: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC ({skipped}\uAC1C\uB294 \uC774\uBBF8 \uC5F0\uACB0\uB428).",
     /** [사용처] Core 체인 연결 완료 토스트 | [조건] 전체 체인 연결 신규 생성 완료 시 | [비고] {created} 치환 */
-    chainCreated: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC",
+    chainCreated: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC.",
     /** [사용처] Core 체인 연결 실패 토스트 | [조건] 체인 생성 중 예외 발생 시 | [비고] {error} 치환 */
     chainFailed: "\uCCB4\uC778 \uC5F0\uACB0 \uC2E4\uD328: {error}",
     // 4. 커넥터 라벨 및 속성 수정 (Connector Editing)
@@ -1943,17 +1944,17 @@
     /** [사용처] Core 라인 타입 변경 검증 | [조건] 커넥터가 선택되지 않은 상태에서 라인 타입 변경 시도 시 */
     connectorSelectForLineType: "\uBCC0\uACBD\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 직각 변환 완료 토스트 | [조건] 커넥터를 직각 형태로 변경했을 때 */
-    connectorLineElbowed: "\u{1F4D0} \uC5F0\uACB0\uC120\uC744 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
+    connectorLineElbowed: "\u{1F4D0} \uC5F0\uACB0\uC120\uC744 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 직선 변환 완료 토스트 | [조건] 커넥터를 직선 형태로 변경했을 때 */
-    connectorLineStraight: "\u{1F4CF} \uC5F0\uACB0\uC120\uC744 \uC9C1\uC120\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
+    connectorLineStraight: "\u{1F4CF} \uC5F0\uACB0\uC120\uC744 \uC9C1\uC120\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 라인 형태 변경 실패 | [조건] 라인 형태 변경 중 예외 발생 시 | [비고] {error} 치환 */
     connectorLineTypeFailed: "\uC5F0\uACB0\uC120 \uD615\uD0DC \uBCC0\uACBD \uC2E4\uD328: {error}",
     /** [사용처] Core 일괄 변환 대상 없음 알림 | [조건] 캔버스에 변환할 커넥터가 없을 때 */
     connectorsNoneToConvert: "\uCE94\uBC84\uC2A4\uC5D0 \uBCC0\uD658\uD560 \uC5F0\uACB0\uC120\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 전체 직각 일괄 변환 토스트 | [조건] 캔버스의 모든 커넥터를 직각으로 변환 완료 시 | [비고] {count} 치환 */
-    connectorsConvertedAll: "\u26A1 \uC5F0\uACB0\uC120 {count}\uAC1C\uB97C \uBAA8\uB450 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uD658\uD588\uC2B5\uB2C8\uB2E4",
+    connectorsConvertedAll: "\u26A1 \uC5F0\uACB0\uC120 {count}\uAC1C\uB97C \uBAA8\uB450 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uD658\uD588\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 일괄 변환 기완료 안내 | [조건] 캔버스의 모든 커넥터가 이미 직각일 때 | [비고] {count} 치환 */
-    connectorsAlreadyElbowed: "\uC5F0\uACB0\uC120 {count}\uAC1C\uAC00 \uC774\uBBF8 \uBAA8\uB450 \uC9C1\uAC01 \uC0C1\uD0DC\uC785\uB2C8\uB2E4",
+    connectorsAlreadyElbowed: "\uC5F0\uACB0\uC120 {count}\uAC1C\uAC00 \uC774\uBBF8 \uBAA8\uB450 \uC9C1\uAC01 \uC0C1\uD0DC\uC785\uB2C8\uB2E4.",
     /** [사용처] Core 일괄 변환 실패 토스트 | [조건] 일괄 변환 처리 중 오류 발생 시 | [비고] {error} 치환 */
     connectorsConvertFailed: "\uC5F0\uACB0\uC120 \uC77C\uAD04 \uBCC0\uD658 \uC2E4\uD328: {error}",
     // 5. 어피어런스 - 상태 (Status Badge)
@@ -1962,7 +1963,7 @@
     /** [사용처] Core 상태 뱃지 제거 토스트 | [조건] 노드에서 상태 뱃지 삭제 완료 시 | [비고] {count} 치환 */
     statusRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 상태 뱃지 부착 토스트 | [조건] 노드에 특정 상태 뱃지 부착 완료 시 | [비고] {count}, {label} 치환 */
-    statusAttached: '{count}\uAC1C \uB178\uB4DC\uC5D0 \uC0C1\uD0DC \uBC43\uC9C0 "{label}"\uC744 \uBD80\uCC29\uD588\uC2B5\uB2C8\uB2E4',
+    statusAttached: '{count}\uAC1C \uB178\uB4DC\uC5D0 \uC0C1\uD0DC \uBC43\uC9C0 "{label}"\uC744 \uBD80\uCC29\uD588\uC2B5\uB2C8\uB2E4.',
     // 6. 어피어런스 - 엘리베이션 (Elevation)
     /** [사용처] Core 엘리베이션 선택 검증 | [조건] 선택된 노드 없이 엘리베이션 지정 시도 시 */
     elevationNeedSelection: "\uC5D8\uB9AC\uBCA0\uC774\uC158\uC744 \uC801\uC6A9\uD560 \uC694\uC18C\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
@@ -2037,6 +2038,11 @@
     styleDeleted: "\uC2A4\uD0C0\uC77C\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI 기본 스타일 보호 알림 | [조건] 기본 White/Black 스타일 수정 시도 시 */
     styleEditNoDefault: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] UI 스타일 프리셋 추가 제한 | [조건] 커스텀 스타일이 7개에 도달한 상태에서 추가 시도 시 */
+    styleCustomLimitReached: "\uC0AC\uC6A9\uC790 \uC2A4\uD0C0\uC77C\uC740 \uCD5C\uB300 7\uAC1C\uAE4C\uC9C0 \uCD94\uAC00\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+    exportCopied: "AI\uC6A9 \uD50C\uB85C\uC6B0\uB97C \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.",
+    exportEmpty: "\uC774 \uD398\uC774\uC9C0\uC5D0 \uB0B4\uBCF4\uB0BC \uD50C\uB85C\uC6B0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    exportFailed: "\uB0B4\uBCF4\uAE30\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
     // 12. 디스크립션 클립보드 복사 (Description)
     /** [사용처] UI 설명 복사 검증 | [조건] 설명 내용이 비어있는 상태에서 복사 클릭 시 */
     descCopyEmpty: "\uBCF5\uC0AC\uD560 \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
@@ -2109,6 +2115,7 @@
     tipHexColor: "Hex \uC0C9\uC0C1",
     /** [사용처] UI Popover / Modal | [조건] 팝오버 닫기(X) 버튼 마우스 오버 */
     tipClose: "\uB2EB\uAE30",
+    tipSettings: "\uC124\uC815",
     /** [사용처] UI ScreenFrameSelect | [조건] 캔버스 프레임 새로고침 아이콘 마우스 오버 */
     tipRefreshFrames: "\uCE94\uBC84\uC2A4\uC5D0\uC11C \uD504\uB808\uC784 \uC0C8\uB85C\uACE0\uCE68",
     /** [사용처] UI ConnectorSection | [조건] 실선 스타일 세그먼트 버튼 마우스 오버 */
@@ -2129,10 +2136,11 @@
     tipTermCircle: "\uC6D0",
     /** [사용처] UI ConnectorSection | [조건] 마름모 단자 옵션 마우스 오버 */
     tipTermDiamond: "\uB9C8\uB984\uBAA8",
+    tipTermTriangle: "\uC0BC\uAC01\uD615",
     /** [사용처] UI ConnectorSection | [조건] 직각 라우팅 옵션 마우스 오버 */
     tipRouteOrtho: "\uC9C1\uAC01",
     /** [사용처] UI ConnectorSection | [조건] S자 곡선 라우팅 옵션 마우스 오버 */
-    tipRouteSCurve: "S\uC790 \uACE1\uC120",
+    tipRouteSCurve: "\uB77C\uC6B4\uB4DC",
     /** [사용처] UI ConnectorSection | [조건] 곡선 라우팅 옵션 마우스 오버 */
     tipRouteCurve: "\uACE1\uC120",
     /** [사용처] UI ConnectorSection | [조건] 직선 라우팅 옵션 마우스 오버 */
@@ -2175,56 +2183,56 @@
     tipQuotaBlocked: "\uBB34\uB8CC \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC2B5\uB2C8\uB2E4. \uC5C5\uADF8\uB808\uC774\uB4DC\uD558\uBA74 \uB354 \uB9CC\uB4E4 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
     // 14. 도형 타입별 지원 여부 안내 (Shape Notices)
     /** [사용처] UI SizeSection 패널 | [조건] Screen 타입 노드가 아닌 일반 도형 선택 시 */
-    noticeSizeOnlyScreen: "Size\uB294 Screen \uB178\uB4DC\uC5D0\uC11C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
+    noticeSizeOnlyScreen: "Size\uB294 Screen \uB178\uB4DC\uC5D0\uC11C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI DescriptionSection 패널 | [조건] Description 미지원 도형 선택 시 */
-    noticeDescUnsupported: "Description\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeDescUnsupported: "Description\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI ElevationSection 패널 | [조건] Elevation 미지원 도형 선택 시 */
-    noticeElevationUnsupported: "Elevation\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeElevationUnsupported: "Elevation\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI StatusSection 패널 | [조건] Status 미지원 도형 선택 시 */
-    noticeStatusUnsupported: "Status\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeStatusUnsupported: "Status\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI StepBadgesSection 패널 | [조건] Step Badges 미지원 도형 선택 시 */
-    noticeStepUnsupported: "Step Badges\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeStepUnsupported: "Step Badges\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI LinkSection 패널 | [조건] Reference Link 미지원 도형 선택 시 */
-    noticeLinkUnsupported: "Reference Link\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeLinkUnsupported: "Reference Link\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI 어피어런스 패널 | [조건] 서로 다른 타입 노드 혼합 선택 시 */
-    noticeMixed: "\uD63C\uD569 \uC120\uD0DD\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeMixed: "\uD63C\uD569 \uC120\uD0DD\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     // 15. 하단 액션바 연결 상태 라벨 (Connect Status Text)
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 캔버스에서 선택된 노드가 0개 또는 1개일 때 */
-    connectStatusSelectNodes: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD",
+    connectStatusSelectNodes: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 2개 노드가 선택되고 명시적 단자 연결 준비 완료 시 */
-    connectStatusReadyTwoNodes: "2\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC",
+    connectStatusReadyTwoNodes: "2\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 3개 이상 노드 선택 시 | [비고] {count} 치환 */
-    connectStatusReadyMultiNodes: "{count}\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC",
+    connectStatusReadyMultiNodes: "{count}\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] AUTO 단자 등 기본 연결 준비 완료 시 */
-    connectStatusReady: "\uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC",
+    connectStatusReady: "\uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 선택된 커넥터에 변경사항이 존재할 때 */
-    connectStatusChangesReady: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC900\uBE44 \uC644\uB8CC",
+    connectStatusChangesReady: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC900\uBE44 \uC644\uB8CC.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 커넥터 연결/적용 작업이 완료되었을 때 */
-    connectStatusConnected: "\uC5F0\uACB0\uB428",
+    connectStatusConnected: "\uC5F0\uACB0\uB428.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 선택된 커넥터에 변경사항이 없을 때 */
-    connectStatusNoChanges: "\uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C",
+    connectStatusNoChanges: "\uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C.",
     // 16. 주요 액션 버튼 안내 및 툴팁 (Action Buttons & Tooltips)
     /** [사용처] UI StepBadgesSection 안내 문구 | [조건] Add Step Badges 버튼 좌측에 상시 표시 */
-    stepDescStartsFromNumber: "\uC9C0\uC815\uD55C \uBC88\uD638\uBD80\uD130 \uC2DC\uC791",
+    stepDescStartsFromNumber: "\uC9C0\uC815\uD55C \uBC88\uD638\uBD80\uD130 \uC2DC\uC791.",
     /** [사용처] UI StepBadgesSection 버튼 툴팁 | [조건] 시작 번호 미입력으로 버튼 비활성화 시 */
-    stepTipEnterStartNumber: "\uC2DC\uC791 \uBC88\uD638\uB97C \uC785\uB825\uD558\uC138\uC694",
+    stepTipEnterStartNumber: "\uC2DC\uC791 \uBC88\uD638\uB97C \uC785\uB825\uD558\uC138\uC694.",
     /** [사용처] UI StepBadgesSection 버튼 툴팁 | [조건] 시작 번호 입력되어 버튼 활성화 시 */
-    stepTipAddStepBadges: "\uC2A4\uD15D \uBC43\uC9C0 \uCD94\uAC00",
+    stepTipAddStepBadges: "\uC2A4\uD15D \uBC43\uC9C0 \uCD94\uAC00.",
     /** [사용처] UI ConnectSection 버튼 툴팁 | [조건] 선택된 커넥터에 적용할 변경사항이 없을 때 */
-    connectTipNoChanges: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C",
+    connectTipNoChanges: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C.",
     /** [사용처] UI ConnectSection 버튼 툴팁 | [조건] 선택된 커넥터의 옵션 변경사항 적용 준비 시 */
-    connectTipApplyChanges: "\uCEE4\uB125\uD130 \uBCC0\uACBD\uC0AC\uD56D \uC801\uC6A9",
+    connectTipApplyChanges: "\uCEE4\uB125\uD130 \uBCC0\uACBD\uC0AC\uD56D \uC801\uC6A9.",
     /** [사용처] UI ConnectSection 버튼 툴팁 | [조건] 2개 이상 선택된 노드 신규 연결 준비 시 */
-    connectTipConnectNodes: "\uC120\uD0DD\uD55C \uB178\uB4DC \uC5F0\uACB0"
+    connectTipConnectNodes: "\uC120\uD0DD\uD55C \uB178\uB4DC \uC5F0\uACB0."
   };
   var EN = {
     // 1. Quota & Entitlement
     limitReached: "Flooow elements are full ({current}/{limit}). Delete existing elements and try again.",
     // 2. Node CRUD
-    nodeCreated: 'Created node "{title}"',
+    nodeCreated: 'Created node "{title}".',
     nodeCreateFailed: "Failed to create node: {error}",
     nodeNotFoundSelect: "Node to edit not found. Select a node on the canvas.",
-    nodeUpdated: 'Updated node "{title}"',
+    nodeUpdated: 'Updated node "{title}".',
     nodeUpdateFailed: "Failed to update node: {error}",
     nodesBatchUpdated: "Updated {count} nodes",
     nodesBatchUpdateFailed: "Failed to update nodes: {error}",
@@ -2232,19 +2240,19 @@
     // 3. Connect & Chain
     connectNodesNotFound: "Nodes to connect not found.",
     connectNeedTwoDifferent: "Select two different nodes to connect.",
-    connectDone: "Connected",
-    connectDoneLabel: 'Connected with label "{label}"',
+    connectDone: "Connected.",
+    connectDoneLabel: 'Connected with label "{label}".',
     connectCreateFailed: "Failed to create connector: {error}",
     connectNeedTwoOrMore: "Select 2 or more nodes to connect.",
     connectNeedTwoDifferentOrMore: "Select 2 or more different nodes.",
     connectNeedTwo: "Select 2 or more nodes to connect.",
-    autoConnectDone: "Orthogonal connection complete",
-    autoConnectDoneLabel: 'Orthogonal connection complete with label "{label}"',
+    autoConnectDone: "Orthogonal connection complete.",
+    autoConnectDoneLabel: 'Orthogonal connection complete with label "{label}".',
     autoChainDone: "\u26A1 Connected {nodes} nodes in sequence ({conns} connectors).",
     autoConnectFailed: "Auto connect failed: {error}",
     chainExistsAll: "All connections already exist.",
-    chainCreatedPartial: "{created} connections created ({skipped} already connected)",
-    chainCreated: "{created} connections created",
+    chainCreatedPartial: "{created} connections created ({skipped} already connected).",
+    chainCreated: "{created} connections created.",
     chainFailed: "Chain connection failed: {error}",
     // 4. Connector Editing
     connectorSelectForLabel: "Select a connector on the canvas to edit.",
@@ -2255,17 +2263,17 @@
     connectorOffsetConverted: "Converted to a custom orthogonal connector to apply offsets.",
     connectorUpdateFailed: "Failed to update connector: {error}",
     connectorSelectForLineType: "Select a connector on the canvas to change.",
-    connectorLineElbowed: "\u{1F4D0} Connector changed to orthogonal",
-    connectorLineStraight: "\u{1F4CF} Connector changed to straight",
+    connectorLineElbowed: "\u{1F4D0} Connector changed to orthogonal.",
+    connectorLineStraight: "\u{1F4CF} Connector changed to straight.",
     connectorLineTypeFailed: "Failed to change connector line type: {error}",
     connectorsNoneToConvert: "No connectors on the canvas to convert.",
-    connectorsConvertedAll: "\u26A1 Converted {count} connectors to orthogonal",
-    connectorsAlreadyElbowed: "{count} connectors are already orthogonal",
+    connectorsConvertedAll: "\u26A1 Converted {count} connectors to orthogonal.",
+    connectorsAlreadyElbowed: "{count} connectors are already orthogonal.",
     connectorsConvertFailed: "Failed to convert connectors: {error}",
     // 5. Status Badge
     statusNeedSelection: "Select 1 or more elements to set a status.",
     statusRemoved: "Removed status badges from {count} nodes.",
-    statusAttached: 'Attached status badge "{label}" to {count} nodes',
+    statusAttached: 'Attached status badge "{label}" to {count} nodes.',
     // 6. Elevation
     elevationNeedSelection: "Select elements to apply elevation.",
     elevationRemoved: "Removed elevation from {count} nodes.",
@@ -2306,6 +2314,10 @@
     styleDefaultNoDelete: "Default styles cannot be deleted.",
     styleDeleted: "Style deleted.",
     styleEditNoDefault: "Default styles cannot be edited.",
+    styleCustomLimitReached: "You can add up to 7 custom styles.",
+    exportCopied: "Flow copied for AI.",
+    exportEmpty: "Nothing to export on this page.",
+    exportFailed: "Export failed.",
     // 12. Description
     descCopyEmpty: "No description to copy.",
     descCopied: "Description copied to clipboard!",
@@ -2343,6 +2355,7 @@
     tipLinkDisabled: "Reference Link is disabled for this shape",
     tipHexColor: "Hex color",
     tipClose: "Close",
+    tipSettings: "Settings",
     tipRefreshFrames: "Refresh frames from canvas",
     tipSolid: "Solid",
     tipDashed: "Dashed",
@@ -2353,8 +2366,9 @@
     tipTermArrow: "Arrow",
     tipTermCircle: "Circle",
     tipTermDiamond: "Diamond",
+    tipTermTriangle: "Triangle",
     tipRouteOrtho: "Orthogonal",
-    tipRouteSCurve: "S-curve",
+    tipRouteSCurve: "Round",
     tipRouteCurve: "Curve",
     tipRouteStraight: "Straight",
     tipGizmoSource: "Source",
@@ -2376,54 +2390,54 @@
     tipConnectorColor: "Connector color",
     tipQuotaBlocked: "Free limit reached. Upgrade to create more.",
     // 14. Shape Notices
-    noticeSizeOnlyScreen: "Size is only available for Screen nodes",
-    noticeDescUnsupported: "Description is not available for this shape",
-    noticeElevationUnsupported: "Elevation is not available for this shape",
-    noticeStatusUnsupported: "Status is not available for this shape",
-    noticeStepUnsupported: "Step Badges are not available for this shape",
-    noticeLinkUnsupported: "Reference Link is not available for this shape",
-    noticeMixed: "Not available for mixed selection",
+    noticeSizeOnlyScreen: "Size is only available for Screen nodes.",
+    noticeDescUnsupported: "Description is not available for this shape.",
+    noticeElevationUnsupported: "Elevation is not available for this shape.",
+    noticeStatusUnsupported: "Status is not available for this shape.",
+    noticeStepUnsupported: "Step Badges are not available for this shape.",
+    noticeLinkUnsupported: "Reference Link is not available for this shape.",
+    noticeMixed: "Not available for mixed selection.",
     // 15. Connect Status Text
-    connectStatusSelectNodes: "Select 2+ nodes to connect",
-    connectStatusReadyTwoNodes: "2 nodes ready to connect",
-    connectStatusReadyMultiNodes: "{count} nodes ready to connect",
-    connectStatusReady: "Ready to connect",
-    connectStatusChangesReady: "Changes ready to apply",
-    connectStatusConnected: "Connected",
-    connectStatusNoChanges: "No changes",
+    connectStatusSelectNodes: "Select 2+ nodes to connect.",
+    connectStatusReadyTwoNodes: "2 nodes ready to connect.",
+    connectStatusReadyMultiNodes: "{count} nodes ready to connect.",
+    connectStatusReady: "Ready to connect.",
+    connectStatusChangesReady: "Changes ready to apply.",
+    connectStatusConnected: "Connected.",
+    connectStatusNoChanges: "No changes.",
     // 16. Action Buttons & Tooltips
-    stepDescStartsFromNumber: "Starts from the specified number",
-    stepTipEnterStartNumber: "Enter a start number",
-    stepTipAddStepBadges: "Add Step Badges",
-    connectTipNoChanges: "No changes to update",
-    connectTipApplyChanges: "Apply connector changes",
-    connectTipConnectNodes: "Connect selected nodes"
+    stepDescStartsFromNumber: "Starts from the specified number.",
+    stepTipEnterStartNumber: "Enter a start number.",
+    stepTipAddStepBadges: "Add Step Badges.",
+    connectTipNoChanges: "No changes to update.",
+    connectTipApplyChanges: "Apply connector changes.",
+    connectTipConnectNodes: "Connect selected nodes."
   };
   var JA = {
     limitReached: "Flooow\u306E\u8981\u7D20\u6570\u304C\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F\uFF08{current}/{limit}\uFF09\u3002\u65E2\u5B58\u306E\u8981\u7D20\u3092\u524A\u9664\u3057\u3066\u304B\u3089\u3001\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002",
-    nodeCreated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F",
+    nodeCreated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\u3002",
     nodeCreateFailed: "\u30CE\u30FC\u30C9\u306E\u4F5C\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     nodeNotFoundSelect: "\u7DE8\u96C6\u3059\u308B\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u30CE\u30FC\u30C9\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-    nodeUpdated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F",
+    nodeUpdated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F\u3002",
     nodeUpdateFailed: "\u30CE\u30FC\u30C9\u306E\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     nodesBatchUpdated: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F",
     nodesBatchUpdateFailed: "\u30CE\u30FC\u30C9\u306E\u4E00\u62EC\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     nodeGone: "\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
     connectNodesNotFound: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
     connectNeedTwoDifferent: "\u63A5\u7D9A\u3059\u308B2\u3064\u306E\u7570\u306A\u308B\u30CE\u30FC\u30C9\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-    connectDone: "\u63A5\u7D9A\u3057\u307E\u3057\u305F",
-    connectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u3067\u63A5\u7D9A\u3057\u307E\u3057\u305F",
+    connectDone: "\u63A5\u7D9A\u3057\u307E\u3057\u305F\u3002",
+    connectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u3067\u63A5\u7D9A\u3057\u307E\u3057\u305F\u3002",
     connectCreateFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u4F5C\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     connectNeedTwoOrMore: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     connectNeedTwoDifferentOrMore: "\u7570\u306A\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     connectNeedTwo: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-    autoConnectDone: "\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F",
-    autoConnectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u4ED8\u304D\u306E\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F",
+    autoConnectDone: "\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002",
+    autoConnectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u4ED8\u304D\u306E\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002",
     autoChainDone: "\u26A1 {nodes}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u9806\u756A\u306B\u63A5\u7D9A\u3057\u307E\u3057\u305F\uFF08{conns}\u672C\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\uFF09\u3002",
     autoConnectFailed: "\u81EA\u52D5\u63A5\u7D9A\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     chainExistsAll: "\u3059\u3079\u3066\u306E\u63A5\u7D9A\u306F\u3059\u3067\u306B\u5B58\u5728\u3057\u307E\u3059\u3002",
-    chainCreatedPartial: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\uFF08{skipped}\u4EF6\u306F\u63A5\u7D9A\u6E08\u307F\uFF09",
-    chainCreated: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F",
+    chainCreatedPartial: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\uFF08{skipped}\u4EF6\u306F\u63A5\u7D9A\u6E08\u307F\uFF09\u3002",
+    chainCreated: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\u3002",
     chainFailed: "\u30C1\u30A7\u30FC\u30F3\u63A5\u7D9A\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     connectorSelectForLabel: "\u7DE8\u96C6\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     connectorLabelSet: "\u4E2D\u592E\u30E9\u30D9\u30EB\u3092\u300C{label}\u300D\u306B\u8A2D\u5B9A\u3057\u307E\u3057\u305F",
@@ -2433,16 +2447,16 @@
     connectorOffsetConverted: "\u30AA\u30D5\u30BB\u30C3\u30C8\u3092\u9069\u7528\u3059\u308B\u305F\u3081\u3001\u30AB\u30B9\u30BF\u30E0\u76F4\u89D2\u30B3\u30CD\u30AF\u30BF\u30FC\u306B\u5909\u63DB\u3057\u307E\u3057\u305F\u3002",
     connectorUpdateFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     connectorSelectForLineType: "\u5909\u66F4\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-    connectorLineElbowed: "\u{1F4D0} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u89D2\u306B\u5909\u66F4\u3057\u307E\u3057\u305F",
-    connectorLineStraight: "\u{1F4CF} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u7DDA\u306B\u5909\u66F4\u3057\u307E\u3057\u305F",
+    connectorLineElbowed: "\u{1F4D0} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u89D2\u306B\u5909\u66F4\u3057\u307E\u3057\u305F\u3002",
+    connectorLineStraight: "\u{1F4CF} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u7DDA\u306B\u5909\u66F4\u3057\u307E\u3057\u305F\u3002",
     connectorLineTypeFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u7DDA\u7A2E\u5909\u66F4\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     connectorsNoneToConvert: "\u5909\u63DB\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u304C\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u306B\u3042\u308A\u307E\u305B\u3093\u3002",
-    connectorsConvertedAll: "\u26A1 {count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u3059\u3079\u3066\u76F4\u89D2\u306B\u5909\u63DB\u3057\u307E\u3057\u305F",
-    connectorsAlreadyElbowed: "{count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u306F\u3059\u3067\u306B\u3059\u3079\u3066\u76F4\u89D2\u3067\u3059",
+    connectorsConvertedAll: "\u26A1 {count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u3059\u3079\u3066\u76F4\u89D2\u306B\u5909\u63DB\u3057\u307E\u3057\u305F\u3002",
+    connectorsAlreadyElbowed: "{count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u306F\u3059\u3067\u306B\u3059\u3079\u3066\u76F4\u89D2\u3067\u3059\u3002",
     connectorsConvertFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u4E00\u62EC\u5909\u63DB\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     statusNeedSelection: "\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u8A2D\u5B9A\u3059\u308B\u8981\u7D20\u30921\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     statusRemoved: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u304B\u3089\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30C3\u30B8\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
-    statusAttached: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u306B\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30C3\u30B8\u300C{label}\u300D\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F",
+    statusAttached: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u306B\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30C3\u30B8\u300C{label}\u300D\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\u3002",
     elevationNeedSelection: "Elevation\u3092\u9069\u7528\u3059\u308B\u8981\u7D20\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     elevationRemoved: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u304B\u3089Elevation\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
     elevationApplied: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u306BLevel {level}\u306EElevation\u3092\u9069\u7528\u3057\u307E\u3057\u305F\u3002",
@@ -2477,6 +2491,10 @@
     styleDefaultNoDelete: "\u30C7\u30D5\u30A9\u30EB\u30C8\u30B9\u30BF\u30A4\u30EB\u306F\u524A\u9664\u3067\u304D\u307E\u305B\u3093\u3002",
     styleDeleted: "\u30B9\u30BF\u30A4\u30EB\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
     styleEditNoDefault: "\u30C7\u30D5\u30A9\u30EB\u30C8\u30B9\u30BF\u30A4\u30EB\u306F\u7DE8\u96C6\u3067\u304D\u307E\u305B\u3093\u3002",
+    styleCustomLimitReached: "\u30AB\u30B9\u30BF\u30E0\u30B9\u30BF\u30A4\u30EB\u306F\u6700\u59277\u3064\u307E\u3067\u8FFD\u52A0\u3067\u304D\u307E\u3059\u3002",
+    exportCopied: "AI\u7528\u306B\u30D5\u30ED\u30FC\u3092\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F\u3002",
+    exportEmpty: "\u3053\u306E\u30DA\u30FC\u30B8\u306B\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u3059\u308B\u30D5\u30ED\u30FC\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
+    exportFailed: "\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002",
     descCopyEmpty: "\u30B3\u30D4\u30FC\u3059\u308B\u8AAC\u660E\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
     descCopied: "\u8AAC\u660E\u3092\u30AF\u30EA\u30C3\u30D7\u30DC\u30FC\u30C9\u306B\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F\uFF01",
     tipWidth: "\u5E45",
@@ -2512,6 +2530,7 @@
     tipLinkDisabled: "\u3053\u306E\u56F3\u5F62\u3067\u306FReference Link\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
     tipHexColor: "Hex\u30AB\u30E9\u30FC",
     tipClose: "\u9589\u3058\u308B",
+    tipSettings: "\u8A2D\u5B9A",
     tipRefreshFrames: "\u30AD\u30E3\u30F3\u30D0\u30B9\u304B\u3089\u30D5\u30EC\u30FC\u30E0\u3092\u66F4\u65B0",
     tipSolid: "\u5B9F\u7DDA",
     tipDashed: "\u7834\u7DDA",
@@ -2522,8 +2541,9 @@
     tipTermArrow: "\u77E2\u5370",
     tipTermCircle: "\u5186",
     tipTermDiamond: "\u3072\u3057\u5F62",
+    tipTermTriangle: "\u4E09\u89D2",
     tipRouteOrtho: "\u76F4\u89D2",
-    tipRouteSCurve: "S\u5B57\u30AB\u30FC\u30D6",
+    tipRouteSCurve: "\u30E9\u30A6\u30F3\u30C9",
     tipRouteCurve: "\u30AB\u30FC\u30D6",
     tipRouteStraight: "\u76F4\u7DDA",
     tipGizmoSource: "\u59CB\u70B9",
@@ -2544,52 +2564,52 @@
     tipPresetDisabledShape: "\u3053\u306E\u56F3\u5F62\u3067\u306FSize\u30D7\u30EA\u30BB\u30C3\u30C8\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
     tipConnectorColor: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u8272",
     tipQuotaBlocked: "\u7121\u6599\u30D7\u30E9\u30F3\u306E\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F\u3002\u30A2\u30C3\u30D7\u30B0\u30EC\u30FC\u30C9\u3059\u308B\u3068\u3055\u3089\u306B\u4F5C\u6210\u3067\u304D\u307E\u3059\u3002",
-    noticeSizeOnlyScreen: "Size\u306FScreen\u30CE\u30FC\u30C9\u3067\u306E\u307F\u4F7F\u7528\u3067\u304D\u307E\u3059",
-    noticeDescUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FDescription\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeElevationUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FElevation\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeStatusUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStatus\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeStepUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStep Badges\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeLinkUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FReference Link\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeMixed: "\u6DF7\u5728\u3057\u305F\u9078\u629E\u3067\u306F\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    connectStatusSelectNodes: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E",
-    connectStatusReadyTwoNodes: "2\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F",
-    connectStatusReadyMultiNodes: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F",
-    connectStatusReady: "\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F",
-    connectStatusChangesReady: "\u9069\u7528\u3059\u308B\u5909\u66F4\u304C\u3042\u308A\u307E\u3059",
-    connectStatusConnected: "\u63A5\u7D9A\u6E08\u307F",
-    connectStatusNoChanges: "\u5909\u66F4\u306A\u3057",
-    stepDescStartsFromNumber: "\u6307\u5B9A\u3057\u305F\u756A\u53F7\u304B\u3089\u958B\u59CB",
-    stepTipEnterStartNumber: "\u958B\u59CB\u756A\u53F7\u3092\u5165\u529B",
-    stepTipAddStepBadges: "\u30B9\u30C6\u30C3\u30D7\u30D0\u30C3\u30B8\u3092\u8FFD\u52A0",
-    connectTipNoChanges: "\u9069\u7528\u3059\u308B\u5909\u66F4\u306F\u3042\u308A\u307E\u305B\u3093",
-    connectTipApplyChanges: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u5909\u66F4\u3092\u9069\u7528",
-    connectTipConnectNodes: "\u9078\u629E\u3057\u305F\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A"
+    noticeSizeOnlyScreen: "Size\u306FScreen\u30CE\u30FC\u30C9\u3067\u306E\u307F\u4F7F\u7528\u3067\u304D\u307E\u3059\u3002",
+    noticeDescUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FDescription\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeElevationUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FElevation\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeStatusUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStatus\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeStepUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStep Badges\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeLinkUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FReference Link\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeMixed: "\u6DF7\u5728\u3057\u305F\u9078\u629E\u3067\u306F\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    connectStatusSelectNodes: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3002",
+    connectStatusReadyTwoNodes: "2\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F\u3002",
+    connectStatusReadyMultiNodes: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F\u3002",
+    connectStatusReady: "\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F\u3002",
+    connectStatusChangesReady: "\u9069\u7528\u3059\u308B\u5909\u66F4\u304C\u3042\u308A\u307E\u3059\u3002",
+    connectStatusConnected: "\u63A5\u7D9A\u6E08\u307F\u3002",
+    connectStatusNoChanges: "\u5909\u66F4\u306A\u3057\u3002",
+    stepDescStartsFromNumber: "\u6307\u5B9A\u3057\u305F\u756A\u53F7\u304B\u3089\u958B\u59CB\u3002",
+    stepTipEnterStartNumber: "\u958B\u59CB\u756A\u53F7\u3092\u5165\u529B\u3002",
+    stepTipAddStepBadges: "\u30B9\u30C6\u30C3\u30D7\u30D0\u30C3\u30B8\u3092\u8FFD\u52A0\u3002",
+    connectTipNoChanges: "\u9069\u7528\u3059\u308B\u5909\u66F4\u306F\u3042\u308A\u307E\u305B\u3093\u3002",
+    connectTipApplyChanges: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u5909\u66F4\u3092\u9069\u7528\u3002",
+    connectTipConnectNodes: "\u9078\u629E\u3057\u305F\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3002"
   };
   var ZH_CN = {
     limitReached: "Flooow \u5143\u7D20\u6570\u91CF\u5DF2\u8FBE\u4E0A\u9650\uFF08{current}/{limit}\uFF09\u3002\u8BF7\u5220\u9664\u73B0\u6709\u5143\u7D20\u540E\u91CD\u8BD5\u3002",
-    nodeCreated: "\u5DF2\u521B\u5EFA\u8282\u70B9\u201C{title}\u201D",
+    nodeCreated: "\u5DF2\u521B\u5EFA\u8282\u70B9\u201C{title}\u201D\u3002",
     nodeCreateFailed: "\u521B\u5EFA\u8282\u70B9\u5931\u8D25\uFF1A{error}",
     nodeNotFoundSelect: "\u627E\u4E0D\u5230\u8981\u7F16\u8F91\u7684\u8282\u70B9\u3002\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u4E00\u4E2A\u8282\u70B9\u3002",
-    nodeUpdated: "\u5DF2\u66F4\u65B0\u8282\u70B9\u201C{title}\u201D",
+    nodeUpdated: "\u5DF2\u66F4\u65B0\u8282\u70B9\u201C{title}\u201D\u3002",
     nodeUpdateFailed: "\u66F4\u65B0\u8282\u70B9\u5931\u8D25\uFF1A{error}",
     nodesBatchUpdated: "\u5DF2\u66F4\u65B0 {count} \u4E2A\u8282\u70B9",
     nodesBatchUpdateFailed: "\u6279\u91CF\u66F4\u65B0\u8282\u70B9\u5931\u8D25\uFF1A{error}",
     nodeGone: "\u627E\u4E0D\u5230\u8BE5\u8282\u70B9\u3002",
     connectNodesNotFound: "\u627E\u4E0D\u5230\u8981\u8FDE\u63A5\u7684\u8282\u70B9\u3002",
     connectNeedTwoDifferent: "\u8BF7\u9009\u62E9\u4E24\u4E2A\u4E0D\u540C\u7684\u8282\u70B9\u8FDB\u884C\u8FDE\u63A5\u3002",
-    connectDone: "\u8FDE\u63A5\u5B8C\u6210",
-    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u8FDE\u63A5",
+    connectDone: "\u8FDE\u63A5\u5B8C\u6210\u3002",
+    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u8FDE\u63A5\u3002",
     connectCreateFailed: "\u521B\u5EFA\u8FDE\u63A5\u5668\u5931\u8D25\uFF1A{error}",
     connectNeedTwoOrMore: "\u8BF7\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u8FDB\u884C\u8FDE\u63A5\u3002",
     connectNeedTwoDifferentOrMore: "\u8BF7\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u4E0D\u540C\u7684\u8282\u70B9\u3002",
     connectNeedTwo: "\u8BF7\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u8FDB\u884C\u8FDE\u63A5\u3002",
-    autoConnectDone: "\u76F4\u89D2\u8FDE\u63A5\u5B8C\u6210",
-    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u76F4\u89D2\u8FDE\u63A5",
+    autoConnectDone: "\u76F4\u89D2\u8FDE\u63A5\u5B8C\u6210\u3002",
+    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u76F4\u89D2\u8FDE\u63A5\u3002",
     autoChainDone: "\u26A1 \u5DF2\u6309\u987A\u5E8F\u8FDE\u63A5 {nodes} \u4E2A\u8282\u70B9\uFF08{conns} \u4E2A\u8FDE\u63A5\u5668\uFF09\u3002",
     autoConnectFailed: "\u81EA\u52A8\u8FDE\u63A5\u5931\u8D25\uFF1A{error}",
     chainExistsAll: "\u6240\u6709\u8FDE\u63A5\u5747\u5DF2\u5B58\u5728\u3002",
-    chainCreatedPartial: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5\uFF08{skipped} \u4E2A\u5DF2\u5B58\u5728\uFF09",
-    chainCreated: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5",
+    chainCreatedPartial: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5\uFF08{skipped} \u4E2A\u5DF2\u5B58\u5728\uFF09\u3002",
+    chainCreated: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5\u3002",
     chainFailed: "\u94FE\u5F0F\u8FDE\u63A5\u5931\u8D25\uFF1A{error}",
     connectorSelectForLabel: "\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u8981\u7F16\u8F91\u7684\u8FDE\u63A5\u5668\u3002",
     connectorLabelSet: "\u4E2D\u5FC3\u6807\u7B7E\u5DF2\u8BBE\u7F6E\u4E3A\u201C{label}\u201D",
@@ -2599,16 +2619,16 @@
     connectorOffsetConverted: "\u5DF2\u8F6C\u6362\u4E3A\u81EA\u5B9A\u4E49\u76F4\u89D2\u8FDE\u63A5\u5668\uFF0C\u4EE5\u5E94\u7528\u504F\u79FB\u3002",
     connectorUpdateFailed: "\u66F4\u65B0\u8FDE\u63A5\u5668\u5931\u8D25\uFF1A{error}",
     connectorSelectForLineType: "\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u8981\u4FEE\u6539\u7684\u8FDE\u63A5\u5668\u3002",
-    connectorLineElbowed: "\u{1F4D0} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u89D2",
-    connectorLineStraight: "\u{1F4CF} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u7EBF",
+    connectorLineElbowed: "\u{1F4D0} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u89D2\u3002",
+    connectorLineStraight: "\u{1F4CF} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u7EBF\u3002",
     connectorLineTypeFailed: "\u66F4\u6539\u8FDE\u63A5\u5668\u7EBF\u578B\u5931\u8D25\uFF1A{error}",
     connectorsNoneToConvert: "\u753B\u5E03\u4E2D\u6CA1\u6709\u53EF\u8F6C\u6362\u7684\u8FDE\u63A5\u5668\u3002",
-    connectorsConvertedAll: "\u26A1 \u5DF2\u5C06 {count} \u4E2A\u8FDE\u63A5\u5668\u5168\u90E8\u8F6C\u6362\u4E3A\u76F4\u89D2",
-    connectorsAlreadyElbowed: "{count} \u4E2A\u8FDE\u63A5\u5668\u5DF2\u5168\u90E8\u4E3A\u76F4\u89D2",
+    connectorsConvertedAll: "\u26A1 \u5DF2\u5C06 {count} \u4E2A\u8FDE\u63A5\u5668\u5168\u90E8\u8F6C\u6362\u4E3A\u76F4\u89D2\u3002",
+    connectorsAlreadyElbowed: "{count} \u4E2A\u8FDE\u63A5\u5668\u5DF2\u5168\u90E8\u4E3A\u76F4\u89D2\u3002",
     connectorsConvertFailed: "\u6279\u91CF\u8F6C\u6362\u8FDE\u63A5\u5668\u5931\u8D25\uFF1A{error}",
     statusNeedSelection: "\u8BF7\u9009\u62E9\u81F3\u5C11 1 \u4E2A\u5143\u7D20\u4EE5\u8BBE\u7F6E\u72B6\u6001\u3002",
     statusRemoved: "\u5DF2\u4ECE {count} \u4E2A\u8282\u70B9\u4E2D\u79FB\u9664\u72B6\u6001\u5FBD\u7AE0\u3002",
-    statusAttached: "\u5DF2\u4E3A {count} \u4E2A\u8282\u70B9\u6DFB\u52A0\u72B6\u6001\u5FBD\u7AE0\u201C{label}\u201D",
+    statusAttached: "\u5DF2\u4E3A {count} \u4E2A\u8282\u70B9\u6DFB\u52A0\u72B6\u6001\u5FBD\u7AE0\u201C{label}\u201D\u3002",
     elevationNeedSelection: "\u8BF7\u9009\u62E9\u8981\u5E94\u7528 Elevation \u7684\u5143\u7D20\u3002",
     elevationRemoved: "\u5DF2\u4ECE {count} \u4E2A\u8282\u70B9\u4E2D\u79FB\u9664 Elevation\u3002",
     elevationApplied: "\u5DF2\u4E3A {count} \u4E2A\u8282\u70B9\u5E94\u7528 Level {level} Elevation\u3002",
@@ -2643,6 +2663,10 @@
     styleDefaultNoDelete: "\u9ED8\u8BA4\u6837\u5F0F\u65E0\u6CD5\u5220\u9664\u3002",
     styleDeleted: "\u6837\u5F0F\u5DF2\u5220\u9664\u3002",
     styleEditNoDefault: "\u9ED8\u8BA4\u6837\u5F0F\u65E0\u6CD5\u7F16\u8F91\u3002",
+    styleCustomLimitReached: "\u6700\u591A\u53EF\u6DFB\u52A0 7 \u4E2A\u81EA\u5B9A\u4E49\u6837\u5F0F\u3002",
+    exportCopied: "\u5DF2\u590D\u5236 AI \u7528\u6D41\u7A0B\u3002",
+    exportEmpty: "\u6B64\u9875\u9762\u6CA1\u6709\u53EF\u5BFC\u51FA\u7684\u6D41\u7A0B\u3002",
+    exportFailed: "\u5BFC\u51FA\u5931\u8D25\u3002",
     descCopyEmpty: "\u6CA1\u6709\u53EF\u590D\u5236\u7684\u63CF\u8FF0\u3002",
     descCopied: "\u63CF\u8FF0\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F\uFF01",
     tipWidth: "\u5BBD\u5EA6",
@@ -2678,6 +2702,7 @@
     tipLinkDisabled: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Reference Link",
     tipHexColor: "Hex \u989C\u8272",
     tipClose: "\u5173\u95ED",
+    tipSettings: "\u8BBE\u7F6E",
     tipRefreshFrames: "\u4ECE\u753B\u5E03\u5237\u65B0\u753B\u6846",
     tipSolid: "\u5B9E\u7EBF",
     tipDashed: "\u865A\u7EBF",
@@ -2688,8 +2713,9 @@
     tipTermArrow: "\u7BAD\u5934",
     tipTermCircle: "\u5706\u5F62",
     tipTermDiamond: "\u83F1\u5F62",
+    tipTermTriangle: "\u4E09\u89D2\u5F62",
     tipRouteOrtho: "\u76F4\u89D2",
-    tipRouteSCurve: "S \u66F2\u7EBF",
+    tipRouteSCurve: "\u5706\u89D2",
     tipRouteCurve: "\u66F2\u7EBF",
     tipRouteStraight: "\u76F4\u7EBF",
     tipGizmoSource: "\u8D77\u70B9",
@@ -2710,52 +2736,52 @@
     tipPresetDisabledShape: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Size \u9884\u8BBE",
     tipConnectorColor: "\u8FDE\u63A5\u5668\u989C\u8272",
     tipQuotaBlocked: "\u5DF2\u8FBE\u5230\u514D\u8D39\u7248\u4E0A\u9650\u3002\u5347\u7EA7\u540E\u53EF\u521B\u5EFA\u66F4\u591A\u5143\u7D20\u3002",
-    noticeSizeOnlyScreen: "Size \u4EC5\u9002\u7528\u4E8E Screen \u8282\u70B9",
-    noticeDescUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Description",
-    noticeElevationUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Elevation",
-    noticeStatusUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Status",
-    noticeStepUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Step Badges",
-    noticeLinkUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Reference Link",
-    noticeMixed: "\u6DF7\u5408\u9009\u62E9\u4E0D\u53EF\u7528",
-    connectStatusSelectNodes: "\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u4EE5\u8FDB\u884C\u8FDE\u63A5",
-    connectStatusReadyTwoNodes: "2 \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5",
-    connectStatusReadyMultiNodes: "{count} \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5",
-    connectStatusReady: "\u51C6\u5907\u8FDE\u63A5",
-    connectStatusChangesReady: "\u66F4\u6539\u5DF2\u51C6\u5907\u5E94\u7528",
-    connectStatusConnected: "\u5DF2\u8FDE\u63A5",
-    connectStatusNoChanges: "\u65E0\u66F4\u6539",
-    stepDescStartsFromNumber: "\u4ECE\u6307\u5B9A\u7F16\u53F7\u5F00\u59CB",
-    stepTipEnterStartNumber: "\u8F93\u5165\u8D77\u59CB\u7F16\u53F7",
-    stepTipAddStepBadges: "\u6DFB\u52A0\u6B65\u9AA4\u5FBD\u7AE0",
-    connectTipNoChanges: "\u6CA1\u6709\u53EF\u5E94\u7528\u7684\u66F4\u6539",
-    connectTipApplyChanges: "\u5E94\u7528\u8FDE\u63A5\u5668\u66F4\u6539",
-    connectTipConnectNodes: "\u8FDE\u63A5\u6240\u9009\u8282\u70B9"
+    noticeSizeOnlyScreen: "Size \u4EC5\u9002\u7528\u4E8E Screen \u8282\u70B9\u3002",
+    noticeDescUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Description\u3002",
+    noticeElevationUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Elevation\u3002",
+    noticeStatusUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Status\u3002",
+    noticeStepUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Step Badges\u3002",
+    noticeLinkUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Reference Link\u3002",
+    noticeMixed: "\u6DF7\u5408\u9009\u62E9\u4E0D\u53EF\u7528\u3002",
+    connectStatusSelectNodes: "\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u4EE5\u8FDB\u884C\u8FDE\u63A5\u3002",
+    connectStatusReadyTwoNodes: "2 \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5\u3002",
+    connectStatusReadyMultiNodes: "{count} \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5\u3002",
+    connectStatusReady: "\u51C6\u5907\u8FDE\u63A5\u3002",
+    connectStatusChangesReady: "\u66F4\u6539\u5DF2\u51C6\u5907\u5E94\u7528\u3002",
+    connectStatusConnected: "\u5DF2\u8FDE\u63A5\u3002",
+    connectStatusNoChanges: "\u65E0\u66F4\u6539\u3002",
+    stepDescStartsFromNumber: "\u4ECE\u6307\u5B9A\u7F16\u53F7\u5F00\u59CB\u3002",
+    stepTipEnterStartNumber: "\u8F93\u5165\u8D77\u59CB\u7F16\u53F7\u3002",
+    stepTipAddStepBadges: "\u6DFB\u52A0\u6B65\u9AA4\u5FBD\u7AE0\u3002",
+    connectTipNoChanges: "\u6CA1\u6709\u53EF\u5E94\u7528\u7684\u66F4\u6539\u3002",
+    connectTipApplyChanges: "\u5E94\u7528\u8FDE\u63A5\u5668\u66F4\u6539\u3002",
+    connectTipConnectNodes: "\u8FDE\u63A5\u6240\u9009\u8282\u70B9\u3002"
   };
   var ZH_TW = {
     limitReached: "Flooow \u5143\u7D20\u6578\u91CF\u5DF2\u9054\u4E0A\u9650\uFF08{current}/{limit}\uFF09\u3002\u8ACB\u522A\u9664\u73FE\u6709\u5143\u7D20\u5F8C\u518D\u8A66\u4E00\u6B21\u3002",
-    nodeCreated: "\u5DF2\u5EFA\u7ACB\u7BC0\u9EDE\u300C{title}\u300D",
+    nodeCreated: "\u5DF2\u5EFA\u7ACB\u7BC0\u9EDE\u300C{title}\u300D\u3002",
     nodeCreateFailed: "\u5EFA\u7ACB\u7BC0\u9EDE\u5931\u6557\uFF1A{error}",
     nodeNotFoundSelect: "\u627E\u4E0D\u5230\u8981\u7DE8\u8F2F\u7684\u7BC0\u9EDE\u3002\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u7BC0\u9EDE\u3002",
-    nodeUpdated: "\u5DF2\u66F4\u65B0\u7BC0\u9EDE\u300C{title}\u300D",
+    nodeUpdated: "\u5DF2\u66F4\u65B0\u7BC0\u9EDE\u300C{title}\u300D\u3002",
     nodeUpdateFailed: "\u66F4\u65B0\u7BC0\u9EDE\u5931\u6557\uFF1A{error}",
     nodesBatchUpdated: "\u5DF2\u66F4\u65B0 {count} \u500B\u7BC0\u9EDE",
     nodesBatchUpdateFailed: "\u6279\u6B21\u66F4\u65B0\u7BC0\u9EDE\u5931\u6557\uFF1A{error}",
     nodeGone: "\u627E\u4E0D\u5230\u8A72\u7BC0\u9EDE\u3002",
     connectNodesNotFound: "\u627E\u4E0D\u5230\u8981\u9023\u63A5\u7684\u7BC0\u9EDE\u3002",
     connectNeedTwoDifferent: "\u8ACB\u9078\u53D6\u5169\u500B\u4E0D\u540C\u7684\u7BC0\u9EDE\u9032\u884C\u9023\u63A5\u3002",
-    connectDone: "\u9023\u63A5\u5B8C\u6210",
-    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u9023\u63A5",
+    connectDone: "\u9023\u63A5\u5B8C\u6210\u3002",
+    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u9023\u63A5\u3002",
     connectCreateFailed: "\u5EFA\u7ACB\u9023\u63A5\u5668\u5931\u6557\uFF1A{error}",
     connectNeedTwoOrMore: "\u8ACB\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u9032\u884C\u9023\u63A5\u3002",
     connectNeedTwoDifferentOrMore: "\u8ACB\u9078\u53D6\u81F3\u5C11 2 \u500B\u4E0D\u540C\u7684\u7BC0\u9EDE\u3002",
     connectNeedTwo: "\u8ACB\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u9032\u884C\u9023\u63A5\u3002",
-    autoConnectDone: "\u76F4\u89D2\u9023\u63A5\u5B8C\u6210",
-    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u76F4\u89D2\u9023\u63A5",
+    autoConnectDone: "\u76F4\u89D2\u9023\u63A5\u5B8C\u6210\u3002",
+    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u76F4\u89D2\u9023\u63A5\u3002",
     autoChainDone: "\u26A1 \u5DF2\u4F9D\u5E8F\u9023\u63A5 {nodes} \u500B\u7BC0\u9EDE\uFF08{conns} \u500B\u9023\u63A5\u5668\uFF09\u3002",
     autoConnectFailed: "\u81EA\u52D5\u9023\u63A5\u5931\u6557\uFF1A{error}",
     chainExistsAll: "\u6240\u6709\u9023\u63A5\u7686\u5DF2\u5B58\u5728\u3002",
-    chainCreatedPartial: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5\uFF08{skipped} \u500B\u5DF2\u9023\u63A5\uFF09",
-    chainCreated: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5",
+    chainCreatedPartial: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5\uFF08{skipped} \u500B\u5DF2\u9023\u63A5\uFF09\u3002",
+    chainCreated: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5\u3002",
     chainFailed: "\u93C8\u5F0F\u9023\u63A5\u5931\u6557\uFF1A{error}",
     connectorSelectForLabel: "\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u8981\u7DE8\u8F2F\u7684\u9023\u63A5\u5668\u3002",
     connectorLabelSet: "\u4E2D\u592E\u6A19\u7C64\u5DF2\u8A2D\u70BA\u300C{label}\u300D",
@@ -2765,16 +2791,16 @@
     connectorOffsetConverted: "\u5DF2\u8F49\u63DB\u70BA\u81EA\u8A02\u76F4\u89D2\u9023\u63A5\u5668\uFF0C\u4EE5\u5957\u7528\u504F\u79FB\u3002",
     connectorUpdateFailed: "\u66F4\u65B0\u9023\u63A5\u5668\u5931\u6557\uFF1A{error}",
     connectorSelectForLineType: "\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u8981\u8B8A\u66F4\u7684\u9023\u63A5\u5668\u3002",
-    connectorLineElbowed: "\u{1F4D0} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u89D2",
-    connectorLineStraight: "\u{1F4CF} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u7DDA",
+    connectorLineElbowed: "\u{1F4D0} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u89D2\u3002",
+    connectorLineStraight: "\u{1F4CF} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u7DDA\u3002",
     connectorLineTypeFailed: "\u8B8A\u66F4\u9023\u63A5\u5668\u7DDA\u689D\u985E\u578B\u5931\u6557\uFF1A{error}",
     connectorsNoneToConvert: "\u756B\u5E03\u4E0A\u6C92\u6709\u53EF\u8F49\u63DB\u7684\u9023\u63A5\u5668\u3002",
-    connectorsConvertedAll: "\u26A1 \u5DF2\u5C07 {count} \u500B\u9023\u63A5\u5668\u5168\u90E8\u8F49\u63DB\u70BA\u76F4\u89D2",
-    connectorsAlreadyElbowed: "{count} \u500B\u9023\u63A5\u5668\u5DF2\u5168\u90E8\u70BA\u76F4\u89D2",
+    connectorsConvertedAll: "\u26A1 \u5DF2\u5C07 {count} \u500B\u9023\u63A5\u5668\u5168\u90E8\u8F49\u63DB\u70BA\u76F4\u89D2\u3002",
+    connectorsAlreadyElbowed: "{count} \u500B\u9023\u63A5\u5668\u5DF2\u5168\u90E8\u70BA\u76F4\u89D2\u3002",
     connectorsConvertFailed: "\u6279\u6B21\u8F49\u63DB\u9023\u63A5\u5668\u5931\u6557\uFF1A{error}",
     statusNeedSelection: "\u8ACB\u9078\u53D6\u81F3\u5C11 1 \u500B\u5143\u7D20\u4EE5\u8A2D\u5B9A\u72C0\u614B\u3002",
     statusRemoved: "\u5DF2\u5F9E {count} \u500B\u7BC0\u9EDE\u79FB\u9664\u72C0\u614B\u5FBD\u7AE0\u3002",
-    statusAttached: "\u5DF2\u70BA {count} \u500B\u7BC0\u9EDE\u65B0\u589E\u72C0\u614B\u5FBD\u7AE0\u300C{label}\u300D",
+    statusAttached: "\u5DF2\u70BA {count} \u500B\u7BC0\u9EDE\u65B0\u589E\u72C0\u614B\u5FBD\u7AE0\u300C{label}\u300D\u3002",
     elevationNeedSelection: "\u8ACB\u9078\u53D6\u8981\u5957\u7528 Elevation \u7684\u5143\u7D20\u3002",
     elevationRemoved: "\u5DF2\u5F9E {count} \u500B\u7BC0\u9EDE\u79FB\u9664 Elevation\u3002",
     elevationApplied: "\u5DF2\u70BA {count} \u500B\u7BC0\u9EDE\u5957\u7528 Level {level} Elevation\u3002",
@@ -2809,6 +2835,10 @@
     styleDefaultNoDelete: "\u9810\u8A2D\u6A23\u5F0F\u7121\u6CD5\u522A\u9664\u3002",
     styleDeleted: "\u6A23\u5F0F\u5DF2\u522A\u9664\u3002",
     styleEditNoDefault: "\u9810\u8A2D\u6A23\u5F0F\u7121\u6CD5\u7DE8\u8F2F\u3002",
+    styleCustomLimitReached: "\u6700\u591A\u53EF\u65B0\u589E 7 \u500B\u81EA\u8A02\u6A23\u5F0F\u3002",
+    exportCopied: "\u5DF2\u8907\u88FD AI \u7528\u6D41\u7A0B\u3002",
+    exportEmpty: "\u6B64\u9801\u9762\u6C92\u6709\u53EF\u532F\u51FA\u7684\u6D41\u7A0B\u3002",
+    exportFailed: "\u532F\u51FA\u5931\u6557\u3002",
     descCopyEmpty: "\u6C92\u6709\u53EF\u8907\u88FD\u7684\u8AAA\u660E\u3002",
     descCopied: "\u8AAA\u660E\u5DF2\u8907\u88FD\u5230\u526A\u8CBC\u7C3F\uFF01",
     tipWidth: "\u5BEC\u5EA6",
@@ -2844,6 +2874,7 @@
     tipLinkDisabled: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Reference Link",
     tipHexColor: "Hex \u984F\u8272",
     tipClose: "\u95DC\u9589",
+    tipSettings: "\u8A2D\u5B9A",
     tipRefreshFrames: "\u5F9E\u756B\u5E03\u91CD\u65B0\u6574\u7406\u6846\u67B6",
     tipSolid: "\u5BE6\u7DDA",
     tipDashed: "\u865B\u7DDA",
@@ -2854,8 +2885,9 @@
     tipTermArrow: "\u7BAD\u982D",
     tipTermCircle: "\u5713\u5F62",
     tipTermDiamond: "\u83F1\u5F62",
+    tipTermTriangle: "\u4E09\u89D2\u5F62",
     tipRouteOrtho: "\u76F4\u89D2",
-    tipRouteSCurve: "S \u66F2\u7DDA",
+    tipRouteSCurve: "\u5713\u89D2",
     tipRouteCurve: "\u66F2\u7DDA",
     tipRouteStraight: "\u76F4\u7DDA",
     tipGizmoSource: "\u8D77\u9EDE",
@@ -2876,35 +2908,35 @@
     tipPresetDisabledShape: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Size \u9810\u8A2D",
     tipConnectorColor: "\u9023\u63A5\u5668\u984F\u8272",
     tipQuotaBlocked: "\u5DF2\u9054\u514D\u8CBB\u7248\u4E0A\u9650\u3002\u5347\u7D1A\u5F8C\u53EF\u5EFA\u7ACB\u66F4\u591A\u5143\u7D20\u3002",
-    noticeSizeOnlyScreen: "Size \u50C5\u9069\u7528\u65BC Screen \u7BC0\u9EDE",
-    noticeDescUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Description",
-    noticeElevationUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Elevation",
-    noticeStatusUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Status",
-    noticeStepUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Step Badges",
-    noticeLinkUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Reference Link",
-    noticeMixed: "\u6DF7\u5408\u9078\u53D6\u4E0D\u53EF\u7528",
-    connectStatusSelectNodes: "\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u4EE5\u9032\u884C\u9023\u63A5",
-    connectStatusReadyTwoNodes: "2 \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5",
-    connectStatusReadyMultiNodes: "{count} \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5",
-    connectStatusReady: "\u6E96\u5099\u9023\u63A5",
-    connectStatusChangesReady: "\u8B8A\u66F4\u5DF2\u6E96\u5099\u5957\u7528",
-    connectStatusConnected: "\u5DF2\u9023\u63A5",
-    connectStatusNoChanges: "\u7121\u8B8A\u66F4",
-    stepDescStartsFromNumber: "\u5F9E\u6307\u5B9A\u7DE8\u865F\u958B\u59CB",
-    stepTipEnterStartNumber: "\u8F38\u5165\u8D77\u59CB\u7DE8\u865F",
-    stepTipAddStepBadges: "\u65B0\u589E\u6B65\u9A5F\u5FBD\u7AE0",
-    connectTipNoChanges: "\u6C92\u6709\u53EF\u5957\u7528\u7684\u8B8A\u66F4",
-    connectTipApplyChanges: "\u5957\u7528\u9023\u63A5\u5668\u8B8A\u66F4",
-    connectTipConnectNodes: "\u9023\u63A5\u6240\u9078\u7BC0\u9EDE"
+    noticeSizeOnlyScreen: "Size \u50C5\u9069\u7528\u65BC Screen \u7BC0\u9EDE\u3002",
+    noticeDescUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Description\u3002",
+    noticeElevationUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Elevation\u3002",
+    noticeStatusUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Status\u3002",
+    noticeStepUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Step Badges\u3002",
+    noticeLinkUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Reference Link\u3002",
+    noticeMixed: "\u6DF7\u5408\u9078\u53D6\u4E0D\u53EF\u7528\u3002",
+    connectStatusSelectNodes: "\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u4EE5\u9032\u884C\u9023\u63A5\u3002",
+    connectStatusReadyTwoNodes: "2 \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5\u3002",
+    connectStatusReadyMultiNodes: "{count} \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5\u3002",
+    connectStatusReady: "\u6E96\u5099\u9023\u63A5\u3002",
+    connectStatusChangesReady: "\u8B8A\u66F4\u5DF2\u6E96\u5099\u5957\u7528\u3002",
+    connectStatusConnected: "\u5DF2\u9023\u63A5\u3002",
+    connectStatusNoChanges: "\u7121\u8B8A\u66F4\u3002",
+    stepDescStartsFromNumber: "\u5F9E\u6307\u5B9A\u7DE8\u865F\u958B\u59CB\u3002",
+    stepTipEnterStartNumber: "\u8F38\u5165\u8D77\u59CB\u7DE8\u865F\u3002",
+    stepTipAddStepBadges: "\u65B0\u589E\u6B65\u9A5F\u5FBD\u7AE0\u3002",
+    connectTipNoChanges: "\u6C92\u6709\u53EF\u5957\u7528\u7684\u8B8A\u66F4\u3002",
+    connectTipApplyChanges: "\u5957\u7528\u9023\u63A5\u5668\u8B8A\u66F4\u3002",
+    connectTipConnectNodes: "\u9023\u63A5\u6240\u9078\u7BC0\u9EDE\u3002"
   };
   var ES = {
     // 1. Quota & Entitlement
     limitReached: "Se ha alcanzado el l\xEDmite de elementos de Flooow ({current}/{limit}). Elimina elementos existentes y vuelve a intentarlo.",
     // 2. Node CRUD
-    nodeCreated: 'Nodo "{title}" creado',
+    nodeCreated: 'Nodo "{title}" creado.',
     nodeCreateFailed: "No se pudo crear el nodo: {error}",
     nodeNotFoundSelect: "No se encontr\xF3 el nodo que quieres editar. Selecciona un nodo en el lienzo.",
-    nodeUpdated: 'Nodo "{title}" actualizado',
+    nodeUpdated: 'Nodo "{title}" actualizado.',
     nodeUpdateFailed: "No se pudo actualizar el nodo: {error}",
     nodesBatchUpdated: "{count} nodos actualizados",
     nodesBatchUpdateFailed: "No se pudieron actualizar los nodos: {error}",
@@ -2912,19 +2944,19 @@
     // 3. Connect & Chain
     connectNodesNotFound: "No se encontraron los nodos que quieres conectar.",
     connectNeedTwoDifferent: "Selecciona dos nodos diferentes para conectarlos.",
-    connectDone: "Conectado",
-    connectDoneLabel: 'Conectado con la etiqueta "{label}"',
+    connectDone: "Conectado.",
+    connectDoneLabel: 'Conectado con la etiqueta "{label}".',
     connectCreateFailed: "No se pudo crear la conexi\xF3n: {error}",
     connectNeedTwoOrMore: "Selecciona al menos 2 nodos para conectarlos.",
     connectNeedTwoDifferentOrMore: "Selecciona al menos 2 nodos diferentes.",
     connectNeedTwo: "Selecciona al menos 2 nodos para conectarlos.",
-    autoConnectDone: "Conexi\xF3n ortogonal completada",
-    autoConnectDoneLabel: 'Conexi\xF3n ortogonal completada con la etiqueta "{label}"',
+    autoConnectDone: "Conexi\xF3n ortogonal completada.",
+    autoConnectDoneLabel: 'Conexi\xF3n ortogonal completada con la etiqueta "{label}".',
     autoChainDone: "\u26A1 {nodes} nodos conectados en secuencia ({conns} conexiones).",
     autoConnectFailed: "No se pudo realizar la conexi\xF3n autom\xE1tica: {error}",
     chainExistsAll: "Todas las conexiones ya existen.",
-    chainCreatedPartial: "{created} conexiones creadas ({skipped} ya exist\xEDan)",
-    chainCreated: "{created} conexiones creadas",
+    chainCreatedPartial: "{created} conexiones creadas ({skipped} ya exist\xEDan).",
+    chainCreated: "{created} conexiones creadas.",
     chainFailed: "No se pudo crear la cadena: {error}",
     // 4. Connector Editing
     connectorSelectForLabel: "Selecciona una conexi\xF3n en el lienzo para editarla.",
@@ -2935,17 +2967,17 @@
     connectorOffsetConverted: "Convertida autom\xE1ticamente en una conexi\xF3n ortogonal personalizada para aplicar los desplazamientos.",
     connectorUpdateFailed: "No se pudo actualizar la conexi\xF3n: {error}",
     connectorSelectForLineType: "Selecciona una conexi\xF3n en el lienzo para cambiarla.",
-    connectorLineElbowed: "\u{1F4D0} Conexi\xF3n cambiada a ortogonal",
-    connectorLineStraight: "\u{1F4CF} Conexi\xF3n cambiada a recta",
+    connectorLineElbowed: "\u{1F4D0} Conexi\xF3n cambiada a ortogonal.",
+    connectorLineStraight: "\u{1F4CF} Conexi\xF3n cambiada a recta.",
     connectorLineTypeFailed: "No se pudo cambiar el tipo de l\xEDnea: {error}",
     connectorsNoneToConvert: "No hay conexiones en el lienzo para convertir.",
-    connectorsConvertedAll: "\u26A1 {count} conexiones convertidas a ortogonales",
-    connectorsAlreadyElbowed: "{count} conexiones ya son ortogonales",
+    connectorsConvertedAll: "\u26A1 {count} conexiones convertidas a ortogonales.",
+    connectorsAlreadyElbowed: "{count} conexiones ya son ortogonales.",
     connectorsConvertFailed: "No se pudieron convertir las conexiones: {error}",
     // 5. Status Badge
     statusNeedSelection: "Selecciona al menos 1 elemento para establecer el estado.",
     statusRemoved: "Insignias de estado eliminadas de {count} nodos.",
-    statusAttached: 'Insignia de estado "{label}" a\xF1adida a {count} nodos',
+    statusAttached: 'Insignia de estado "{label}" a\xF1adida a {count} nodos.',
     // 6. Elevation
     elevationNeedSelection: "Selecciona elementos para aplicar Elevation.",
     elevationRemoved: "Elevation eliminada de {count} nodos.",
@@ -2986,6 +3018,10 @@
     styleDefaultNoDelete: "Los estilos predeterminados no se pueden eliminar.",
     styleDeleted: "Estilo eliminado.",
     styleEditNoDefault: "Los estilos predeterminados no se pueden editar.",
+    styleCustomLimitReached: "Puedes a\xF1adir hasta 7 estilos personalizados.",
+    exportCopied: "Flujo copiado para la IA.",
+    exportEmpty: "Nada que exportar en esta p\xE1gina.",
+    exportFailed: "Error al exportar.",
     // 12. Description
     descCopyEmpty: "No hay ninguna descripci\xF3n para copiar.",
     descCopied: "Descripci\xF3n copiada al portapapeles.",
@@ -3023,6 +3059,7 @@
     tipLinkDisabled: "Reference Link no est\xE1 disponible para esta forma",
     tipHexColor: "Color hexadecimal",
     tipClose: "Cerrar",
+    tipSettings: "Ajustes",
     tipRefreshFrames: "Actualizar frames desde el lienzo",
     tipSolid: "S\xF3lida",
     tipDashed: "Discontinua",
@@ -3033,8 +3070,9 @@
     tipTermArrow: "Flecha",
     tipTermCircle: "C\xEDrculo",
     tipTermDiamond: "Rombo",
+    tipTermTriangle: "Tri\xE1ngulo",
     tipRouteOrtho: "Ortogonal",
-    tipRouteSCurve: "Curva en S",
+    tipRouteSCurve: "Redondeado",
     tipRouteCurve: "Curva",
     tipRouteStraight: "Recta",
     tipGizmoSource: "Origen",
@@ -3056,37 +3094,37 @@
     tipConnectorColor: "Color de conexi\xF3n",
     tipQuotaBlocked: "L\xEDmite gratuito alcanzado. Actualiza para crear m\xE1s.",
     // 14. Shape Notices
-    noticeSizeOnlyScreen: "Size solo est\xE1 disponible para nodos Screen",
-    noticeDescUnsupported: "Description no est\xE1 disponible para esta forma",
-    noticeElevationUnsupported: "Elevation no est\xE1 disponible para esta forma",
-    noticeStatusUnsupported: "Status no est\xE1 disponible para esta forma",
-    noticeStepUnsupported: "Step Badges no est\xE1 disponible para esta forma",
-    noticeLinkUnsupported: "Reference Link no est\xE1 disponible para esta forma",
-    noticeMixed: "No disponible para una selecci\xF3n mixta",
+    noticeSizeOnlyScreen: "Size solo est\xE1 disponible para nodos Screen.",
+    noticeDescUnsupported: "Description no est\xE1 disponible para esta forma.",
+    noticeElevationUnsupported: "Elevation no est\xE1 disponible para esta forma.",
+    noticeStatusUnsupported: "Status no est\xE1 disponible para esta forma.",
+    noticeStepUnsupported: "Step Badges no est\xE1 disponible para esta forma.",
+    noticeLinkUnsupported: "Reference Link no est\xE1 disponible para esta forma.",
+    noticeMixed: "No disponible para una selecci\xF3n mixta.",
     // 15. Connect Status Text
-    connectStatusSelectNodes: "Selecciona 2 o m\xE1s nodos para conectar",
-    connectStatusReadyTwoNodes: "2 nodos listos para conectar",
-    connectStatusReadyMultiNodes: "{count} nodos listos para conectar",
-    connectStatusReady: "Listo para conectar",
-    connectStatusChangesReady: "Cambios listos para aplicar",
-    connectStatusConnected: "Conectado",
-    connectStatusNoChanges: "Sin cambios",
+    connectStatusSelectNodes: "Selecciona 2 o m\xE1s nodos para conectar.",
+    connectStatusReadyTwoNodes: "2 nodos listos para conectar.",
+    connectStatusReadyMultiNodes: "{count} nodos listos para conectar.",
+    connectStatusReady: "Listo para conectar.",
+    connectStatusChangesReady: "Cambios listos para aplicar.",
+    connectStatusConnected: "Conectado.",
+    connectStatusNoChanges: "Sin cambios.",
     // 16. Action Buttons & Tooltips
-    stepDescStartsFromNumber: "Comienza desde el n\xFAmero especificado",
-    stepTipEnterStartNumber: "Introduce un n\xFAmero inicial",
-    stepTipAddStepBadges: "A\xF1adir Step Badges",
-    connectTipNoChanges: "No hay cambios para aplicar",
-    connectTipApplyChanges: "Aplicar cambios de conexi\xF3n",
-    connectTipConnectNodes: "Conectar nodos seleccionados"
+    stepDescStartsFromNumber: "Comienza desde el n\xFAmero especificado.",
+    stepTipEnterStartNumber: "Introduce un n\xFAmero inicial.",
+    stepTipAddStepBadges: "A\xF1adir Step Badges.",
+    connectTipNoChanges: "No hay cambios para aplicar.",
+    connectTipApplyChanges: "Aplicar cambios de conexi\xF3n.",
+    connectTipConnectNodes: "Conectar nodos seleccionados."
   };
   var DE = {
     // 1. Quota & Entitlement
     limitReached: "Das Limit f\xFCr Flooow-Elemente ist erreicht ({current}/{limit}). L\xF6sche vorhandene Elemente und versuche es erneut.",
     // 2. Node CRUD
-    nodeCreated: 'Knoten "{title}" erstellt',
+    nodeCreated: 'Knoten "{title}" erstellt.',
     nodeCreateFailed: "Knoten konnte nicht erstellt werden: {error}",
     nodeNotFoundSelect: "Der zu bearbeitende Knoten wurde nicht gefunden. W\xE4hle einen Knoten auf der Arbeitsfl\xE4che aus.",
-    nodeUpdated: 'Knoten "{title}" aktualisiert',
+    nodeUpdated: 'Knoten "{title}" aktualisiert.',
     nodeUpdateFailed: "Knoten konnte nicht aktualisiert werden: {error}",
     nodesBatchUpdated: "{count} Knoten aktualisiert",
     nodesBatchUpdateFailed: "Knoten konnten nicht aktualisiert werden: {error}",
@@ -3094,19 +3132,19 @@
     // 3. Connect & Chain
     connectNodesNotFound: "Zu verbindende Knoten wurden nicht gefunden.",
     connectNeedTwoDifferent: "W\xE4hle zwei verschiedene Knoten zum Verbinden aus.",
-    connectDone: "Verbunden",
-    connectDoneLabel: 'Mit der Beschriftung "{label}" verbunden',
+    connectDone: "Verbunden.",
+    connectDoneLabel: 'Mit der Beschriftung "{label}" verbunden.',
     connectCreateFailed: "Verbindung konnte nicht erstellt werden: {error}",
     connectNeedTwoOrMore: "W\xE4hle mindestens 2 Knoten zum Verbinden aus.",
     connectNeedTwoDifferentOrMore: "W\xE4hle mindestens 2 verschiedene Knoten aus.",
     connectNeedTwo: "W\xE4hle mindestens 2 Knoten zum Verbinden aus.",
-    autoConnectDone: "Orthogonale Verbindung erstellt",
-    autoConnectDoneLabel: 'Orthogonale Verbindung mit der Beschriftung "{label}" erstellt',
+    autoConnectDone: "Orthogonale Verbindung erstellt.",
+    autoConnectDoneLabel: 'Orthogonale Verbindung mit der Beschriftung "{label}" erstellt.',
     autoChainDone: "\u26A1 {nodes} Knoten nacheinander verbunden ({conns} Verbindungen).",
     autoConnectFailed: "Automatische Verbindung fehlgeschlagen: {error}",
     chainExistsAll: "Alle Verbindungen sind bereits vorhanden.",
-    chainCreatedPartial: "{created} Verbindungen erstellt ({skipped} bereits vorhanden)",
-    chainCreated: "{created} Verbindungen erstellt",
+    chainCreatedPartial: "{created} Verbindungen erstellt ({skipped} bereits vorhanden).",
+    chainCreated: "{created} Verbindungen erstellt.",
     chainFailed: "Kettenverbindung fehlgeschlagen: {error}",
     // 4. Connector Editing
     connectorSelectForLabel: "W\xE4hle eine Verbindung auf der Arbeitsfl\xE4che aus, um sie zu bearbeiten.",
@@ -3117,17 +3155,17 @@
     connectorOffsetConverted: "Zur Anwendung von Vers\xE4tzen automatisch in eine benutzerdefinierte orthogonale Verbindung umgewandelt.",
     connectorUpdateFailed: "Verbindung konnte nicht aktualisiert werden: {error}",
     connectorSelectForLineType: "W\xE4hle eine Verbindung auf der Arbeitsfl\xE4che aus, um sie zu \xE4ndern.",
-    connectorLineElbowed: "\u{1F4D0} Verbindung auf orthogonal ge\xE4ndert",
-    connectorLineStraight: "\u{1F4CF} Verbindung auf gerade ge\xE4ndert",
+    connectorLineElbowed: "\u{1F4D0} Verbindung auf orthogonal ge\xE4ndert.",
+    connectorLineStraight: "\u{1F4CF} Verbindung auf gerade ge\xE4ndert.",
     connectorLineTypeFailed: "Linientyp konnte nicht ge\xE4ndert werden: {error}",
     connectorsNoneToConvert: "Keine Verbindungen auf der Arbeitsfl\xE4che zum Umwandeln vorhanden.",
-    connectorsConvertedAll: "\u26A1 {count} Verbindungen in orthogonale Verbindungen umgewandelt",
-    connectorsAlreadyElbowed: "{count} Verbindungen sind bereits orthogonal",
+    connectorsConvertedAll: "\u26A1 {count} Verbindungen in orthogonale Verbindungen umgewandelt.",
+    connectorsAlreadyElbowed: "{count} Verbindungen sind bereits orthogonal.",
     connectorsConvertFailed: "Verbindungen konnten nicht umgewandelt werden: {error}",
     // 5. Status Badge
     statusNeedSelection: "W\xE4hle mindestens 1 Element aus, um einen Status festzulegen.",
     statusRemoved: "Status-Badges von {count} Knoten entfernt.",
-    statusAttached: 'Status-Badge "{label}" an {count} Knoten angebracht',
+    statusAttached: 'Status-Badge "{label}" an {count} Knoten angebracht.',
     // 6. Elevation
     elevationNeedSelection: "W\xE4hle Elemente aus, um Elevation anzuwenden.",
     elevationRemoved: "Elevation von {count} Knoten entfernt.",
@@ -3168,6 +3206,10 @@
     styleDefaultNoDelete: "Standardstile k\xF6nnen nicht gel\xF6scht werden.",
     styleDeleted: "Stil gel\xF6scht.",
     styleEditNoDefault: "Standardstile k\xF6nnen nicht bearbeitet werden.",
+    styleCustomLimitReached: "Du kannst bis zu 7 benutzerdefinierte Stile hinzuf\xFCgen.",
+    exportCopied: "Flow f\xFCr KI kopiert.",
+    exportEmpty: "Nichts auf dieser Seite zu exportieren.",
+    exportFailed: "Export fehlgeschlagen.",
     // 12. Description
     descCopyEmpty: "Keine Beschreibung zum Kopieren vorhanden.",
     descCopied: "Beschreibung in die Zwischenablage kopiert.",
@@ -3205,6 +3247,7 @@
     tipLinkDisabled: "Reference Link ist f\xFCr diese Form nicht verf\xFCgbar",
     tipHexColor: "Hex-Farbe",
     tipClose: "Schlie\xDFen",
+    tipSettings: "Einstellungen",
     tipRefreshFrames: "Frames von der Arbeitsfl\xE4che aktualisieren",
     tipSolid: "Durchgezogen",
     tipDashed: "Gestrichelt",
@@ -3215,8 +3258,9 @@
     tipTermArrow: "Pfeil",
     tipTermCircle: "Kreis",
     tipTermDiamond: "Raute",
+    tipTermTriangle: "Dreieck",
     tipRouteOrtho: "Orthogonal",
-    tipRouteSCurve: "S-Kurve",
+    tipRouteSCurve: "Rund",
     tipRouteCurve: "Kurve",
     tipRouteStraight: "Gerade",
     tipGizmoSource: "Quelle",
@@ -3238,37 +3282,37 @@
     tipConnectorColor: "Verbindungsfarbe",
     tipQuotaBlocked: "Kostenloses Limit erreicht. Upgrade f\xFCr weitere Elemente.",
     // 14. Shape Notices
-    noticeSizeOnlyScreen: "Size ist nur f\xFCr Screen-Knoten verf\xFCgbar",
-    noticeDescUnsupported: "Description ist f\xFCr diese Form nicht verf\xFCgbar",
-    noticeElevationUnsupported: "Elevation ist f\xFCr diese Form nicht verf\xFCgbar",
-    noticeStatusUnsupported: "Status ist f\xFCr diese Form nicht verf\xFCgbar",
-    noticeStepUnsupported: "Step Badges sind f\xFCr diese Form nicht verf\xFCgbar",
-    noticeLinkUnsupported: "Reference Link ist f\xFCr diese Form nicht verf\xFCgbar",
-    noticeMixed: "Bei gemischter Auswahl nicht verf\xFCgbar",
+    noticeSizeOnlyScreen: "Size ist nur f\xFCr Screen-Knoten verf\xFCgbar.",
+    noticeDescUnsupported: "Description ist f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeElevationUnsupported: "Elevation ist f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeStatusUnsupported: "Status ist f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeStepUnsupported: "Step Badges sind f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeLinkUnsupported: "Reference Link ist f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeMixed: "Bei gemischter Auswahl nicht verf\xFCgbar.",
     // 15. Connect Status Text
-    connectStatusSelectNodes: "Mindestens 2 Knoten zum Verbinden ausw\xE4hlen",
-    connectStatusReadyTwoNodes: "2 Knoten zum Verbinden bereit",
-    connectStatusReadyMultiNodes: "{count} Knoten zum Verbinden bereit",
-    connectStatusReady: "Bereit zum Verbinden",
-    connectStatusChangesReady: "\xC4nderungen zum Anwenden bereit",
-    connectStatusConnected: "Verbunden",
-    connectStatusNoChanges: "Keine \xC4nderungen",
+    connectStatusSelectNodes: "Mindestens 2 Knoten zum Verbinden ausw\xE4hlen.",
+    connectStatusReadyTwoNodes: "2 Knoten zum Verbinden bereit.",
+    connectStatusReadyMultiNodes: "{count} Knoten zum Verbinden bereit.",
+    connectStatusReady: "Bereit zum Verbinden.",
+    connectStatusChangesReady: "\xC4nderungen zum Anwenden bereit.",
+    connectStatusConnected: "Verbunden.",
+    connectStatusNoChanges: "Keine \xC4nderungen.",
     // 16. Action Buttons & Tooltips
-    stepDescStartsFromNumber: "Beginnt mit der angegebenen Nummer",
-    stepTipEnterStartNumber: "Startnummer eingeben",
-    stepTipAddStepBadges: "Step Badges hinzuf\xFCgen",
-    connectTipNoChanges: "Keine \xC4nderungen zum Anwenden",
-    connectTipApplyChanges: "Verbindungs\xE4nderungen anwenden",
-    connectTipConnectNodes: "Ausgew\xE4hlte Knoten verbinden"
+    stepDescStartsFromNumber: "Beginnt mit der angegebenen Nummer.",
+    stepTipEnterStartNumber: "Startnummer eingeben.",
+    stepTipAddStepBadges: "Step Badges hinzuf\xFCgen.",
+    connectTipNoChanges: "Keine \xC4nderungen zum Anwenden.",
+    connectTipApplyChanges: "Verbindungs\xE4nderungen anwenden.",
+    connectTipConnectNodes: "Ausgew\xE4hlte Knoten verbinden."
   };
   var FR = {
     // 1. Quota & Entitlement
     limitReached: "La limite d\u2019\xE9l\xE9ments Flooow est atteinte ({current}/{limit}). Supprimez des \xE9l\xE9ments existants, puis r\xE9essayez.",
     // 2. Node CRUD
-    nodeCreated: 'N\u0153ud "{title}" cr\xE9\xE9',
+    nodeCreated: 'N\u0153ud "{title}" cr\xE9\xE9.',
     nodeCreateFailed: "\xC9chec de la cr\xE9ation du n\u0153ud : {error}",
     nodeNotFoundSelect: "N\u0153ud \xE0 modifier introuvable. S\xE9lectionnez un n\u0153ud sur le canevas.",
-    nodeUpdated: 'N\u0153ud "{title}" mis \xE0 jour',
+    nodeUpdated: 'N\u0153ud "{title}" mis \xE0 jour.',
     nodeUpdateFailed: "\xC9chec de la mise \xE0 jour du n\u0153ud : {error}",
     nodesBatchUpdated: "{count} n\u0153uds mis \xE0 jour",
     nodesBatchUpdateFailed: "\xC9chec de la mise \xE0 jour des n\u0153uds : {error}",
@@ -3276,19 +3320,19 @@
     // 3. Connect & Chain
     connectNodesNotFound: "N\u0153uds \xE0 connecter introuvables.",
     connectNeedTwoDifferent: "S\xE9lectionnez deux n\u0153uds diff\xE9rents \xE0 connecter.",
-    connectDone: "Connect\xE9",
-    connectDoneLabel: 'Connect\xE9 avec le libell\xE9 "{label}"',
+    connectDone: "Connect\xE9.",
+    connectDoneLabel: 'Connect\xE9 avec le libell\xE9 "{label}".',
     connectCreateFailed: "\xC9chec de la cr\xE9ation de la connexion : {error}",
     connectNeedTwoOrMore: "S\xE9lectionnez au moins 2 n\u0153uds \xE0 connecter.",
     connectNeedTwoDifferentOrMore: "S\xE9lectionnez au moins 2 n\u0153uds diff\xE9rents.",
     connectNeedTwo: "S\xE9lectionnez au moins 2 n\u0153uds \xE0 connecter.",
-    autoConnectDone: "Connexion orthogonale termin\xE9e",
-    autoConnectDoneLabel: 'Connexion orthogonale termin\xE9e avec le libell\xE9 "{label}"',
+    autoConnectDone: "Connexion orthogonale termin\xE9e.",
+    autoConnectDoneLabel: 'Connexion orthogonale termin\xE9e avec le libell\xE9 "{label}".',
     autoChainDone: "\u26A1 {nodes} n\u0153uds connect\xE9s en s\xE9quence ({conns} connexions).",
     autoConnectFailed: "\xC9chec de la connexion automatique : {error}",
     chainExistsAll: "Toutes les connexions existent d\xE9j\xE0.",
-    chainCreatedPartial: "{created} connexions cr\xE9\xE9es ({skipped} existent d\xE9j\xE0)",
-    chainCreated: "{created} connexions cr\xE9\xE9es",
+    chainCreatedPartial: "{created} connexions cr\xE9\xE9es ({skipped} existent d\xE9j\xE0).",
+    chainCreated: "{created} connexions cr\xE9\xE9es.",
     chainFailed: "\xC9chec de la cr\xE9ation de la cha\xEEne : {error}",
     // 4. Connector Editing
     connectorSelectForLabel: "S\xE9lectionnez une connexion sur le canevas pour la modifier.",
@@ -3299,17 +3343,17 @@
     connectorOffsetConverted: "Convertie automatiquement en connexion orthogonale personnalis\xE9e pour appliquer les d\xE9calages.",
     connectorUpdateFailed: "\xC9chec de la mise \xE0 jour de la connexion : {error}",
     connectorSelectForLineType: "S\xE9lectionnez une connexion sur le canevas pour la modifier.",
-    connectorLineElbowed: "\u{1F4D0} Connexion pass\xE9e en mode orthogonal",
-    connectorLineStraight: "\u{1F4CF} Connexion pass\xE9e en ligne droite",
+    connectorLineElbowed: "\u{1F4D0} Connexion pass\xE9e en mode orthogonal.",
+    connectorLineStraight: "\u{1F4CF} Connexion pass\xE9e en ligne droite.",
     connectorLineTypeFailed: "\xC9chec de la modification du type de ligne : {error}",
     connectorsNoneToConvert: "Aucune connexion \xE0 convertir sur le canevas.",
-    connectorsConvertedAll: "\u26A1 {count} connexions converties en mode orthogonal",
-    connectorsAlreadyElbowed: "{count} connexions sont d\xE9j\xE0 orthogonales",
+    connectorsConvertedAll: "\u26A1 {count} connexions converties en mode orthogonal.",
+    connectorsAlreadyElbowed: "{count} connexions sont d\xE9j\xE0 orthogonales.",
     connectorsConvertFailed: "\xC9chec de la conversion des connexions : {error}",
     // 5. Status Badge
     statusNeedSelection: "S\xE9lectionnez au moins 1 \xE9l\xE9ment pour d\xE9finir un statut.",
     statusRemoved: "Badges de statut supprim\xE9s de {count} n\u0153uds.",
-    statusAttached: 'Badge de statut "{label}" ajout\xE9 \xE0 {count} n\u0153uds',
+    statusAttached: 'Badge de statut "{label}" ajout\xE9 \xE0 {count} n\u0153uds.',
     // 6. Elevation
     elevationNeedSelection: "S\xE9lectionnez des \xE9l\xE9ments pour appliquer Elevation.",
     elevationRemoved: "Elevation supprim\xE9e de {count} n\u0153uds.",
@@ -3350,6 +3394,10 @@
     styleDefaultNoDelete: "Les styles par d\xE9faut ne peuvent pas \xEAtre supprim\xE9s.",
     styleDeleted: "Style supprim\xE9.",
     styleEditNoDefault: "Les styles par d\xE9faut ne peuvent pas \xEAtre modifi\xE9s.",
+    styleCustomLimitReached: "Vous pouvez ajouter jusqu\u2019\xE0 7 styles personnalis\xE9s.",
+    exportCopied: "Flow copi\xE9 pour l\u2019IA.",
+    exportEmpty: "Rien \xE0 exporter sur cette page.",
+    exportFailed: "\xC9chec de l\u2019exportation.",
     // 12. Description
     descCopyEmpty: "Aucune description \xE0 copier.",
     descCopied: "Description copi\xE9e dans le presse-papiers.",
@@ -3387,6 +3435,7 @@
     tipLinkDisabled: "Reference Link n\u2019est pas disponible pour cette forme",
     tipHexColor: "Couleur hexad\xE9cimale",
     tipClose: "Fermer",
+    tipSettings: "Param\xE8tres",
     tipRefreshFrames: "Actualiser les frames depuis le canevas",
     tipSolid: "Plein",
     tipDashed: "Tirets",
@@ -3397,8 +3446,9 @@
     tipTermArrow: "Fl\xE8che",
     tipTermCircle: "Cercle",
     tipTermDiamond: "Losange",
+    tipTermTriangle: "Triangle",
     tipRouteOrtho: "Orthogonal",
-    tipRouteSCurve: "Courbe en S",
+    tipRouteSCurve: "Arrondi",
     tipRouteCurve: "Courbe",
     tipRouteStraight: "Ligne droite",
     tipGizmoSource: "Source",
@@ -3420,28 +3470,28 @@
     tipConnectorColor: "Couleur de la connexion",
     tipQuotaBlocked: "Limite gratuite atteinte. Passez \xE0 Pro pour en cr\xE9er davantage.",
     // 14. Shape Notices
-    noticeSizeOnlyScreen: "Size est disponible uniquement pour les n\u0153uds Screen",
-    noticeDescUnsupported: "Description n\u2019est pas disponible pour cette forme",
-    noticeElevationUnsupported: "Elevation n\u2019est pas disponible pour cette forme",
-    noticeStatusUnsupported: "Status n\u2019est pas disponible pour cette forme",
-    noticeStepUnsupported: "Step Badges ne sont pas disponibles pour cette forme",
-    noticeLinkUnsupported: "Reference Link n\u2019est pas disponible pour cette forme",
-    noticeMixed: "Indisponible pour une s\xE9lection mixte",
+    noticeSizeOnlyScreen: "Size est disponible uniquement pour les n\u0153uds Screen.",
+    noticeDescUnsupported: "Description n\u2019est pas disponible pour cette forme.",
+    noticeElevationUnsupported: "Elevation n\u2019est pas disponible pour cette forme.",
+    noticeStatusUnsupported: "Status n\u2019est pas disponible pour cette forme.",
+    noticeStepUnsupported: "Step Badges ne sont pas disponibles pour cette forme.",
+    noticeLinkUnsupported: "Reference Link n\u2019est pas disponible pour cette forme.",
+    noticeMixed: "Indisponible pour une s\xE9lection mixte.",
     // 15. Connect Status Text
-    connectStatusSelectNodes: "S\xE9lectionnez 2 n\u0153uds ou plus pour connecter",
-    connectStatusReadyTwoNodes: "2 n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s",
-    connectStatusReadyMultiNodes: "{count} n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s",
-    connectStatusReady: "Pr\xEAt \xE0 connecter",
-    connectStatusChangesReady: "Modifications pr\xEAtes \xE0 \xEAtre appliqu\xE9es",
-    connectStatusConnected: "Connect\xE9",
-    connectStatusNoChanges: "Aucune modification",
+    connectStatusSelectNodes: "S\xE9lectionnez 2 n\u0153uds ou plus pour connecter.",
+    connectStatusReadyTwoNodes: "2 n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s.",
+    connectStatusReadyMultiNodes: "{count} n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s.",
+    connectStatusReady: "Pr\xEAt \xE0 connecter.",
+    connectStatusChangesReady: "Modifications pr\xEAtes \xE0 \xEAtre appliqu\xE9es.",
+    connectStatusConnected: "Connect\xE9.",
+    connectStatusNoChanges: "Aucune modification.",
     // 16. Action Buttons & Tooltips
-    stepDescStartsFromNumber: "Commence \xE0 partir du num\xE9ro sp\xE9cifi\xE9",
-    stepTipEnterStartNumber: "Saisissez un num\xE9ro de d\xE9part",
-    stepTipAddStepBadges: "Ajouter des Step Badges",
-    connectTipNoChanges: "Aucune modification \xE0 appliquer",
-    connectTipApplyChanges: "Appliquer les modifications de connexion",
-    connectTipConnectNodes: "Connecter les n\u0153uds s\xE9lectionn\xE9s"
+    stepDescStartsFromNumber: "Commence \xE0 partir du num\xE9ro sp\xE9cifi\xE9.",
+    stepTipEnterStartNumber: "Saisissez un num\xE9ro de d\xE9part.",
+    stepTipAddStepBadges: "Ajouter des Step Badges.",
+    connectTipNoChanges: "Aucune modification \xE0 appliquer.",
+    connectTipApplyChanges: "Appliquer les modifications de connexion.",
+    connectTipConnectNodes: "Connecter les n\u0153uds s\xE9lectionn\xE9s."
   };
   var CATALOGS = {
     ko: KO,
@@ -3561,8 +3611,243 @@
     return { savedAt: Math.max(0, Math.floor(rec.savedAt)), items: rec.items };
   }
 
+  // src/flowExport.ts
+  var FLOW_EXPORT_SCHEMA_VERSION = "1.0";
+  var BRANCH_MEANING = {
+    CHECK: "true",
+    CROSS: "false"
+  };
+  function cleanText(value) {
+    if (value == null) return void 0;
+    const trimmed = String(value).trim();
+    return trimmed.length > 0 ? trimmed : void 0;
+  }
+  function typeTag(node) {
+    if (node.type === "Branch" && node.branchVariant) {
+      const variant = node.branchVariant;
+      if (variant === "TAG") {
+        return node.branchText ? `[Branch:Tag "${node.branchText}"]` : "[Branch:Tag]";
+      }
+      if (variant === "CHECK") return "[Branch:Check=true]";
+      if (variant === "CROSS") return "[Branch:Cross=false]";
+      return `[Branch:${variant}]`;
+    }
+    return `[${node.type}]`;
+  }
+  function buildFlowExport(input) {
+    const title = input.title && input.title.trim() ? input.title.trim() : "Untitled flow";
+    const jsonNodes = input.nodes.map((n) => {
+      const branchVariant = n.type === "Branch" && n.branchVariant ? n.branchVariant : void 0;
+      const node = {
+        id: n.id,
+        type: n.type,
+        title: n.title
+      };
+      const desc = cleanText(n.description);
+      if (desc !== void 0) node.description = desc;
+      const status = cleanText(n.status);
+      if (status !== void 0) node.status = status;
+      if (typeof n.stepNumber === "number" && Number.isFinite(n.stepNumber)) {
+        node.stepNumber = n.stepNumber;
+      }
+      if (branchVariant !== void 0) {
+        node.branchVariant = branchVariant;
+        const meaning = BRANCH_MEANING[branchVariant];
+        if (meaning !== void 0) node.branchMeaning = meaning;
+        const text = cleanText(n.branchText);
+        if (branchVariant === "TAG" && text !== void 0) node.branchText = text;
+      }
+      const link = cleanText(n.link);
+      if (link !== void 0) node.link = link;
+      return node;
+    });
+    const byId = /* @__PURE__ */ new Map();
+    for (const n of jsonNodes) {
+      if (!byId.has(n.id)) byId.set(n.id, n);
+    }
+    const outDegree = /* @__PURE__ */ new Map();
+    const inDegree = /* @__PURE__ */ new Map();
+    const seenEdges = /* @__PURE__ */ new Set();
+    const jsonEdges = [];
+    for (const e of input.edges) {
+      if (!e || !byId.has(e.source) || !byId.has(e.target)) continue;
+      const label = cleanText(e.label);
+      const dedupeKey = `${e.source}\0${e.target}\0${label ?? ""}`;
+      if (seenEdges.has(dedupeKey)) continue;
+      seenEdges.add(dedupeKey);
+      const sourceNode = byId.get(e.source);
+      let condition;
+      if (label !== void 0) {
+        condition = "labeled";
+      } else if (sourceNode.type === "Branch") {
+        condition = "branch";
+      } else {
+        condition = "link";
+      }
+      const edge = { source: e.source, target: e.target, condition };
+      if (label !== void 0) edge.label = label;
+      jsonEdges.push(edge);
+      outDegree.set(e.source, (outDegree.get(e.source) ?? 0) + 1);
+      inDegree.set(e.target, (inDegree.get(e.target) ?? 0) + 1);
+    }
+    for (const edge of jsonEdges) {
+      if (edge.condition === "link" && (outDegree.get(edge.source) ?? 0) > 1) {
+        edge.condition = "fanout";
+      }
+    }
+    const adjacency = /* @__PURE__ */ new Map();
+    for (const edge of jsonEdges) {
+      const list = adjacency.get(edge.source);
+      if (list) list.push(edge);
+      else adjacency.set(edge.source, [edge]);
+    }
+    const displayName = /* @__PURE__ */ new Map();
+    const titleCount = /* @__PURE__ */ new Map();
+    const order = [];
+    const visiting = /* @__PURE__ */ new Set();
+    const visited = /* @__PURE__ */ new Set();
+    const cycleEdges = /* @__PURE__ */ new Set();
+    function visit(id) {
+      if (visited.has(id)) return;
+      visited.add(id);
+      visiting.add(id);
+      order.push(id);
+      const node = byId.get(id);
+      const base = node.title && node.title.trim() ? node.title.trim() : node.type;
+      const occurrence = (titleCount.get(base) ?? 0) + 1;
+      titleCount.set(base, occurrence);
+      displayName.set(id, occurrence > 1 ? `${base} (${occurrence})` : base);
+      for (const edge of adjacency.get(id) ?? []) {
+        if (visiting.has(edge.target)) cycleEdges.add(edge);
+        visit(edge.target);
+      }
+      visiting.delete(id);
+    }
+    const starts = [];
+    const isolated = [];
+    for (const n of jsonNodes) {
+      const hasIn = (inDegree.get(n.id) ?? 0) > 0;
+      const hasOut = (adjacency.get(n.id) ?? []).length > 0;
+      if (!hasIn && !hasOut) {
+        isolated.push(n.id);
+      } else if (!hasIn) {
+        starts.push(n.id);
+      }
+    }
+    const pathRoots = [];
+    for (const id of starts) {
+      if (visited.has(id)) continue;
+      const before = order.length;
+      visit(id);
+      pathRoots.push(order.slice(before));
+    }
+    for (const n of jsonNodes) {
+      if (!visited.has(n.id) && !isolated.includes(n.id)) {
+        const before = order.length;
+        visit(n.id);
+        pathRoots.push(order.slice(before));
+      }
+    }
+    for (const id of isolated) {
+      if (!visited.has(id)) visit(id);
+    }
+    const numberOf = /* @__PURE__ */ new Map();
+    order.forEach((id, index) => numberOf.set(id, index + 1));
+    function detailSuffix(node) {
+      const parts = [];
+      if (typeof node.stepNumber === "number") parts.push(`#${node.stepNumber}`);
+      const desc = node.description;
+      if (desc !== void 0) parts.push(`\u2014 ${desc}`);
+      if (node.status !== void 0) parts.push(`(status: ${node.status})`);
+      if (node.link !== void 0) parts.push(`(link: ${node.link})`);
+      return parts.length > 0 ? ` ${parts.join(" ")}` : "";
+    }
+    function edgeRef(edge) {
+      const num = numberOf.get(edge.target);
+      const name = `${num}. ${displayName.get(edge.target)}`;
+      const cycleMark = cycleEdges.has(edge) ? " \u21A9" : "";
+      if (edge.label !== void 0) return `\u2014 ${edge.label} \u2192 ${name}${cycleMark}`;
+      return `\u2192 ${name}${cycleMark}`;
+    }
+    const lines = [];
+    lines.push(`# ${title}`);
+    lines.push(`Flooow flow export v1 \xB7 ${jsonNodes.length} nodes, ${jsonEdges.length} connections.`);
+    lines.push("");
+    if (jsonNodes.length === 0) {
+      lines.push("No flow nodes on this page.");
+    } else {
+      lines.push("## Flows");
+      lines.push("");
+      let pathIndex = 0;
+      for (const path of pathRoots) {
+        pathIndex += 1;
+        lines.push(`### Path ${pathIndex} (starts at ${displayName.get(path[0])})`);
+        for (const id of path) {
+          const node = byId.get(id);
+          const num = numberOf.get(id);
+          lines.push(`${num}. ${typeTag(node)} ${displayName.get(id)}${detailSuffix(node)}`);
+          const out = adjacency.get(id) ?? [];
+          const unlabeled = out.filter((e) => e.label === void 0);
+          const labeled = out.filter((e) => e.label !== void 0);
+          for (const edge of labeled) {
+            lines.push(`   ${edgeRef(edge)}`);
+          }
+          if (unlabeled.length === 1) {
+            lines.push(`   ${edgeRef(unlabeled[0])}`);
+          } else if (unlabeled.length > 1) {
+            lines.push(`   ${unlabeled.map((e) => edgeRef(e)).join(", ")} (no condition)`);
+          }
+        }
+        lines.push("");
+      }
+      if (isolated.length > 0) {
+        lines.push("### Unconnected nodes");
+        for (const id of isolated) {
+          const node = byId.get(id);
+          const num = numberOf.get(id);
+          lines.push(`- ${num}. ${typeTag(node)} ${displayName.get(id)}${detailSuffix(node)}`);
+        }
+        lines.push("");
+      }
+    }
+    const json = {
+      schemaVersion: FLOW_EXPORT_SCHEMA_VERSION,
+      meta: {
+        title,
+        exportedAt: input.exportedAt,
+        nodeCount: jsonNodes.length,
+        edgeCount: jsonEdges.length,
+        generator: "flooow-export/1.0"
+      },
+      nodes: jsonNodes,
+      edges: jsonEdges
+    };
+    return {
+      json,
+      jsonText: JSON.stringify(json, null, 2),
+      aiText: lines.join("\n"),
+      nodeCount: jsonNodes.length,
+      edgeCount: jsonEdges.length,
+      empty: jsonNodes.length === 0 && jsonEdges.length === 0
+    };
+  }
+
   // src/entitlementGate.ts
   var FREE_ELEMENT_LIMIT = 20;
+  var DEV_ALLOWLIST_IDS = /* @__PURE__ */ new Set([
+    "1561493499214058929",
+    // owner (noh@emagine.kr)
+    "1689849102863946099",
+    // tooolo.app@gmail.com
+    "1351710682044891321",
+    // 2018620161@sdu.ac.kr
+    "897408411655532536"
+    // contact@emagine.kr
+  ]);
+  function isAllowlistedDevUser(userId, allowlist = DEV_ALLOWLIST_IDS) {
+    if (!userId) return false;
+    return allowlist.has(userId);
+  }
   function isUnlimitedEntitlement(entitlement) {
     return entitlement === "PAID_ACTIVE" || entitlement === "DEV_ACTIVE";
   }
@@ -4045,7 +4330,7 @@
       isBgDark
     };
   }
-  function getStatusBadgeColors(status, nodeBgColor, isDarkTheme = false) {
+  function getStatusBadgeColors(status, nodeBgColor) {
     const cfg = STATUS_CONFIG[status];
     const defaultBg = cfg ? cfg.color : { r: 0.5, g: 0.5, b: 0.5 };
     const defaultText = cfg ? cfg.textColor : { r: 1, g: 1, b: 1 };
@@ -4056,7 +4341,7 @@
     const isChromatic = saturation >= 0.15 && delta >= 0.08;
     if (isChromatic) {
       const luminance = 0.299 * nodeBgColor.r + 0.587 * nodeBgColor.g + 0.114 * nodeBgColor.b;
-      const isBgDark = isDarkTheme || luminance < 0.5;
+      const isBgDark = luminance < 0.5;
       if (isBgDark) {
         return {
           badgeBg: { r: 1, g: 1, b: 1 },
@@ -4681,6 +4966,10 @@
   function getCreateEntitlement() {
     try {
       if (isFigmaPluginDevelopment()) return "DEV_ACTIVE";
+      try {
+        if (isAllowlistedDevUser(figma.currentUser?.id)) return "DEV_ACTIVE";
+      } catch (_) {
+      }
       return normalizePaymentStatus(figma.payments?.status?.type);
     } catch (_) {
       return "FREE";
@@ -6320,7 +6609,7 @@
     applyFigmaTextFill(titleText, titleFill);
     if (status && STATUS_CONFIG[status]) {
       const cfg = STATUS_CONFIG[status];
-      const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, bgColor, isDark);
+      const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, bgColor);
       const statusBadge = figma.createFrame();
       statusBadge.name = "StatusBadge";
       statusBadge.layoutMode = "HORIZONTAL";
@@ -6436,7 +6725,7 @@
     if (elevData !== "") {
       const elev = parseInt(elevData, 10);
       card.setPluginData("node_elevation", elevData);
-      card.effects = getElevationEffects(elev, isDark);
+      card.effects = getElevationEffects(elev, isBgDark);
       card.clipsContent = false;
     }
     card.setPluginData("is_flow_node", "true");
@@ -6816,7 +7105,7 @@
         card.setPluginData("workflow_status", payload.status);
         if (STATUS_CONFIG[payload.status]) {
           const cfg = STATUS_CONFIG[payload.status];
-          const { badgeBg, badgeTextColor } = getStatusBadgeColors(payload.status, bgColor, isDark);
+          const { badgeBg, badgeTextColor } = getStatusBadgeColors(payload.status, bgColor);
           const statusBadge = figma.createFrame();
           statusBadge.name = "StatusBadge";
           statusBadge.layoutMode = "HORIZONTAL";
@@ -7366,7 +7655,7 @@
         typeof card.cornerRadius === "number" ? card.cornerRadius : 0
       );
       statusBadge.constraints = { horizontal: "MAX", vertical: "MAX" };
-      const { badgeBg, badgeTextColor } = getStatusBadgeColors(effectiveStatus, bgColor, isDark);
+      const { badgeBg, badgeTextColor } = getStatusBadgeColors(effectiveStatus, bgColor);
       statusBadge.fills = [{ type: "SOLID", color: badgeBg }];
       const bText = statusBadge.children.find((c) => c.type === "TEXT");
       if (bText) {
@@ -8278,9 +8567,10 @@
         const mapCap = (term) => {
           switch (term) {
             case "ARROW":
-            case "TRIANGLE_ARROW":
             case "REVERSED_TRIANGLE_ARROW":
               return "ARROW_LINES";
+            case "TRIANGLE_ARROW":
+              return "ARROW_EQUILATERAL";
             case "DIAMOND":
               return "DIAMOND_FILLED";
             case "CIRCLE":
@@ -8676,8 +8966,7 @@
           if (Array.isArray(cardFills) && cardFills.length > 0 && cardFills[0].type === "SOLID") {
             nodeBgColor = cardFills[0].color;
           }
-          const isDarkTheme = card.getPluginData("node_theme") === "dark";
-          const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, nodeBgColor, isDarkTheme);
+          const { badgeBg, badgeTextColor } = getStatusBadgeColors(status, nodeBgColor);
           statusBadge.paddingLeft = 9;
           statusBadge.paddingRight = 9;
           statusBadge.cornerRadius = getStatusBadgeCornerRadius(
@@ -8752,13 +9041,12 @@
           card.setPluginData("node_elevation", "");
           card.effects = [];
         } else {
-          const nodeTheme = card.getPluginData("node_theme");
-          let isDark = nodeTheme === "dark";
+          let isDark = false;
           if ("fills" in card && Array.isArray(card.fills) && card.fills.length > 0) {
             const firstFill = card.fills[0];
             if (firstFill.type === "SOLID") {
               const lum = 0.299 * firstFill.color.r + 0.587 * firstFill.color.g + 0.114 * firstFill.color.b;
-              if (lum < 0.5) isDark = true;
+              isDark = lum < 0.5;
             }
           }
           card.setPluginData("node_elevation", `${level}`);
@@ -9151,6 +9439,132 @@
     } catch (_) {
     }
   }
+  function collectFlowExportRecords(scope) {
+    const nodes = [];
+    const edges = [];
+    const nodeIds = /* @__PURE__ */ new Set();
+    const seenConnectors = /* @__PURE__ */ new Set();
+    let allNodes = [];
+    try {
+      if (scope === "selection") {
+        const selection = [...figma.currentPage.selection];
+        const pageConnectors = figma.currentPage.findAll((n) => {
+          try {
+            if (!n) return false;
+            if (n.type === "CONNECTOR") return true;
+            if (n.type === "GROUP" || n.type === "VECTOR") {
+              return safeGetPluginData2(n, "is_custom_connector") === "true" || safeGetPluginData2(n, "is_flow_connector") === "true";
+            }
+            return false;
+          } catch (_) {
+            return false;
+          }
+        });
+        allNodes = [...selection, ...pageConnectors];
+      } else {
+        allNodes = figma.currentPage.findAll(() => true);
+      }
+    } catch (_) {
+      return { nodes, edges };
+    }
+    const resolveFlowTop = (id) => {
+      if (!id) return null;
+      try {
+        const raw = figma.getNodeById(id);
+        if (!raw) return null;
+        const flow = findFlowNode(raw);
+        if (!flow || !nodeIds.has(flow.id)) return null;
+        return flow.id;
+      } catch (_) {
+        return null;
+      }
+    };
+    for (const n of allNodes) {
+      try {
+        if (!n || findConnectorNode(n)) continue;
+        const flow = findFlowNode(n);
+        if (!flow || nodeIds.has(flow.id)) continue;
+        nodeIds.add(flow.id);
+        const record = buildFlowNodeRecord(flow);
+        if (record) nodes.push(record);
+      } catch (_) {
+      }
+    }
+    for (const n of allNodes) {
+      try {
+        if (!n) continue;
+        const connTop = findConnectorNode(n);
+        if (!connTop || seenConnectors.has(connTop.id)) continue;
+        seenConnectors.add(connTop.id);
+        const edge = extractConnectorEdge(connTop, resolveFlowTop);
+        if (edge) edges.push(edge);
+      } catch (_) {
+      }
+    }
+    return { nodes, edges };
+  }
+  function buildFlowNodeRecord(flow) {
+    try {
+      const flowNodeType = normalizeNodeType(safeGetPluginData2(flow, "node_type"));
+      const { title, description } = extractNodeText(flow);
+      const record = {
+        id: flow.id,
+        type: flowNodeType,
+        title: title || flow.name || "Untitled"
+      };
+      if (description) record.description = description;
+      const status = safeGetPluginData2(flow, "workflow_status");
+      if (status) record.status = status;
+      const stepRaw = safeGetPluginData2(flow, "step_number");
+      const stepNumber = stepRaw ? parseInt(stepRaw, 10) : NaN;
+      if (Number.isFinite(stepNumber)) record.stepNumber = stepNumber;
+      if (flowNodeType === "Branch") {
+        const variant = normalizeBranchVariant(safeGetPluginData2(flow, "branch_variant"));
+        record.branchVariant = variant;
+        if (variant === "TAG" && !isDefaultNodeTitle(record.title)) {
+          record.branchText = record.title;
+        }
+      }
+      const link = safeGetPluginData2(flow, "figma_link");
+      if (link) record.link = link;
+      return record;
+    } catch (_) {
+      return null;
+    }
+  }
+  function extractConnectorEdge(connTop, resolveFlowTop) {
+    try {
+      let sourceId = null;
+      let targetId = null;
+      let label;
+      if (connTop.type === "CONNECTOR") {
+        const conn = connTop;
+        const s = conn.connectorStart;
+        const t2 = conn.connectorEnd;
+        const sId = s && "endpointNodeId" in s ? s.endpointNodeId : void 0;
+        const tId = t2 && "endpointNodeId" in t2 ? t2.endpointNodeId : void 0;
+        sourceId = resolveFlowTop(sId);
+        targetId = resolveFlowTop(tId);
+        try {
+          const text = conn.text?.characters?.trim();
+          if (text) label = text;
+        } catch (_) {
+          label = void 0;
+        }
+      } else {
+        sourceId = resolveFlowTop(safeGetPluginData2(connTop, "source_node_id") || void 0);
+        targetId = resolveFlowTop(safeGetPluginData2(connTop, "target_node_id") || void 0);
+        const storedLabel = safeGetPluginData2(connTop, "connector_label").trim();
+        if (storedLabel) label = storedLabel;
+      }
+      if (!sourceId || !targetId) return null;
+      const edge = { source: sourceId, target: targetId };
+      if (label) edge.label = label;
+      return edge;
+    } catch (_) {
+      return null;
+    }
+  }
   async function extractUI3Variables() {
     try {
       if (!("variables" in figma) || !figma.variables) {
@@ -9344,6 +9758,37 @@
         }
         case "SAVE_PRESETS": {
           await savePresetStore(msg.kind, msg.presets);
+          break;
+        }
+        case "EXPORT_FLOW": {
+          const pageName = (() => {
+            try {
+              return figma.currentPage.name || "Untitled flow";
+            } catch (_) {
+              return "Untitled flow";
+            }
+          })();
+          const scope = msg.scope === "selection" ? "selection" : "board";
+          const records = collectFlowExportRecords(scope);
+          const built = buildFlowExport({
+            title: pageName,
+            exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+            nodes: records.nodes,
+            edges: records.edges
+          });
+          const fileName = (() => {
+            const safe = pageName.replace(/[\\/:*?"<>|]/g, "_").trim();
+            return `flooow-${safe || "flow"}.json`;
+          })();
+          postToUI({
+            type: "FLOW_EXPORTED",
+            jsonText: built.jsonText,
+            aiText: built.aiText,
+            fileName,
+            nodeCount: built.nodeCount,
+            edgeCount: built.edgeCount,
+            empty: built.empty
+          });
           break;
         }
         case "CLOSE_PLUGIN":

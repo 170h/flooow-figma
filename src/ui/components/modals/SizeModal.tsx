@@ -240,7 +240,7 @@ export function SizeModal({
                     {sizeMode === 'hug' ? HUG_SVG : sizeMode === 'fit' ? FIT_SVG : FIXED_SVG}
                   </span>
                   <span id={`text-${mode}-size-mode`} style={{ fontSize: 11, color: '#ffffff' }}>
-                    {sizeMode === 'fixed' ? t('sizeModeFixed') : sizeMode === 'fit' ? t('sizeModeFit') : t('sizeModeHug')}
+                    {sizeMode === 'fixed' ? 'Fixed height' : sizeMode === 'fit' ? 'Fit contents' : 'Hug contents'}
                   </span>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
@@ -267,7 +267,7 @@ export function SizeModal({
                   >
                     <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{sizeMode === 'fixed' && CHECK_SVG}</span>
                     <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{FIXED_SVG}</span>
-                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{t('sizeModeFixed')}</span>
+                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>Fixed height</span>
                   </div>
                   {/* Hug contents 항목 */}
                   <div
@@ -278,7 +278,7 @@ export function SizeModal({
                   >
                     <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{sizeMode === 'hug' && CHECK_SVG}</span>
                     <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{HUG_SVG}</span>
-                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{t('sizeModeHug')}</span>
+                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>Hug contents</span>
                   </div>
                   {/* Fit contents 항목 */}
                   <div
@@ -289,7 +289,7 @@ export function SizeModal({
                   >
                     <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{sizeMode === 'fit' && CHECK_SVG}</span>
                     <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{FIT_SVG}</span>
-                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{t('sizeModeFit')}</span>
+                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>Fit contents</span>
                   </div>
                 </div>
               )}

@@ -17,6 +17,28 @@ export type CreateEntitlement = 'FREE' | 'PAID_ACTIVE' | 'DEV_ACTIVE';
 /** Pro 결제 주기. Payments API에는 없고, 구독 일정이 있을 때만 채운다. */
 export type BillingPeriod = 'monthly' | 'annual';
 
+/**
+ * 지인 무료 허용 목록 (Figma user id 문자열).
+ * - 여기에 등록된 id는 결제 없이 DEV_ACTIVE(= Pro와 동일 무제한, Dev Plan 표시)로 동작하며 기간 제한이 없다.
+ * - id 확인법: Personal Access Token으로 `curl -H "X-Figma-Token: <PAT>" https://api.figma.com/v1/me` → 응답의 "id" 값.
+ * - 참고: 게시된 플러그인의 제작자 계정은 Figma가 항상 PAID로 반환하므로 등록 불필요.
+ */
+export const DEV_ALLOWLIST_IDS: ReadonlySet<string> = new Set<string>([
+  '1561493499214058929', // owner (noh@emagine.kr)
+  '1689849102863946099', // tooolo.app@gmail.com
+  '1351710682044891321', // 2018620161@sdu.ac.kr
+  '897408411655532536', // contact@emagine.kr
+]);
+
+/** allowlist 판정 (순수). null/빈값·미등록은 false. */
+export function isAllowlistedDevUser(
+  userId: string | null | undefined,
+  allowlist: ReadonlySet<string> = DEV_ALLOWLIST_IDS
+): boolean {
+  if (!userId) return false;
+  return allowlist.has(userId);
+}
+
 export type CreateGateReason = 'PAID_ACTIVE' | 'DEV_ACTIVE' | 'WITHIN_LIMIT' | 'LIMIT_EXCEEDED';
 
 /** Pro와 개발용 Dev는 생성 한도가 없다. */

@@ -387,7 +387,8 @@ export type PluginAction =
   | { type: 'INIT'; locale?: AppLocale }
   | { type: 'INITIATE_CHECKOUT' }
   | { type: 'LOAD_PRESETS'; kind: PresetKind }
-  | { type: 'SAVE_PRESETS'; kind: PresetKind; presets: PresetEnvelope };
+  | { type: 'SAVE_PRESETS'; kind: PresetKind; presets: PresetEnvelope }
+  | { type: 'EXPORT_FLOW'; scope: ExportScope };
 
 // 연결된 커넥터 세부 정보 (방향 역전 여부 및 각 엔드포인트 마그넷)
 // + Connector Property State 표시용 스타일 필드 (additive: 기존 필드는 변경 없음)
@@ -504,6 +505,15 @@ export type CoreToUIMessage =
       stored: PresetEnvelope | null;
     }
   | {
+      type: 'FLOW_EXPORTED';
+      jsonText: string;
+      aiText: string;
+      fileName: string;
+      nodeCount: number;
+      edgeCount: number;
+      empty: boolean;
+    }
+  | {
       type: 'FLOOOW_USAGE';
       usage: FlooowUsageState;
       /** true면 현재 프로젝트 fresh scan 결과. 모달 로딩을 끝낸다. */
@@ -514,6 +524,18 @@ export type CoreToUIMessage =
        */
       error?: PlanLoadIssue;
     };
+
+export interface FlowExportPayload {
+  jsonText: string;
+  aiText: string;
+  fileName: string;
+  nodeCount: number;
+  edgeCount: number;
+  empty: boolean;
+}
+
+/** Export 범위 (Settings Export 섹션 라디오: 전체 보드 vs 선택) */
+export type ExportScope = 'board' | 'selection';
 
 export type PlanLoadIssue = 'retryable' | 'blocked';
 

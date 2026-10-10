@@ -7,7 +7,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { canCreateFlooowElements, normalizePaymentStatus, assembleFlooowUsage, FREE_ELEMENT_LIMIT } from '../src/entitlementGate.ts';
+import { canCreateFlooowElements, normalizePaymentStatus, assembleFlooowUsage, FREE_ELEMENT_LIMIT, isAllowlistedDevUser } from '../src/entitlementGate.ts';
 
 console.log('=== entitlementGate.test.mjs — Repository Regression Test ===');
 
@@ -209,6 +209,20 @@ runTest('Free session sequence: 생성→거부→삭제→생성→Pro→Free (
   g = canCreateFlooowElements({ currentCount: 25, requestedCount: 1, entitlement: normalizePaymentStatus('UNPAID') });
   assert.equal(g.allowed, false);
   assert.equal(g.limit, 20);
+});
+
+runTest('isAllowlistedDevUser: 등록 id만 true (지인 무료)', () => {
+  const list = new Set(['111', '222']);
+  assert.equal(isAllowlistedDevUser('111', list), true);
+  assert.equal(isAllowlistedDevUser('222', list), true);
+  assert.equal(isAllowlistedDevUser('999', list), false);
+  assert.equal(isAllowlistedDevUser(null, list), false);
+  assert.equal(isAllowlistedDevUser(undefined, list), false);
+  assert.equal(isAllowlistedDevUser('', list), false);
+});
+
+runTest('isAllowlistedDevUser: 기본 allowlist는 비어 있음 (ID 등록 필요)', () => {
+  assert.equal(isAllowlistedDevUser('123456789'), false);
 });
 
 console.log(`\nResult: ${passCount} passed, ${failCount} failed.`);

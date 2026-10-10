@@ -698,7 +698,7 @@ export function StepBadgesSection() {
               style={{
                 width: "100px",
                 height: "28px",
-                backgroundColor: "#F3F4F6",
+                backgroundColor: "var(--color-bg-secondary)",
                 borderRadius: "6px",
                 padding: "0 6px",
                 display: "flex",
@@ -714,7 +714,7 @@ export function StepBadgesSection() {
                 height="24"
                 viewBox="0 0 24 24"
                 fill="none"
-                style={{ color: "#111827", flexShrink: 0, cursor: "pointer" }}
+                style={{ color: "var(--color-text-primary, #111827)", flexShrink: 0, cursor: "pointer" }}
                 onClick={handleResetNumber}
               >
                 <path

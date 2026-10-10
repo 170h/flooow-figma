@@ -101,23 +101,23 @@ runTest('모든 지원 언어에서 모든 키가 존재하고 비어 있지 않
 runTest('{param} 치환 동작', () => {
   assert.equal(
     t('nodeCreated', { title: 'Login' }, 'ko'),
-    '노드 "Login"을 생성했습니다'
+    '노드 "Login"을 생성했습니다.'
   );
   assert.equal(
     t('nodeCreated', { title: 'Login' }, 'en'),
-    'Created node "Login"'
+    'Created node "Login".'
   );
   assert.equal(
     t('nodeCreated', { title: 'Login' }, 'ja'),
-    'ノード「Login」を作成しました'
+    'ノード「Login」を作成しました。'
   );
   assert.equal(
     t('chainCreatedPartial', { created: 2, skipped: 1 }, 'en'),
-    '2 connections created (1 already connected)'
+    '2 connections created (1 already connected).'
   );
   assert.equal(
     t('chainCreatedPartial', { created: 2, skipped: 1 }, 'es'),
-    '2 conexiones creadas (1 ya existían)'
+    '2 conexiones creadas (1 ya existían).'
   );
 });
 

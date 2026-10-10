@@ -167,12 +167,14 @@ export function StyleModal({
         selectedStylePresetId: editingPresetId,
       });
     } else {
-      addStylePreset({
+      if (!addStylePreset({
         name: isFillNone ? "Custom None" : `Custom ${finalFillColor}`,
         fillColor: finalFillColor,
         strokeWeight: finalStrokeWeight,
         strokeColor: finalStrokeColor,
-      });
+      })) {
+        return;
+      }
     }
 
     setNodeOptionState({

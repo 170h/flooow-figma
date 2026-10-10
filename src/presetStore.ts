@@ -60,3 +60,24 @@ export function isStoredNewer(
 export function makePresetEnvelope(items: unknown[]): PresetEnvelope {
   return { savedAt: Date.now(), items };
 }
+
+/** 사용자가 추가할 수 있는 커스텀 스타일 프리셋 최대 개수 (기본 프리셋 제외) */
+export const MAX_CUSTOM_STYLE_PRESETS = 7;
+
+export interface CustomPresetLike {
+  id: string;
+  isDefault?: boolean;
+}
+
+/** 기본 프리셋을 제외한 사용자 추가 개수 (삭제·수정 가능분과 일치) */
+export function countCustomStylePresets(
+  presets: ReadonlyArray<CustomPresetLike> | null | undefined,
+  defaultIds: ReadonlySet<string>
+): number {
+  if (!Array.isArray(presets)) return 0;
+  let count = 0;
+  for (const p of presets) {
+    if (p && typeof p.id === 'string' && !p.isDefault && !defaultIds.has(p.id)) count++;
+  }
+  return count;
+}

@@ -161,6 +161,73 @@
       --switch-dash-disabled: rgba(255, 255, 255, 0.25);
     }
 
+    /* 명시적 테마 accent parity (Settings Theme — 리터럴값 구형 다크 규칙의 대응분.
+       변수 기반 규칙은 JS 오버라이드가 자동 처리한다. 전용 신호라 Figma와 무관하다.) */
+    :root[data-flooow-theme="dark"] body .anchor-handle:not(.active):not(.mixed) {
+      background: #2c2c2c !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+    :root[data-flooow-theme="dark"] body .anchor-handle:not(.active):not(.mixed):hover {
+      border-color: rgba(255, 255, 255, 0.45) !important;
+    }
+    :root[data-flooow-theme="dark"] body .anchor-handle.mixed {
+      background: #2c2c2c !important;
+      border: 1px solid var(--color-primary, #8C4CF6) !important;
+    }
+    :root[data-flooow-theme="dark"] body .conn-color-chip:not(.light) {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      background-color: transparent !important;
+    }
+    :root[data-flooow-theme="dark"] body .conn-color-chip:not(.light) svg.conn-color-mixed-svg path {
+      fill: currentColor !important;
+    }
+    :root[data-flooow-theme="dark"] body .app-footer .btn-ghost:disabled {
+      color: rgba(255, 255, 255, 0.3) !important;
+    }
+    :root[data-flooow-theme="dark"] body .node-preview-type {
+      color: rgba(255, 255, 255, 0.6) !important;
+    }
+    :root[data-flooow-theme="dark"] body .chip-btn:not(.active):not(:disabled):not(.disabled) {
+      color: var(--color-text-secondary) !important;
+    }
+    :root[data-flooow-theme="dark"] body .chip-btn.mixed,
+    :root[data-flooow-theme="dark"] body .tab-btn.mixed {
+      color: var(--color-text-secondary) !important;
+    }
+    :root[data-flooow-theme="dark"] body .tab-btn:hover:not(:disabled) {
+      background: var(--color-bg-secondary) !important;
+      color: #ffffff !important;
+    }
+    :root[data-flooow-theme="light"] body .anchor-handle:not(.active):not(.mixed) {
+      background: #ffffff !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+    :root[data-flooow-theme="light"] body .anchor-handle:not(.active):not(.mixed):hover {
+      border-color: rgba(0, 0, 0, 0.3) !important;
+    }
+    :root[data-flooow-theme="light"] body .conn-color-chip:not(.light) {
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+      color: inherit !important;
+      background-color: transparent !important;
+    }
+    :root[data-flooow-theme="light"] body .conn-color-chip:not(.light) svg.conn-color-mixed-svg path {
+      fill: var(--color-chip-icon, currentColor) !important;
+    }
+    :root[data-flooow-theme="light"] body .app-footer .btn-ghost:disabled {
+      color: rgba(0, 0, 0, 0.3) !important;
+    }
+    :root[data-flooow-theme="light"] body .node-preview-type {
+      color: rgba(0, 0, 0, 0.5) !important;
+    }
+    :root[data-flooow-theme="light"] body .chip-btn:not(.active):not(:disabled):not(.disabled) {
+      color: rgba(0, 0, 0, 0.6) !important;
+    }
+    :root[data-flooow-theme="light"] body .chip-btn.mixed,
+    :root[data-flooow-theme="light"] body .tab-btn.mixed {
+      color: rgba(0, 0, 0, 0.6) !important;
+    }
+
     /* 다크 서피스 기반 모달 카드 공통 토큰 */
     .size-modal-card,
     .style-modal-card,
@@ -891,6 +958,14 @@
     .chip-btn:not(.active):hover:not(:disabled):not(.disabled) {
       background: #f5f5f5;
       color: rgba(0, 0, 0, 0.9);
+    }
+
+    /* 다크 모드: 칩 호버는 옅게 (bg-secondary) */
+    body.figma-dark .chip-btn:not(.active):hover:not(:disabled):not(.disabled),
+    .figma-dark .chip-btn:not(.active):hover:not(:disabled):not(.disabled),
+    [data-theme="dark"] .chip-btn:not(.active):hover:not(:disabled):not(.disabled) {
+      background: var(--color-bg-secondary);
+      color: #ffffff;
     }
 
     .chip-btn:disabled,

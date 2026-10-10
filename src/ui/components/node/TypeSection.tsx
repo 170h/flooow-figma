@@ -18,12 +18,14 @@ import {
 } from '../../../domain/nodeDomain';
 
 /**
- * 1. Screen 아이콘 (1027415-4991 공식 규격: 위 11, 왼쪽 7, 아래 13, 오른쪽 9 간격)
+ * 1. Screen 아이콘 (1027526-2062 공식 규격: 6x6 도트(7, 11), 30x22 바디(9, 13), 12x4 라인(24, 28))
  */
 function ScreenIcon() {
   return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path transform="translate(7, 11)" d="M6 0V2H32V24H2V6H0V0H6ZM6 6H2.95996V23.04H31.04V2.95996H6V6ZM1 1V5H5V1H1Z" fill="currentColor" />
+      <path transform="translate(7, 11)" d="M5 1V5H1V1H5ZM6 0H0V6H6V0Z" fill="currentColor" />
+      <path transform="translate(9, 13)" d="M30 22H0V3.83H0.96V21.04H29.04V0.96H3.87V0H30V22Z" fill="currentColor" />
+      <rect x="24" y="28" width="12" height="4" stroke="currentColor" stroke-width="1" fill="none" />
     </svg>
   );
 }

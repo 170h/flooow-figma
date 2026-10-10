@@ -257,9 +257,10 @@ export function safeGetPluginData(node: any, key: string): string {
 export function terminalToStrokeCap(terminal?: ConnectorTerminalType): StrokeCap {
   switch (terminal) {
     case 'ARROW':
-    case 'TRIANGLE_ARROW':
     case 'REVERSED_TRIANGLE_ARROW':
       return 'ARROW_LINES';
+    case 'TRIANGLE_ARROW':
+      return 'ARROW_EQUILATERAL';
     case 'CIRCLE':
       return 'CIRCLE_FILLED';
     case 'DIAMOND':

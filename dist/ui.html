@@ -167,6 +167,73 @@
       --switch-dash-disabled: rgba(255, 255, 255, 0.25);
     }
 
+    /* 명시적 테마 accent parity (Settings Theme — 리터럴값 구형 다크 규칙의 대응분.
+       변수 기반 규칙은 JS 오버라이드가 자동 처리한다. 전용 신호라 Figma와 무관하다.) */
+    :root[data-flooow-theme="dark"] body .anchor-handle:not(.active):not(.mixed) {
+      background: #2c2c2c !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+    :root[data-flooow-theme="dark"] body .anchor-handle:not(.active):not(.mixed):hover {
+      border-color: rgba(255, 255, 255, 0.45) !important;
+    }
+    :root[data-flooow-theme="dark"] body .anchor-handle.mixed {
+      background: #2c2c2c !important;
+      border: 1px solid var(--color-primary, #8C4CF6) !important;
+    }
+    :root[data-flooow-theme="dark"] body .conn-color-chip:not(.light) {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      background-color: transparent !important;
+    }
+    :root[data-flooow-theme="dark"] body .conn-color-chip:not(.light) svg.conn-color-mixed-svg path {
+      fill: currentColor !important;
+    }
+    :root[data-flooow-theme="dark"] body .app-footer .btn-ghost:disabled {
+      color: rgba(255, 255, 255, 0.3) !important;
+    }
+    :root[data-flooow-theme="dark"] body .node-preview-type {
+      color: rgba(255, 255, 255, 0.6) !important;
+    }
+    :root[data-flooow-theme="dark"] body .chip-btn:not(.active):not(:disabled):not(.disabled) {
+      color: var(--color-text-secondary) !important;
+    }
+    :root[data-flooow-theme="dark"] body .chip-btn.mixed,
+    :root[data-flooow-theme="dark"] body .tab-btn.mixed {
+      color: var(--color-text-secondary) !important;
+    }
+    :root[data-flooow-theme="dark"] body .tab-btn:hover:not(:disabled) {
+      background: var(--color-bg-secondary) !important;
+      color: #ffffff !important;
+    }
+    :root[data-flooow-theme="light"] body .anchor-handle:not(.active):not(.mixed) {
+      background: #ffffff !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+    :root[data-flooow-theme="light"] body .anchor-handle:not(.active):not(.mixed):hover {
+      border-color: rgba(0, 0, 0, 0.3) !important;
+    }
+    :root[data-flooow-theme="light"] body .conn-color-chip:not(.light) {
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+      color: inherit !important;
+      background-color: transparent !important;
+    }
+    :root[data-flooow-theme="light"] body .conn-color-chip:not(.light) svg.conn-color-mixed-svg path {
+      fill: var(--color-chip-icon, currentColor) !important;
+    }
+    :root[data-flooow-theme="light"] body .app-footer .btn-ghost:disabled {
+      color: rgba(0, 0, 0, 0.3) !important;
+    }
+    :root[data-flooow-theme="light"] body .node-preview-type {
+      color: rgba(0, 0, 0, 0.5) !important;
+    }
+    :root[data-flooow-theme="light"] body .chip-btn:not(.active):not(:disabled):not(.disabled) {
+      color: rgba(0, 0, 0, 0.6) !important;
+    }
+    :root[data-flooow-theme="light"] body .chip-btn.mixed,
+    :root[data-flooow-theme="light"] body .tab-btn.mixed {
+      color: rgba(0, 0, 0, 0.6) !important;
+    }
+
     /* 다크 서피스 기반 모달 카드 공통 토큰 */
     .size-modal-card,
     .style-modal-card,
@@ -897,6 +964,14 @@
     .chip-btn:not(.active):hover:not(:disabled):not(.disabled) {
       background: #f5f5f5;
       color: rgba(0, 0, 0, 0.9);
+    }
+
+    /* 다크 모드: 칩 호버는 옅게 (bg-secondary) */
+    body.figma-dark .chip-btn:not(.active):hover:not(:disabled):not(.disabled),
+    .figma-dark .chip-btn:not(.active):hover:not(:disabled):not(.disabled),
+    [data-theme="dark"] .chip-btn:not(.active):hover:not(:disabled):not(.disabled) {
+      background: var(--color-bg-secondary);
+      color: #ffffff;
     }
 
     .chip-btn:disabled,
@@ -6197,7 +6272,7 @@
             }
             return dispatcher.useContext(Context);
           }
-          function useState19(initialState) {
+          function useState20(initialState) {
             var dispatcher = resolveDispatcher();
             return dispatcher.useState(initialState);
           }
@@ -7000,7 +7075,7 @@
           exports.useMemo = useMemo7;
           exports.useReducer = useReducer;
           exports.useRef = useRef20;
-          exports.useState = useState19;
+          exports.useState = useState20;
           exports.useSyncExternalStore = useSyncExternalStore;
           exports.useTransition = useTransition;
           exports.version = ReactVersion;
@@ -7496,9 +7571,9 @@
           if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function") {
             __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
           }
-          var React24 = require_react();
+          var React25 = require_react();
           var Scheduler = require_scheduler();
-          var ReactSharedInternals = React24.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React25.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           var suppressWarning = false;
           function setSuppressWarning(newSuppressWarning) {
             {
@@ -9105,7 +9180,7 @@
             {
               if (props.value == null) {
                 if (typeof props.children === "object" && props.children !== null) {
-                  React24.Children.forEach(props.children, function(child) {
+                  React25.Children.forEach(props.children, function(child) {
                     if (child == null) {
                       return;
                     }
@@ -28701,7 +28776,7 @@
       if (true) {
         (function() {
           "use strict";
-          var React24 = require_react();
+          var React25 = require_react();
           var REACT_ELEMENT_TYPE = Symbol.for("react.element");
           var REACT_PORTAL_TYPE = Symbol.for("react.portal");
           var REACT_FRAGMENT_TYPE = Symbol.for("react.fragment");
@@ -28727,7 +28802,7 @@
             }
             return null;
           }
-          var ReactSharedInternals = React24.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React25.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           function error(format) {
             {
               {
@@ -29577,11 +29652,11 @@
               return jsxWithValidation(type, props, key, false);
             }
           }
-          var jsx32 = jsxWithValidationDynamic;
-          var jsxs28 = jsxWithValidationStatic;
+          var jsx33 = jsxWithValidationDynamic;
+          var jsxs29 = jsxWithValidationStatic;
           exports.Fragment = REACT_FRAGMENT_TYPE;
-          exports.jsx = jsx32;
-          exports.jsxs = jsxs28;
+          exports.jsx = jsx33;
+          exports.jsxs = jsxs29;
         })();
       }
     }
@@ -30451,6 +30526,15 @@
   function makePresetEnvelope(items) {
     return { savedAt: Date.now(), items };
   }
+  var MAX_CUSTOM_STYLE_PRESETS = 7;
+  function countCustomStylePresets(presets, defaultIds) {
+    if (!Array.isArray(presets)) return 0;
+    let count = 0;
+    for (const p of presets) {
+      if (p && typeof p.id === "string" && !p.isDefault && !defaultIds.has(p.id)) count++;
+    }
+    return count;
+  }
 
   // src/i18n.ts
   var SUPPORTED_LOCALES = [
@@ -30493,13 +30577,13 @@
     limitReached: "Flooow element\uAC00 \uAC00\uB4DD \uCC3C\uC2B5\uB2C8\uB2E4 ({current}/{limit}). \uAE30\uC874 element\uB97C \uC0AD\uC81C\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
     // 2. 노드 생성 및 수정 (Node CRUD)
     /** [사용처] Core 노드 단일 생성 완료 토스트 | [조건] 노드 1개 생성 성공 시 | [비고] {title} 치환 */
-    nodeCreated: '\uB178\uB4DC "{title}"\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4',
+    nodeCreated: '\uB178\uB4DC "{title}"\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4.',
     /** [사용처] Core 노드 생성 실패 토스트 | [조건] 노드 생성 예외 발생 시 | [비고] {error} 치환 */
     nodeCreateFailed: "\uB178\uB4DC \uC0DD\uC131 \uC2E4\uD328: {error}",
     /** [사용처] Core 노드 수정 실패 안내 | [조건] 수정할 노드가 캔버스에서 선택되지 않았을 때 */
     nodeNotFoundSelect: "\uC218\uC815\uD560 \uB178\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE94\uBC84\uC2A4\uC5D0\uC11C \uB178\uB4DC\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 노드 단일 수정 완료 토스트 | [조건] 노드 속성 수정 성공 시 | [비고] {title} 치환 */
-    nodeUpdated: '\uB178\uB4DC "{title}"\uC744 \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4',
+    nodeUpdated: '\uB178\uB4DC "{title}"\uC744 \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4.',
     /** [사용처] Core 노드 수정 실패 토스트 | [조건] 노드 수정 중 예외 발생 시 | [비고] {error} 치환 */
     nodeUpdateFailed: "\uB178\uB4DC \uC218\uC815 \uC2E4\uD328: {error}",
     /** [사용처] Core 노드 다중 수정 완료 토스트 | [조건] 2개 이상 노드 일괄 업데이트 성공 시 | [비고] {count} 치환 */
@@ -30514,9 +30598,9 @@
     /** [사용처] Core 커넥터 생성 검증 | [조건] 동일한 노드를 선택했거나 2개 노드가 구별되지 않을 때 */
     connectNeedTwoDifferent: "\uC11C\uB85C \uB2E4\uB978 \uB450 \uB178\uB4DC\uB97C \uC120\uD0DD\uD558\uC5EC \uC5F0\uACB0\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 커넥터 생성 완료 토스트 | [조건] 라벨 없는 커넥터 생성 성공 시 */
-    connectDone: "\uC5F0\uACB0 \uC644\uB8CC",
+    connectDone: "\uC5F0\uACB0 \uC644\uB8CC.",
     /** [사용처] Core 커넥터 생성 완료 토스트 | [조건] 라벨이 포함된 커넥터 생성 성공 시 | [비고] {label} 치환 */
-    connectDoneLabel: '\uB77C\uBCA8 "{label}" \uC5F0\uACB0 \uC644\uB8CC',
+    connectDoneLabel: '\uB77C\uBCA8 "{label}" \uC5F0\uACB0 \uC644\uB8CC.',
     /** [사용처] Core 커넥터 생성 실패 토스트 | [조건] 커넥터 생성 중 예외 발생 시 | [비고] {error} 치환 */
     connectCreateFailed: "\uC5F0\uACB0\uC120 \uC0DD\uC131 \uC2E4\uD328: {error}",
     /** [사용처] Core 다중 노드 연결 검증 | [조건] 연결 대상 노드가 2개 미만으로 선택되었을 때 */
@@ -30526,9 +30610,9 @@
     /** [사용처] UI 연결 버튼 검증 안내 | [조건] 노드가 2개 미만으로 선택되었을 때 */
     connectNeedTwo: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 직각 연결 완료 토스트 | [조건] 직각 커넥터 생성 성공 시 */
-    autoConnectDone: "\uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC",
+    autoConnectDone: "\uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC.",
     /** [사용처] Core 직각 연결 완료 토스트 | [조건] 라벨 포함 직각 커넥터 생성 성공 시 | [비고] {label} 치환 */
-    autoConnectDoneLabel: '\uB77C\uBCA8 "{label}" \uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC',
+    autoConnectDoneLabel: '\uB77C\uBCA8 "{label}" \uCE7C\uAC01 \uC9C1\uAC01 \uC5F0\uACB0 \uC644\uB8CC.',
     /** [사용처] Core 순차 체인 연결 완료 토스트 | [조건] 3개 이상 노드 순차 체인 생성 성공 시 | [비고] {nodes}, {conns} 치환 */
     autoChainDone: "\u26A1 \uCD1D {nodes}\uAC1C \uB178\uB4DC\uAC00 \uCE7C\uAC01 \uC9C1\uAC01 \uC21C\uCC28 \uC5F0\uACB0\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({conns}\uAC1C \uC5F0\uACB0\uC120).",
     /** [사용처] Core 자동 연결 실패 토스트 | [조건] 자동 연결 실행 중 오류 발생 시 | [비고] {error} 치환 */
@@ -30536,9 +30620,9 @@
     /** [사용처] Core 체인 생성 안내 | [조건] 선택한 노드들 사이의 모든 연결선이 이미 존재할 때 */
     chainExistsAll: "\uBAA8\uB4E0 \uC5F0\uACB0\uC774 \uC774\uBBF8 \uC874\uC7AC\uD569\uB2C8\uB2E4.",
     /** [사용처] Core 부분 체인 연결 토스트 | [조건] 기존 연결은 건너뛰고 일부만 신규 생성되었을 때 | [비고] {created}, {skipped} 치환 */
-    chainCreatedPartial: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC ({skipped}\uAC1C\uB294 \uC774\uBBF8 \uC5F0\uACB0\uB428)",
+    chainCreatedPartial: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC ({skipped}\uAC1C\uB294 \uC774\uBBF8 \uC5F0\uACB0\uB428).",
     /** [사용처] Core 체인 연결 완료 토스트 | [조건] 전체 체인 연결 신규 생성 완료 시 | [비고] {created} 치환 */
-    chainCreated: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC",
+    chainCreated: "{created}\uAC1C \uC5F0\uACB0 \uC644\uB8CC.",
     /** [사용처] Core 체인 연결 실패 토스트 | [조건] 체인 생성 중 예외 발생 시 | [비고] {error} 치환 */
     chainFailed: "\uCCB4\uC778 \uC5F0\uACB0 \uC2E4\uD328: {error}",
     // 4. 커넥터 라벨 및 속성 수정 (Connector Editing)
@@ -30559,17 +30643,17 @@
     /** [사용처] Core 라인 타입 변경 검증 | [조건] 커넥터가 선택되지 않은 상태에서 라인 타입 변경 시도 시 */
     connectorSelectForLineType: "\uBCC0\uACBD\uD560 \uC5F0\uACB0\uC120(\uCEE4\uB125\uD130)\uC744 \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
     /** [사용처] Core 직각 변환 완료 토스트 | [조건] 커넥터를 직각 형태로 변경했을 때 */
-    connectorLineElbowed: "\u{1F4D0} \uC5F0\uACB0\uC120\uC744 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
+    connectorLineElbowed: "\u{1F4D0} \uC5F0\uACB0\uC120\uC744 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 직선 변환 완료 토스트 | [조건] 커넥터를 직선 형태로 변경했을 때 */
-    connectorLineStraight: "\u{1F4CF} \uC5F0\uACB0\uC120\uC744 \uC9C1\uC120\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4",
+    connectorLineStraight: "\u{1F4CF} \uC5F0\uACB0\uC120\uC744 \uC9C1\uC120\uC73C\uB85C \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 라인 형태 변경 실패 | [조건] 라인 형태 변경 중 예외 발생 시 | [비고] {error} 치환 */
     connectorLineTypeFailed: "\uC5F0\uACB0\uC120 \uD615\uD0DC \uBCC0\uACBD \uC2E4\uD328: {error}",
     /** [사용처] Core 일괄 변환 대상 없음 알림 | [조건] 캔버스에 변환할 커넥터가 없을 때 */
     connectorsNoneToConvert: "\uCE94\uBC84\uC2A4\uC5D0 \uBCC0\uD658\uD560 \uC5F0\uACB0\uC120\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 전체 직각 일괄 변환 토스트 | [조건] 캔버스의 모든 커넥터를 직각으로 변환 완료 시 | [비고] {count} 치환 */
-    connectorsConvertedAll: "\u26A1 \uC5F0\uACB0\uC120 {count}\uAC1C\uB97C \uBAA8\uB450 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uD658\uD588\uC2B5\uB2C8\uB2E4",
+    connectorsConvertedAll: "\u26A1 \uC5F0\uACB0\uC120 {count}\uAC1C\uB97C \uBAA8\uB450 \uC9C1\uAC01\uC73C\uB85C \uBCC0\uD658\uD588\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 일괄 변환 기완료 안내 | [조건] 캔버스의 모든 커넥터가 이미 직각일 때 | [비고] {count} 치환 */
-    connectorsAlreadyElbowed: "\uC5F0\uACB0\uC120 {count}\uAC1C\uAC00 \uC774\uBBF8 \uBAA8\uB450 \uC9C1\uAC01 \uC0C1\uD0DC\uC785\uB2C8\uB2E4",
+    connectorsAlreadyElbowed: "\uC5F0\uACB0\uC120 {count}\uAC1C\uAC00 \uC774\uBBF8 \uBAA8\uB450 \uC9C1\uAC01 \uC0C1\uD0DC\uC785\uB2C8\uB2E4.",
     /** [사용처] Core 일괄 변환 실패 토스트 | [조건] 일괄 변환 처리 중 오류 발생 시 | [비고] {error} 치환 */
     connectorsConvertFailed: "\uC5F0\uACB0\uC120 \uC77C\uAD04 \uBCC0\uD658 \uC2E4\uD328: {error}",
     // 5. 어피어런스 - 상태 (Status Badge)
@@ -30578,7 +30662,7 @@
     /** [사용처] Core 상태 뱃지 제거 토스트 | [조건] 노드에서 상태 뱃지 삭제 완료 시 | [비고] {count} 치환 */
     statusRemoved: "{count}\uAC1C \uB178\uB4DC\uC758 \uC0C1\uD0DC \uBC43\uC9C0\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] Core 상태 뱃지 부착 토스트 | [조건] 노드에 특정 상태 뱃지 부착 완료 시 | [비고] {count}, {label} 치환 */
-    statusAttached: '{count}\uAC1C \uB178\uB4DC\uC5D0 \uC0C1\uD0DC \uBC43\uC9C0 "{label}"\uC744 \uBD80\uCC29\uD588\uC2B5\uB2C8\uB2E4',
+    statusAttached: '{count}\uAC1C \uB178\uB4DC\uC5D0 \uC0C1\uD0DC \uBC43\uC9C0 "{label}"\uC744 \uBD80\uCC29\uD588\uC2B5\uB2C8\uB2E4.',
     // 6. 어피어런스 - 엘리베이션 (Elevation)
     /** [사용처] Core 엘리베이션 선택 검증 | [조건] 선택된 노드 없이 엘리베이션 지정 시도 시 */
     elevationNeedSelection: "\uC5D8\uB9AC\uBCA0\uC774\uC158\uC744 \uC801\uC6A9\uD560 \uC694\uC18C\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
@@ -30653,6 +30737,11 @@
     styleDeleted: "\uC2A4\uD0C0\uC77C\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI 기본 스타일 보호 알림 | [조건] 기본 White/Black 스타일 수정 시도 시 */
     styleEditNoDefault: "\uAE30\uBCF8 \uC2A4\uD0C0\uC77C\uC740 \uC218\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    /** [사용처] UI 스타일 프리셋 추가 제한 | [조건] 커스텀 스타일이 7개에 도달한 상태에서 추가 시도 시 */
+    styleCustomLimitReached: "\uC0AC\uC6A9\uC790 \uC2A4\uD0C0\uC77C\uC740 \uCD5C\uB300 7\uAC1C\uAE4C\uC9C0 \uCD94\uAC00\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+    exportCopied: "AI\uC6A9 \uD50C\uB85C\uC6B0\uB97C \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.",
+    exportEmpty: "\uC774 \uD398\uC774\uC9C0\uC5D0 \uB0B4\uBCF4\uB0BC \uD50C\uB85C\uC6B0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    exportFailed: "\uB0B4\uBCF4\uAE30\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
     // 12. 디스크립션 클립보드 복사 (Description)
     /** [사용처] UI 설명 복사 검증 | [조건] 설명 내용이 비어있는 상태에서 복사 클릭 시 */
     descCopyEmpty: "\uBCF5\uC0AC\uD560 \uC124\uBA85\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
@@ -30725,6 +30814,7 @@
     tipHexColor: "Hex \uC0C9\uC0C1",
     /** [사용처] UI Popover / Modal | [조건] 팝오버 닫기(X) 버튼 마우스 오버 */
     tipClose: "\uB2EB\uAE30",
+    tipSettings: "\uC124\uC815",
     /** [사용처] UI ScreenFrameSelect | [조건] 캔버스 프레임 새로고침 아이콘 마우스 오버 */
     tipRefreshFrames: "\uCE94\uBC84\uC2A4\uC5D0\uC11C \uD504\uB808\uC784 \uC0C8\uB85C\uACE0\uCE68",
     /** [사용처] UI ConnectorSection | [조건] 실선 스타일 세그먼트 버튼 마우스 오버 */
@@ -30745,10 +30835,11 @@
     tipTermCircle: "\uC6D0",
     /** [사용처] UI ConnectorSection | [조건] 마름모 단자 옵션 마우스 오버 */
     tipTermDiamond: "\uB9C8\uB984\uBAA8",
+    tipTermTriangle: "\uC0BC\uAC01\uD615",
     /** [사용처] UI ConnectorSection | [조건] 직각 라우팅 옵션 마우스 오버 */
     tipRouteOrtho: "\uC9C1\uAC01",
     /** [사용처] UI ConnectorSection | [조건] S자 곡선 라우팅 옵션 마우스 오버 */
-    tipRouteSCurve: "S\uC790 \uACE1\uC120",
+    tipRouteSCurve: "\uB77C\uC6B4\uB4DC",
     /** [사용처] UI ConnectorSection | [조건] 곡선 라우팅 옵션 마우스 오버 */
     tipRouteCurve: "\uACE1\uC120",
     /** [사용처] UI ConnectorSection | [조건] 직선 라우팅 옵션 마우스 오버 */
@@ -30791,56 +30882,56 @@
     tipQuotaBlocked: "\uBB34\uB8CC \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC2B5\uB2C8\uB2E4. \uC5C5\uADF8\uB808\uC774\uB4DC\uD558\uBA74 \uB354 \uB9CC\uB4E4 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
     // 14. 도형 타입별 지원 여부 안내 (Shape Notices)
     /** [사용처] UI SizeSection 패널 | [조건] Screen 타입 노드가 아닌 일반 도형 선택 시 */
-    noticeSizeOnlyScreen: "Size\uB294 Screen \uB178\uB4DC\uC5D0\uC11C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4",
+    noticeSizeOnlyScreen: "Size\uB294 Screen \uB178\uB4DC\uC5D0\uC11C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI DescriptionSection 패널 | [조건] Description 미지원 도형 선택 시 */
-    noticeDescUnsupported: "Description\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeDescUnsupported: "Description\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI ElevationSection 패널 | [조건] Elevation 미지원 도형 선택 시 */
-    noticeElevationUnsupported: "Elevation\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeElevationUnsupported: "Elevation\uC740 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI StatusSection 패널 | [조건] Status 미지원 도형 선택 시 */
-    noticeStatusUnsupported: "Status\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeStatusUnsupported: "Status\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI StepBadgesSection 패널 | [조건] Step Badges 미지원 도형 선택 시 */
-    noticeStepUnsupported: "Step Badges\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeStepUnsupported: "Step Badges\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI LinkSection 패널 | [조건] Reference Link 미지원 도형 선택 시 */
-    noticeLinkUnsupported: "Reference Link\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeLinkUnsupported: "Reference Link\uB294 \uC774 \uB3C4\uD615\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     /** [사용처] UI 어피어런스 패널 | [조건] 서로 다른 타입 노드 혼합 선택 시 */
-    noticeMixed: "\uD63C\uD569 \uC120\uD0DD\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noticeMixed: "\uD63C\uD569 \uC120\uD0DD\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
     // 15. 하단 액션바 연결 상태 라벨 (Connect Status Text)
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 캔버스에서 선택된 노드가 0개 또는 1개일 때 */
-    connectStatusSelectNodes: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD",
+    connectStatusSelectNodes: "\uC5F0\uACB0\uD560 \uB178\uB4DC\uB97C 2\uAC1C \uC774\uC0C1 \uC120\uD0DD.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 2개 노드가 선택되고 명시적 단자 연결 준비 완료 시 */
-    connectStatusReadyTwoNodes: "2\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC",
+    connectStatusReadyTwoNodes: "2\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 3개 이상 노드 선택 시 | [비고] {count} 치환 */
-    connectStatusReadyMultiNodes: "{count}\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC",
+    connectStatusReadyMultiNodes: "{count}\uAC1C \uB178\uB4DC \uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] AUTO 단자 등 기본 연결 준비 완료 시 */
-    connectStatusReady: "\uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC",
+    connectStatusReady: "\uC5F0\uACB0 \uC900\uBE44 \uC644\uB8CC.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 선택된 커넥터에 변경사항이 존재할 때 */
-    connectStatusChangesReady: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC900\uBE44 \uC644\uB8CC",
+    connectStatusChangesReady: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC900\uBE44 \uC644\uB8CC.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 커넥터 연결/적용 작업이 완료되었을 때 */
-    connectStatusConnected: "\uC5F0\uACB0\uB428",
+    connectStatusConnected: "\uC5F0\uACB0\uB428.",
     /** [사용처] UI ConnectSection 상태 라벨 | [조건] 선택된 커넥터에 변경사항이 없을 때 */
-    connectStatusNoChanges: "\uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C",
+    connectStatusNoChanges: "\uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C.",
     // 16. 주요 액션 버튼 안내 및 툴팁 (Action Buttons & Tooltips)
     /** [사용처] UI StepBadgesSection 안내 문구 | [조건] Add Step Badges 버튼 좌측에 상시 표시 */
-    stepDescStartsFromNumber: "\uC9C0\uC815\uD55C \uBC88\uD638\uBD80\uD130 \uC2DC\uC791",
+    stepDescStartsFromNumber: "\uC9C0\uC815\uD55C \uBC88\uD638\uBD80\uD130 \uC2DC\uC791.",
     /** [사용처] UI StepBadgesSection 버튼 툴팁 | [조건] 시작 번호 미입력으로 버튼 비활성화 시 */
-    stepTipEnterStartNumber: "\uC2DC\uC791 \uBC88\uD638\uB97C \uC785\uB825\uD558\uC138\uC694",
+    stepTipEnterStartNumber: "\uC2DC\uC791 \uBC88\uD638\uB97C \uC785\uB825\uD558\uC138\uC694.",
     /** [사용처] UI StepBadgesSection 버튼 툴팁 | [조건] 시작 번호 입력되어 버튼 활성화 시 */
-    stepTipAddStepBadges: "\uC2A4\uD15D \uBC43\uC9C0 \uCD94\uAC00",
+    stepTipAddStepBadges: "\uC2A4\uD15D \uBC43\uC9C0 \uCD94\uAC00.",
     /** [사용처] UI ConnectSection 버튼 툴팁 | [조건] 선택된 커넥터에 적용할 변경사항이 없을 때 */
-    connectTipNoChanges: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C",
+    connectTipNoChanges: "\uC801\uC6A9\uD560 \uBCC0\uACBD\uC0AC\uD56D \uC5C6\uC74C.",
     /** [사용처] UI ConnectSection 버튼 툴팁 | [조건] 선택된 커넥터의 옵션 변경사항 적용 준비 시 */
-    connectTipApplyChanges: "\uCEE4\uB125\uD130 \uBCC0\uACBD\uC0AC\uD56D \uC801\uC6A9",
+    connectTipApplyChanges: "\uCEE4\uB125\uD130 \uBCC0\uACBD\uC0AC\uD56D \uC801\uC6A9.",
     /** [사용처] UI ConnectSection 버튼 툴팁 | [조건] 2개 이상 선택된 노드 신규 연결 준비 시 */
-    connectTipConnectNodes: "\uC120\uD0DD\uD55C \uB178\uB4DC \uC5F0\uACB0"
+    connectTipConnectNodes: "\uC120\uD0DD\uD55C \uB178\uB4DC \uC5F0\uACB0."
   };
   var EN = {
     // 1. Quota & Entitlement
     limitReached: "Flooow elements are full ({current}/{limit}). Delete existing elements and try again.",
     // 2. Node CRUD
-    nodeCreated: 'Created node "{title}"',
+    nodeCreated: 'Created node "{title}".',
     nodeCreateFailed: "Failed to create node: {error}",
     nodeNotFoundSelect: "Node to edit not found. Select a node on the canvas.",
-    nodeUpdated: 'Updated node "{title}"',
+    nodeUpdated: 'Updated node "{title}".',
     nodeUpdateFailed: "Failed to update node: {error}",
     nodesBatchUpdated: "Updated {count} nodes",
     nodesBatchUpdateFailed: "Failed to update nodes: {error}",
@@ -30848,19 +30939,19 @@
     // 3. Connect & Chain
     connectNodesNotFound: "Nodes to connect not found.",
     connectNeedTwoDifferent: "Select two different nodes to connect.",
-    connectDone: "Connected",
-    connectDoneLabel: 'Connected with label "{label}"',
+    connectDone: "Connected.",
+    connectDoneLabel: 'Connected with label "{label}".',
     connectCreateFailed: "Failed to create connector: {error}",
     connectNeedTwoOrMore: "Select 2 or more nodes to connect.",
     connectNeedTwoDifferentOrMore: "Select 2 or more different nodes.",
     connectNeedTwo: "Select 2 or more nodes to connect.",
-    autoConnectDone: "Orthogonal connection complete",
-    autoConnectDoneLabel: 'Orthogonal connection complete with label "{label}"',
+    autoConnectDone: "Orthogonal connection complete.",
+    autoConnectDoneLabel: 'Orthogonal connection complete with label "{label}".',
     autoChainDone: "\u26A1 Connected {nodes} nodes in sequence ({conns} connectors).",
     autoConnectFailed: "Auto connect failed: {error}",
     chainExistsAll: "All connections already exist.",
-    chainCreatedPartial: "{created} connections created ({skipped} already connected)",
-    chainCreated: "{created} connections created",
+    chainCreatedPartial: "{created} connections created ({skipped} already connected).",
+    chainCreated: "{created} connections created.",
     chainFailed: "Chain connection failed: {error}",
     // 4. Connector Editing
     connectorSelectForLabel: "Select a connector on the canvas to edit.",
@@ -30871,17 +30962,17 @@
     connectorOffsetConverted: "Converted to a custom orthogonal connector to apply offsets.",
     connectorUpdateFailed: "Failed to update connector: {error}",
     connectorSelectForLineType: "Select a connector on the canvas to change.",
-    connectorLineElbowed: "\u{1F4D0} Connector changed to orthogonal",
-    connectorLineStraight: "\u{1F4CF} Connector changed to straight",
+    connectorLineElbowed: "\u{1F4D0} Connector changed to orthogonal.",
+    connectorLineStraight: "\u{1F4CF} Connector changed to straight.",
     connectorLineTypeFailed: "Failed to change connector line type: {error}",
     connectorsNoneToConvert: "No connectors on the canvas to convert.",
-    connectorsConvertedAll: "\u26A1 Converted {count} connectors to orthogonal",
-    connectorsAlreadyElbowed: "{count} connectors are already orthogonal",
+    connectorsConvertedAll: "\u26A1 Converted {count} connectors to orthogonal.",
+    connectorsAlreadyElbowed: "{count} connectors are already orthogonal.",
     connectorsConvertFailed: "Failed to convert connectors: {error}",
     // 5. Status Badge
     statusNeedSelection: "Select 1 or more elements to set a status.",
     statusRemoved: "Removed status badges from {count} nodes.",
-    statusAttached: 'Attached status badge "{label}" to {count} nodes',
+    statusAttached: 'Attached status badge "{label}" to {count} nodes.',
     // 6. Elevation
     elevationNeedSelection: "Select elements to apply elevation.",
     elevationRemoved: "Removed elevation from {count} nodes.",
@@ -30922,6 +31013,10 @@
     styleDefaultNoDelete: "Default styles cannot be deleted.",
     styleDeleted: "Style deleted.",
     styleEditNoDefault: "Default styles cannot be edited.",
+    styleCustomLimitReached: "You can add up to 7 custom styles.",
+    exportCopied: "Flow copied for AI.",
+    exportEmpty: "Nothing to export on this page.",
+    exportFailed: "Export failed.",
     // 12. Description
     descCopyEmpty: "No description to copy.",
     descCopied: "Description copied to clipboard!",
@@ -30959,6 +31054,7 @@
     tipLinkDisabled: "Reference Link is disabled for this shape",
     tipHexColor: "Hex color",
     tipClose: "Close",
+    tipSettings: "Settings",
     tipRefreshFrames: "Refresh frames from canvas",
     tipSolid: "Solid",
     tipDashed: "Dashed",
@@ -30969,8 +31065,9 @@
     tipTermArrow: "Arrow",
     tipTermCircle: "Circle",
     tipTermDiamond: "Diamond",
+    tipTermTriangle: "Triangle",
     tipRouteOrtho: "Orthogonal",
-    tipRouteSCurve: "S-curve",
+    tipRouteSCurve: "Round",
     tipRouteCurve: "Curve",
     tipRouteStraight: "Straight",
     tipGizmoSource: "Source",
@@ -30992,54 +31089,54 @@
     tipConnectorColor: "Connector color",
     tipQuotaBlocked: "Free limit reached. Upgrade to create more.",
     // 14. Shape Notices
-    noticeSizeOnlyScreen: "Size is only available for Screen nodes",
-    noticeDescUnsupported: "Description is not available for this shape",
-    noticeElevationUnsupported: "Elevation is not available for this shape",
-    noticeStatusUnsupported: "Status is not available for this shape",
-    noticeStepUnsupported: "Step Badges are not available for this shape",
-    noticeLinkUnsupported: "Reference Link is not available for this shape",
-    noticeMixed: "Not available for mixed selection",
+    noticeSizeOnlyScreen: "Size is only available for Screen nodes.",
+    noticeDescUnsupported: "Description is not available for this shape.",
+    noticeElevationUnsupported: "Elevation is not available for this shape.",
+    noticeStatusUnsupported: "Status is not available for this shape.",
+    noticeStepUnsupported: "Step Badges are not available for this shape.",
+    noticeLinkUnsupported: "Reference Link is not available for this shape.",
+    noticeMixed: "Not available for mixed selection.",
     // 15. Connect Status Text
-    connectStatusSelectNodes: "Select 2+ nodes to connect",
-    connectStatusReadyTwoNodes: "2 nodes ready to connect",
-    connectStatusReadyMultiNodes: "{count} nodes ready to connect",
-    connectStatusReady: "Ready to connect",
-    connectStatusChangesReady: "Changes ready to apply",
-    connectStatusConnected: "Connected",
-    connectStatusNoChanges: "No changes",
+    connectStatusSelectNodes: "Select 2+ nodes to connect.",
+    connectStatusReadyTwoNodes: "2 nodes ready to connect.",
+    connectStatusReadyMultiNodes: "{count} nodes ready to connect.",
+    connectStatusReady: "Ready to connect.",
+    connectStatusChangesReady: "Changes ready to apply.",
+    connectStatusConnected: "Connected.",
+    connectStatusNoChanges: "No changes.",
     // 16. Action Buttons & Tooltips
-    stepDescStartsFromNumber: "Starts from the specified number",
-    stepTipEnterStartNumber: "Enter a start number",
-    stepTipAddStepBadges: "Add Step Badges",
-    connectTipNoChanges: "No changes to update",
-    connectTipApplyChanges: "Apply connector changes",
-    connectTipConnectNodes: "Connect selected nodes"
+    stepDescStartsFromNumber: "Starts from the specified number.",
+    stepTipEnterStartNumber: "Enter a start number.",
+    stepTipAddStepBadges: "Add Step Badges.",
+    connectTipNoChanges: "No changes to update.",
+    connectTipApplyChanges: "Apply connector changes.",
+    connectTipConnectNodes: "Connect selected nodes."
   };
   var JA = {
     limitReached: "Flooow\u306E\u8981\u7D20\u6570\u304C\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F\uFF08{current}/{limit}\uFF09\u3002\u65E2\u5B58\u306E\u8981\u7D20\u3092\u524A\u9664\u3057\u3066\u304B\u3089\u3001\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002",
-    nodeCreated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F",
+    nodeCreated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\u3002",
     nodeCreateFailed: "\u30CE\u30FC\u30C9\u306E\u4F5C\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     nodeNotFoundSelect: "\u7DE8\u96C6\u3059\u308B\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u30CE\u30FC\u30C9\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-    nodeUpdated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F",
+    nodeUpdated: "\u30CE\u30FC\u30C9\u300C{title}\u300D\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F\u3002",
     nodeUpdateFailed: "\u30CE\u30FC\u30C9\u306E\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     nodesBatchUpdated: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F",
     nodesBatchUpdateFailed: "\u30CE\u30FC\u30C9\u306E\u4E00\u62EC\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     nodeGone: "\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
     connectNodesNotFound: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
     connectNeedTwoDifferent: "\u63A5\u7D9A\u3059\u308B2\u3064\u306E\u7570\u306A\u308B\u30CE\u30FC\u30C9\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-    connectDone: "\u63A5\u7D9A\u3057\u307E\u3057\u305F",
-    connectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u3067\u63A5\u7D9A\u3057\u307E\u3057\u305F",
+    connectDone: "\u63A5\u7D9A\u3057\u307E\u3057\u305F\u3002",
+    connectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u3067\u63A5\u7D9A\u3057\u307E\u3057\u305F\u3002",
     connectCreateFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u4F5C\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     connectNeedTwoOrMore: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     connectNeedTwoDifferentOrMore: "\u7570\u306A\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     connectNeedTwo: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-    autoConnectDone: "\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F",
-    autoConnectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u4ED8\u304D\u306E\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F",
+    autoConnectDone: "\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002",
+    autoConnectDoneLabel: "\u30E9\u30D9\u30EB\u300C{label}\u300D\u4ED8\u304D\u306E\u76F4\u89D2\u63A5\u7D9A\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002",
     autoChainDone: "\u26A1 {nodes}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u9806\u756A\u306B\u63A5\u7D9A\u3057\u307E\u3057\u305F\uFF08{conns}\u672C\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\uFF09\u3002",
     autoConnectFailed: "\u81EA\u52D5\u63A5\u7D9A\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     chainExistsAll: "\u3059\u3079\u3066\u306E\u63A5\u7D9A\u306F\u3059\u3067\u306B\u5B58\u5728\u3057\u307E\u3059\u3002",
-    chainCreatedPartial: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\uFF08{skipped}\u4EF6\u306F\u63A5\u7D9A\u6E08\u307F\uFF09",
-    chainCreated: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F",
+    chainCreatedPartial: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\uFF08{skipped}\u4EF6\u306F\u63A5\u7D9A\u6E08\u307F\uFF09\u3002",
+    chainCreated: "{created}\u4EF6\u306E\u63A5\u7D9A\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\u3002",
     chainFailed: "\u30C1\u30A7\u30FC\u30F3\u63A5\u7D9A\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     connectorSelectForLabel: "\u7DE8\u96C6\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     connectorLabelSet: "\u4E2D\u592E\u30E9\u30D9\u30EB\u3092\u300C{label}\u300D\u306B\u8A2D\u5B9A\u3057\u307E\u3057\u305F",
@@ -31049,16 +31146,16 @@
     connectorOffsetConverted: "\u30AA\u30D5\u30BB\u30C3\u30C8\u3092\u9069\u7528\u3059\u308B\u305F\u3081\u3001\u30AB\u30B9\u30BF\u30E0\u76F4\u89D2\u30B3\u30CD\u30AF\u30BF\u30FC\u306B\u5909\u63DB\u3057\u307E\u3057\u305F\u3002",
     connectorUpdateFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u66F4\u65B0\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     connectorSelectForLineType: "\u5909\u66F4\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u3067\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-    connectorLineElbowed: "\u{1F4D0} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u89D2\u306B\u5909\u66F4\u3057\u307E\u3057\u305F",
-    connectorLineStraight: "\u{1F4CF} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u7DDA\u306B\u5909\u66F4\u3057\u307E\u3057\u305F",
+    connectorLineElbowed: "\u{1F4D0} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u89D2\u306B\u5909\u66F4\u3057\u307E\u3057\u305F\u3002",
+    connectorLineStraight: "\u{1F4CF} \u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u76F4\u7DDA\u306B\u5909\u66F4\u3057\u307E\u3057\u305F\u3002",
     connectorLineTypeFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u7DDA\u7A2E\u5909\u66F4\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     connectorsNoneToConvert: "\u5909\u63DB\u3059\u308B\u30B3\u30CD\u30AF\u30BF\u30FC\u304C\u30AD\u30E3\u30F3\u30D0\u30B9\u4E0A\u306B\u3042\u308A\u307E\u305B\u3093\u3002",
-    connectorsConvertedAll: "\u26A1 {count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u3059\u3079\u3066\u76F4\u89D2\u306B\u5909\u63DB\u3057\u307E\u3057\u305F",
-    connectorsAlreadyElbowed: "{count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u306F\u3059\u3067\u306B\u3059\u3079\u3066\u76F4\u89D2\u3067\u3059",
+    connectorsConvertedAll: "\u26A1 {count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u3092\u3059\u3079\u3066\u76F4\u89D2\u306B\u5909\u63DB\u3057\u307E\u3057\u305F\u3002",
+    connectorsAlreadyElbowed: "{count}\u500B\u306E\u30B3\u30CD\u30AF\u30BF\u30FC\u306F\u3059\u3067\u306B\u3059\u3079\u3066\u76F4\u89D2\u3067\u3059\u3002",
     connectorsConvertFailed: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u4E00\u62EC\u5909\u63DB\u306B\u5931\u6557\u3057\u307E\u3057\u305F: {error}",
     statusNeedSelection: "\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u8A2D\u5B9A\u3059\u308B\u8981\u7D20\u30921\u3064\u4EE5\u4E0A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     statusRemoved: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u304B\u3089\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30C3\u30B8\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
-    statusAttached: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u306B\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30C3\u30B8\u300C{label}\u300D\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F",
+    statusAttached: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u306B\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30C3\u30B8\u300C{label}\u300D\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\u3002",
     elevationNeedSelection: "Elevation\u3092\u9069\u7528\u3059\u308B\u8981\u7D20\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     elevationRemoved: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u304B\u3089Elevation\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
     elevationApplied: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u306BLevel {level}\u306EElevation\u3092\u9069\u7528\u3057\u307E\u3057\u305F\u3002",
@@ -31093,6 +31190,10 @@
     styleDefaultNoDelete: "\u30C7\u30D5\u30A9\u30EB\u30C8\u30B9\u30BF\u30A4\u30EB\u306F\u524A\u9664\u3067\u304D\u307E\u305B\u3093\u3002",
     styleDeleted: "\u30B9\u30BF\u30A4\u30EB\u3092\u524A\u9664\u3057\u307E\u3057\u305F\u3002",
     styleEditNoDefault: "\u30C7\u30D5\u30A9\u30EB\u30C8\u30B9\u30BF\u30A4\u30EB\u306F\u7DE8\u96C6\u3067\u304D\u307E\u305B\u3093\u3002",
+    styleCustomLimitReached: "\u30AB\u30B9\u30BF\u30E0\u30B9\u30BF\u30A4\u30EB\u306F\u6700\u59277\u3064\u307E\u3067\u8FFD\u52A0\u3067\u304D\u307E\u3059\u3002",
+    exportCopied: "AI\u7528\u306B\u30D5\u30ED\u30FC\u3092\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F\u3002",
+    exportEmpty: "\u3053\u306E\u30DA\u30FC\u30B8\u306B\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u3059\u308B\u30D5\u30ED\u30FC\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
+    exportFailed: "\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002",
     descCopyEmpty: "\u30B3\u30D4\u30FC\u3059\u308B\u8AAC\u660E\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
     descCopied: "\u8AAC\u660E\u3092\u30AF\u30EA\u30C3\u30D7\u30DC\u30FC\u30C9\u306B\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F\uFF01",
     tipWidth: "\u5E45",
@@ -31128,6 +31229,7 @@
     tipLinkDisabled: "\u3053\u306E\u56F3\u5F62\u3067\u306FReference Link\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
     tipHexColor: "Hex\u30AB\u30E9\u30FC",
     tipClose: "\u9589\u3058\u308B",
+    tipSettings: "\u8A2D\u5B9A",
     tipRefreshFrames: "\u30AD\u30E3\u30F3\u30D0\u30B9\u304B\u3089\u30D5\u30EC\u30FC\u30E0\u3092\u66F4\u65B0",
     tipSolid: "\u5B9F\u7DDA",
     tipDashed: "\u7834\u7DDA",
@@ -31138,8 +31240,9 @@
     tipTermArrow: "\u77E2\u5370",
     tipTermCircle: "\u5186",
     tipTermDiamond: "\u3072\u3057\u5F62",
+    tipTermTriangle: "\u4E09\u89D2",
     tipRouteOrtho: "\u76F4\u89D2",
-    tipRouteSCurve: "S\u5B57\u30AB\u30FC\u30D6",
+    tipRouteSCurve: "\u30E9\u30A6\u30F3\u30C9",
     tipRouteCurve: "\u30AB\u30FC\u30D6",
     tipRouteStraight: "\u76F4\u7DDA",
     tipGizmoSource: "\u59CB\u70B9",
@@ -31160,52 +31263,52 @@
     tipPresetDisabledShape: "\u3053\u306E\u56F3\u5F62\u3067\u306FSize\u30D7\u30EA\u30BB\u30C3\u30C8\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
     tipConnectorColor: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u8272",
     tipQuotaBlocked: "\u7121\u6599\u30D7\u30E9\u30F3\u306E\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F\u3002\u30A2\u30C3\u30D7\u30B0\u30EC\u30FC\u30C9\u3059\u308B\u3068\u3055\u3089\u306B\u4F5C\u6210\u3067\u304D\u307E\u3059\u3002",
-    noticeSizeOnlyScreen: "Size\u306FScreen\u30CE\u30FC\u30C9\u3067\u306E\u307F\u4F7F\u7528\u3067\u304D\u307E\u3059",
-    noticeDescUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FDescription\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeElevationUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FElevation\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeStatusUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStatus\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeStepUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStep Badges\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeLinkUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FReference Link\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    noticeMixed: "\u6DF7\u5728\u3057\u305F\u9078\u629E\u3067\u306F\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093",
-    connectStatusSelectNodes: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E",
-    connectStatusReadyTwoNodes: "2\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F",
-    connectStatusReadyMultiNodes: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F",
-    connectStatusReady: "\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F",
-    connectStatusChangesReady: "\u9069\u7528\u3059\u308B\u5909\u66F4\u304C\u3042\u308A\u307E\u3059",
-    connectStatusConnected: "\u63A5\u7D9A\u6E08\u307F",
-    connectStatusNoChanges: "\u5909\u66F4\u306A\u3057",
-    stepDescStartsFromNumber: "\u6307\u5B9A\u3057\u305F\u756A\u53F7\u304B\u3089\u958B\u59CB",
-    stepTipEnterStartNumber: "\u958B\u59CB\u756A\u53F7\u3092\u5165\u529B",
-    stepTipAddStepBadges: "\u30B9\u30C6\u30C3\u30D7\u30D0\u30C3\u30B8\u3092\u8FFD\u52A0",
-    connectTipNoChanges: "\u9069\u7528\u3059\u308B\u5909\u66F4\u306F\u3042\u308A\u307E\u305B\u3093",
-    connectTipApplyChanges: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u5909\u66F4\u3092\u9069\u7528",
-    connectTipConnectNodes: "\u9078\u629E\u3057\u305F\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A"
+    noticeSizeOnlyScreen: "Size\u306FScreen\u30CE\u30FC\u30C9\u3067\u306E\u307F\u4F7F\u7528\u3067\u304D\u307E\u3059\u3002",
+    noticeDescUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FDescription\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeElevationUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FElevation\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeStatusUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStatus\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeStepUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FStep Badges\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeLinkUnsupported: "\u3053\u306E\u56F3\u5F62\u3067\u306FReference Link\u3092\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    noticeMixed: "\u6DF7\u5728\u3057\u305F\u9078\u629E\u3067\u306F\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+    connectStatusSelectNodes: "\u63A5\u7D9A\u3059\u308B\u30CE\u30FC\u30C9\u30922\u3064\u4EE5\u4E0A\u9078\u629E\u3002",
+    connectStatusReadyTwoNodes: "2\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F\u3002",
+    connectStatusReadyMultiNodes: "{count}\u500B\u306E\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F\u3002",
+    connectStatusReady: "\u63A5\u7D9A\u3059\u308B\u6E96\u5099\u304C\u3067\u304D\u307E\u3057\u305F\u3002",
+    connectStatusChangesReady: "\u9069\u7528\u3059\u308B\u5909\u66F4\u304C\u3042\u308A\u307E\u3059\u3002",
+    connectStatusConnected: "\u63A5\u7D9A\u6E08\u307F\u3002",
+    connectStatusNoChanges: "\u5909\u66F4\u306A\u3057\u3002",
+    stepDescStartsFromNumber: "\u6307\u5B9A\u3057\u305F\u756A\u53F7\u304B\u3089\u958B\u59CB\u3002",
+    stepTipEnterStartNumber: "\u958B\u59CB\u756A\u53F7\u3092\u5165\u529B\u3002",
+    stepTipAddStepBadges: "\u30B9\u30C6\u30C3\u30D7\u30D0\u30C3\u30B8\u3092\u8FFD\u52A0\u3002",
+    connectTipNoChanges: "\u9069\u7528\u3059\u308B\u5909\u66F4\u306F\u3042\u308A\u307E\u305B\u3093\u3002",
+    connectTipApplyChanges: "\u30B3\u30CD\u30AF\u30BF\u30FC\u306E\u5909\u66F4\u3092\u9069\u7528\u3002",
+    connectTipConnectNodes: "\u9078\u629E\u3057\u305F\u30CE\u30FC\u30C9\u3092\u63A5\u7D9A\u3002"
   };
   var ZH_CN = {
     limitReached: "Flooow \u5143\u7D20\u6570\u91CF\u5DF2\u8FBE\u4E0A\u9650\uFF08{current}/{limit}\uFF09\u3002\u8BF7\u5220\u9664\u73B0\u6709\u5143\u7D20\u540E\u91CD\u8BD5\u3002",
-    nodeCreated: "\u5DF2\u521B\u5EFA\u8282\u70B9\u201C{title}\u201D",
+    nodeCreated: "\u5DF2\u521B\u5EFA\u8282\u70B9\u201C{title}\u201D\u3002",
     nodeCreateFailed: "\u521B\u5EFA\u8282\u70B9\u5931\u8D25\uFF1A{error}",
     nodeNotFoundSelect: "\u627E\u4E0D\u5230\u8981\u7F16\u8F91\u7684\u8282\u70B9\u3002\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u4E00\u4E2A\u8282\u70B9\u3002",
-    nodeUpdated: "\u5DF2\u66F4\u65B0\u8282\u70B9\u201C{title}\u201D",
+    nodeUpdated: "\u5DF2\u66F4\u65B0\u8282\u70B9\u201C{title}\u201D\u3002",
     nodeUpdateFailed: "\u66F4\u65B0\u8282\u70B9\u5931\u8D25\uFF1A{error}",
     nodesBatchUpdated: "\u5DF2\u66F4\u65B0 {count} \u4E2A\u8282\u70B9",
     nodesBatchUpdateFailed: "\u6279\u91CF\u66F4\u65B0\u8282\u70B9\u5931\u8D25\uFF1A{error}",
     nodeGone: "\u627E\u4E0D\u5230\u8BE5\u8282\u70B9\u3002",
     connectNodesNotFound: "\u627E\u4E0D\u5230\u8981\u8FDE\u63A5\u7684\u8282\u70B9\u3002",
     connectNeedTwoDifferent: "\u8BF7\u9009\u62E9\u4E24\u4E2A\u4E0D\u540C\u7684\u8282\u70B9\u8FDB\u884C\u8FDE\u63A5\u3002",
-    connectDone: "\u8FDE\u63A5\u5B8C\u6210",
-    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u8FDE\u63A5",
+    connectDone: "\u8FDE\u63A5\u5B8C\u6210\u3002",
+    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u8FDE\u63A5\u3002",
     connectCreateFailed: "\u521B\u5EFA\u8FDE\u63A5\u5668\u5931\u8D25\uFF1A{error}",
     connectNeedTwoOrMore: "\u8BF7\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u8FDB\u884C\u8FDE\u63A5\u3002",
     connectNeedTwoDifferentOrMore: "\u8BF7\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u4E0D\u540C\u7684\u8282\u70B9\u3002",
     connectNeedTwo: "\u8BF7\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u8FDB\u884C\u8FDE\u63A5\u3002",
-    autoConnectDone: "\u76F4\u89D2\u8FDE\u63A5\u5B8C\u6210",
-    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u76F4\u89D2\u8FDE\u63A5",
+    autoConnectDone: "\u76F4\u89D2\u8FDE\u63A5\u5B8C\u6210\u3002",
+    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6807\u7B7E\u201C{label}\u201D\u5B8C\u6210\u76F4\u89D2\u8FDE\u63A5\u3002",
     autoChainDone: "\u26A1 \u5DF2\u6309\u987A\u5E8F\u8FDE\u63A5 {nodes} \u4E2A\u8282\u70B9\uFF08{conns} \u4E2A\u8FDE\u63A5\u5668\uFF09\u3002",
     autoConnectFailed: "\u81EA\u52A8\u8FDE\u63A5\u5931\u8D25\uFF1A{error}",
     chainExistsAll: "\u6240\u6709\u8FDE\u63A5\u5747\u5DF2\u5B58\u5728\u3002",
-    chainCreatedPartial: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5\uFF08{skipped} \u4E2A\u5DF2\u5B58\u5728\uFF09",
-    chainCreated: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5",
+    chainCreatedPartial: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5\uFF08{skipped} \u4E2A\u5DF2\u5B58\u5728\uFF09\u3002",
+    chainCreated: "\u5DF2\u521B\u5EFA {created} \u4E2A\u8FDE\u63A5\u3002",
     chainFailed: "\u94FE\u5F0F\u8FDE\u63A5\u5931\u8D25\uFF1A{error}",
     connectorSelectForLabel: "\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u8981\u7F16\u8F91\u7684\u8FDE\u63A5\u5668\u3002",
     connectorLabelSet: "\u4E2D\u5FC3\u6807\u7B7E\u5DF2\u8BBE\u7F6E\u4E3A\u201C{label}\u201D",
@@ -31215,16 +31318,16 @@
     connectorOffsetConverted: "\u5DF2\u8F6C\u6362\u4E3A\u81EA\u5B9A\u4E49\u76F4\u89D2\u8FDE\u63A5\u5668\uFF0C\u4EE5\u5E94\u7528\u504F\u79FB\u3002",
     connectorUpdateFailed: "\u66F4\u65B0\u8FDE\u63A5\u5668\u5931\u8D25\uFF1A{error}",
     connectorSelectForLineType: "\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u8981\u4FEE\u6539\u7684\u8FDE\u63A5\u5668\u3002",
-    connectorLineElbowed: "\u{1F4D0} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u89D2",
-    connectorLineStraight: "\u{1F4CF} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u7EBF",
+    connectorLineElbowed: "\u{1F4D0} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u89D2\u3002",
+    connectorLineStraight: "\u{1F4CF} \u8FDE\u63A5\u5668\u5DF2\u6539\u4E3A\u76F4\u7EBF\u3002",
     connectorLineTypeFailed: "\u66F4\u6539\u8FDE\u63A5\u5668\u7EBF\u578B\u5931\u8D25\uFF1A{error}",
     connectorsNoneToConvert: "\u753B\u5E03\u4E2D\u6CA1\u6709\u53EF\u8F6C\u6362\u7684\u8FDE\u63A5\u5668\u3002",
-    connectorsConvertedAll: "\u26A1 \u5DF2\u5C06 {count} \u4E2A\u8FDE\u63A5\u5668\u5168\u90E8\u8F6C\u6362\u4E3A\u76F4\u89D2",
-    connectorsAlreadyElbowed: "{count} \u4E2A\u8FDE\u63A5\u5668\u5DF2\u5168\u90E8\u4E3A\u76F4\u89D2",
+    connectorsConvertedAll: "\u26A1 \u5DF2\u5C06 {count} \u4E2A\u8FDE\u63A5\u5668\u5168\u90E8\u8F6C\u6362\u4E3A\u76F4\u89D2\u3002",
+    connectorsAlreadyElbowed: "{count} \u4E2A\u8FDE\u63A5\u5668\u5DF2\u5168\u90E8\u4E3A\u76F4\u89D2\u3002",
     connectorsConvertFailed: "\u6279\u91CF\u8F6C\u6362\u8FDE\u63A5\u5668\u5931\u8D25\uFF1A{error}",
     statusNeedSelection: "\u8BF7\u9009\u62E9\u81F3\u5C11 1 \u4E2A\u5143\u7D20\u4EE5\u8BBE\u7F6E\u72B6\u6001\u3002",
     statusRemoved: "\u5DF2\u4ECE {count} \u4E2A\u8282\u70B9\u4E2D\u79FB\u9664\u72B6\u6001\u5FBD\u7AE0\u3002",
-    statusAttached: "\u5DF2\u4E3A {count} \u4E2A\u8282\u70B9\u6DFB\u52A0\u72B6\u6001\u5FBD\u7AE0\u201C{label}\u201D",
+    statusAttached: "\u5DF2\u4E3A {count} \u4E2A\u8282\u70B9\u6DFB\u52A0\u72B6\u6001\u5FBD\u7AE0\u201C{label}\u201D\u3002",
     elevationNeedSelection: "\u8BF7\u9009\u62E9\u8981\u5E94\u7528 Elevation \u7684\u5143\u7D20\u3002",
     elevationRemoved: "\u5DF2\u4ECE {count} \u4E2A\u8282\u70B9\u4E2D\u79FB\u9664 Elevation\u3002",
     elevationApplied: "\u5DF2\u4E3A {count} \u4E2A\u8282\u70B9\u5E94\u7528 Level {level} Elevation\u3002",
@@ -31259,6 +31362,10 @@
     styleDefaultNoDelete: "\u9ED8\u8BA4\u6837\u5F0F\u65E0\u6CD5\u5220\u9664\u3002",
     styleDeleted: "\u6837\u5F0F\u5DF2\u5220\u9664\u3002",
     styleEditNoDefault: "\u9ED8\u8BA4\u6837\u5F0F\u65E0\u6CD5\u7F16\u8F91\u3002",
+    styleCustomLimitReached: "\u6700\u591A\u53EF\u6DFB\u52A0 7 \u4E2A\u81EA\u5B9A\u4E49\u6837\u5F0F\u3002",
+    exportCopied: "\u5DF2\u590D\u5236 AI \u7528\u6D41\u7A0B\u3002",
+    exportEmpty: "\u6B64\u9875\u9762\u6CA1\u6709\u53EF\u5BFC\u51FA\u7684\u6D41\u7A0B\u3002",
+    exportFailed: "\u5BFC\u51FA\u5931\u8D25\u3002",
     descCopyEmpty: "\u6CA1\u6709\u53EF\u590D\u5236\u7684\u63CF\u8FF0\u3002",
     descCopied: "\u63CF\u8FF0\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F\uFF01",
     tipWidth: "\u5BBD\u5EA6",
@@ -31294,6 +31401,7 @@
     tipLinkDisabled: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Reference Link",
     tipHexColor: "Hex \u989C\u8272",
     tipClose: "\u5173\u95ED",
+    tipSettings: "\u8BBE\u7F6E",
     tipRefreshFrames: "\u4ECE\u753B\u5E03\u5237\u65B0\u753B\u6846",
     tipSolid: "\u5B9E\u7EBF",
     tipDashed: "\u865A\u7EBF",
@@ -31304,8 +31412,9 @@
     tipTermArrow: "\u7BAD\u5934",
     tipTermCircle: "\u5706\u5F62",
     tipTermDiamond: "\u83F1\u5F62",
+    tipTermTriangle: "\u4E09\u89D2\u5F62",
     tipRouteOrtho: "\u76F4\u89D2",
-    tipRouteSCurve: "S \u66F2\u7EBF",
+    tipRouteSCurve: "\u5706\u89D2",
     tipRouteCurve: "\u66F2\u7EBF",
     tipRouteStraight: "\u76F4\u7EBF",
     tipGizmoSource: "\u8D77\u70B9",
@@ -31326,52 +31435,52 @@
     tipPresetDisabledShape: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Size \u9884\u8BBE",
     tipConnectorColor: "\u8FDE\u63A5\u5668\u989C\u8272",
     tipQuotaBlocked: "\u5DF2\u8FBE\u5230\u514D\u8D39\u7248\u4E0A\u9650\u3002\u5347\u7EA7\u540E\u53EF\u521B\u5EFA\u66F4\u591A\u5143\u7D20\u3002",
-    noticeSizeOnlyScreen: "Size \u4EC5\u9002\u7528\u4E8E Screen \u8282\u70B9",
-    noticeDescUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Description",
-    noticeElevationUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Elevation",
-    noticeStatusUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Status",
-    noticeStepUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Step Badges",
-    noticeLinkUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Reference Link",
-    noticeMixed: "\u6DF7\u5408\u9009\u62E9\u4E0D\u53EF\u7528",
-    connectStatusSelectNodes: "\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u4EE5\u8FDB\u884C\u8FDE\u63A5",
-    connectStatusReadyTwoNodes: "2 \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5",
-    connectStatusReadyMultiNodes: "{count} \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5",
-    connectStatusReady: "\u51C6\u5907\u8FDE\u63A5",
-    connectStatusChangesReady: "\u66F4\u6539\u5DF2\u51C6\u5907\u5E94\u7528",
-    connectStatusConnected: "\u5DF2\u8FDE\u63A5",
-    connectStatusNoChanges: "\u65E0\u66F4\u6539",
-    stepDescStartsFromNumber: "\u4ECE\u6307\u5B9A\u7F16\u53F7\u5F00\u59CB",
-    stepTipEnterStartNumber: "\u8F93\u5165\u8D77\u59CB\u7F16\u53F7",
-    stepTipAddStepBadges: "\u6DFB\u52A0\u6B65\u9AA4\u5FBD\u7AE0",
-    connectTipNoChanges: "\u6CA1\u6709\u53EF\u5E94\u7528\u7684\u66F4\u6539",
-    connectTipApplyChanges: "\u5E94\u7528\u8FDE\u63A5\u5668\u66F4\u6539",
-    connectTipConnectNodes: "\u8FDE\u63A5\u6240\u9009\u8282\u70B9"
+    noticeSizeOnlyScreen: "Size \u4EC5\u9002\u7528\u4E8E Screen \u8282\u70B9\u3002",
+    noticeDescUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Description\u3002",
+    noticeElevationUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Elevation\u3002",
+    noticeStatusUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Status\u3002",
+    noticeStepUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Step Badges\u3002",
+    noticeLinkUnsupported: "\u6B64\u56FE\u5F62\u4E0D\u652F\u6301 Reference Link\u3002",
+    noticeMixed: "\u6DF7\u5408\u9009\u62E9\u4E0D\u53EF\u7528\u3002",
+    connectStatusSelectNodes: "\u9009\u62E9\u81F3\u5C11 2 \u4E2A\u8282\u70B9\u4EE5\u8FDB\u884C\u8FDE\u63A5\u3002",
+    connectStatusReadyTwoNodes: "2 \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5\u3002",
+    connectStatusReadyMultiNodes: "{count} \u4E2A\u8282\u70B9\u5DF2\u51C6\u5907\u8FDE\u63A5\u3002",
+    connectStatusReady: "\u51C6\u5907\u8FDE\u63A5\u3002",
+    connectStatusChangesReady: "\u66F4\u6539\u5DF2\u51C6\u5907\u5E94\u7528\u3002",
+    connectStatusConnected: "\u5DF2\u8FDE\u63A5\u3002",
+    connectStatusNoChanges: "\u65E0\u66F4\u6539\u3002",
+    stepDescStartsFromNumber: "\u4ECE\u6307\u5B9A\u7F16\u53F7\u5F00\u59CB\u3002",
+    stepTipEnterStartNumber: "\u8F93\u5165\u8D77\u59CB\u7F16\u53F7\u3002",
+    stepTipAddStepBadges: "\u6DFB\u52A0\u6B65\u9AA4\u5FBD\u7AE0\u3002",
+    connectTipNoChanges: "\u6CA1\u6709\u53EF\u5E94\u7528\u7684\u66F4\u6539\u3002",
+    connectTipApplyChanges: "\u5E94\u7528\u8FDE\u63A5\u5668\u66F4\u6539\u3002",
+    connectTipConnectNodes: "\u8FDE\u63A5\u6240\u9009\u8282\u70B9\u3002"
   };
   var ZH_TW = {
     limitReached: "Flooow \u5143\u7D20\u6578\u91CF\u5DF2\u9054\u4E0A\u9650\uFF08{current}/{limit}\uFF09\u3002\u8ACB\u522A\u9664\u73FE\u6709\u5143\u7D20\u5F8C\u518D\u8A66\u4E00\u6B21\u3002",
-    nodeCreated: "\u5DF2\u5EFA\u7ACB\u7BC0\u9EDE\u300C{title}\u300D",
+    nodeCreated: "\u5DF2\u5EFA\u7ACB\u7BC0\u9EDE\u300C{title}\u300D\u3002",
     nodeCreateFailed: "\u5EFA\u7ACB\u7BC0\u9EDE\u5931\u6557\uFF1A{error}",
     nodeNotFoundSelect: "\u627E\u4E0D\u5230\u8981\u7DE8\u8F2F\u7684\u7BC0\u9EDE\u3002\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u7BC0\u9EDE\u3002",
-    nodeUpdated: "\u5DF2\u66F4\u65B0\u7BC0\u9EDE\u300C{title}\u300D",
+    nodeUpdated: "\u5DF2\u66F4\u65B0\u7BC0\u9EDE\u300C{title}\u300D\u3002",
     nodeUpdateFailed: "\u66F4\u65B0\u7BC0\u9EDE\u5931\u6557\uFF1A{error}",
     nodesBatchUpdated: "\u5DF2\u66F4\u65B0 {count} \u500B\u7BC0\u9EDE",
     nodesBatchUpdateFailed: "\u6279\u6B21\u66F4\u65B0\u7BC0\u9EDE\u5931\u6557\uFF1A{error}",
     nodeGone: "\u627E\u4E0D\u5230\u8A72\u7BC0\u9EDE\u3002",
     connectNodesNotFound: "\u627E\u4E0D\u5230\u8981\u9023\u63A5\u7684\u7BC0\u9EDE\u3002",
     connectNeedTwoDifferent: "\u8ACB\u9078\u53D6\u5169\u500B\u4E0D\u540C\u7684\u7BC0\u9EDE\u9032\u884C\u9023\u63A5\u3002",
-    connectDone: "\u9023\u63A5\u5B8C\u6210",
-    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u9023\u63A5",
+    connectDone: "\u9023\u63A5\u5B8C\u6210\u3002",
+    connectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u9023\u63A5\u3002",
     connectCreateFailed: "\u5EFA\u7ACB\u9023\u63A5\u5668\u5931\u6557\uFF1A{error}",
     connectNeedTwoOrMore: "\u8ACB\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u9032\u884C\u9023\u63A5\u3002",
     connectNeedTwoDifferentOrMore: "\u8ACB\u9078\u53D6\u81F3\u5C11 2 \u500B\u4E0D\u540C\u7684\u7BC0\u9EDE\u3002",
     connectNeedTwo: "\u8ACB\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u9032\u884C\u9023\u63A5\u3002",
-    autoConnectDone: "\u76F4\u89D2\u9023\u63A5\u5B8C\u6210",
-    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u76F4\u89D2\u9023\u63A5",
+    autoConnectDone: "\u76F4\u89D2\u9023\u63A5\u5B8C\u6210\u3002",
+    autoConnectDoneLabel: "\u5DF2\u4F7F\u7528\u6A19\u7C64\u300C{label}\u300D\u5B8C\u6210\u76F4\u89D2\u9023\u63A5\u3002",
     autoChainDone: "\u26A1 \u5DF2\u4F9D\u5E8F\u9023\u63A5 {nodes} \u500B\u7BC0\u9EDE\uFF08{conns} \u500B\u9023\u63A5\u5668\uFF09\u3002",
     autoConnectFailed: "\u81EA\u52D5\u9023\u63A5\u5931\u6557\uFF1A{error}",
     chainExistsAll: "\u6240\u6709\u9023\u63A5\u7686\u5DF2\u5B58\u5728\u3002",
-    chainCreatedPartial: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5\uFF08{skipped} \u500B\u5DF2\u9023\u63A5\uFF09",
-    chainCreated: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5",
+    chainCreatedPartial: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5\uFF08{skipped} \u500B\u5DF2\u9023\u63A5\uFF09\u3002",
+    chainCreated: "\u5DF2\u5EFA\u7ACB {created} \u500B\u9023\u63A5\u3002",
     chainFailed: "\u93C8\u5F0F\u9023\u63A5\u5931\u6557\uFF1A{error}",
     connectorSelectForLabel: "\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u8981\u7DE8\u8F2F\u7684\u9023\u63A5\u5668\u3002",
     connectorLabelSet: "\u4E2D\u592E\u6A19\u7C64\u5DF2\u8A2D\u70BA\u300C{label}\u300D",
@@ -31381,16 +31490,16 @@
     connectorOffsetConverted: "\u5DF2\u8F49\u63DB\u70BA\u81EA\u8A02\u76F4\u89D2\u9023\u63A5\u5668\uFF0C\u4EE5\u5957\u7528\u504F\u79FB\u3002",
     connectorUpdateFailed: "\u66F4\u65B0\u9023\u63A5\u5668\u5931\u6557\uFF1A{error}",
     connectorSelectForLineType: "\u8ACB\u5728\u756B\u5E03\u4E0A\u9078\u53D6\u8981\u8B8A\u66F4\u7684\u9023\u63A5\u5668\u3002",
-    connectorLineElbowed: "\u{1F4D0} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u89D2",
-    connectorLineStraight: "\u{1F4CF} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u7DDA",
+    connectorLineElbowed: "\u{1F4D0} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u89D2\u3002",
+    connectorLineStraight: "\u{1F4CF} \u9023\u63A5\u5668\u5DF2\u8B8A\u66F4\u70BA\u76F4\u7DDA\u3002",
     connectorLineTypeFailed: "\u8B8A\u66F4\u9023\u63A5\u5668\u7DDA\u689D\u985E\u578B\u5931\u6557\uFF1A{error}",
     connectorsNoneToConvert: "\u756B\u5E03\u4E0A\u6C92\u6709\u53EF\u8F49\u63DB\u7684\u9023\u63A5\u5668\u3002",
-    connectorsConvertedAll: "\u26A1 \u5DF2\u5C07 {count} \u500B\u9023\u63A5\u5668\u5168\u90E8\u8F49\u63DB\u70BA\u76F4\u89D2",
-    connectorsAlreadyElbowed: "{count} \u500B\u9023\u63A5\u5668\u5DF2\u5168\u90E8\u70BA\u76F4\u89D2",
+    connectorsConvertedAll: "\u26A1 \u5DF2\u5C07 {count} \u500B\u9023\u63A5\u5668\u5168\u90E8\u8F49\u63DB\u70BA\u76F4\u89D2\u3002",
+    connectorsAlreadyElbowed: "{count} \u500B\u9023\u63A5\u5668\u5DF2\u5168\u90E8\u70BA\u76F4\u89D2\u3002",
     connectorsConvertFailed: "\u6279\u6B21\u8F49\u63DB\u9023\u63A5\u5668\u5931\u6557\uFF1A{error}",
     statusNeedSelection: "\u8ACB\u9078\u53D6\u81F3\u5C11 1 \u500B\u5143\u7D20\u4EE5\u8A2D\u5B9A\u72C0\u614B\u3002",
     statusRemoved: "\u5DF2\u5F9E {count} \u500B\u7BC0\u9EDE\u79FB\u9664\u72C0\u614B\u5FBD\u7AE0\u3002",
-    statusAttached: "\u5DF2\u70BA {count} \u500B\u7BC0\u9EDE\u65B0\u589E\u72C0\u614B\u5FBD\u7AE0\u300C{label}\u300D",
+    statusAttached: "\u5DF2\u70BA {count} \u500B\u7BC0\u9EDE\u65B0\u589E\u72C0\u614B\u5FBD\u7AE0\u300C{label}\u300D\u3002",
     elevationNeedSelection: "\u8ACB\u9078\u53D6\u8981\u5957\u7528 Elevation \u7684\u5143\u7D20\u3002",
     elevationRemoved: "\u5DF2\u5F9E {count} \u500B\u7BC0\u9EDE\u79FB\u9664 Elevation\u3002",
     elevationApplied: "\u5DF2\u70BA {count} \u500B\u7BC0\u9EDE\u5957\u7528 Level {level} Elevation\u3002",
@@ -31425,6 +31534,10 @@
     styleDefaultNoDelete: "\u9810\u8A2D\u6A23\u5F0F\u7121\u6CD5\u522A\u9664\u3002",
     styleDeleted: "\u6A23\u5F0F\u5DF2\u522A\u9664\u3002",
     styleEditNoDefault: "\u9810\u8A2D\u6A23\u5F0F\u7121\u6CD5\u7DE8\u8F2F\u3002",
+    styleCustomLimitReached: "\u6700\u591A\u53EF\u65B0\u589E 7 \u500B\u81EA\u8A02\u6A23\u5F0F\u3002",
+    exportCopied: "\u5DF2\u8907\u88FD AI \u7528\u6D41\u7A0B\u3002",
+    exportEmpty: "\u6B64\u9801\u9762\u6C92\u6709\u53EF\u532F\u51FA\u7684\u6D41\u7A0B\u3002",
+    exportFailed: "\u532F\u51FA\u5931\u6557\u3002",
     descCopyEmpty: "\u6C92\u6709\u53EF\u8907\u88FD\u7684\u8AAA\u660E\u3002",
     descCopied: "\u8AAA\u660E\u5DF2\u8907\u88FD\u5230\u526A\u8CBC\u7C3F\uFF01",
     tipWidth: "\u5BEC\u5EA6",
@@ -31460,6 +31573,7 @@
     tipLinkDisabled: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Reference Link",
     tipHexColor: "Hex \u984F\u8272",
     tipClose: "\u95DC\u9589",
+    tipSettings: "\u8A2D\u5B9A",
     tipRefreshFrames: "\u5F9E\u756B\u5E03\u91CD\u65B0\u6574\u7406\u6846\u67B6",
     tipSolid: "\u5BE6\u7DDA",
     tipDashed: "\u865B\u7DDA",
@@ -31470,8 +31584,9 @@
     tipTermArrow: "\u7BAD\u982D",
     tipTermCircle: "\u5713\u5F62",
     tipTermDiamond: "\u83F1\u5F62",
+    tipTermTriangle: "\u4E09\u89D2\u5F62",
     tipRouteOrtho: "\u76F4\u89D2",
-    tipRouteSCurve: "S \u66F2\u7DDA",
+    tipRouteSCurve: "\u5713\u89D2",
     tipRouteCurve: "\u66F2\u7DDA",
     tipRouteStraight: "\u76F4\u7DDA",
     tipGizmoSource: "\u8D77\u9EDE",
@@ -31492,35 +31607,35 @@
     tipPresetDisabledShape: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Size \u9810\u8A2D",
     tipConnectorColor: "\u9023\u63A5\u5668\u984F\u8272",
     tipQuotaBlocked: "\u5DF2\u9054\u514D\u8CBB\u7248\u4E0A\u9650\u3002\u5347\u7D1A\u5F8C\u53EF\u5EFA\u7ACB\u66F4\u591A\u5143\u7D20\u3002",
-    noticeSizeOnlyScreen: "Size \u50C5\u9069\u7528\u65BC Screen \u7BC0\u9EDE",
-    noticeDescUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Description",
-    noticeElevationUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Elevation",
-    noticeStatusUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Status",
-    noticeStepUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Step Badges",
-    noticeLinkUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Reference Link",
-    noticeMixed: "\u6DF7\u5408\u9078\u53D6\u4E0D\u53EF\u7528",
-    connectStatusSelectNodes: "\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u4EE5\u9032\u884C\u9023\u63A5",
-    connectStatusReadyTwoNodes: "2 \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5",
-    connectStatusReadyMultiNodes: "{count} \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5",
-    connectStatusReady: "\u6E96\u5099\u9023\u63A5",
-    connectStatusChangesReady: "\u8B8A\u66F4\u5DF2\u6E96\u5099\u5957\u7528",
-    connectStatusConnected: "\u5DF2\u9023\u63A5",
-    connectStatusNoChanges: "\u7121\u8B8A\u66F4",
-    stepDescStartsFromNumber: "\u5F9E\u6307\u5B9A\u7DE8\u865F\u958B\u59CB",
-    stepTipEnterStartNumber: "\u8F38\u5165\u8D77\u59CB\u7DE8\u865F",
-    stepTipAddStepBadges: "\u65B0\u589E\u6B65\u9A5F\u5FBD\u7AE0",
-    connectTipNoChanges: "\u6C92\u6709\u53EF\u5957\u7528\u7684\u8B8A\u66F4",
-    connectTipApplyChanges: "\u5957\u7528\u9023\u63A5\u5668\u8B8A\u66F4",
-    connectTipConnectNodes: "\u9023\u63A5\u6240\u9078\u7BC0\u9EDE"
+    noticeSizeOnlyScreen: "Size \u50C5\u9069\u7528\u65BC Screen \u7BC0\u9EDE\u3002",
+    noticeDescUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Description\u3002",
+    noticeElevationUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Elevation\u3002",
+    noticeStatusUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Status\u3002",
+    noticeStepUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Step Badges\u3002",
+    noticeLinkUnsupported: "\u6B64\u5716\u5F62\u4E0D\u652F\u63F4 Reference Link\u3002",
+    noticeMixed: "\u6DF7\u5408\u9078\u53D6\u4E0D\u53EF\u7528\u3002",
+    connectStatusSelectNodes: "\u9078\u53D6\u81F3\u5C11 2 \u500B\u7BC0\u9EDE\u4EE5\u9032\u884C\u9023\u63A5\u3002",
+    connectStatusReadyTwoNodes: "2 \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5\u3002",
+    connectStatusReadyMultiNodes: "{count} \u500B\u7BC0\u9EDE\u5DF2\u6E96\u5099\u9023\u63A5\u3002",
+    connectStatusReady: "\u6E96\u5099\u9023\u63A5\u3002",
+    connectStatusChangesReady: "\u8B8A\u66F4\u5DF2\u6E96\u5099\u5957\u7528\u3002",
+    connectStatusConnected: "\u5DF2\u9023\u63A5\u3002",
+    connectStatusNoChanges: "\u7121\u8B8A\u66F4\u3002",
+    stepDescStartsFromNumber: "\u5F9E\u6307\u5B9A\u7DE8\u865F\u958B\u59CB\u3002",
+    stepTipEnterStartNumber: "\u8F38\u5165\u8D77\u59CB\u7DE8\u865F\u3002",
+    stepTipAddStepBadges: "\u65B0\u589E\u6B65\u9A5F\u5FBD\u7AE0\u3002",
+    connectTipNoChanges: "\u6C92\u6709\u53EF\u5957\u7528\u7684\u8B8A\u66F4\u3002",
+    connectTipApplyChanges: "\u5957\u7528\u9023\u63A5\u5668\u8B8A\u66F4\u3002",
+    connectTipConnectNodes: "\u9023\u63A5\u6240\u9078\u7BC0\u9EDE\u3002"
   };
   var ES = {
     // 1. Quota & Entitlement
     limitReached: "Se ha alcanzado el l\xEDmite de elementos de Flooow ({current}/{limit}). Elimina elementos existentes y vuelve a intentarlo.",
     // 2. Node CRUD
-    nodeCreated: 'Nodo "{title}" creado',
+    nodeCreated: 'Nodo "{title}" creado.',
     nodeCreateFailed: "No se pudo crear el nodo: {error}",
     nodeNotFoundSelect: "No se encontr\xF3 el nodo que quieres editar. Selecciona un nodo en el lienzo.",
-    nodeUpdated: 'Nodo "{title}" actualizado',
+    nodeUpdated: 'Nodo "{title}" actualizado.',
     nodeUpdateFailed: "No se pudo actualizar el nodo: {error}",
     nodesBatchUpdated: "{count} nodos actualizados",
     nodesBatchUpdateFailed: "No se pudieron actualizar los nodos: {error}",
@@ -31528,19 +31643,19 @@
     // 3. Connect & Chain
     connectNodesNotFound: "No se encontraron los nodos que quieres conectar.",
     connectNeedTwoDifferent: "Selecciona dos nodos diferentes para conectarlos.",
-    connectDone: "Conectado",
-    connectDoneLabel: 'Conectado con la etiqueta "{label}"',
+    connectDone: "Conectado.",
+    connectDoneLabel: 'Conectado con la etiqueta "{label}".',
     connectCreateFailed: "No se pudo crear la conexi\xF3n: {error}",
     connectNeedTwoOrMore: "Selecciona al menos 2 nodos para conectarlos.",
     connectNeedTwoDifferentOrMore: "Selecciona al menos 2 nodos diferentes.",
     connectNeedTwo: "Selecciona al menos 2 nodos para conectarlos.",
-    autoConnectDone: "Conexi\xF3n ortogonal completada",
-    autoConnectDoneLabel: 'Conexi\xF3n ortogonal completada con la etiqueta "{label}"',
+    autoConnectDone: "Conexi\xF3n ortogonal completada.",
+    autoConnectDoneLabel: 'Conexi\xF3n ortogonal completada con la etiqueta "{label}".',
     autoChainDone: "\u26A1 {nodes} nodos conectados en secuencia ({conns} conexiones).",
     autoConnectFailed: "No se pudo realizar la conexi\xF3n autom\xE1tica: {error}",
     chainExistsAll: "Todas las conexiones ya existen.",
-    chainCreatedPartial: "{created} conexiones creadas ({skipped} ya exist\xEDan)",
-    chainCreated: "{created} conexiones creadas",
+    chainCreatedPartial: "{created} conexiones creadas ({skipped} ya exist\xEDan).",
+    chainCreated: "{created} conexiones creadas.",
     chainFailed: "No se pudo crear la cadena: {error}",
     // 4. Connector Editing
     connectorSelectForLabel: "Selecciona una conexi\xF3n en el lienzo para editarla.",
@@ -31551,17 +31666,17 @@
     connectorOffsetConverted: "Convertida autom\xE1ticamente en una conexi\xF3n ortogonal personalizada para aplicar los desplazamientos.",
     connectorUpdateFailed: "No se pudo actualizar la conexi\xF3n: {error}",
     connectorSelectForLineType: "Selecciona una conexi\xF3n en el lienzo para cambiarla.",
-    connectorLineElbowed: "\u{1F4D0} Conexi\xF3n cambiada a ortogonal",
-    connectorLineStraight: "\u{1F4CF} Conexi\xF3n cambiada a recta",
+    connectorLineElbowed: "\u{1F4D0} Conexi\xF3n cambiada a ortogonal.",
+    connectorLineStraight: "\u{1F4CF} Conexi\xF3n cambiada a recta.",
     connectorLineTypeFailed: "No se pudo cambiar el tipo de l\xEDnea: {error}",
     connectorsNoneToConvert: "No hay conexiones en el lienzo para convertir.",
-    connectorsConvertedAll: "\u26A1 {count} conexiones convertidas a ortogonales",
-    connectorsAlreadyElbowed: "{count} conexiones ya son ortogonales",
+    connectorsConvertedAll: "\u26A1 {count} conexiones convertidas a ortogonales.",
+    connectorsAlreadyElbowed: "{count} conexiones ya son ortogonales.",
     connectorsConvertFailed: "No se pudieron convertir las conexiones: {error}",
     // 5. Status Badge
     statusNeedSelection: "Selecciona al menos 1 elemento para establecer el estado.",
     statusRemoved: "Insignias de estado eliminadas de {count} nodos.",
-    statusAttached: 'Insignia de estado "{label}" a\xF1adida a {count} nodos',
+    statusAttached: 'Insignia de estado "{label}" a\xF1adida a {count} nodos.',
     // 6. Elevation
     elevationNeedSelection: "Selecciona elementos para aplicar Elevation.",
     elevationRemoved: "Elevation eliminada de {count} nodos.",
@@ -31602,6 +31717,10 @@
     styleDefaultNoDelete: "Los estilos predeterminados no se pueden eliminar.",
     styleDeleted: "Estilo eliminado.",
     styleEditNoDefault: "Los estilos predeterminados no se pueden editar.",
+    styleCustomLimitReached: "Puedes a\xF1adir hasta 7 estilos personalizados.",
+    exportCopied: "Flujo copiado para la IA.",
+    exportEmpty: "Nada que exportar en esta p\xE1gina.",
+    exportFailed: "Error al exportar.",
     // 12. Description
     descCopyEmpty: "No hay ninguna descripci\xF3n para copiar.",
     descCopied: "Descripci\xF3n copiada al portapapeles.",
@@ -31639,6 +31758,7 @@
     tipLinkDisabled: "Reference Link no est\xE1 disponible para esta forma",
     tipHexColor: "Color hexadecimal",
     tipClose: "Cerrar",
+    tipSettings: "Ajustes",
     tipRefreshFrames: "Actualizar frames desde el lienzo",
     tipSolid: "S\xF3lida",
     tipDashed: "Discontinua",
@@ -31649,8 +31769,9 @@
     tipTermArrow: "Flecha",
     tipTermCircle: "C\xEDrculo",
     tipTermDiamond: "Rombo",
+    tipTermTriangle: "Tri\xE1ngulo",
     tipRouteOrtho: "Ortogonal",
-    tipRouteSCurve: "Curva en S",
+    tipRouteSCurve: "Redondeado",
     tipRouteCurve: "Curva",
     tipRouteStraight: "Recta",
     tipGizmoSource: "Origen",
@@ -31672,37 +31793,37 @@
     tipConnectorColor: "Color de conexi\xF3n",
     tipQuotaBlocked: "L\xEDmite gratuito alcanzado. Actualiza para crear m\xE1s.",
     // 14. Shape Notices
-    noticeSizeOnlyScreen: "Size solo est\xE1 disponible para nodos Screen",
-    noticeDescUnsupported: "Description no est\xE1 disponible para esta forma",
-    noticeElevationUnsupported: "Elevation no est\xE1 disponible para esta forma",
-    noticeStatusUnsupported: "Status no est\xE1 disponible para esta forma",
-    noticeStepUnsupported: "Step Badges no est\xE1 disponible para esta forma",
-    noticeLinkUnsupported: "Reference Link no est\xE1 disponible para esta forma",
-    noticeMixed: "No disponible para una selecci\xF3n mixta",
+    noticeSizeOnlyScreen: "Size solo est\xE1 disponible para nodos Screen.",
+    noticeDescUnsupported: "Description no est\xE1 disponible para esta forma.",
+    noticeElevationUnsupported: "Elevation no est\xE1 disponible para esta forma.",
+    noticeStatusUnsupported: "Status no est\xE1 disponible para esta forma.",
+    noticeStepUnsupported: "Step Badges no est\xE1 disponible para esta forma.",
+    noticeLinkUnsupported: "Reference Link no est\xE1 disponible para esta forma.",
+    noticeMixed: "No disponible para una selecci\xF3n mixta.",
     // 15. Connect Status Text
-    connectStatusSelectNodes: "Selecciona 2 o m\xE1s nodos para conectar",
-    connectStatusReadyTwoNodes: "2 nodos listos para conectar",
-    connectStatusReadyMultiNodes: "{count} nodos listos para conectar",
-    connectStatusReady: "Listo para conectar",
-    connectStatusChangesReady: "Cambios listos para aplicar",
-    connectStatusConnected: "Conectado",
-    connectStatusNoChanges: "Sin cambios",
+    connectStatusSelectNodes: "Selecciona 2 o m\xE1s nodos para conectar.",
+    connectStatusReadyTwoNodes: "2 nodos listos para conectar.",
+    connectStatusReadyMultiNodes: "{count} nodos listos para conectar.",
+    connectStatusReady: "Listo para conectar.",
+    connectStatusChangesReady: "Cambios listos para aplicar.",
+    connectStatusConnected: "Conectado.",
+    connectStatusNoChanges: "Sin cambios.",
     // 16. Action Buttons & Tooltips
-    stepDescStartsFromNumber: "Comienza desde el n\xFAmero especificado",
-    stepTipEnterStartNumber: "Introduce un n\xFAmero inicial",
-    stepTipAddStepBadges: "A\xF1adir Step Badges",
-    connectTipNoChanges: "No hay cambios para aplicar",
-    connectTipApplyChanges: "Aplicar cambios de conexi\xF3n",
-    connectTipConnectNodes: "Conectar nodos seleccionados"
+    stepDescStartsFromNumber: "Comienza desde el n\xFAmero especificado.",
+    stepTipEnterStartNumber: "Introduce un n\xFAmero inicial.",
+    stepTipAddStepBadges: "A\xF1adir Step Badges.",
+    connectTipNoChanges: "No hay cambios para aplicar.",
+    connectTipApplyChanges: "Aplicar cambios de conexi\xF3n.",
+    connectTipConnectNodes: "Conectar nodos seleccionados."
   };
   var DE = {
     // 1. Quota & Entitlement
     limitReached: "Das Limit f\xFCr Flooow-Elemente ist erreicht ({current}/{limit}). L\xF6sche vorhandene Elemente und versuche es erneut.",
     // 2. Node CRUD
-    nodeCreated: 'Knoten "{title}" erstellt',
+    nodeCreated: 'Knoten "{title}" erstellt.',
     nodeCreateFailed: "Knoten konnte nicht erstellt werden: {error}",
     nodeNotFoundSelect: "Der zu bearbeitende Knoten wurde nicht gefunden. W\xE4hle einen Knoten auf der Arbeitsfl\xE4che aus.",
-    nodeUpdated: 'Knoten "{title}" aktualisiert',
+    nodeUpdated: 'Knoten "{title}" aktualisiert.',
     nodeUpdateFailed: "Knoten konnte nicht aktualisiert werden: {error}",
     nodesBatchUpdated: "{count} Knoten aktualisiert",
     nodesBatchUpdateFailed: "Knoten konnten nicht aktualisiert werden: {error}",
@@ -31710,19 +31831,19 @@
     // 3. Connect & Chain
     connectNodesNotFound: "Zu verbindende Knoten wurden nicht gefunden.",
     connectNeedTwoDifferent: "W\xE4hle zwei verschiedene Knoten zum Verbinden aus.",
-    connectDone: "Verbunden",
-    connectDoneLabel: 'Mit der Beschriftung "{label}" verbunden',
+    connectDone: "Verbunden.",
+    connectDoneLabel: 'Mit der Beschriftung "{label}" verbunden.',
     connectCreateFailed: "Verbindung konnte nicht erstellt werden: {error}",
     connectNeedTwoOrMore: "W\xE4hle mindestens 2 Knoten zum Verbinden aus.",
     connectNeedTwoDifferentOrMore: "W\xE4hle mindestens 2 verschiedene Knoten aus.",
     connectNeedTwo: "W\xE4hle mindestens 2 Knoten zum Verbinden aus.",
-    autoConnectDone: "Orthogonale Verbindung erstellt",
-    autoConnectDoneLabel: 'Orthogonale Verbindung mit der Beschriftung "{label}" erstellt',
+    autoConnectDone: "Orthogonale Verbindung erstellt.",
+    autoConnectDoneLabel: 'Orthogonale Verbindung mit der Beschriftung "{label}" erstellt.',
     autoChainDone: "\u26A1 {nodes} Knoten nacheinander verbunden ({conns} Verbindungen).",
     autoConnectFailed: "Automatische Verbindung fehlgeschlagen: {error}",
     chainExistsAll: "Alle Verbindungen sind bereits vorhanden.",
-    chainCreatedPartial: "{created} Verbindungen erstellt ({skipped} bereits vorhanden)",
-    chainCreated: "{created} Verbindungen erstellt",
+    chainCreatedPartial: "{created} Verbindungen erstellt ({skipped} bereits vorhanden).",
+    chainCreated: "{created} Verbindungen erstellt.",
     chainFailed: "Kettenverbindung fehlgeschlagen: {error}",
     // 4. Connector Editing
     connectorSelectForLabel: "W\xE4hle eine Verbindung auf der Arbeitsfl\xE4che aus, um sie zu bearbeiten.",
@@ -31733,17 +31854,17 @@
     connectorOffsetConverted: "Zur Anwendung von Vers\xE4tzen automatisch in eine benutzerdefinierte orthogonale Verbindung umgewandelt.",
     connectorUpdateFailed: "Verbindung konnte nicht aktualisiert werden: {error}",
     connectorSelectForLineType: "W\xE4hle eine Verbindung auf der Arbeitsfl\xE4che aus, um sie zu \xE4ndern.",
-    connectorLineElbowed: "\u{1F4D0} Verbindung auf orthogonal ge\xE4ndert",
-    connectorLineStraight: "\u{1F4CF} Verbindung auf gerade ge\xE4ndert",
+    connectorLineElbowed: "\u{1F4D0} Verbindung auf orthogonal ge\xE4ndert.",
+    connectorLineStraight: "\u{1F4CF} Verbindung auf gerade ge\xE4ndert.",
     connectorLineTypeFailed: "Linientyp konnte nicht ge\xE4ndert werden: {error}",
     connectorsNoneToConvert: "Keine Verbindungen auf der Arbeitsfl\xE4che zum Umwandeln vorhanden.",
-    connectorsConvertedAll: "\u26A1 {count} Verbindungen in orthogonale Verbindungen umgewandelt",
-    connectorsAlreadyElbowed: "{count} Verbindungen sind bereits orthogonal",
+    connectorsConvertedAll: "\u26A1 {count} Verbindungen in orthogonale Verbindungen umgewandelt.",
+    connectorsAlreadyElbowed: "{count} Verbindungen sind bereits orthogonal.",
     connectorsConvertFailed: "Verbindungen konnten nicht umgewandelt werden: {error}",
     // 5. Status Badge
     statusNeedSelection: "W\xE4hle mindestens 1 Element aus, um einen Status festzulegen.",
     statusRemoved: "Status-Badges von {count} Knoten entfernt.",
-    statusAttached: 'Status-Badge "{label}" an {count} Knoten angebracht',
+    statusAttached: 'Status-Badge "{label}" an {count} Knoten angebracht.',
     // 6. Elevation
     elevationNeedSelection: "W\xE4hle Elemente aus, um Elevation anzuwenden.",
     elevationRemoved: "Elevation von {count} Knoten entfernt.",
@@ -31784,6 +31905,10 @@
     styleDefaultNoDelete: "Standardstile k\xF6nnen nicht gel\xF6scht werden.",
     styleDeleted: "Stil gel\xF6scht.",
     styleEditNoDefault: "Standardstile k\xF6nnen nicht bearbeitet werden.",
+    styleCustomLimitReached: "Du kannst bis zu 7 benutzerdefinierte Stile hinzuf\xFCgen.",
+    exportCopied: "Flow f\xFCr KI kopiert.",
+    exportEmpty: "Nichts auf dieser Seite zu exportieren.",
+    exportFailed: "Export fehlgeschlagen.",
     // 12. Description
     descCopyEmpty: "Keine Beschreibung zum Kopieren vorhanden.",
     descCopied: "Beschreibung in die Zwischenablage kopiert.",
@@ -31821,6 +31946,7 @@
     tipLinkDisabled: "Reference Link ist f\xFCr diese Form nicht verf\xFCgbar",
     tipHexColor: "Hex-Farbe",
     tipClose: "Schlie\xDFen",
+    tipSettings: "Einstellungen",
     tipRefreshFrames: "Frames von der Arbeitsfl\xE4che aktualisieren",
     tipSolid: "Durchgezogen",
     tipDashed: "Gestrichelt",
@@ -31831,8 +31957,9 @@
     tipTermArrow: "Pfeil",
     tipTermCircle: "Kreis",
     tipTermDiamond: "Raute",
+    tipTermTriangle: "Dreieck",
     tipRouteOrtho: "Orthogonal",
-    tipRouteSCurve: "S-Kurve",
+    tipRouteSCurve: "Rund",
     tipRouteCurve: "Kurve",
     tipRouteStraight: "Gerade",
     tipGizmoSource: "Quelle",
@@ -31854,37 +31981,37 @@
     tipConnectorColor: "Verbindungsfarbe",
     tipQuotaBlocked: "Kostenloses Limit erreicht. Upgrade f\xFCr weitere Elemente.",
     // 14. Shape Notices
-    noticeSizeOnlyScreen: "Size ist nur f\xFCr Screen-Knoten verf\xFCgbar",
-    noticeDescUnsupported: "Description ist f\xFCr diese Form nicht verf\xFCgbar",
-    noticeElevationUnsupported: "Elevation ist f\xFCr diese Form nicht verf\xFCgbar",
-    noticeStatusUnsupported: "Status ist f\xFCr diese Form nicht verf\xFCgbar",
-    noticeStepUnsupported: "Step Badges sind f\xFCr diese Form nicht verf\xFCgbar",
-    noticeLinkUnsupported: "Reference Link ist f\xFCr diese Form nicht verf\xFCgbar",
-    noticeMixed: "Bei gemischter Auswahl nicht verf\xFCgbar",
+    noticeSizeOnlyScreen: "Size ist nur f\xFCr Screen-Knoten verf\xFCgbar.",
+    noticeDescUnsupported: "Description ist f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeElevationUnsupported: "Elevation ist f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeStatusUnsupported: "Status ist f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeStepUnsupported: "Step Badges sind f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeLinkUnsupported: "Reference Link ist f\xFCr diese Form nicht verf\xFCgbar.",
+    noticeMixed: "Bei gemischter Auswahl nicht verf\xFCgbar.",
     // 15. Connect Status Text
-    connectStatusSelectNodes: "Mindestens 2 Knoten zum Verbinden ausw\xE4hlen",
-    connectStatusReadyTwoNodes: "2 Knoten zum Verbinden bereit",
-    connectStatusReadyMultiNodes: "{count} Knoten zum Verbinden bereit",
-    connectStatusReady: "Bereit zum Verbinden",
-    connectStatusChangesReady: "\xC4nderungen zum Anwenden bereit",
-    connectStatusConnected: "Verbunden",
-    connectStatusNoChanges: "Keine \xC4nderungen",
+    connectStatusSelectNodes: "Mindestens 2 Knoten zum Verbinden ausw\xE4hlen.",
+    connectStatusReadyTwoNodes: "2 Knoten zum Verbinden bereit.",
+    connectStatusReadyMultiNodes: "{count} Knoten zum Verbinden bereit.",
+    connectStatusReady: "Bereit zum Verbinden.",
+    connectStatusChangesReady: "\xC4nderungen zum Anwenden bereit.",
+    connectStatusConnected: "Verbunden.",
+    connectStatusNoChanges: "Keine \xC4nderungen.",
     // 16. Action Buttons & Tooltips
-    stepDescStartsFromNumber: "Beginnt mit der angegebenen Nummer",
-    stepTipEnterStartNumber: "Startnummer eingeben",
-    stepTipAddStepBadges: "Step Badges hinzuf\xFCgen",
-    connectTipNoChanges: "Keine \xC4nderungen zum Anwenden",
-    connectTipApplyChanges: "Verbindungs\xE4nderungen anwenden",
-    connectTipConnectNodes: "Ausgew\xE4hlte Knoten verbinden"
+    stepDescStartsFromNumber: "Beginnt mit der angegebenen Nummer.",
+    stepTipEnterStartNumber: "Startnummer eingeben.",
+    stepTipAddStepBadges: "Step Badges hinzuf\xFCgen.",
+    connectTipNoChanges: "Keine \xC4nderungen zum Anwenden.",
+    connectTipApplyChanges: "Verbindungs\xE4nderungen anwenden.",
+    connectTipConnectNodes: "Ausgew\xE4hlte Knoten verbinden."
   };
   var FR = {
     // 1. Quota & Entitlement
     limitReached: "La limite d\u2019\xE9l\xE9ments Flooow est atteinte ({current}/{limit}). Supprimez des \xE9l\xE9ments existants, puis r\xE9essayez.",
     // 2. Node CRUD
-    nodeCreated: 'N\u0153ud "{title}" cr\xE9\xE9',
+    nodeCreated: 'N\u0153ud "{title}" cr\xE9\xE9.',
     nodeCreateFailed: "\xC9chec de la cr\xE9ation du n\u0153ud : {error}",
     nodeNotFoundSelect: "N\u0153ud \xE0 modifier introuvable. S\xE9lectionnez un n\u0153ud sur le canevas.",
-    nodeUpdated: 'N\u0153ud "{title}" mis \xE0 jour',
+    nodeUpdated: 'N\u0153ud "{title}" mis \xE0 jour.',
     nodeUpdateFailed: "\xC9chec de la mise \xE0 jour du n\u0153ud : {error}",
     nodesBatchUpdated: "{count} n\u0153uds mis \xE0 jour",
     nodesBatchUpdateFailed: "\xC9chec de la mise \xE0 jour des n\u0153uds : {error}",
@@ -31892,19 +32019,19 @@
     // 3. Connect & Chain
     connectNodesNotFound: "N\u0153uds \xE0 connecter introuvables.",
     connectNeedTwoDifferent: "S\xE9lectionnez deux n\u0153uds diff\xE9rents \xE0 connecter.",
-    connectDone: "Connect\xE9",
-    connectDoneLabel: 'Connect\xE9 avec le libell\xE9 "{label}"',
+    connectDone: "Connect\xE9.",
+    connectDoneLabel: 'Connect\xE9 avec le libell\xE9 "{label}".',
     connectCreateFailed: "\xC9chec de la cr\xE9ation de la connexion : {error}",
     connectNeedTwoOrMore: "S\xE9lectionnez au moins 2 n\u0153uds \xE0 connecter.",
     connectNeedTwoDifferentOrMore: "S\xE9lectionnez au moins 2 n\u0153uds diff\xE9rents.",
     connectNeedTwo: "S\xE9lectionnez au moins 2 n\u0153uds \xE0 connecter.",
-    autoConnectDone: "Connexion orthogonale termin\xE9e",
-    autoConnectDoneLabel: 'Connexion orthogonale termin\xE9e avec le libell\xE9 "{label}"',
+    autoConnectDone: "Connexion orthogonale termin\xE9e.",
+    autoConnectDoneLabel: 'Connexion orthogonale termin\xE9e avec le libell\xE9 "{label}".',
     autoChainDone: "\u26A1 {nodes} n\u0153uds connect\xE9s en s\xE9quence ({conns} connexions).",
     autoConnectFailed: "\xC9chec de la connexion automatique : {error}",
     chainExistsAll: "Toutes les connexions existent d\xE9j\xE0.",
-    chainCreatedPartial: "{created} connexions cr\xE9\xE9es ({skipped} existent d\xE9j\xE0)",
-    chainCreated: "{created} connexions cr\xE9\xE9es",
+    chainCreatedPartial: "{created} connexions cr\xE9\xE9es ({skipped} existent d\xE9j\xE0).",
+    chainCreated: "{created} connexions cr\xE9\xE9es.",
     chainFailed: "\xC9chec de la cr\xE9ation de la cha\xEEne : {error}",
     // 4. Connector Editing
     connectorSelectForLabel: "S\xE9lectionnez une connexion sur le canevas pour la modifier.",
@@ -31915,17 +32042,17 @@
     connectorOffsetConverted: "Convertie automatiquement en connexion orthogonale personnalis\xE9e pour appliquer les d\xE9calages.",
     connectorUpdateFailed: "\xC9chec de la mise \xE0 jour de la connexion : {error}",
     connectorSelectForLineType: "S\xE9lectionnez une connexion sur le canevas pour la modifier.",
-    connectorLineElbowed: "\u{1F4D0} Connexion pass\xE9e en mode orthogonal",
-    connectorLineStraight: "\u{1F4CF} Connexion pass\xE9e en ligne droite",
+    connectorLineElbowed: "\u{1F4D0} Connexion pass\xE9e en mode orthogonal.",
+    connectorLineStraight: "\u{1F4CF} Connexion pass\xE9e en ligne droite.",
     connectorLineTypeFailed: "\xC9chec de la modification du type de ligne : {error}",
     connectorsNoneToConvert: "Aucune connexion \xE0 convertir sur le canevas.",
-    connectorsConvertedAll: "\u26A1 {count} connexions converties en mode orthogonal",
-    connectorsAlreadyElbowed: "{count} connexions sont d\xE9j\xE0 orthogonales",
+    connectorsConvertedAll: "\u26A1 {count} connexions converties en mode orthogonal.",
+    connectorsAlreadyElbowed: "{count} connexions sont d\xE9j\xE0 orthogonales.",
     connectorsConvertFailed: "\xC9chec de la conversion des connexions : {error}",
     // 5. Status Badge
     statusNeedSelection: "S\xE9lectionnez au moins 1 \xE9l\xE9ment pour d\xE9finir un statut.",
     statusRemoved: "Badges de statut supprim\xE9s de {count} n\u0153uds.",
-    statusAttached: 'Badge de statut "{label}" ajout\xE9 \xE0 {count} n\u0153uds',
+    statusAttached: 'Badge de statut "{label}" ajout\xE9 \xE0 {count} n\u0153uds.',
     // 6. Elevation
     elevationNeedSelection: "S\xE9lectionnez des \xE9l\xE9ments pour appliquer Elevation.",
     elevationRemoved: "Elevation supprim\xE9e de {count} n\u0153uds.",
@@ -31966,6 +32093,10 @@
     styleDefaultNoDelete: "Les styles par d\xE9faut ne peuvent pas \xEAtre supprim\xE9s.",
     styleDeleted: "Style supprim\xE9.",
     styleEditNoDefault: "Les styles par d\xE9faut ne peuvent pas \xEAtre modifi\xE9s.",
+    styleCustomLimitReached: "Vous pouvez ajouter jusqu\u2019\xE0 7 styles personnalis\xE9s.",
+    exportCopied: "Flow copi\xE9 pour l\u2019IA.",
+    exportEmpty: "Rien \xE0 exporter sur cette page.",
+    exportFailed: "\xC9chec de l\u2019exportation.",
     // 12. Description
     descCopyEmpty: "Aucune description \xE0 copier.",
     descCopied: "Description copi\xE9e dans le presse-papiers.",
@@ -32003,6 +32134,7 @@
     tipLinkDisabled: "Reference Link n\u2019est pas disponible pour cette forme",
     tipHexColor: "Couleur hexad\xE9cimale",
     tipClose: "Fermer",
+    tipSettings: "Param\xE8tres",
     tipRefreshFrames: "Actualiser les frames depuis le canevas",
     tipSolid: "Plein",
     tipDashed: "Tirets",
@@ -32013,8 +32145,9 @@
     tipTermArrow: "Fl\xE8che",
     tipTermCircle: "Cercle",
     tipTermDiamond: "Losange",
+    tipTermTriangle: "Triangle",
     tipRouteOrtho: "Orthogonal",
-    tipRouteSCurve: "Courbe en S",
+    tipRouteSCurve: "Arrondi",
     tipRouteCurve: "Courbe",
     tipRouteStraight: "Ligne droite",
     tipGizmoSource: "Source",
@@ -32036,28 +32169,28 @@
     tipConnectorColor: "Couleur de la connexion",
     tipQuotaBlocked: "Limite gratuite atteinte. Passez \xE0 Pro pour en cr\xE9er davantage.",
     // 14. Shape Notices
-    noticeSizeOnlyScreen: "Size est disponible uniquement pour les n\u0153uds Screen",
-    noticeDescUnsupported: "Description n\u2019est pas disponible pour cette forme",
-    noticeElevationUnsupported: "Elevation n\u2019est pas disponible pour cette forme",
-    noticeStatusUnsupported: "Status n\u2019est pas disponible pour cette forme",
-    noticeStepUnsupported: "Step Badges ne sont pas disponibles pour cette forme",
-    noticeLinkUnsupported: "Reference Link n\u2019est pas disponible pour cette forme",
-    noticeMixed: "Indisponible pour une s\xE9lection mixte",
+    noticeSizeOnlyScreen: "Size est disponible uniquement pour les n\u0153uds Screen.",
+    noticeDescUnsupported: "Description n\u2019est pas disponible pour cette forme.",
+    noticeElevationUnsupported: "Elevation n\u2019est pas disponible pour cette forme.",
+    noticeStatusUnsupported: "Status n\u2019est pas disponible pour cette forme.",
+    noticeStepUnsupported: "Step Badges ne sont pas disponibles pour cette forme.",
+    noticeLinkUnsupported: "Reference Link n\u2019est pas disponible pour cette forme.",
+    noticeMixed: "Indisponible pour une s\xE9lection mixte.",
     // 15. Connect Status Text
-    connectStatusSelectNodes: "S\xE9lectionnez 2 n\u0153uds ou plus pour connecter",
-    connectStatusReadyTwoNodes: "2 n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s",
-    connectStatusReadyMultiNodes: "{count} n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s",
-    connectStatusReady: "Pr\xEAt \xE0 connecter",
-    connectStatusChangesReady: "Modifications pr\xEAtes \xE0 \xEAtre appliqu\xE9es",
-    connectStatusConnected: "Connect\xE9",
-    connectStatusNoChanges: "Aucune modification",
+    connectStatusSelectNodes: "S\xE9lectionnez 2 n\u0153uds ou plus pour connecter.",
+    connectStatusReadyTwoNodes: "2 n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s.",
+    connectStatusReadyMultiNodes: "{count} n\u0153uds pr\xEAts \xE0 \xEAtre connect\xE9s.",
+    connectStatusReady: "Pr\xEAt \xE0 connecter.",
+    connectStatusChangesReady: "Modifications pr\xEAtes \xE0 \xEAtre appliqu\xE9es.",
+    connectStatusConnected: "Connect\xE9.",
+    connectStatusNoChanges: "Aucune modification.",
     // 16. Action Buttons & Tooltips
-    stepDescStartsFromNumber: "Commence \xE0 partir du num\xE9ro sp\xE9cifi\xE9",
-    stepTipEnterStartNumber: "Saisissez un num\xE9ro de d\xE9part",
-    stepTipAddStepBadges: "Ajouter des Step Badges",
-    connectTipNoChanges: "Aucune modification \xE0 appliquer",
-    connectTipApplyChanges: "Appliquer les modifications de connexion",
-    connectTipConnectNodes: "Connecter les n\u0153uds s\xE9lectionn\xE9s"
+    stepDescStartsFromNumber: "Commence \xE0 partir du num\xE9ro sp\xE9cifi\xE9.",
+    stepTipEnterStartNumber: "Saisissez un num\xE9ro de d\xE9part.",
+    stepTipAddStepBadges: "Ajouter des Step Badges.",
+    connectTipNoChanges: "Aucune modification \xE0 appliquer.",
+    connectTipApplyChanges: "Appliquer les modifications de connexion.",
+    connectTipConnectNodes: "Connecter les n\u0153uds s\xE9lectionn\xE9s."
   };
   var CATALOGS = {
     ko: KO,
@@ -32131,6 +32264,13 @@
     return matched ? matched.id : null;
   }
   var getCurrentUITheme = () => {
+    try {
+      const el = document.getElementById("flooow-theme-override");
+      const marker = el?.textContent || "";
+      if (marker.includes("flooow-theme:dark")) return "dark";
+      if (marker.includes("flooow-theme:light")) return "light";
+    } catch (_) {
+    }
     if (typeof document !== "undefined" && (document.documentElement.classList.contains("figma-dark") || document.body.classList.contains("figma-dark") || document.querySelector('[data-theme="dark"]'))) {
       return "dark";
     }
@@ -32260,6 +32400,113 @@
     const [selectedStylePresetId, setSelectedStylePresetId] = (0, import_react2.useState)("style-white");
     const [designFrames, setDesignFrames] = (0, import_react2.useState)([]);
     const [flooowUsage, setFlooowUsage] = (0, import_react2.useState)(null);
+    const [flowExport, setFlowExport] = (0, import_react2.useState)(null);
+    const [locale, setLocaleState] = (0, import_react2.useState)(() => {
+      try {
+        const stored = localStorage.getItem("flooow_locale");
+        if (stored) return setAppLocale(stored);
+      } catch (_) {
+      }
+      return getAppLocale();
+    });
+    const setLocale = (0, import_react2.useCallback)((next) => {
+      const applied = setAppLocale(next);
+      setLocaleState(applied);
+      try {
+        localStorage.setItem("flooow_locale", applied);
+      } catch (_) {
+      }
+      parent.postMessage({ pluginMessage: { type: "INIT", locale: applied } }, "*");
+    }, []);
+    const [themeMode, setThemeModeState] = (0, import_react2.useState)(() => {
+      try {
+        const stored = localStorage.getItem("flooow_theme");
+        if (stored === "light" || stored === "dark" || stored === "system") return stored;
+      } catch (_) {
+      }
+      return "system";
+    });
+    const setThemeMode = (0, import_react2.useCallback)((mode) => {
+      setThemeModeState(mode);
+      try {
+        localStorage.setItem("flooow_theme", mode);
+      } catch (_) {
+      }
+    }, []);
+    (0, import_react2.useEffect)(() => {
+      const VAR_SETS = {
+        light: [
+          ["--color-bg", "#ffffff"],
+          ["--color-bg-secondary", "#f5f5f5"],
+          ["--color-bg-tertiary", "#ebebeb"],
+          ["--color-bg-hover", "rgba(0, 0, 0, 0.04)"],
+          ["--color-text-primary", "#000000"],
+          ["--color-text-secondary", "rgba(0, 0, 0, 0.6)"],
+          ["--color-text-tertiary", "rgba(0, 0, 0, 0.4)"],
+          ["--color-border", "rgba(0, 0, 0, 0.08)"],
+          ["--color-border-subtle", "rgba(0, 0, 0, 0.05)"],
+          ["--color-border-strong", "rgba(0, 0, 0, 0.16)"],
+          ["--color-chip-border", "rgba(0, 0, 0, 0.1)"],
+          ["--color-chip-icon", "rgba(0, 0, 0, 0.9)"],
+          ["--color-stroke-icon-line", "rgba(0, 0, 0, 0.15)"],
+          ["--switch-track-on", "#8C4CF6"],
+          ["--switch-track-off", "#D9D9D9"],
+          ["--switch-track-disabled-on", "#E6E6E6"],
+          ["--switch-track-disabled-off", "#E6E6E6"],
+          ["--switch-track-disabled-mixed", "#E6E6E6"],
+          ["--switch-thumb-color", "#FFFFFF"],
+          ["--switch-thumb-disabled", "#FFFFFF"],
+          ["--switch-dash-color", "rgba(255, 255, 255, 0.5)"],
+          ["--switch-dash-disabled", "rgba(255, 255, 255, 0.5)"]
+        ],
+        dark: [
+          ["--color-bg", "#2c2c2c"],
+          ["--color-bg-secondary", "#1e1e1e"],
+          ["--color-bg-tertiary", "#383838"],
+          ["--color-bg-hover", "rgba(255, 255, 255, 0.06)"],
+          ["--color-text-primary", "#ffffff"],
+          ["--color-text-secondary", "rgba(255, 255, 255, 0.65)"],
+          ["--color-text-tertiary", "rgba(255, 255, 255, 0.4)"],
+          ["--color-border", "rgba(255, 255, 255, 0.12)"],
+          ["--color-border-subtle", "rgba(255, 255, 255, 0.08)"],
+          ["--color-border-strong", "rgba(255, 255, 255, 0.2)"],
+          ["--color-chip-border", "rgba(255, 255, 255, 0.12)"],
+          ["--color-chip-icon", "rgba(255, 255, 255, 0.9)"],
+          ["--color-stroke-icon-line", "rgba(255, 255, 255, 0.35)"],
+          ["--switch-track-on", "#8C4CF6"],
+          ["--switch-track-off", "#383838"],
+          ["--switch-track-disabled-on", "#444444"],
+          ["--switch-track-disabled-off", "#444444"],
+          ["--switch-track-disabled-mixed", "#444444"],
+          ["--switch-thumb-color", "#FFFFFF"],
+          ["--switch-thumb-disabled", "#757575"],
+          ["--switch-dash-color", "rgba(255, 255, 255, 0.5)"],
+          ["--switch-dash-disabled", "rgba(255, 255, 255, 0.25)"]
+        ]
+      };
+      try {
+        const root2 = document.documentElement;
+        let el = document.getElementById("flooow-theme-override");
+        if (themeMode === "system") {
+          if (el) el.remove();
+          root2.removeAttribute("data-flooow-theme");
+          root2.style.colorScheme = "";
+          return;
+        }
+        const decls = VAR_SETS[themeMode].map(([k, v]) => `${k}:${v} !important;`).join("");
+        const iconColor = themeMode === "dark" ? "#ffffff" : "#1e1e1e";
+        const css = `/*flooow-theme:${themeMode}*/:root[data-flooow-theme="${themeMode}"] body{${decls}}:root[data-flooow-theme="${themeMode}"] body .type-icon-btn{color:${iconColor} !important;}`;
+        root2.setAttribute("data-flooow-theme", themeMode);
+        if (!el) {
+          el = document.createElement("style");
+          el.id = "flooow-theme-override";
+          document.head.appendChild(el);
+        }
+        if (el.textContent !== css) el.textContent = css;
+        root2.style.colorScheme = themeMode;
+      } catch (_) {
+      }
+    }, [themeMode]);
     const [usageCounting, setUsageCounting] = (0, import_react2.useState)(false);
     const [planIssue, setPlanIssue] = (0, import_react2.useState)(null);
     (0, import_react2.useEffect)(() => {
@@ -33050,6 +33297,10 @@
       showToast(t("sizePresetDeleted", { name: target?.name || (getAppLocale() === "en" ? "Size" : "\uC0AC\uC774\uC988") }), "info");
     }, [sizePresets, savePresets, showToast]);
     const addStylePreset = (0, import_react2.useCallback)((preset) => {
+      if (countCustomStylePresets(stylePresets, DEFAULT_STYLE_PRESET_IDS) >= MAX_CUSTOM_STYLE_PRESETS) {
+        showToast(t("styleCustomLimitReached"), "warning");
+        return false;
+      }
       const newId = `style-${typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`}`;
       const newPreset = {
         ...preset,
@@ -33072,6 +33323,7 @@
         strokeColor: preset.strokeColor
       });
       showToast(t("styleAddedNew"), "success");
+      return true;
     }, [stylePresets, saveStylePresets, setUIState, setNodeOptionState, applyCurrentNodeState, showToast]);
     const updateStylePreset = (0, import_react2.useCallback)((id, partial) => {
       const next = stylePresets.map((p) => p.id === id ? { ...p, ...partial } : p);
@@ -33831,6 +34083,12 @@
       loadDesignFrames,
       flooowUsage,
       setFlooowUsage,
+      flowExport,
+      setFlowExport,
+      locale,
+      setLocale,
+      themeMode,
+      setThemeMode,
       usageCounting,
       setUsageCounting,
       requestFlooowUsage,
@@ -33885,7 +34143,7 @@
   }
 
   // src/ui/App.tsx
-  var import_react26 = __toESM(require_react());
+  var import_react27 = __toESM(require_react());
 
   // src/ui/hooks/useFigmaMessage.ts
   var import_react3 = __toESM(require_react());
@@ -33903,7 +34161,8 @@
       setFlooowUsage,
       setUsageCounting,
       setPlanIssue,
-      applyLoadedPresets
+      applyLoadedPresets,
+      setFlowExport
     } = useApp();
     const handlerRef = (0, import_react3.useRef)(null);
     const prevNodeIdRef = (0, import_react3.useRef)(void 0);
@@ -33986,6 +34245,17 @@
             applyLoadedPresets(msg.kind, msg.stored ?? null);
             break;
           }
+          case "FLOW_EXPORTED": {
+            setFlowExport({
+              jsonText: msg.jsonText,
+              aiText: msg.aiText,
+              fileName: msg.fileName,
+              nodeCount: msg.nodeCount,
+              edgeCount: msg.edgeCount,
+              empty: msg.empty
+            });
+            break;
+          }
           case "FLOOOW_USAGE": {
             if (msg.error === "blocked") {
               setPlanIssue("blocked");
@@ -34007,15 +34277,22 @@
       };
       handlerRef.current = handler;
       window.addEventListener("message", handler);
+      const storedLocale = (() => {
+        try {
+          return localStorage.getItem("flooow_locale");
+        } catch (_) {
+          return null;
+        }
+      })();
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get("nodes") === "2") {
       } else {
-        parent.postMessage({ pluginMessage: { type: "INIT", locale: setAppLocale(resolveAppLocale(navigator.language)) } }, "*");
+        parent.postMessage({ pluginMessage: { type: "INIT", locale: setAppLocale(storedLocale || resolveAppLocale(navigator.language)) } }, "*");
       }
       return () => {
         window.removeEventListener("message", handler);
       };
-    }, [handleSelectionChange, setUIState, setFlooowUsage, setUsageCounting, setPlanIssue, applyLoadedPresets]);
+    }, [handleSelectionChange, setUIState, setFlooowUsage, setUsageCounting, setPlanIssue, applyLoadedPresets, setFlowExport]);
   }
 
   // src/ui/hooks/useSelectionSummary.ts
@@ -34155,7 +34432,11 @@
   // src/ui/components/node/TypeSection.tsx
   var import_jsx_runtime2 = __toESM(require_jsx_runtime());
   function ScreenIcon() {
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "48", height: "48", viewBox: "0 0 48 48", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { transform: "translate(7, 11)", d: "M6 0V2H32V24H2V6H0V0H6ZM6 6H2.95996V23.04H31.04V2.95996H6V6ZM1 1V5H5V1H1Z", fill: "currentColor" }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: "48", height: "48", viewBox: "0 0 48 48", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { transform: "translate(7, 11)", d: "M5 1V5H1V1H5ZM6 0H0V6H6V0Z", fill: "currentColor" }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { transform: "translate(9, 13)", d: "M30 22H0V3.83H0.96V21.04H29.04V0.96H3.87V0H30V22Z", fill: "currentColor" }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("rect", { x: "24", y: "28", width: "12", height: "4", stroke: "currentColor", "stroke-width": "1", fill: "none" })
+    ] });
   }
   function ProcessIcon() {
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "26", height: "26", viewBox: "0 0 26 26", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M25 1V25H1V1H25ZM26 0H0V26H26V0Z", fill: "currentColor" }) });
@@ -34396,6 +34677,7 @@
   // src/ui/components/shared/icons.tsx
   var import_react5 = __toESM(require_react());
   var import_jsx_runtime3 = __toESM(require_jsx_runtime());
+  var IcSettings = () => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M7 19.4999C7 19.7761 7.22386 19.9999 7.5 19.9999C7.77614 19.9999 8 19.7761 8 19.4999V11.9999C8 11.9832 7.99918 11.9667 7.99758 11.9504C9.1399 11.7197 10 10.7103 10 9.49994C10 8.28961 9.1399 7.28016 7.99758 7.04946C7.99918 7.03317 8 7.01665 8 6.99994V4.49994C8 4.2238 7.77614 3.99994 7.5 3.99994C7.22386 3.99994 7 4.2238 7 4.49994V6.99994C7 7.01665 7.00082 7.03317 7.00242 7.04946C5.86009 7.28016 5 8.28961 5 9.49994C5 10.7103 5.86009 11.7197 7.00242 11.9504C7.00082 11.9667 7 11.9832 7 11.9999V19.4999ZM7.5 10.9999C8.32843 10.9999 9 10.3284 9 9.49994C9 8.67151 8.32843 7.99994 7.5 7.99994C6.67157 7.99994 6 8.67151 6 9.49994C6 10.3284 6.67157 10.9999 7.5 10.9999ZM16 4.49994C16 4.2238 16.2239 3.99994 16.5 3.99994C16.7761 3.99994 17 4.2238 17 4.49994V11.9999C17 12.0166 16.9992 12.0332 16.9976 12.0495C18.1399 12.2802 19 13.2896 19 14.4999C19 15.7103 18.1399 16.7197 16.9976 16.9504C16.9992 16.9667 17 16.9832 17 16.9999V19.4999C17 19.7761 16.7761 19.9999 16.5 19.9999C16.2239 19.9999 16 19.7761 16 19.4999V16.9999C16 16.9832 16.0008 16.9667 16.0024 16.9504C14.8601 16.7197 14 15.7103 14 14.4999C14 13.2896 14.8601 12.2802 16.0024 12.0495C16.0008 12.0332 16 12.0166 16 11.9999V4.49994ZM16.5 12.9999C17.3284 12.9999 18 13.6715 18 14.4999C18 15.3284 17.3284 15.9999 16.5 15.9999C15.6716 15.9999 15 15.3284 15 14.4999C15 13.6715 15.6716 12.9999 16.5 12.9999Z", fillRule: "evenodd", clipRule: "evenodd", fill: "currentColor" }) });
   var IcChevronRight = () => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M6.76777 5.52511C6.96303 5.32985 7.27954 5.32985 7.4748 5.52511L9.94941 7.99972L7.4748 10.4753C7.2796 10.6702 6.96297 10.6702 6.76777 10.4753C6.57251 10.28 6.57251 9.96256 6.76777 9.7673L8.53535 7.99972L6.76777 6.23214C6.57251 6.03688 6.57251 5.72037 6.76777 5.52511Z", fill: "currentColor" }) });
   var IcCopy = () => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M13.5 6C14.3284 6 15 6.67157 15 7.5V9H16.5C17.3284 9 18 9.67157 18 10.5V16.5C18 17.3284 17.3284 18 16.5 18H10.5C9.67157 18 9 17.3284 9 16.5V15H7.5C6.67157 15 6 14.3284 6 13.5V7.5C6 6.67157 6.67157 6 7.5 6H13.5ZM15 13.5C15 14.3284 14.3284 15 13.5 15H10V16.5C10 16.7761 10.2239 17 10.5 17H16.5C16.7761 17 17 16.7761 17 16.5V10.5C17 10.2239 16.7761 10 16.5 10H15V13.5ZM7.5 7C7.22386 7 7 7.22386 7 7.5V13.5C7 13.7761 7.22386 14 7.5 14H13.5C13.7761 14 14 13.7761 14 13.5V7.5C14 7.22386 13.7761 7 13.5 7H7.5Z", fill: "currentColor" }) });
   var IcCheckLarge = () => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { fillRule: "evenodd", clipRule: "evenodd", d: "M16.765 7.07607C16.9992 7.22242 17.0704 7.5309 16.924 7.76507L11.924 15.7651C11.8366 15.9049 11.686 15.9926 11.5212 15.9996C11.3565 16.0066 11.1989 15.932 11.1 15.8001L8.10003 11.7999C7.93434 11.579 7.97912 11.2656 8.20004 11.0999C8.42095 10.9343 8.73435 10.979 8.90003 11.2L11.4625 14.6167L16.076 7.23507C16.2224 7.0009 16.5309 6.92971 16.765 7.07607Z", fill: "currentColor" }) });
@@ -36244,7 +36526,7 @@
                           style: {
                             width: "100px",
                             height: "28px",
-                            backgroundColor: "#F3F4F6",
+                            backgroundColor: "var(--color-bg-secondary)",
                             borderRadius: "6px",
                             padding: "0 6px",
                             display: "flex",
@@ -36262,7 +36544,7 @@
                                 height: "24",
                                 viewBox: "0 0 24 24",
                                 fill: "none",
-                                style: { color: "#111827", flexShrink: 0, cursor: "pointer" },
+                                style: { color: "var(--color-text-primary, #111827)", flexShrink: 0, cursor: "pointer" },
                                 onClick: handleResetNumber,
                                 children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
                                   "path",
@@ -37338,7 +37620,7 @@
                         children: [
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "size-mode-btn-content figma-dropdown-btn-content", children: [
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-current-icon figma-dropdown-current-icon", id: "size-mode-current-icon", children: currentSizeMode === "hug" ? HUG_SVG : currentSizeMode === "fit" ? FIT_SVG : currentSizeMode === "mixed" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(MixedDashChip, { size: 16 }) : FIXED_SVG }),
-                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-current-text figma-dropdown-current-text", id: "size-mode-current-text", children: currentSizeMode === "hug" ? t("sizeModeHug") : currentSizeMode === "fit" ? t("sizeModeFit") : currentSizeMode === "mixed" ? "Mixed" : t("sizeModeFixed") })
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-current-text figma-dropdown-current-text", id: "size-mode-current-text", children: currentSizeMode === "hug" ? "Hug contents" : currentSizeMode === "fit" ? "Fit contents" : currentSizeMode === "mixed" ? "Mixed" : "Fixed height" })
                           ] }),
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                             "span",
@@ -37375,17 +37657,17 @@
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "fixed" ? " selected" : ""}`, "data-value": "fixed", onClick: () => selectSizeMode("fixed"), children: [
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: CHECK_SVG }),
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: FIXED_SVG }),
-                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: t("sizeModeFixed") })
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Fixed height" })
                           ] }),
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "hug" ? " selected" : ""}`, "data-value": "hug", onClick: () => selectSizeMode("hug"), children: [
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: CHECK_SVG }),
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: HUG_SVG }),
-                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: t("sizeModeHug") })
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Hug contents" })
                           ] }),
                           /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: `size-mode-menu-item figma-dropdown-item${currentSizeMode === "fit" ? " selected" : ""}`, "data-value": "fit", onClick: () => selectSizeMode("fit"), children: [
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-check figma-dropdown-check-slot", children: CHECK_SVG }),
                             /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-icon figma-dropdown-icon-slot", children: FIT_SVG }),
-                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: t("sizeModeFit") })
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "size-mode-menu-item-label figma-dropdown-label", children: "Fit contents" })
                           ] })
                         ]
                       }
@@ -37423,7 +37705,6 @@
   // src/ui/components/appearance/StyleSection.tsx
   var import_react13 = __toESM(require_react());
   var import_jsx_runtime13 = __toESM(require_jsx_runtime());
-  var DEFAULT_STYLE_PRESET_IDS2 = /* @__PURE__ */ new Set(["style-white", "style-black"]);
   function normalizeColorHex(hex) {
     if (!hex) return "";
     const clean = hex.trim().toLowerCase();
@@ -37471,6 +37752,8 @@
     } = useApp();
     const summary = useSelectionSummary();
     const btnMoreRef = (0, import_react13.useRef)(null);
+    const isStyleAddCapped = countCustomStylePresets(stylePresets, DEFAULT_STYLE_PRESET_IDS) >= MAX_CUSTOM_STYLE_PRESETS;
+    const styleCapNotice = useDisabledNotice();
     const isMultiForStyle = summary.isMultiFlowNode || summary.isMixedWithConnectors;
     const isFillMixed = multiDraft.colorHex !== void 0 ? false : isMultiForStyle ? summary.color.isMixed : false;
     const isStrokeMixed = multiDraft.strokeColor !== void 0 ? false : isMultiForStyle ? summary.strokeColor.isMixed : false;
@@ -37560,7 +37843,7 @@
       }
       return true;
     });
-    const isMoreDisabled = !activeStylePreset || Boolean(activeStylePreset.isDefault) || DEFAULT_STYLE_PRESET_IDS2.has(activeStylePreset.id);
+    const isMoreDisabled = !activeStylePreset || Boolean(activeStylePreset.isDefault) || DEFAULT_STYLE_PRESET_IDS.has(activeStylePreset.id);
     const applyFillColor = (0, import_react13.useCallback)(
       (newColorHex) => {
         const formatted = newColorHex.startsWith("#") ? newColorHex : `#${newColorHex}`;
@@ -37808,14 +38091,24 @@
     }
     return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "section-block", children: [
       /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "section-header", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: "section-title", children: "Style" }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: "section-title", children: [
+          "Style",
+          isStyleAddCapped && styleCapNotice.phase !== "hidden" && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(DisabledNoticeChip, { text: t("styleCustomLimitReached"), fading: styleCapNotice.phase === "fading" })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "section-actions", children: [
           /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
             "button",
             {
               className: "btn-action-icon",
               "data-tooltip": t("tipAddStyle"),
-              onClick: () => setActiveModal("add-style"),
+              style: isStyleAddCapped ? { opacity: 0.3, cursor: "default" } : void 0,
+              onClick: () => {
+                if (isStyleAddCapped) {
+                  styleCapNotice.flash();
+                  return;
+                }
+                setActiveModal("add-style");
+              },
               children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
                 "path",
                 {
@@ -38249,6 +38542,7 @@
   var TERMINAL_OPTIONS = [
     "NONE",
     "ARROW",
+    "TRIANGLE_ARROW",
     "CIRCLE",
     "DIAMOND"
   ];
@@ -38256,12 +38550,14 @@
     start: {
       NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
       ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M7 3.5L2 8L7 12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5L1 8L5.5 12.5Z" fill="currentColor"/></svg>`,
       CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1"/><circle cx="5.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
       DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M10 8H50" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5L1 8L5.5 12.5L10 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`
     },
     end: {
       NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
       ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M45 3.5L50 8L45 12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M46.5 3.5L51 8L46.5 12.5Z" fill="currentColor"/></svg>`,
       CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1"/><circle cx="46.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
       DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H42" stroke="currentColor" stroke-width="1"/><path d="M46.5 3.5L42 8L46.5 12.5L51 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`
     }
@@ -38270,12 +38566,14 @@
     start: {
       NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
       ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M8 4L4 8L8 12" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      TRIANGLE_ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M5 4.5L1.5 8L5 11.5Z" fill="currentColor"/></svg>`,
       CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8 8H32" stroke="currentColor" stroke-width="1"/><circle cx="5" cy="8" r="2.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
       DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8.5 8H32" stroke="currentColor" stroke-width="1"/><path d="M5 4.5L1.5 8L5 11.5L8.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`
     },
     end: {
       NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
       ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M28 4L32 8L28 12" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      TRIANGLE_ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M31 4.5L34.5 8L31 11.5Z" fill="currentColor"/></svg>`,
       CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1"/><circle cx="31" cy="8" r="2.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
       DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H27.5" stroke="currentColor" stroke-width="1"/><path d="M31 4.5L27.5 8L31 11.5L34.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`
     }
@@ -38380,8 +38678,6 @@
         markConnectorDirty();
       }, 200);
     };
-    const isRoutingMixed = summary.connectorRoutingType.isMixed;
-    const isLinePatternMixed = summary.connectorStrokePattern.isMixed;
     const hasSelectedConnectors = summary.connectorCount > 0;
     const connectedStyleSummary = hasSelectedConnectors ? null : getConnectedConnectorStyleSummary(uiState.connectedConnectors);
     const getPresetLineColor2 = (preset) => {
@@ -38696,8 +38992,6 @@
       summary.color.isMixed,
       summary.color.value,
       selectedNodes,
-      selectedRoutingType,
-      selectedLinePattern,
       setUIState
     ]);
     (0, import_react15.useEffect)(() => {
@@ -39123,13 +39417,12 @@
             )
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: "routing-types-grid", style: { flex: 1 }, children: ROUTING_TYPES.map((r) => {
-            const isActive = !isRoutingMixed && selectedRoutingType === r.type;
+            const isActive = selectedRoutingType === r.type;
             return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
               "button",
               {
                 className: `routing-btn${isActive ? " active" : ""}`,
                 "data-tooltip": t(r.type === "ORTHOGONAL" ? "tipRouteOrtho" : r.type === "S_CURVE" ? "tipRouteSCurve" : r.type === "CURVED" ? "tipRouteCurve" : "tipRouteStraight"),
-                disabled: isRoutingMixed,
                 onClick: () => selectRoutingType(r.type),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", dangerouslySetInnerHTML: { __html: r.svg } })
               },
@@ -39234,13 +39527,12 @@
               { pattern: "SOLID", title: "Solid", path: "M18.5 11C18.7761 11 19 11.2239 19 11.5C19 11.7761 18.7761 12 18.5 12H5.5C5.22386 12 5 11.7761 5 11.5C5 11.2239 5.22386 11 5.5 11H18.5Z" },
               { pattern: "DASHED", title: "Dashed", path: "M7.5 12C7.77614 12 8 12.2239 8 12.5C8 12.7761 7.77614 13 7.5 13H5.5C5.22386 13 5 12.7761 5 12.5C5 12.2239 5.22386 12 5.5 12H7.5ZM13 12C13.2761 12 13.5 12.2239 13.5 12.5C13.5 12.7761 13.2761 13 13 13H11C10.7239 13 10.5 12.7761 10.5 12.5C10.5 12.2239 10.7239 12 11 12H13ZM18.5 12C18.7761 12 19 12.2239 19 12.5C19 12.7761 18.7761 13 18.5 13H16.5C16.2239 13 16 12.7761 16 12.5C16 12.2239 16.2239 12 16.5 12H18.5Z" }
             ].map(({ pattern, title, path }) => {
-              const isActive = !isLinePatternMixed && selectedLinePattern === pattern;
+              const isActive = selectedLinePattern === pattern;
               return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
                 "button",
                 {
                   className: `line-style-btn${isActive ? " active" : ""}`,
                   "data-tooltip": t(pattern === "SOLID" ? "tipSolid" : "tipDashed"),
-                  disabled: isLinePatternMixed,
                   onClick: (e) => selectLinePattern(pattern, e.currentTarget),
                   children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: path, fill: "currentColor" }) })
                 },
@@ -39250,9 +39542,8 @@
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
               "button",
               {
-                className: `line-style-btn${!isLinePatternMixed && selectedLinePattern === "DOTTED" ? " active" : ""}`,
+                className: `line-style-btn${selectedLinePattern === "DOTTED" ? " active" : ""}`,
                 "data-tooltip": t("tipDotted"),
-                disabled: isLinePatternMixed,
                 onClick: (e) => selectLinePattern("DOTTED", e.currentTarget),
                 children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("g", { transform: "translate(5, 11.3)", children: [
                   /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M0.7 0C0.31 0 0 0.31 0 0.7C0 1.09 0.31 1.4 0.7 1.4C1.09 1.4 1.4 1.09 1.4 0.7C1.4 0.31 1.09 0 0.7 0Z", fill: "currentColor" }),
@@ -39366,7 +39657,7 @@
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("select", { id: "select-start-terminal", style: { display: "none" }, value: startTermVal, onChange: () => {
-            }, children: ["MIXED", "NONE", "ARROW", "CIRCLE", "DIAMOND"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
+            }, children: ["MIXED", "NONE", "ARROW", "TRIANGLE_ARROW", "CIRCLE", "DIAMOND"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
             startTermPopupOpen && /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
               "div",
               {
@@ -39398,7 +39689,6 @@
                       "div",
                       {
                         className: `terminal-ui3-item${isSelected ? " selected" : ""}`,
-                        "data-tooltip": t(opt === "NONE" ? "tipTermNone" : opt === "ARROW" ? "tipTermArrow" : opt === "CIRCLE" ? "tipTermCircle" : "tipTermDiamond"),
                         style: {
                           width: "100%",
                           height: "24px",
@@ -39465,7 +39755,7 @@
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("select", { id: "select-end-terminal", style: { display: "none" }, value: endTermVal, onChange: () => {
-            }, children: ["MIXED", "NONE", "ARROW", "CIRCLE", "DIAMOND"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
+            }, children: ["MIXED", "NONE", "ARROW", "TRIANGLE_ARROW", "CIRCLE", "DIAMOND"].map((v) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("option", { value: v, children: v === "MIXED" ? "Mixed" : v }, v)) }),
             endTermPopupOpen && /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
               "div",
               {
@@ -39497,7 +39787,6 @@
                       "div",
                       {
                         className: `terminal-ui3-item${isSelected ? " selected" : ""}`,
-                        "data-tooltip": t(opt === "NONE" ? "tipTermNone" : opt === "ARROW" ? "tipTermArrow" : opt === "CIRCLE" ? "tipTermCircle" : "tipTermDiamond"),
                         style: {
                           width: "100%",
                           height: "24px",
@@ -40240,7 +40529,7 @@
   // src/ui/components/shared/Tooltip.tsx
   var import_react17 = __toESM(require_react());
   var import_jsx_runtime19 = __toESM(require_jsx_runtime());
-  var INITIAL_DELAY = 500;
+  var INITIAL_DELAY = 1e3;
   var SWITCH_GRACE = 500;
   function FigmaTooltip() {
     const tooltipRef = (0, import_react17.useRef)(null);
@@ -40389,7 +40678,7 @@
       nodeOptionState
     } = useApp();
     if (!contextMenuOpen) return null;
-    const DEFAULT_STYLE_PRESET_IDS3 = /* @__PURE__ */ new Set(["style-white", "style-black"]);
+    const DEFAULT_STYLE_PRESET_IDS2 = /* @__PURE__ */ new Set(["style-white", "style-black"]);
     const DEFAULT_STYLE_COLORS = /* @__PURE__ */ new Set(["#ffffff", "#000000"]);
     function handleEdit(e) {
       e.stopPropagation();
@@ -40398,7 +40687,7 @@
         setActiveModal("edit-size");
       } else if (contextMenuTarget === "style") {
         const color = nodeOptionState.fillColor;
-        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS3.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
+        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS2.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
           showToast(t("styleEditNoDefault"), "warning");
           return;
         }
@@ -40420,7 +40709,7 @@
         showToast(t("sizePresetDeleted2"));
       } else if (contextMenuTarget === "style") {
         const color = nodeOptionState.fillColor;
-        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS3.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
+        if (selectedStylePresetId && DEFAULT_STYLE_PRESET_IDS2.has(selectedStylePresetId) || (!color || DEFAULT_STYLE_COLORS.has(color.toLowerCase()))) {
           showToast(t("styleDefaultNoDelete"), "warning");
           return;
         }
@@ -40624,7 +40913,7 @@
                             children: [
                               /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)("div", { className: "size-dropdown-left", style: { display: "flex", alignItems: "center", gap: 6 }, children: [
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }, children: sizeMode === "hug" ? HUG_SVG2 : sizeMode === "fit" ? FIT_SVG2 : FIXED_SVG2 }),
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { id: `text-${mode}-size-mode`, style: { fontSize: 11, color: "#ffffff" }, children: sizeMode === "fixed" ? t("sizeModeFixed") : sizeMode === "fit" ? t("sizeModeFit") : t("sizeModeHug") })
+                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { id: `text-${mode}-size-mode`, style: { fontSize: 11, color: "#ffffff" }, children: sizeMode === "fixed" ? "Fixed height" : sizeMode === "fit" ? "Fit contents" : "Hug contents" })
                               ] }),
                               /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
                                 "svg",
@@ -40674,7 +40963,7 @@
                               children: [
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "fixed" && CHECK_SVG3 }),
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: FIXED_SVG2 }),
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: t("sizeModeFixed") })
+                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: "Fixed height" })
                               ]
                             }
                           ),
@@ -40695,7 +40984,7 @@
                               children: [
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "hug" && CHECK_SVG3 }),
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: HUG_SVG2 }),
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: t("sizeModeHug") })
+                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: "Hug contents" })
                               ]
                             }
                           ),
@@ -40716,7 +41005,7 @@
                               children: [
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: sizeMode === "fit" && CHECK_SVG3 }),
                                 /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: FIT_SVG2 }),
-                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: t("sizeModeFit") })
+                                /* @__PURE__ */ (0, import_jsx_runtime21.jsx)("span", { style: { flex: 1, whiteSpace: "nowrap" }, children: "Fit contents" })
                               ]
                             }
                           )
@@ -41761,12 +42050,14 @@
           selectedStylePresetId: editingPresetId
         });
       } else {
-        addStylePreset({
+        if (!addStylePreset({
           name: isFillNone ? "Custom None" : `Custom ${finalFillColor}`,
           fillColor: finalFillColor,
           strokeWeight: finalStrokeWeight,
           strokeColor: finalStrokeColor
-        });
+        })) {
+          return;
+        }
       }
       setNodeOptionState({
         fillColor: finalFillColor,
@@ -42076,6 +42367,7 @@
       const result = [];
       const baseColors = [
         { id: "conn-default-white", name: "White", color: "#FFFFFF" },
+        { id: "conn-default-light-gray", name: "Light Gray", color: "#B3B3B3" },
         { id: "conn-default-gray", name: "Gray", color: "#757575" },
         { id: "conn-default-black", name: "Black", color: "#000000" }
       ];
@@ -42910,8 +43202,343 @@
     );
   }
 
-  // src/ui/App.tsx
+  // src/ui/components/modals/SettingsModal.tsx
+  var import_react26 = __toESM(require_react());
   var import_jsx_runtime30 = __toESM(require_jsx_runtime());
+  var CLOSE_SVG6 = /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+    "path",
+    {
+      d: "M16.6464 6.64645C16.8417 6.45118 17.1582 6.45118 17.3535 6.64645C17.5487 6.84171 17.5487 7.15822 17.3535 7.35348L12.707 12L17.3535 16.6464C17.5487 16.8417 17.5487 17.1582 17.3535 17.3535C17.1582 17.5487 16.8417 17.5487 16.6464 17.3535L12 12.707L7.35348 17.3535C7.15822 17.5487 6.84171 17.5487 6.64645 17.3535C6.45118 17.1582 6.45118 16.8417 6.64645 16.6464L11.2929 12L6.64645 7.35348C6.45123 7.15821 6.4512 6.84169 6.64645 6.64645C6.8417 6.45125 7.15823 6.45125 7.35348 6.64645L12 11.2929L16.6464 6.64645Z",
+      fill: "currentColor"
+    }
+  ) });
+  var ICON_COPY = /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M13.5 6C14.3284 6 15 6.67157 15 7.5V9H16.5C17.3284 9 18 9.67157 18 10.5V16.5C18 17.3284 17.3284 18 16.5 18H10.5C9.67157 18 9 17.3284 9 16.5V15H7.5C6.67157 15 6 14.3284 6 13.5V7.5C6 6.67157 6.67157 6 7.5 6H13.5ZM15 13.5C15 14.3284 14.3284 15 13.5 15H10V16.5C10 16.7761 10.2239 17 10.5 17H16.5C16.7761 17 17 16.7761 17 16.5V10.5C17 10.2239 16.7761 10 16.5 10H15V13.5ZM7.5 7C7.22386 7 7 7.22386 7 7.5V13.5C7 13.7761 7.22386 14 7.5 14H13.5C13.7761 14 14 13.7761 14 13.5V7.5C14 7.22386 13.7761 7 13.5 7H7.5Z", fill: "currentColor" }) });
+  var ICON_EXPORT = /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M17.5 15C17.7761 15 18 15.2239 18 15.5V16.5C18 17.3284 17.3284 18 16.5 18H7.5C6.67157 18 6 17.3284 6 16.5V15.5C6 15.2239 6.22386 15 6.5 15C6.77614 15 7 15.2239 7 15.5V16.5C7 16.7761 7.22386 17 7.5 17H16.5C16.7761 17 17 16.7761 17 16.5V15.5C17 15.2239 17.2239 15 17.5 15ZM12 5C12.2761 5 12.5 5.22386 12.5 5.5V12.293L14.6465 10.1465C14.8417 9.95122 15.1583 9.95122 15.3535 10.1465C15.5488 10.3417 15.5488 10.6583 15.3535 10.8535L12.3535 13.8535C12.1583 14.0488 11.8417 14.0488 11.6465 13.8535L8.64648 10.8535C8.45122 10.6583 8.45122 10.3417 8.64648 10.1465C8.84175 9.95122 9.15825 9.95122 9.35352 10.1465L11.5 12.293V5.5C11.5 5.22386 11.7239 5 12 5Z", fill: "currentColor" }) });
+  var ICON_THEME_LIGHT = /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M12 3.62069V3M12 21V20.3793M20.3793 12H21M3 12H3.62069M17.9256 6.07501L18.3645 5.63611M5.63546 18.3639L6.07435 17.925M17.9256 17.925L18.3645 18.3639M5.63546 5.63607L6.07435 6.07496M16.9534 11.9661C16.9534 14.7084 14.7303 16.9316 11.9879 16.9316C9.2455 16.9316 7.02236 14.7084 7.02236 11.9661C7.02236 9.22368 9.2455 7.00054 11.9879 7.00054C14.7303 7.00054 16.9534 9.22368 16.9534 11.9661Z", strokeLinecap: "round", stroke: "currentColor" }) });
+  var ICON_THEME_DARK = /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M19 13.9248C18.3421 14.1243 17.6441 14.2316 16.921 14.2316C12.9703 14.2316 9.7677 11.0289 9.7677 7.07819C9.7677 6.35542 9.8749 5.65767 10.0743 5C7.13757 5.89061 5 8.61897 5 11.8466C5 15.7973 8.20263 19 12.1533 19C15.3812 19 18.1097 16.862 19 13.9248Z", strokeLinejoin: "round", stroke: "currentColor" }) });
+  var ICON_THEME_SYSTEM = /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M12 16V18M9 19H15M6 16H18C19.1046 16 20 15.1046 20 14V7C20 5.89543 19.1046 5 18 5H6C4.89543 5 4 5.89543 4 7V14C4 15.1046 4.89543 16 6 16Z", strokeLinecap: "round", strokeLinejoin: "round", stroke: "currentColor" }) });
+  var CHEVRON_SVG3 = /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M9.7673 6.76777C9.96256 6.5725 10.28 6.5725 10.4753 6.76777C10.6702 6.96296 10.6702 7.2796 10.4753 7.4748L7.99972 9.94941L5.52511 7.4748C5.32985 7.27953 5.32985 6.96303 5.52511 6.76777C5.72037 6.5725 6.03688 6.5725 6.23214 6.76777L7.99972 8.53534L9.7673 6.76777Z", fill: "currentColor" }) });
+  var CHECK_SVG4 = /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M6.5 8.5L8 10L10 6.5", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }) });
+  var RADIO_ON_SVG = /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M8 0C12.4183 0 16 3.58172 16 8C16 12.4183 12.4183 16 8 16C3.58172 16 0 12.4183 0 8C0 3.58172 3.58172 0 8 0ZM8 1C4.13401 1 1 4.13401 1 8C1 11.866 4.13401 15 8 15C11.866 15 15 11.866 15 8C15 4.13401 11.866 1 8 1Z", fill: "currentColor" }),
+    /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("circle", { cx: "8", cy: "8", r: "4", fill: "currentColor" })
+  ] });
+  var RADIO_OFF_SVG = /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M8 0C12.4183 0 16 3.58172 16 8C16 12.4183 12.4183 16 8 16C3.58172 16 0 12.4183 0 8C0 3.58172 3.58172 0 8 0ZM8 1C4.13401 1 1 4.13401 1 8C1 11.866 4.13401 15 8 15C11.866 15 15 11.866 15 8C15 4.13401 11.866 1 8 1Z", fill: "currentColor" }) });
+  var LOCALE_LABELS = {
+    ko: "Korean",
+    en: "English",
+    ja: "Japanese",
+    "zh-CN": "Simplified Chinese",
+    "zh-TW": "Traditional Chinese",
+    es: "Spanish",
+    de: "German",
+    fr: "French"
+  };
+  function SettingsModal({
+    onClose,
+    onCopy,
+    onDownload,
+    showTheme,
+    themeMode = "system",
+    onThemeChange,
+    boardLabel
+  }) {
+    const { locale, setLocale, selectedNodes } = useApp();
+    const [langOpen, setLangOpen] = (0, import_react26.useState)(false);
+    const hasSelection = selectedNodes.length > 0;
+    const [exportScope, setExportScope] = (0, import_react26.useState)(() => hasSelection ? "selection" : "board");
+    const effectiveScope = exportScope === "selection" && !hasSelection ? "board" : exportScope;
+    const themeTabs = [
+      { mode: "light", icon: ICON_THEME_LIGHT },
+      { mode: "dark", icon: ICON_THEME_DARK },
+      { mode: "system", icon: ICON_THEME_SYSTEM }
+    ];
+    return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      "div",
+      {
+        id: "modal-settings-backdrop",
+        className: "popover-backdrop active",
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        },
+        onClick: (e) => {
+          if (e.target === e.currentTarget) onClose();
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
+          "div",
+          {
+            id: "modal-settings",
+            className: "subscription-modal-card",
+            onClick: (e) => e.stopPropagation(),
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "subscription-modal-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { className: "subscription-modal-title", children: "Settings" }),
+                /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "subscription-modal-close-btn",
+                    onClick: onClose,
+                    "data-tooltip": t("tipClose"),
+                    children: CLOSE_SVG6
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "subscription-modal-body", children: [
+                showTheme && /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "subscription-plan-section", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "subscription-plan-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "subscription-section-label", children: "Theme" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+                    "div",
+                    {
+                      style: {
+                        display: "flex",
+                        alignItems: "stretch",
+                        width: "168px",
+                        height: "32px",
+                        background: "var(--color-bg-tertiary)",
+                        borderRadius: "5px",
+                        boxSizing: "border-box"
+                      },
+                      children: themeTabs.map(({ mode, icon }) => {
+                        const isActive = themeMode === mode;
+                        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: () => onThemeChange?.(mode),
+                            style: {
+                              flex: 1,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: isActive ? "var(--color-bg-secondary)" : "transparent",
+                              border: isActive ? "1px solid #444444" : "1px solid transparent",
+                              borderRadius: "5px",
+                              color: "#FFFFFF",
+                              cursor: "pointer",
+                              boxSizing: "border-box",
+                              padding: 0
+                            },
+                            children: icon
+                          },
+                          mode
+                        );
+                      })
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "subscription-plan-section", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "subscription-plan-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "subscription-section-label", children: "Language" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { style: { position: "relative" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: (e) => {
+                          e.stopPropagation();
+                          setLangOpen((v) => !v);
+                        },
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          width: "100%",
+                          height: "24px",
+                          background: "var(--color-bg-secondary)",
+                          border: "1px solid #444444",
+                          borderRadius: "5px",
+                          color: "#FFFFFF",
+                          cursor: "pointer",
+                          padding: "0 0 0 8px",
+                          boxSizing: "border-box",
+                          fontSize: "11px",
+                          fontWeight: 450,
+                          lineHeight: "16px"
+                        },
+                        children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { style: { flex: 1, textAlign: "left" }, children: LOCALE_LABELS[locale] }),
+                          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            transform: langOpen ? "rotate(180deg)" : "none",
+                            transition: "transform 0.15s ease"
+                          }, children: CHEVRON_SVG3 })
+                        ]
+                      }
+                    ),
+                    langOpen && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+                      "div",
+                      {
+                        style: {
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                          marginTop: "4px",
+                          padding: "5px",
+                          background: "#1e1e1e",
+                          borderRadius: "13px",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.35)",
+                          boxSizing: "border-box"
+                        },
+                        children: SUPPORTED_LOCALES.map((loc) => {
+                          const isSelected = locale === loc;
+                          return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
+                            "div",
+                            {
+                              onClick: () => {
+                                setLocale(loc);
+                                setLangOpen(false);
+                              },
+                              style: {
+                                width: "100%",
+                                minHeight: "24px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "0 4px",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                color: "#ffffff",
+                                userSelect: "none",
+                                boxSizing: "border-box",
+                                fontSize: "11px",
+                                fontWeight: 450,
+                                lineHeight: "16px",
+                                background: isSelected ? "#8C4CF6" : "transparent"
+                              },
+                              children: [
+                                /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { style: {
+                                  width: "16px",
+                                  height: "16px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                  opacity: isSelected ? 1 : 0
+                                }, children: CHECK_SVG4 }),
+                                /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { style: { flex: 1 }, children: LOCALE_LABELS[loc] })
+                              ]
+                            },
+                            loc
+                          );
+                        })
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "subscription-plan-section", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "subscription-plan-label-row", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "subscription-section-label", children: "Export" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 0" }, children: ["board", "selection"].map((kind) => {
+                    const selectionEmpty = kind === "selection" && !hasSelection;
+                    const active = effectiveScope === kind && !selectionEmpty;
+                    return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
+                      "button",
+                      {
+                        type: "button",
+                        disabled: selectionEmpty,
+                        onClick: () => setExportScope(kind),
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          color: "#FFFFFF",
+                          cursor: selectionEmpty ? "default" : "pointer",
+                          opacity: selectionEmpty ? 0.4 : 1,
+                          fontSize: "11px",
+                          fontWeight: 450,
+                          lineHeight: "16px"
+                        },
+                        children: [
+                          active ? RADIO_ON_SVG : RADIO_OFF_SVG,
+                          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { children: kind === "board" ? boardLabel : "Selection" })
+                        ]
+                      },
+                      kind
+                    );
+                  }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "10px", padding: "4px 0" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => onCopy(effectiveScope),
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          width: "168px",
+                          height: "24px",
+                          background: "transparent",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "5px",
+                          color: "#FFFFFF",
+                          cursor: "pointer",
+                          padding: "4px 8px 4px 4px",
+                          boxSizing: "border-box",
+                          fontSize: "11px",
+                          fontWeight: 450,
+                          lineHeight: "16px"
+                        },
+                        children: [
+                          ICON_COPY,
+                          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { style: { flex: 1, textAlign: "center" }, children: "Copy for AI" })
+                        ]
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => onDownload(effectiveScope),
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          width: "168px",
+                          height: "24px",
+                          background: "transparent",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "5px",
+                          color: "#FFFFFF",
+                          cursor: "pointer",
+                          padding: "4px 8px 4px 4px",
+                          boxSizing: "border-box",
+                          fontSize: "11px",
+                          fontWeight: 450,
+                          lineHeight: "16px"
+                        },
+                        children: [
+                          ICON_EXPORT,
+                          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { style: { flex: 1, textAlign: "center" }, children: "Download JSON" })
+                        ]
+                      }
+                    )
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "subscription-modal-footer", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "btn-cta-primary",
+                  onClick: onClose,
+                  children: "OK"
+                }
+              ) })
+            ]
+          }
+        )
+      }
+    );
+  }
+
+  // src/ui/App.tsx
+  var import_jsx_runtime31 = __toESM(require_jsx_runtime());
   var TABS = [
     { id: "node", label: "Node" },
     { id: "appearance", label: "Appearance" },
@@ -42945,6 +43572,10 @@
       setLastConnectorConfig,
       markConnectorDirty,
       showToast,
+      flowExport,
+      setFlowExport,
+      themeMode,
+      setThemeMode,
       autoResizeWindow,
       stylePresets,
       selectedStylePresetId,
@@ -42973,15 +43604,77 @@
       planIssue,
       retryPlanLoad
     } = useApp();
-    const handleAddSizeSave = (0, import_react26.useCallback)((preset) => {
+    const handleAddSizeSave = (0, import_react27.useCallback)((preset) => {
       addSizePreset(preset);
     }, [addSizePreset]);
     const editSizePreset = sizePresets?.find((p) => p.id === selectedSizePresetId) || sizePresets?.[0];
-    const handleEditSizeSave = (0, import_react26.useCallback)((preset) => {
+    const handleEditSizeSave = (0, import_react27.useCallback)((preset) => {
       if (editSizePreset) updateSizePreset(editSizePreset.id, preset);
     }, [editSizePreset, updateSizePreset]);
     const summary = useSelectionSummary();
     const nodeCount = selectedNodes.length;
+    const pendingExportRef = (0, import_react27.useRef)(null);
+    const requestFlowExport = (action, scope = "board") => {
+      pendingExportRef.current = action;
+      parent.postMessage({ pluginMessage: { type: "EXPORT_FLOW", scope } }, "*");
+    };
+    async function copyTextToClipboard(text) {
+      try {
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (_) {
+      }
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        return ok;
+      } catch (_) {
+        return false;
+      }
+    }
+    function downloadJsonFile(fileName, jsonText) {
+      try {
+        const blob = new Blob([jsonText], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = fileName || "flooow-flow.json";
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1e3);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+    (0, import_react27.useEffect)(() => {
+      if (!flowExport || !pendingExportRef.current) return;
+      const action = pendingExportRef.current;
+      pendingExportRef.current = null;
+      if (flowExport.empty) {
+        showToast(t("exportEmpty"), "warning");
+        setFlowExport(null);
+        return;
+      }
+      if (action === "copy") {
+        copyTextToClipboard(flowExport.aiText).then((ok) => {
+          showToast(t(ok ? "exportCopied" : "exportFailed"), ok ? "success" : "error");
+        });
+      } else {
+        const ok = downloadJsonFile(flowExport.fileName, flowExport.jsonText);
+        if (!ok) showToast(t("exportFailed"), "error");
+      }
+      setFlowExport(null);
+    }, [flowExport, setFlowExport, showToast]);
     const isFigjamSelected = summary.isFigJamObject;
     const isSingleFigjam = isFigjamSelected && nodeCount === 1;
     const isMultiFigjam = isFigjamSelected && nodeCount >= 2;
@@ -42993,7 +43686,7 @@
     const isMultiConn = nodeCount >= 2 && allConnectors;
     const isConnSel = isSingleConn || isMultiConn;
     const ctaLabel = getCtaLabel(nodeCount);
-    (0, import_react26.useEffect)(() => {
+    (0, import_react27.useEffect)(() => {
       if (isSingleFigjam) {
         if (currentTab !== "node") setCurrentTab("node");
       } else if (isMixedNodeAndFigjam || isMultiFigjam) {
@@ -43006,7 +43699,7 @@
         if (currentTab === "connection") setCurrentTab("node");
       }
     }, [isSingleFigjam, isMultiFigjam, isMixedNodeAndFigjam, isConnSel, nodeCount, currentTab, setCurrentTab]);
-    (0, import_react26.useEffect)(() => {
+    (0, import_react27.useEffect)(() => {
       autoResizeWindow();
     }, [currentTab, autoResizeWindow]);
     const nodeLayoutKey = [
@@ -43016,13 +43709,13 @@
       multiDraft.branchVariant ?? "",
       selectedNodes.map((n) => `${n?.flowNodeType ?? ""}:${n?.branchVariant ?? ""}`).join(",")
     ].join("|");
-    (0, import_react26.useEffect)(() => {
+    (0, import_react27.useEffect)(() => {
       autoResizeWindow();
     }, [nodeLayoutKey, autoResizeWindow]);
-    (0, import_react26.useEffect)(() => {
+    (0, import_react27.useEffect)(() => {
       autoResizeWindow();
     }, [isSingleFigjam, isMultiFigjam, autoResizeWindow]);
-    (0, import_react26.useEffect)(() => {
+    (0, import_react27.useEffect)(() => {
       let newlyFocusedInput = null;
       const handleFocusIn = (e) => {
         const target = e.target;
@@ -43082,8 +43775,8 @@
     function handleContextDelete() {
       setContextMenuOpen(false);
     }
-    const titleDebounceRef = (0, import_react26.useRef)(null);
-    (0, import_react26.useEffect)(() => {
+    const titleDebounceRef = (0, import_react27.useRef)(null);
+    (0, import_react27.useEffect)(() => {
       return () => {
         if (titleDebounceRef.current) {
           clearTimeout(titleDebounceRef.current);
@@ -43092,18 +43785,18 @@
     }, []);
     function renderTitleBanner() {
       if (isSingleFigjam) {
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "figjam-title-label", children: "Figma object" });
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { className: "figjam-title-label", children: "Figma object" });
       }
       if (isMixedNodeAndFigjam) {
         const nodeLabel = flooowCount === 1 ? "1 Node" : `${flooowCount} Nodes`;
         const figjamLabel = figjamObjectCount === 1 ? "1 Figma object" : `${figjamObjectCount} Figma objects`;
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { id: "multi-selection-text", children: `${nodeLabel} and ${figjamLabel} selected` }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("span", { id: "multi-selection-text", children: `${nodeLabel} and ${figjamLabel} selected` }) });
       }
       if (isMultiFigjam) {
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figma objects selected` }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("span", { id: "multi-selection-text", children: `${nodeCount} Figma objects selected` }) });
       }
       if (isSingleConn) {
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
           "input",
           {
             type: "text",
@@ -43131,10 +43824,10 @@
         } else {
           selText = `${flowNodeCount} node${flowNodeCount > 1 ? "s" : ""} and ${figmaCount} Figma object${figmaCount > 1 ? "s" : ""} selected`;
         }
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { id: "multi-selection-text", children: selText }) });
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { id: "multi-selection-indicator", className: "multi-selection-indicator", style: { width: "100%", display: "flex" }, children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("span", { id: "multi-selection-text", children: selText }) });
       }
       const activeNodeId = nodeCount === 1 ? selectedNodes[0]?.id || "single" : "none";
-      return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { id: "single-title-wrap", style: { width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
         "input",
         {
           type: "text",
@@ -43152,15 +43845,27 @@
       ) });
     }
     const planLoading = flooowUsage === null && planIssue === null;
-    return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, onInput: triggerFormChange, onChange: triggerFormChange, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "title-banner", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: `segmented-control${planLoading || planIssue ? " disabled" : ""}`, role: "tablist", children: TABS.map((tab) => {
+    return /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)("div", { id: "plugin-root", onClick: handleRootClick, onInput: triggerFormChange, onChange: triggerFormChange, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)("div", { className: "title-banner", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { style: { flex: 1, minWidth: 0 }, children: renderTitleBanner() }),
+        /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
+          "button",
+          {
+            type: "button",
+            className: "btn-action-icon",
+            "data-tooltip": t("tipSettings"),
+            onClick: () => setActiveModal("settings"),
+            children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(IcSettings, {})
+          }
+        )
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("nav", { className: "main-tabs-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { className: `segmented-control${planLoading || planIssue ? " disabled" : ""}`, role: "tablist", children: TABS.map((tab) => {
         const isConnectionDisabled = isSingleFigjam || !isConnSel && nodeCount < 2;
         const isAppearanceDisabled = isFigjamSelected || isMixedNodeAndFigjam || nodeCount === 0 || isConnSel;
         const isNodeDisabled = isFigjamSelected || isMixedNodeAndFigjam || isConnSel;
         const isDisabled = tab.id === "connection" ? isConnectionDisabled : tab.id === "appearance" ? isAppearanceDisabled : isNodeDisabled;
         const isActive = !isSingleFigjam && currentTab === tab.id;
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
           "button",
           {
             id: `tab-btn-${tab.id}`,
@@ -43173,33 +43878,33 @@
           tab.id
         );
       }) }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("hr", { className: "section-divider" }),
-      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("main", { className: "tab-panels", children: planLoading ? null : planIssue ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "figjam-empty-card is-error", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { children: planIssue === "blocked" ? "Figma didn't respond, so Flooow can't edit this file right now." : "Couldn't load your plan. Refresh to try again." }) }) : isSingleFigjam ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "figjam-empty-card", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { children: "Select a Flooow node" }) }) : /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("hr", { className: "section-divider" }),
+      /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("main", { className: "tab-panels", children: planLoading ? null : planIssue ? /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { className: "figjam-empty-card is-error", children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("span", { children: planIssue === "blocked" ? "Figma didn't respond, so Flooow can't edit this file right now." : "Couldn't load your plan. Refresh to try again." }) }) : isSingleFigjam ? /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { className: "figjam-empty-card", children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("span", { children: "Select a Flooow node" }) }) : /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(import_jsx_runtime31.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
           "section",
           {
             id: "panel-node",
             className: "tab-panel",
             style: { display: currentTab === "node" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(NodePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(NodePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
           "section",
           {
             id: "panel-appearance",
             className: "tab-panel",
             style: { display: currentTab === "appearance" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(AppearancePanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(AppearancePanel, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
           "section",
           {
             id: "panel-connection",
             className: "tab-panel",
             style: { display: currentTab === "connection" ? "block" : "none" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(ConnectionPanel, {})
+            children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(ConnectionPanel, {})
           }
         )
       ] }) }),
@@ -43210,8 +43915,8 @@
         const planBadgeText = flooowUsage === null ? "" : `${planShortName(flooowUsage.entitlement)} Plan`;
         const limitReached = usageBlocked && !unlimited;
         const meterText = flooowUsage === null ? "" : unlimited ? "Unlimited elements" : limitReached ? "Limit reached in this file" : `${flooowUsage.total} / ${flooowUsage.limit} elements`;
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("footer", { className: "app-footer", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)("footer", { className: "app-footer", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
             "div",
             {
               className: `footer-left${planLoading || planIssue ? "" : " footer-clickable"}`,
@@ -43220,12 +43925,12 @@
                 requestFlooowUsage();
               },
               title: planLoading || planIssue ? void 0 : "Plan & Usage",
-              children: planLoading ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { className: "footer-plan-spinner", role: "status", "aria-label": "Loading plan" }) : planIssue ? null : /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "footer-plan-block", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)("div", { className: "footer-plan-row", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { className: `footer-plan-title${unlimited ? " paid" : ""}`, children: planBadgeText }),
-                  /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("span", { className: `footer-plan-chevron${unlimited ? " paid" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(IcChevronRight, {}) })
+              children: planLoading ? /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("span", { className: "footer-plan-spinner", role: "status", "aria-label": "Loading plan" }) : planIssue ? null : /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)("div", { className: "footer-plan-block", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)("div", { className: "footer-plan-row", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("span", { className: `footer-plan-title${unlimited ? " paid" : ""}`, children: planBadgeText }),
+                  /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("span", { className: `footer-plan-chevron${unlimited ? " paid" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(IcChevronRight, {}) })
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
                   "span",
                   {
                     className: `footer-usage-meter${limitReached ? " limit-reached" : ""}`,
@@ -43236,14 +43941,14 @@
               ] })
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("div", { className: "footer-right", children: planLoading ? null : planIssue ? /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("button", { className: "btn-ghost", type: "button", onClick: retryPlanLoad, children: "Refresh" }) : nodeCount === 1 ? null : nodeCount >= 2 ? (
+          /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("div", { className: "footer-right", children: planLoading ? null : planIssue ? /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("button", { className: "btn-ghost", type: "button", onClick: retryPlanLoad, children: "Refresh" }) : nodeCount === 1 ? null : nodeCount >= 2 ? (
             /* 노드 복수 선택 / 커넥터 복수 선택 / 혼합 복수 선택: Undo(초안 취소) + Apply to All */
             (() => {
               const hasDirty = Boolean(hasMultiDraft || connectorDirty || endpointDirty || hasConnectorLabelDraft);
               const isApplyDisabled = !hasDirty || isApplyingMultiDraft;
               const isUndoDisabled = !canUndo && !hasDirty;
-              return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_jsx_runtime30.Fragment, { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+              return /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(import_jsx_runtime31.Fragment, { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
                   "button",
                   {
                     id: "btn-undo",
@@ -43254,7 +43959,7 @@
                     children: "Undo"
                   }
                 ),
-                /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
                   "button",
                   {
                     id: "btn-main-cta",
@@ -43269,7 +43974,7 @@
             })()
           ) : (
             /* 0개 선택 생성 모드 (nodeCount === 0) */
-            /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
+            /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(
               "button",
               {
                 id: "btn-main-cta",
@@ -43279,7 +43984,7 @@
                 title: usageBlocked ? t("tipQuotaBlocked") : void 0,
                 onClick: handleMainAction,
                 children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("svg", { className: "create-node-plus", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime30.jsx)("path", { d: "M8 3.25c.331 0 .6.269.6.6v3.55H12.15a.6.6 0 0 1 0 1.2H8.6V12.15a.6.6 0 0 1-1.2 0V8.6H3.85a.6.6 0 0 1 0-1.2h3.55V3.85c0-.331.269-.6.6-.6Z", fill: "currentColor" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("svg", { className: "create-node-plus", width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("path", { d: "M8 3.25c.331 0 .6.269.6.6v3.55H12.15a.6.6 0 0 1 0 1.2H8.6V12.15a.6.6 0 0 1-1.2 0V8.6H3.85a.6.6 0 0 1 0-1.2h3.55V3.85c0-.331.269-.6.6-.6Z", fill: "currentColor" }) }),
                   "Create Node"
                 ]
               }
@@ -43287,8 +43992,8 @@
           ) })
         ] });
       })(),
-      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
-      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(ContextMenu, { onEdit: handleContextEdit, onDelete: handleContextDelete }),
+      activeModal === "add-size" && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
         SizeModal,
         {
           mode: "add",
@@ -43300,7 +44005,7 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      activeModal === "edit-size" && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
         SizeModal,
         {
           mode: "edit",
@@ -43313,13 +44018,13 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "figma-design-picker" && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      activeModal === "figma-design-picker" && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
         FigmaDesignPickerModal,
         {
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "add-style" && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      activeModal === "add-style" && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
         StyleModal,
         {
           mode: "add",
@@ -43328,7 +44033,7 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "edit-style" && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      activeModal === "edit-style" && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
         StyleModal,
         {
           mode: "edit",
@@ -43340,7 +44045,7 @@
       ),
       activeModal === "connector-color" && (() => {
         const isConnectorColorMixed = summary.isMultiConnector ? summary.connectorColor.isMixed : false;
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
           ConnectorColorModal,
           {
             initialColor: isConnectorColorMixed ? "" : uiState.selectedConnectorColor || "#000000",
@@ -43387,7 +44092,7 @@
         const isMultiForFill = summary.isMultiFlowNode || summary.isMixedWithConnectors;
         const isFillMixed = isMultiForFill ? multiDraft.colorHex !== void 0 ? false : summary.color.isMixed : false;
         const currentFill = multiDraft.colorHex !== void 0 ? multiDraft.colorHex : (isMultiForFill ? summary.color.value : summary.isSingleFlowNode ? nodeOptionState.fillColor || summary.color.value : nodeOptionState.fillColor) || nodeOptionState.fillColor || "#FFFFFF";
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
           FillColorModal,
           {
             initialColor: currentFill,
@@ -43414,7 +44119,7 @@
         const currentStrokeColor = multiDraft.strokeColor !== void 0 ? multiDraft.strokeColor : (isMultiForStroke ? summary.strokeColor.value : summary.isSingleFlowNode ? nodeOptionState.strokeColor || summary.strokeColor.value : nodeOptionState.strokeColor) || nodeOptionState.strokeColor || "#000000";
         const rawWeight = isMultiForStroke ? summary.strokeWeight.value : summary.isSingleFlowNode ? nodeOptionState.strokeWeight ?? summary.strokeWeight.value : nodeOptionState.strokeWeight;
         const currentStrokeWeight = multiDraft.strokeWeight !== void 0 ? multiDraft.strokeWeight : typeof rawWeight === "number" ? rawWeight : typeof nodeOptionState.strokeWeight === "number" ? nodeOptionState.strokeWeight : 1.5;
-        return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+        return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
           StrokeColorModal,
           {
             initialColor: currentStrokeColor,
@@ -43436,7 +44141,7 @@
           }
         );
       })(),
-      activeModal === "label-fill-color" && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      activeModal === "label-fill-color" && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
         FillColorModal,
         {
           title: "Label Fill",
@@ -43455,7 +44160,7 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "label-stroke-color" && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      activeModal === "label-stroke-color" && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
         StrokeColorModal,
         {
           title: "Label Stroke",
@@ -43477,7 +44182,7 @@
           onClose: () => setActiveModal("none")
         }
       ),
-      activeModal === "subscription" && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
+      activeModal === "subscription" && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
         SubscriptionModal,
         {
           usage: flooowUsage,
@@ -43486,18 +44191,38 @@
           onUpgrade: requestCheckout
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(FigmaTooltip, {})
+      activeModal === "settings" && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
+        SettingsModal,
+        {
+          showTheme: true,
+          themeMode,
+          onThemeChange: setThemeMode,
+          boardLabel: "Entire canvas",
+          onClose: () => setActiveModal("none"),
+          onCopy: (scope) => requestFlowExport("copy", scope),
+          onDownload: (scope) => requestFlowExport("file", scope)
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(FigmaTooltip, {})
     ] });
   }
 
   // src/ui/index.tsx
-  var import_jsx_runtime31 = __toESM(require_jsx_runtime());
-  setAppLocale(resolveAppLocale(typeof navigator !== "undefined" ? navigator.language : void 0));
+  var import_jsx_runtime32 = __toESM(require_jsx_runtime());
+  function resolveBootLocale() {
+    try {
+      const stored = localStorage.getItem("flooow_locale");
+      if (stored) return stored;
+    } catch (_) {
+    }
+    return resolveAppLocale(typeof navigator !== "undefined" ? navigator.language : void 0);
+  }
+  setAppLocale(resolveBootLocale());
   var container = document.getElementById("root");
   if (!container) throw new Error("#root not found");
   var root = (0, import_client.createRoot)(container);
   root.render(
-    /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(App, {}) })
+    /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(AppProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(App, {}) })
   );
 })();
 /*! Bundled license information:

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
+import type { ExportScope } from '../types';
 import { labelFillIsDefault, labelStrokeFollowsConnector, useApp } from './context/AppContext';
 import { getDefaultNodeTitle } from '../domain/nodeDomain';
 import { useFigmaMessage } from './hooks/useFigmaMessage';
@@ -12,7 +13,7 @@ import { ConnectionPanel } from './components/connection/ConnectionPanel';
 import { FigmaTooltip } from './components/shared/Tooltip';
 import { ContextMenu } from './components/popovers/ContextMenu';
 import { isUnlimitedEntitlement, planShortName } from '../entitlementGate';
-import { IcChevronRight } from './components/shared/icons';
+import { IcChevronRight, IcSettings } from './components/shared/icons';
 import { SizeModal } from './components/modals/SizeModal';
 import { FigmaDesignPickerModal } from './components/modals/FigmaDesignPickerModal';
 import { StyleModal } from './components/modals/StyleModal';
@@ -20,6 +21,7 @@ import { ConnectorColorModal } from './components/modals/ConnectorColorModal';
 import { FillColorModal } from './components/modals/FillColorModal';
 import { StrokeColorModal } from './components/modals/StrokeColorModal';
 import { SubscriptionModal } from './components/modals/SubscriptionModal';
+import { SettingsModal } from './components/modals/SettingsModal';
 
 // ============================================================
 // 탭 버튼 목록
@@ -63,6 +65,8 @@ export function App() {
     setLastConnectorConfig,
     markConnectorDirty,
     showToast,
+    flowExport, setFlowExport,
+    themeMode, setThemeMode,
     autoResizeWindow,
     stylePresets,
     selectedStylePresetId,
@@ -106,6 +110,76 @@ export function App() {
 
   const summary = useSelectionSummary();
   const nodeCount = selectedNodes.length;
+
+  // Export 실행 (Settings 모달에서 호출 — Copy for AI / Download JSON)
+  const pendingExportRef = useRef<'copy' | 'file' | null>(null);
+
+  const requestFlowExport = (action: 'copy' | 'file', scope: ExportScope = 'board') => {
+    pendingExportRef.current = action;
+    parent.postMessage({ pluginMessage: { type: 'EXPORT_FLOW', scope } }, '*');
+  };
+
+  async function copyTextToClipboard(text: string): Promise<boolean> {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_) {
+      /* 아래 폴백으로 진행 */
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function downloadJsonFile(fileName: string, jsonText: string): boolean {
+    try {
+      const blob = new Blob([jsonText], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = fileName || 'flooow-flow.json';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // FLOW_EXPORTED 수신 시 대기 중이던 액션(copy/download) 수행
+  useEffect(() => {
+    if (!flowExport || !pendingExportRef.current) return;
+    const action = pendingExportRef.current;
+    pendingExportRef.current = null;
+    if (flowExport.empty) {
+      showToast(t('exportEmpty'), 'warning');
+      setFlowExport(null);
+      return;
+    }
+    if (action === 'copy') {
+      copyTextToClipboard(flowExport.aiText).then((ok) => {
+        showToast(t(ok ? 'exportCopied' : 'exportFailed'), ok ? 'success' : 'error');
+      });
+    } else {
+      const ok = downloadJsonFile(flowExport.fileName, flowExport.jsonText);
+      if (!ok) showToast(t('exportFailed'), 'error');
+    }
+    setFlowExport(null);
+  }, [flowExport, setFlowExport, showToast]);
 
   // 피그잼 일반 오브젝트 판별 (플로우 노드/커넥터가 아닌 네이티브 객체)
   const isFigjamSelected = summary.isFigJamObject;
@@ -368,6 +442,14 @@ export function App() {
         <div style={{ flex: 1, minWidth: 0 }}>
           {renderTitleBanner()}
         </div>
+        <button
+          type="button"
+          className="btn-action-icon"
+          data-tooltip={t('tipSettings')}
+          onClick={() => setActiveModal('settings')}
+        >
+          <IcSettings />
+        </button>
       </div>
 
       {/* 2. 메인 탭 세그먼트 컨트롤 */}
@@ -801,6 +883,17 @@ export function App() {
           scanning={usageCounting}
           onClose={() => setActiveModal('none')}
           onUpgrade={requestCheckout}
+        />
+      )}
+      {activeModal === 'settings' && (
+        <SettingsModal
+          showTheme
+          themeMode={themeMode}
+          onThemeChange={setThemeMode}
+          boardLabel="Entire canvas"
+          onClose={() => setActiveModal('none')}
+          onCopy={(scope) => requestFlowExport('copy', scope)}
+          onDownload={(scope) => requestFlowExport('file', scope)}
         />
       )}
 

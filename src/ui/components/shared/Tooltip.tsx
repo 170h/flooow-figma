@@ -3,11 +3,11 @@ import React, { useEffect, useRef, useCallback } from 'react';
 /**
  * 피그마 UI3 스타일 플로팅 툴팁
  * data-tooltip 속성을 가진 요소에 마우스오버 시 표시된다.
- * - 첫 진입: 150ms 머무르면 표시
+ * - 첫 진입: 1000ms 머무르면 표시
  * - 표시 중 다른 대상으로 이동: 대기 없이 즉시 표시 (500ms 유예 포함)
  * - 포커스된 입력 필드(타이핑 중)에는 표시하지 않음
  */
-const INITIAL_DELAY = 500; // 첫 진입 대기 (데스크톱 표준 400~500ms)
+const INITIAL_DELAY = 1000; // 첫 진입 대기
 const SWITCH_GRACE = 500; // 전환 즉시 표시 유예
 
 export function FigmaTooltip() {

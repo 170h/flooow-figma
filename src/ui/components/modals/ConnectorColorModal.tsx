@@ -58,9 +58,10 @@ export function ConnectorColorModal({
     const seen = new Set<string>();
     const result: { id: string; name?: string; color: string }[] = [];
 
-    // 1. 기본 무채색 3종 (화이트, 그레이, 블랙)
+    // 1. 기본 무채색 4종 (화이트, 라이트 그레이, 그레이, 블랙)
     const baseColors = [
       { id: "conn-default-white", name: "White", color: "#FFFFFF" },
+      { id: "conn-default-light-gray", name: "Light Gray", color: "#B3B3B3" },
       { id: "conn-default-gray", name: "Gray", color: "#757575" },
       { id: "conn-default-black", name: "Black", color: "#000000" },
     ];

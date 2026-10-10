@@ -22,11 +22,12 @@ import { getConnectedConnectorStyleSummary } from '../../utils/selectionUtils';
 // - 드롭다운 메뉴: -short(36x16) 아이콘 (Figma 1027261:5984, 6029, 6009, 6054)
 // ============================================================
 
-export type TerminalOption = 'NONE' | 'ARROW' | 'CIRCLE' | 'DIAMOND';
+export type TerminalOption = 'NONE' | 'ARROW' | 'TRIANGLE_ARROW' | 'CIRCLE' | 'DIAMOND';
 
 const TERMINAL_OPTIONS: TerminalOption[] = [
   'NONE',
   'ARROW',
+  'TRIANGLE_ARROW',
   'CIRCLE',
   'DIAMOND',
 ];
@@ -36,12 +37,14 @@ const TERMINAL_SVGS_BTN: Record<'start' | 'end', Record<TerminalOption, string>>
   start: {
     NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M7 3.5L2 8L7 12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5L1 8L5.5 12.5Z" fill="currentColor"/></svg>`,
     CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M9 8H50" stroke="currentColor" stroke-width="1"/><circle cx="5.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
     DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M10 8H50" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5L1 8L5.5 12.5L10 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
   },
   end: {
     NONE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M45 3.5L50 8L45 12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    TRIANGLE_ARROW: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H50" stroke="currentColor" stroke-width="1"/><path d="M46.5 3.5L51 8L46.5 12.5Z" fill="currentColor"/></svg>`,
     CIRCLE: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H43" stroke="currentColor" stroke-width="1"/><circle cx="46.5" cy="8" r="3.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
     DIAMOND: `<svg width="52" height="16" viewBox="0 0 52 16" fill="none"><path d="M2 8H42" stroke="currentColor" stroke-width="1"/><path d="M46.5 3.5L42 8L46.5 12.5L51 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
   },
@@ -52,12 +55,14 @@ const TERMINAL_SVGS_SHORT: Record<'start' | 'end', Record<TerminalOption, string
   start: {
     NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M8 4L4 8L8 12" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    TRIANGLE_ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M5 4.5L1.5 8L5 11.5Z" fill="currentColor"/></svg>`,
     CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8 8H32" stroke="currentColor" stroke-width="1"/><circle cx="5" cy="8" r="2.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
     DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M8.5 8H32" stroke="currentColor" stroke-width="1"/><path d="M5 4.5L1.5 8L5 11.5L8.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
   },
   end: {
     NONE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
     ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M28 4L32 8L28 12" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    TRIANGLE_ARROW: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H32" stroke="currentColor" stroke-width="1"/><path d="M31 4.5L34.5 8L31 11.5Z" fill="currentColor"/></svg>`,
     CIRCLE: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H28" stroke="currentColor" stroke-width="1"/><circle cx="31" cy="8" r="2.5" stroke="currentColor" stroke-width="1" fill="none"/></svg>`,
     DIAMOND: `<svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M4 8H27.5" stroke="currentColor" stroke-width="1"/><path d="M31 4.5L27.5 8L31 11.5L34.5 8Z" stroke="currentColor" stroke-width="1" fill="none" stroke-linejoin="round"/></svg>`,
   },
@@ -199,11 +204,6 @@ export function ConnectSection() {
       markConnectorDirty();
     }, 200);
   };
-
-  // 라우팅 및 선 스타일 Mixed 상태
-  // 선택된 커넥터들의 해당 속성이 서로 다르면 Mixed 상태로 판정한다.
-  const isRoutingMixed = summary.connectorRoutingType.isMixed;
-  const isLinePatternMixed = summary.connectorStrokePattern.isMixed;
 
   // 선택된 커넥터 존재 여부 (Node/Object와 함께 선택된 경우 포함)
   // Connector 스타일(Color/Weight/Terminal/Offset)은 선택 목록에서 Connector만 필터링한 결과(summary.connectorCount > 0)만을 기준으로 계산한다.
@@ -583,8 +583,6 @@ export function ConnectSection() {
     summary.color.isMixed,
     summary.color.value,
     selectedNodes,
-    selectedRoutingType,
-    selectedLinePattern,
     setUIState
   ]);
 
@@ -1058,12 +1056,11 @@ export function ConnectSection() {
           {/* 컬러 드롭박스 우측: 커넥터 모양 (ROUTING_TYPES 4개) */}
           <div className="routing-types-grid" style={{ flex: 1 }}>
             {ROUTING_TYPES.map(r => {
-              const isActive = !isRoutingMixed && selectedRoutingType === r.type;
+              const isActive = selectedRoutingType === r.type;
               return (
                 <button key={r.type}
                   className={`routing-btn${isActive ? ' active' : ''}`}
                   data-tooltip={t(r.type === 'ORTHOGONAL' ? 'tipRouteOrtho' : r.type === 'S_CURVE' ? 'tipRouteSCurve' : r.type === 'CURVED' ? 'tipRouteCurve' : 'tipRouteStraight')}
-                  disabled={isRoutingMixed}
                   onClick={() => selectRoutingType(r.type)}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" dangerouslySetInnerHTML={{ __html: r.svg }} />
                 </button>
@@ -1161,21 +1158,19 @@ export function ConnectSection() {
               { pattern: 'SOLID', title: 'Solid', path: 'M18.5 11C18.7761 11 19 11.2239 19 11.5C19 11.7761 18.7761 12 18.5 12H5.5C5.22386 12 5 11.7761 5 11.5C5 11.2239 5.22386 11 5.5 11H18.5Z' },
               { pattern: 'DASHED', title: 'Dashed', path: 'M7.5 12C7.77614 12 8 12.2239 8 12.5C8 12.7761 7.77614 13 7.5 13H5.5C5.22386 13 5 12.7761 5 12.5C5 12.2239 5.22386 12 5.5 12H7.5ZM13 12C13.2761 12 13.5 12.2239 13.5 12.5C13.5 12.7761 13.2761 13 13 13H11C10.7239 13 10.5 12.7761 10.5 12.5C10.5 12.2239 10.7239 12 11 12H13ZM18.5 12C18.7761 12 19 12.2239 19 12.5C19 12.7761 18.7761 13 18.5 13H16.5C16.2239 13 16 12.7761 16 12.5C16 12.2239 16.2239 12 16.5 12H18.5Z' },
             ].map(({ pattern, title, path }) => {
-              const isActive = !isLinePatternMixed && selectedLinePattern === pattern;
+              const isActive = selectedLinePattern === pattern;
               return (
                 <button key={pattern}
                   className={`line-style-btn${isActive ? ' active' : ''}`}
                   data-tooltip={t(pattern === 'SOLID' ? 'tipSolid' : 'tipDashed')}
-                  disabled={isLinePatternMixed}
                   onClick={e => selectLinePattern(pattern, e.currentTarget)}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d={path} fill="currentColor"/></svg>
                 </button>
               );
             })}
             <button
-              className={`line-style-btn${!isLinePatternMixed && selectedLinePattern === 'DOTTED' ? ' active' : ''}`}
+              className={`line-style-btn${selectedLinePattern === 'DOTTED' ? ' active' : ''}`}
               data-tooltip={t('tipDotted')}
-              disabled={isLinePatternMixed}
               onClick={e => selectLinePattern('DOTTED', e.currentTarget)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <g transform="translate(5, 11.3)">
@@ -1292,7 +1287,7 @@ export function ConnectSection() {
 
             {/* 외부 스크립트 호환용 숨겨진 select */}
             <select id="select-start-terminal" style={{ display: 'none' }} value={startTermVal} onChange={() => {}}>
-              {['MIXED', 'NONE', 'ARROW', 'CIRCLE', 'DIAMOND'].map((v) => (
+              {['MIXED', 'NONE', 'ARROW', 'TRIANGLE_ARROW', 'CIRCLE', 'DIAMOND'].map((v) => (
                 <option key={v} value={v}>
                   {v === 'MIXED' ? 'Mixed' : v}
                 </option>
@@ -1328,14 +1323,13 @@ export function ConnectSection() {
                   <DropdownMixedItem variant="icon-only" />
                 )}
 
-                {/* 6개 단자 옵션: -short 아이콘 사용 */}
+                {/* 5개 단자 옵션: -short 아이콘 사용 */}
                 {TERMINAL_OPTIONS.map((opt) => {
                   const isSelected = startTermVal !== 'MIXED' && startTermVal === opt;
                   return (
                     <div
                       key={opt}
                       className={`terminal-ui3-item${isSelected ? ' selected' : ''}`}
-                      data-tooltip={t(opt === 'NONE' ? 'tipTermNone' : opt === 'ARROW' ? 'tipTermArrow' : opt === 'CIRCLE' ? 'tipTermCircle' : 'tipTermDiamond')}
                       style={{
                         width: '100%',
                         height: '24px',
@@ -1403,7 +1397,7 @@ export function ConnectSection() {
 
             {/* 외부 스크립트 호환용 숨겨진 select */}
             <select id="select-end-terminal" style={{ display: 'none' }} value={endTermVal} onChange={() => {}}>
-              {['MIXED', 'NONE', 'ARROW', 'CIRCLE', 'DIAMOND'].map((v) => (
+              {['MIXED', 'NONE', 'ARROW', 'TRIANGLE_ARROW', 'CIRCLE', 'DIAMOND'].map((v) => (
                 <option key={v} value={v}>
                   {v === 'MIXED' ? 'Mixed' : v}
                 </option>
@@ -1439,14 +1433,13 @@ export function ConnectSection() {
                   <DropdownMixedItem variant="icon-only" />
                 )}
 
-                {/* 6개 단자 옵션: -short 아이콘 사용 */}
+                {/* 5개 단자 옵션: -short 아이콘 사용 */}
                 {TERMINAL_OPTIONS.map((opt) => {
                   const isSelected = endTermVal !== 'MIXED' && endTermVal === opt;
                   return (
                     <div
                       key={opt}
                       className={`terminal-ui3-item${isSelected ? ' selected' : ''}`}
-                      data-tooltip={t(opt === 'NONE' ? 'tipTermNone' : opt === 'ARROW' ? 'tipTermArrow' : opt === 'CIRCLE' ? 'tipTermCircle' : 'tipTermDiamond')}
                       style={{
                         width: '100%',
                         height: '24px',

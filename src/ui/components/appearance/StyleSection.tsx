@@ -1,15 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useApp, StylePreset } from "../../context/AppContext";
+import { useApp, StylePreset, DEFAULT_STYLE_PRESET_IDS } from "../../context/AppContext";
 import { useSelectionSummary } from "../../hooks/useSelectionSummary";
 import { StrokeColorIcon, FillColorIcon } from "../shared/icons";
+import { useDisabledNotice, DisabledNoticeChip } from "../shared/DisabledNotice";
 import { t } from "../../../i18n";
 import { normalizeNodeType, normalizeBranchVariant, branchVariantUsesStroke } from "../../../domain/nodeDomain";
-
-/**
- * 기본 스타일 프리셋 ID 목록 (첫 번째: 흰색 + 1.5px 블랙 보더, 두 번째: 블랙 + 0px 보더)
- * 기본 스타일은 수정 및 삭제가 불가능하여 More(···) 버튼이 비활성화됩니다.
- */
-const DEFAULT_STYLE_PRESET_IDS = new Set(["style-white", "style-black"]);
+import { MAX_CUSTOM_STYLE_PRESETS, countCustomStylePresets } from "../../../presetStore";
 
 /**
  * 색상 HEX 문자열 정규화 (소문자, 3자리 확장)
@@ -78,6 +74,11 @@ export function StyleSection() {
 
   const summary = useSelectionSummary();
   const btnMoreRef = useRef<HTMLButtonElement>(null);
+
+  // 사용자 추가 스타일은 최대 7개 (기본 White/Black 제외) — 도달 시 + 버튼 클릭에 안내 칩 표시
+  const isStyleAddCapped =
+    countCustomStylePresets(stylePresets, DEFAULT_STYLE_PRESET_IDS) >= MAX_CUSTOM_STYLE_PRESETS;
+  const styleCapNotice = useDisabledNotice();
 
   // Mixed 상태 판별 (Draft가 있으면 Draft 우선이므로 Mixed 해제)
   // 노드+커넥터 혼합 선택도 플로우 노드 기준으로 판정한다
@@ -606,12 +607,21 @@ export function StyleSection() {
     <div className="section-block">
       {/* 1. 상단 섹션 헤더 */}
       <div className="section-header">
-        <span className="section-title">Style</span>
+        <span className="section-title">Style{isStyleAddCapped && styleCapNotice.phase !== 'hidden' && (
+          <DisabledNoticeChip text={t('styleCustomLimitReached')} fading={styleCapNotice.phase === 'fading'} />
+        )}</span>
         <div className="section-actions">
           <button
             className="btn-action-icon"
             data-tooltip={t('tipAddStyle')}
-            onClick={() => setActiveModal("add-style")}
+            style={isStyleAddCapped ? { opacity: 0.3, cursor: 'default' } : undefined}
+            onClick={() => {
+              if (isStyleAddCapped) {
+                styleCapNotice.flash();
+                return;
+              }
+              setActiveModal("add-style");
+            }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path

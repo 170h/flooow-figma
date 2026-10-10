@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { resolveAppLocale, setAppLocale } from '../../i18n';
-import type { FlooowUsageState } from '../../types';
+import type { AppLocale, FlooowUsageState } from '../../types';
 
 function isReadyUsage(value: unknown): value is FlooowUsageState {
   if (!value || typeof value !== 'object') return false;
@@ -30,6 +30,7 @@ export function useFigmaMessage() {
     setUsageCounting,
     setPlanIssue,
     applyLoadedPresets,
+    setFlowExport,
   } = useApp();
 
   const handlerRef = useRef<((event: MessageEvent) => void) | null>(null);
@@ -127,6 +128,18 @@ export function useFigmaMessage() {
           break;
         }
 
+        case 'FLOW_EXPORTED': {
+          setFlowExport({
+            jsonText: msg.jsonText,
+            aiText: msg.aiText,
+            fileName: msg.fileName,
+            nodeCount: msg.nodeCount,
+            edgeCount: msg.edgeCount,
+            empty: msg.empty,
+          });
+          break;
+        }
+
         case 'FLOOOW_USAGE': {
           if (msg.error === 'blocked') {
             setPlanIssue('blocked');
@@ -152,17 +165,24 @@ export function useFigmaMessage() {
     handlerRef.current = handler;
     window.addEventListener('message', handler);
 
-    // 플러그인 초기화 메시지 전송 (UI 로케일 포함)
+    // 플러그인 초기화 메시지 전송 (UI 로케일 포함 — 저장된 설정 우선)
     // usage는 INIT 응답의 캐시만 받는다. 파일 전체 스캔은 모달 refresh에서만 한다.
+    const storedLocale = (() => {
+      try {
+        return localStorage.getItem('flooow_locale');
+      } catch (_) {
+        return null;
+      }
+    })();
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('nodes') === '2') {
       // 개발 테스트 모드
     } else {
-      parent.postMessage({ pluginMessage: { type: 'INIT', locale: setAppLocale(resolveAppLocale(navigator.language)) } }, '*');
+      parent.postMessage({ pluginMessage: { type: 'INIT', locale: setAppLocale((storedLocale || resolveAppLocale(navigator.language)) as AppLocale) } }, '*');
     }
 
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, [handleSelectionChange, setUIState, setFlooowUsage, setUsageCounting, setPlanIssue, applyLoadedPresets]);
+  }, [handleSelectionChange, setUIState, setFlooowUsage, setUsageCounting, setPlanIssue, applyLoadedPresets, setFlowExport]);
 }
